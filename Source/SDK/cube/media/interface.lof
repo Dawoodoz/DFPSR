@@ -1,0 +1,32 @@
+Begin : Panel
+	Name = "mainPanel"
+	Solid = 0
+	Begin : Panel
+		Name = "sidePanel"
+		Left = "+10"
+		Top = "+10"
+		Right = "+100"
+		Bottom = "100%-10"
+		Solid = 1
+		Color = "100,100,100"
+		Begin : Button
+			Name = "buttonA"
+			Text = "Ortho"
+			Left = "+10"
+			Top = "+10"
+			Right = "100%-10"
+			Bottom = "+50"
+			Color = "200,200,200"
+		End
+		Begin : Button
+			Name = "buttonB"
+			Text = "Depth"
+			Left = "+10"
+			Top = "+60"
+			Right = "100%-10"
+			Bottom = "+100"
+			Color = "200,200,200"
+		End
+	End
+End
+

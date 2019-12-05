@@ -1,0 +1,66 @@
+Code convention:
+1. Use common sense!
+	If it looks wrong to humans then it's wrong.
+	Don't defeat the purpose of the rule by taking it too far.
+2. Don't use iterators when there is any other way to accomplish the task.
+	You can't write efficient algorithms without knowing the data structures.
+3. Tabs for indentation then spaces for alignment.
+	It's the best of both worlds by both having variable length tabs
+	and correct alignment that works between lines of the same indentation.
+	3.1. Do not use multiple spaces as a replacement for tabs in indentation.
+	     I don't care if you set your editor to 2, 4 or 8 columns per tab
+	     and neither should you care about my preferences.
+	3.2. Do not use a tab as a replacement for multiple spaces in alignment.
+	     The number of leading tabs should be equal to the indentation depth.
+	     This way we can prove mathematically that blocks of code in the same
+	     indentation will always keep the same relative alignment.
+	3.3. Do not use tabs after spaces.
+	     First tabs for indentation, then spaces for alignment.
+	3.4. Do not try to align between different indentation depths.
+	     Only align within the same depth so that it works for all tab lengths.
+	Example using "--->" for tabs and "." for spaces:
+		int foo(int x, int y) [
+		--->if (superLongExpression(x) &&
+		--->....superLongExpression(y)) {
+		--->--->bar(x + y);
+		--->}
+		}
+	If a reader uses 8 spaces per tab then superLongExpression is still aligned:
+		int foo(int x, int y) [
+		------->if (superLongExpression(x) &&
+		------->....superLongExpression(y)) {
+		------->------->bar(x + y);
+		------->}
+		}
+4. No dangling else, use explicit {} for safety.
+	Otherwise someone might add an extra statement and get random crashes.
+5. No hpp extensions, use h for all headers.
+	Use macros if you want to use the same API for both C and C++,
+	so that it selects the correct version for the language automatically.
+6. C-style casting for raw data manipulation and C++-style for polymorphism.
+	C++-style casting makes no sense when using assembly intrinsics.
+	High-level behaviour is undefined behaviour in bare metal programming
+	and only adds more confusion when trying to optimize code.
+7. Don't call member methods with "this" set to nullptr.
+	This would be undefined behaviour and may randomly crash.
+	Use global functions instead. They allow checking pointers for null
+	because they are explicit arguments declared by the programmer.
+8. Avoid using STD/STL directly in SDK examples.
+	Use the safer and faster wrapper types in the dsr namespace.
+	One shouldn't have to remember which namespace a collection was declared in.
+9. Don't abuse the auto keyword everywhere just to make it look more "modern".
+	Auto can decrease readability if used too often.
+	Don't force the reader to look into multiple modules to figure out the type.
+10. No new line for opening brackets.
+	Makes the code more compact and decreases the risk of copy-paste errors.
+11. Don't fix the style of someone else's code if you can easily read it.
+	Being pedantic can become an addiction consuming all your time.
+	Fixing actual bugs and port to new systems is much more appreciated than
+	causing version conflicts with others.
+12. Don't change things that you don't know how to test manually.
+
+Regression tests can only catch a percentage of new defects and
+cannot guarantee any level of quality on its own for a large test space.
+The principle of random sampling to estimate quality is only valid
+if the samples are actually random to cover the entire test space.
+

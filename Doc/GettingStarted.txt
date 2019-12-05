@@ -1,0 +1,47 @@
+LINUX
+
+Place the library's root folder inside of a new folder.
+This allow keeping your own projects and the "temporary" folder that's
+used for compiling quickly outside of the library's version history.
+
+If using Linux with an X11 server, you might need to install the X11 headers.
+If it doesn't work, your Linux distro might not have an X11 server.
+	sudo apt-get install libx11-dev
+
+If using Raspbian, you can create and share your own window module for Raspbian
+or simply choose Ubuntu Mate with the following performance tweaks:
+	Control panel - Sound - Activate sound for windows and buttons: Off
+	Firefox browser - Preferences - General - Use smooth scrolling: Off
+	Firefox browser - Preferences - Home - Homepage and new windows: Blank page
+
+Build and run an example program:
+	* Select an SDK example and open its folder in a terminal.
+		chmod +x build.sh
+		./build.sh
+	Some examples might have additional dependencies.
+
+Run regression tests:
+	* Open the source folder in a terminal and run the test script:
+		chmod +x test.sh
+		./test.sh
+
+Create your own Linux project
+	* Copy one of the SDK examples.
+	* Change ROOT_PATH and TEMP_DIR in your build script
+	  to refer to the same locations from a new source path.
+	* Add your own external dependencies to LINKER_FLAGS within a quote
+	  with -l in front of each library name.
+
+Creating a terminal application
+	If your application doesn't create any window, you can make it more portable
+	by replacing "WINDOW_MANAGER=X11" with "WINDOW_MANAGER=NONE".
+	This will compile with NoWindow.cpp instead of X11Window.cpp in windowManagers.
+
+Create your own cross-platform CodeBlocks project:
+	* Select C++ 14 with G++ from the GCC toolchain.
+	* Link with "-lm -pthread" to get standard C++ math and threading.
+	* Include all source files in the DFPSR folder or just the ones you need.
+	* Include the window wrapper and its dependencies for each target build.
+	  Most platforms will be targeted using NoWindow.cpp for text only.
+	This should work with most other IDEs that support the GCC toolchain.
+

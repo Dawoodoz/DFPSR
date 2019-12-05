@@ -1,0 +1,15 @@
+; Dense Sprite Model Format
+
+angles = 2
+
+<Part>
+	XAxis  = 1.0, 0.0, 0.0
+	YAxis  = 0.0, 1.0, 0.0
+	ZAxis  = 0.0, 0.0, 1.0
+	Origin = 0.0, 0.0, 0.0
+	Displacement = 0.05
+	ClipZero = 1
+	Mirror = 1
+	Visible: Plane, PlanksHeight.png, PlanksColor.png
+	Shadow: Box, 0.97, 0.04, 0.97
+

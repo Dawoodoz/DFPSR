@@ -1,0 +1,17 @@
+; Dense Sprite Model Format
+
+angles = 1
+
+<Part>
+	XAxis  = 1.0, 0.0, 0.0
+	YAxis  = 0.0, 1.0, 0.0
+	ZAxis  = 0.0, 0.0, 1.0
+	Origin = 0.0, 0.5, 0.0
+	Displacement = 0.08
+	ClipZero = 0
+	Mirror = 0
+	PatchHeight = 1
+	Radius = 0.15
+	Visible: Cylinder, PillarHeight.png, PillarColor.png
+	Shadow: Cylinder, 0.15, 1.0, 8
+

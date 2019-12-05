@@ -1,0 +1,2 @@
+cppcheck . --enable=all
+

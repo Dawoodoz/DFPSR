@@ -1,0 +1,23 @@
+Begin : Panel
+	Name = "mainPanel"
+	Solid = 0
+	Begin : Panel
+		Name = "toolPanel"
+		Left = +0
+		Top = +0
+		Right = +70
+		Bottom = +50
+		Solid = 1
+		Color = 100,150,100
+		Begin : Button
+			Name = "ExitButton"
+			Text = "Exit"
+			Left = +10
+			Top = +10
+			Right = +60
+			Bottom = +40
+			Color = 200,200,200
+		End
+	End
+End
+
