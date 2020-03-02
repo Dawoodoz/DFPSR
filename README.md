@@ -11,12 +11,17 @@ A modern software rendering library for C++14 using SSE/NEON created by David Fo
 * **Create your legacy.** Make software that future generations might be able to port, compile and run natively without the need for emulators.
 
 ## Still a public beta
-Don't use it for safety-critical projects unless you verify correctness yourself and take all responsibility. Either way, it's probably a lot safer than using OpenGL, OpenCL or Direct3D simply by being a single implementation where bugs will be mostly the same on each platform.
+Don't use it for safety-critical projects unless you verify correctness yourself and take all responsibility. Either way, it's probably a lot safer than using OpenGL, OpenCL or Direct3D simply by being a single implementation where bugs will be mostly the same on each platform. Stack memory for VLA may vary. Test everything with billions of cases.
+
+## Platforms
+* Developed mainly with Ubuntu on desktops and laptops.
+* Tested with Ubuntu mate on Raspberry Pi 3B and Pine64. (Ubuntu Mate didn't work on Raspberry Pi Zero)
+* Tested with Raspbian Buster on Raspberry Pi Zero W (X11 doesn't work on older versions of Raspbian)
+* There's a half finished Win32 port that's not published because it wasn't fast enough when emulated on 64-bit Windows. Might have to write for 64-bit only on Windows to prevent poor performance.
 
 ## Remaining work
 * Optimization of 3D rendering is still quite primitive. There's no quad-tree algorithm for quickly skipping large chunks of unseen pixels. There's no depth sorting nor early removal of triangles yet.
 * The 3D camera system doesn't have a stable API yet.
-* There's a half finished Ms-Windows port that I haven't given out yet, because accidentally running the 32-bit version on 64-bit Windows may trigger the WoW64 emulator with a 50X speed penalty for CPU operations which is very bad for software rendering of course. Maybe the Windows port can be exclusive for 64 bits to prevent this.
 
 ## How you can help
 * Report bugs that you find. (Visual C++ is not supported because it doesn't have C++14 nor C11 extensions)
