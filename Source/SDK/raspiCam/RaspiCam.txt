@@ -35,9 +35,8 @@ Mount the camera onto the camera connector.
 * Remove any lens protection to avoid getting a black or foggy image.
 
 CAMERA TESTING WITH RASPISTILL
-* Create a new folder and try the camera.
-	raspistill -o ./test.jpg
-* Open the folder and look at the jpg image being saved.
+* Open a terminal anywhere and try the camera.
+	raspistill -t 1000000
 
 CAMERA TESTING WITH SDK EXAMPLE 
 * Open SDK/Raspicam in a terminal and run the build script.
