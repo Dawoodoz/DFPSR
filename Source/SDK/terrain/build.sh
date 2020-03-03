@@ -17,9 +17,11 @@ MODE=-DDEBUG #Debug mode
 CPP_VERSION=-std=c++14
 # Select optimization level
 O_LEVEL=-O2
+# Select external libraries
+LINKER_FLAGS=""
 
 # Give execution permission
 chmod +x ${ROOT_PATH}/tools/buildAndRun.sh;
 # Compile everything
-${ROOT_PATH}/tools/buildAndRun.sh ${PROJECT_FOLDER} ${TARGET_FILE} ${ROOT_PATH} ${TEMP_DIR} ${WINDOW_MANAGER} ${MODE} ${CPP_VERSION} ${O_LEVEL};
+${ROOT_PATH}/tools/buildAndRun.sh "${PROJECT_FOLDER}" "${TARGET_FILE}" "${ROOT_PATH}" "${TEMP_DIR}" "${WINDOW_MANAGER}" "${MODE}" "${CPP_VERSION}" "${O_LEVEL}" "${LINKER_FLAGS}";
 
