@@ -38,7 +38,12 @@ std::shared_ptr<dsr::BackendWindow> createBackendWindow(const dsr::String& title
 Window dsr::window_create(const String& title, int32_t width, int32_t height) {
 	if (width < 1) { width = 1; }
 	if (height < 1) { height = 1; }
-	return std::make_shared<DsrWindow>(createBackendWindow(title, width, height));
+	std::shared_ptr<dsr::BackendWindow> backend = createBackendWindow(title, width, height);
+	if (backend.get() != nullptr) {
+		return std::make_shared<DsrWindow>(backend);
+	} else {
+		return std::shared_ptr<DsrWindow>();
+	}
 }
 
 Window dsr::window_create_fullscreen(const String& title) {

@@ -605,7 +605,12 @@ void X11Window::showCanvas() {
 }
 
 std::shared_ptr<dsr::BackendWindow> createBackendWindow(const dsr::String& title, int width, int height) {
-	auto backend = std::make_shared<X11Window>(title, width, height);
-	return std::dynamic_pointer_cast<dsr::BackendWindow>(backend);
+	// Check if a display is available for creating a window
+	if (XOpenDisplay(nullptr) != nullptr) {
+		auto backend = std::make_shared<X11Window>(title, width, height);
+		return std::dynamic_pointer_cast<dsr::BackendWindow>(backend);
+	} else {
+		printf("No display detected. Aborting X11 window creation.\n");
+		return std::shared_ptr<dsr::BackendWindow>();
+	}
 }
-
