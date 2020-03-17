@@ -234,7 +234,7 @@ inline void safeMemorySet(SafePointer<T>& target, uint8_t value, int byteSize) {
 		// Target must be in valid memory
 		target.assertInside("memoryCopy (target)", target.getUnsafe(), byteSize);
 	#endif
-	std::memset(target.getUnsafe(), value, (size_t)byteSize);
+	std::memset((char*)(target.getUnsafe()), value, (size_t)byteSize);
 }
 
 }
