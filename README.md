@@ -17,6 +17,7 @@ Don't use it for safety-critical projects unless you verify correctness yourself
 * Developed mainly with Ubuntu on desktops and laptops.
 * Tested with Ubuntu mate on Raspberry Pi 3B and Pine64. (Ubuntu Mate didn't work on Raspberry Pi Zero)
 * Tested with Raspbian Buster on Raspberry Pi Zero W (X11 doesn't work on older versions of Raspbian)
+* Linux Mint need the compiler and X11 headers, so run "sudo apt install g++" and "sudo apt install libx11-dev" before compiling.
 * There's a half finished Win32 port that's not published because it wasn't fast enough when emulated on 64-bit Windows. Might have to write for 64-bit only on Windows to prevent poor performance.
 
 ## Remaining work
