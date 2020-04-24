@@ -1,11 +1,17 @@
 # DFPSR
 A modern software rendering library for C++14 using SSE/NEON created by David Forsgren Piuva. If you're looking for the latest mainstream fad, look elsewhere. This is a library for quality software meant to be developed over multiple decades and survive your grandchildren with minimal maintenance.
 
+## What your games might look like using isometric CPU rendering
+
+![Screenshot of the sandbox example running on a hexacore Intel Core I5 9600K.](Sandbox.png "Sandbox example")
+
+Real-time dynamic light with depth-based casted shadows and normal mapping at 295 frames per second in 800x600 pixels running on the CPU. Higher resolutions would break the retro style and actually look worse, but there's lots of time left for game logic and additional effects. By pre-rendering 3D models to diffuse, normal and height images, reading the data is much more cache efficient on modern CPUs than using a free perspective. This also allow having more triangles than pixels on the screen and doing passive updates of static geometry. Low-detailed 3D models are used to cast dynamic shadows.
+
 ## Why use a software renderer when GPUs are so fast?
 * **Minimal dependency** for minimal support cost. No customer will ever tell you that some shader wouldn't compile on a GPU driver you never even heard of. It's all pure math on the CPU sending calls directly to the system.
 * **Robust** because it will probably not ruin your system when making a mistake, unlike graphics APIs for the GPU that are prone to blue-screens. There are layers of safety for most API calls and pointer classes have extra tight memory protection in debug mode while leaving no trace in release mode.
 * **Determinism down to machine precision** means that if it worked on one computer, it will probably work the same on another computer.
-* **Often faster than the monitor's refresh rate** for isometric graphics with dynamic light. Try the Sandbox SDK example compiled in release mode on Ubuntu to check if it's smooth on your CPU. A quad-core Intel Core I5 should be fast enough in resonable resolutions.
+* **Often faster than the monitor's refresh rate** for isometric graphics with dynamic light. Try the Sandbox SDK example compiled in release mode on Ubuntu or Manjaro to check if it's smooth on your CPU. Quad-core Intel Core I5 should be fast enough in resonable resolutions, hexa-core I5 will have plenty of performance and octa-core I7 is butter smooth even in high resolutions.
 * **Low latency for retro 2D graphics** using the CPU's higher frequency for low resolutions. There are no hardware limits other than CPU cycles and memory. Render to textures, apply deferred light filters or write your modified rendering pipeline for custom geometry formats.
 * **Easy to use GUI system.** Create a window, load the interface from a file and connect a lambda function to a button's click action using only a few lines of procedural code.
 * **Create your legacy.** Make software that future generations might be able to port, compile and run natively without the need for emulators.
@@ -15,6 +21,7 @@ Don't use it for safety-critical projects unless you verify correctness yourself
 
 ## Platforms
 * Developed mainly with Ubuntu on desktops and laptops.
+* Tested with Manjaro, my new favorite Linux distribution. Installing GPU drivers and running the latest AAA games was much easier than on other distributions. I would still use CPU rendering for most of my development where GPU rendering would simply be total overkill and only increase future maintenance costs.
 * Tested with Ubuntu mate on Raspberry Pi 3B and Pine64. (Ubuntu Mate didn't work on Raspberry Pi Zero)
 * Tested with Raspbian Buster on Raspberry Pi Zero W (X11 doesn't work on older versions of Raspbian)
 * Linux Mint need the compiler and X11 headers, so run "sudo apt install g++" and "sudo apt install libx11-dev" before compiling.
