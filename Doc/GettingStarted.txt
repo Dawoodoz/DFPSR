@@ -6,10 +6,10 @@ used for compiling quickly outside of the library's version history.
 
 If using Linux with an X11 server, you might need to install the X11 headers.
 If it doesn't work, your Linux distro might not have an X11 server.
+On debian based distributions:
 	sudo apt-get install libx11-dev
 
-If using Raspbian, you can create and share your own window module for Raspbian
-or simply choose Ubuntu Mate with the following performance tweaks:
+If using a Raspberry Pi, you can use Raspbian (Buster or newer for X11 support) or Ubuntu Mate with the following performance tweaks:
 	Control panel - Sound - Activate sound for windows and buttons: Off
 	Firefox browser - Preferences - General - Use smooth scrolling: Off
 	Firefox browser - Preferences - Home - Homepage and new windows: Blank page
