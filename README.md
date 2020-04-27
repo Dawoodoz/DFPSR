@@ -29,13 +29,15 @@ Don't use it for safety-critical projects unless you verify correctness yourself
 
 ## Remaining work
 * Optimization of 3D rendering is still quite primitive. There's no quad-tree algorithm for quickly skipping large chunks of unseen pixels. There's no depth sorting nor early removal of triangles yet.
-* The 3D camera system doesn't have a stable API yet.
+* The 3D camera system doesn't have a fixed API yet. The ability to not have a far-clip-plane made it complicated to express using a standard view space, so clip planes are stored separatelly while rendering. There might be a better solution.
 
 ## How you can help
 * Report bugs that you find. (Visual C++ is not supported because it doesn't have C++14 nor C11 extensions)
 * Port the Window wrapper to more platforms with instructions for compiling and linking.
-* Create your own GUI components that can be pasted into a project and registered to the class factory.
+* Create your own GUI components that can be pasted into a project and registered to the class factory. The most used may be taken into the core.
 * Develop minimal-dependency open-source games as a complement to the SDK.
+* Create 3D model import/export functions for standard formats.
+* Create 3D model editor with custom format for generating pre-rendered extremely detailed isometric sprites with diffuse, normal and height images, compatible with the Sandbox example.
 
 ## Supported CPU hardware
 * Intel/AMD using SSE2 intrinsics.
