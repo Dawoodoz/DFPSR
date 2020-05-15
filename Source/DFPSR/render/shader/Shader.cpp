@@ -228,6 +228,9 @@ inline static void fillShapeSuper(const Shader& shader, ImageRgbaU8Impl *colorBu
 	const int colorRowSize = imageInternal::getRowSize(colorBuffer);
 	const int depthRowSize = imageInternal::getRowSize(depthBuffer);
 	const PackOrder& targetPackingOrder = imageInternal::getPackOrder(colorBuffer);
+	const int colorHeight = imageInternal::getHeight(colorBuffer);
+	const int depthHeight = imageInternal::getHeight(depthBuffer);
+	const int maxHeight = colorHeight > depthHeight ? colorHeight : depthHeight;
 
 	// Initialize row pointers for color buffer
 	SafePointer<uint32_t> pixelDataUpper, pixelDataLower, pixelDataUpperRow, pixelDataLowerRow;
@@ -269,7 +272,7 @@ inline static void fillShapeSuper(const Shader& shader, ImageRgbaU8Impl *colorBu
 		int innerBlockEnd = roundDownEven(innerEnd);
 		// Avoid reading outside of the given bound
 		bool hasTop = upperRow.right > upperRow.left;
-		bool hasBottom = lowerRow.right > lowerRow.left;
+		bool hasBottom = lowerRow.right > lowerRow.left && y2 < maxHeight;
 		if (hasTop || hasBottom) {
 			// Initialize pointers
 			if (COLOR_WRITE) {
