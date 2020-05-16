@@ -270,9 +270,13 @@ inline static void fillShapeSuper(const Shader& shader, ImageRgbaU8Impl *colorBu
 		int outerBlockEnd = roundUpEven(outerEnd);
 		int innerBlockStart = roundUpEven(innerStart);
 		int innerBlockEnd = roundDownEven(innerEnd);
+		// Clip last row if outside on odd height
+		if (y2 >= maxHeight) {
+			lowerRow.right = lowerRow.left;
+		}
 		// Avoid reading outside of the given bound
 		bool hasTop = upperRow.right > upperRow.left;
-		bool hasBottom = lowerRow.right > lowerRow.left && y2 < maxHeight;
+		bool hasBottom = lowerRow.right > lowerRow.left;
 		if (hasTop || hasBottom) {
 			// Initialize pointers
 			if (COLOR_WRITE) {
