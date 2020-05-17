@@ -249,6 +249,10 @@ Renderer renderer_create() {
 	return std::make_shared<RendererImpl>();
 }
 
+bool renderer_exists(const Renderer& renderer) {
+	return renderer.get() != nullptr;
+}
+
 void renderer_begin(Renderer& renderer, ImageRgbaU8& colorBuffer, ImageF32& depthBuffer) {
 	MUST_EXIST(renderer,renderer_begin);
 	renderer->beginFrame(colorBuffer, depthBuffer);

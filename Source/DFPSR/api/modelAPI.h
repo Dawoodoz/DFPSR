@@ -96,6 +96,7 @@ namespace dsr {
 	//     create (begin giveTask* end)*
 	Renderer renderer_create();
 	// Begin rendering to target color and depth buffers of the same dimensions
+	bool renderer_exists(const Renderer& renderer);
 	void renderer_begin(Renderer& renderer, ImageRgbaU8& colorBuffer, ImageF32& depthBuffer);
 	// Once an object passed game-specific occlusion tests, give it to the renderer using renderer_giveTask
 	// The render job will be performed during the next call to renderer_execute
