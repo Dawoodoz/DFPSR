@@ -45,6 +45,10 @@ const ImageRgbaU8 BasicResourcePool::fetchImageRgba(const String& name) {
 		int existingIndex = this->findImageRgba(name);
 		if (existingIndex > -1) {
 			result = imageRgbaList[existingIndex].ref;
+		} else if (name.findFirst(U'.') > -1) {
+			throwError("The image \"", name, "\" had a forbidden dot in the name. Images in resource pools are fetched without the extension to allow changing image format without changing what it's called in other resources.\n");
+		} else if (name.findFirst(U'/') > -1 && name.findFirst(U'\\') > -1) {
+			throwError("The image \"", name, "\" contained a path separator, which is not allowed because of ambiguity. The same file can have multiple paths to the same folder and multiple files can have the same name in different folders.\n");
 		} else {
 			// Look for a png image
 			const String extensionless = this->path + name;
