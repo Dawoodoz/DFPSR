@@ -61,7 +61,7 @@ void imageImpl_drawCopy(ImageF32Impl& target, const ImageU16Impl& source, int32_
 
 void imageImpl_drawAlphaFilter(ImageRgbaU8Impl& target, const ImageRgbaU8Impl& source, int32_t left = 0, int32_t top = 0);
 void imageImpl_drawMaxAlpha(ImageRgbaU8Impl& target, const ImageRgbaU8Impl& source, int32_t left = 0, int32_t top = 0, int32_t sourceAlphaOffset = 0);
-void imageImpl_drawAlphaClip(ImageRgbaU8Impl& target, const ImageRgbaU8Impl& source, int32_t left = 0, int32_t top = 0, int32_t treshold = 0);
+void imageImpl_drawAlphaClip(ImageRgbaU8Impl& target, const ImageRgbaU8Impl& source, int32_t left = 0, int32_t top = 0, int32_t threshold = 0);
 void imageImpl_drawSilhouette(ImageRgbaU8Impl& target, const ImageU8Impl& source, const ColorRgbaI32& color, int32_t left = 0, int32_t top = 0);
 
 void imageImpl_drawHigher(ImageU16Impl& targetHeight, const ImageU16Impl& sourceHeight, int32_t left = 0, int32_t top = 0, int32_t sourceHeightOffset = 0);

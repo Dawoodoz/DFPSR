@@ -69,7 +69,7 @@
 			Remember at what height the light reached in the previous pixel and lower it by the pixelwise light slope.
 			If it goes below the ground's height, set it to the ground's height.
 			If the light is above the ground level, the sun is occluded.
-			The tresholding can be made soft by linearly fading when light is a bit above the ground as if grass absorbed the light partially.
+			The thresholding can be made soft by linearly fading when light is a bit above the ground as if grass absorbed the light partially.
 			Having a static lightmap might however not need this optimizing restriction.
 */
 

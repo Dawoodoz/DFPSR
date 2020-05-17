@@ -299,8 +299,8 @@ void ModelImpl::expandBound(const FVector3D& point) {
 	if (this->maxBound.y > point.y) { this->maxBound.y = point.y; }
 	if (this->maxBound.z > point.z) { this->maxBound.z = point.z; }
 }
-int ModelImpl::findPoint(const FVector3D &position, float treshold) const {
-	float bestDistance = treshold;
+int ModelImpl::findPoint(const FVector3D &position, float threshold) const {
+	float bestDistance = threshold;
 	int bestIndex = -1;
 	for (int index = 0; index < this->positionBuffer.length(); index++) {
 		float distance = length(position - this->getPoint(index));
@@ -325,8 +325,8 @@ int ModelImpl::addPoint(const FVector3D &position) {
 	this->expandBound(position);
 	return this->positionBuffer.length() - 1;
 }
-int ModelImpl::addPointIfNeeded(const FVector3D &position, float treshold) {
-	int existingIndex = this->findPoint(position, treshold);
+int ModelImpl::addPointIfNeeded(const FVector3D &position, float threshold) {
+	int existingIndex = this->findPoint(position, threshold);
 	if (existingIndex > -1) {
 		return existingIndex;
 	} else {

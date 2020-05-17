@@ -193,9 +193,9 @@ void dsr::draw_maxAlpha(ImageRgbaU8& target, const ImageRgbaU8& source, int32_t 
 		imageImpl_drawMaxAlpha(*target, *source, left, top, sourceAlphaOffset);
 	}
 }
-void dsr::draw_alphaClip(ImageRgbaU8& target, const ImageRgbaU8& source, int32_t left, int32_t top, int32_t treshold) {
+void dsr::draw_alphaClip(ImageRgbaU8& target, const ImageRgbaU8& source, int32_t left, int32_t top, int32_t threshold) {
 	if (target && source) {
-		imageImpl_drawAlphaClip(*target, *source, left, top, treshold);
+		imageImpl_drawAlphaClip(*target, *source, left, top, threshold);
 	}
 }
 void dsr::draw_silhouette(ImageRgbaU8& target, const ImageU8& source, const ColorRgbaI32& color, int32_t left, int32_t top) {

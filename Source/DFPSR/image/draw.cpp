@@ -611,12 +611,12 @@ void dsr::imageImpl_drawMaxAlpha(ImageRgbaU8Impl& target, const ImageRgbaU8Impl&
 	}
 }
 
-void dsr::imageImpl_drawAlphaClip(ImageRgbaU8Impl& target, const ImageRgbaU8Impl& source, int32_t left, int32_t top, int32_t treshold) {
+void dsr::imageImpl_drawAlphaClip(ImageRgbaU8Impl& target, const ImageRgbaU8Impl& source, int32_t left, int32_t top, int32_t threshold) {
 	if (ImageIntersection::canCreate(target, source, left, top)) {
 		ImageIntersection intersection = ImageIntersection::create(target, source, left, top);
 		// Read and repack to convert between different color formats
 		ITERATE_PIXELS(intersection.subTarget, intersection.subSource,
-			if (sourcePixel[source.packOrder.alphaIndex] > treshold) {
+			if (sourcePixel[source.packOrder.alphaIndex] > threshold) {
 				targetPixel[target.packOrder.redIndex]   = sourcePixel[source.packOrder.redIndex];
 				targetPixel[target.packOrder.greenIndex] = sourcePixel[source.packOrder.greenIndex];
 				targetPixel[target.packOrder.blueIndex]  = sourcePixel[source.packOrder.blueIndex];

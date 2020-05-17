@@ -87,9 +87,9 @@ void model_setPoint(Model& model, int pointIndex, const FVector3D& position) {
 	model->setPoint(pointIndex, position);
 }
 
-int model_findPoint(const Model& model, const FVector3D &position, float treshold) {
+int model_findPoint(const Model& model, const FVector3D &position, float threshold) {
 	MUST_EXIST(model,model_findPoint);
-	return model->findPoint(position, treshold);
+	return model->findPoint(position, threshold);
 }
 
 int model_addPoint(const Model& model, const FVector3D &position) {
@@ -97,9 +97,9 @@ int model_addPoint(const Model& model, const FVector3D &position) {
 	return model->addPoint(position);
 }
 
-int model_addPointIfNeeded(Model& model, const FVector3D &position, float treshold) {
+int model_addPointIfNeeded(Model& model, const FVector3D &position, float threshold) {
 	MUST_EXIST(model,model_addPointIfNeeded);
-	return model->addPointIfNeeded(position, treshold);
+	return model->addPointIfNeeded(position, threshold);
 }
 
 int model_getVertexPointIndex(const Model& model, int partIndex, int polygonIndex, int vertexIndex) {

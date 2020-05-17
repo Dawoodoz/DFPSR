@@ -54,9 +54,9 @@ namespace dsr {
 	int model_getNumberOfPoints(const Model& model);
 	FVector3D model_getPoint(const Model& model, int pointIndex);
 	void model_setPoint(Model& model, int pointIndex, const FVector3D& position);
-	int model_findPoint(const Model& model, const FVector3D &position, float treshold);
+	int model_findPoint(const Model& model, const FVector3D &position, float threshold);
 	int model_addPoint(const Model& model, const FVector3D &position);
-	int model_addPointIfNeeded(Model& model, const FVector3D &position, float treshold);
+	int model_addPointIfNeeded(Model& model, const FVector3D &position, float threshold);
 
 	// Vertex
 	int model_getVertexPointIndex(const Model& model, int partIndex, int polygonIndex, int vertexIndex);

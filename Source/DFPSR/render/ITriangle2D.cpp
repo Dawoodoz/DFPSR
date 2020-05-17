@@ -96,7 +96,7 @@ static void cutConvexEdge(const LVector2D& startPoint, const LVector2D& endPoint
 	int64_t originY = constants::unitsPerHalfPixel + clipBound.top() * constants::unitsPerPixel;
 
 	// To turn x > 0 into x >= 0 without branching, just compare to -1 instead as it is equivalent for integers.
-	int64_t treshold = (startPoint.x > endPoint.x || (startPoint.x == endPoint.x && startPoint.y > endPoint.y)) ? -1 : 0;
+	int64_t threshold = (startPoint.x > endPoint.x || (startPoint.x == endPoint.x && startPoint.y > endPoint.y)) ? -1 : 0;
 	// Get normals for each edge
 	int64_t normalX = endPoint.y - startPoint.y;
 	int64_t normalY = startPoint.x - endPoint.x;
@@ -111,12 +111,12 @@ static void cutConvexEdge(const LVector2D& startPoint, const LVector2D& endPoint
 		int64_t valueRow = valueOrigin;
 		// Proof for the limit variable:
 		//   Find the highest x for the left side where offsetX < 0 or the lowest x for the right side where offsetX > 0
-		//   x must satisfy the equation valueRow + (offsetX * (x - leftBound)) > treshold
-		//   offsetX * (x - leftBound) > treshold - valueRow
-		//   (offsetX * x) - (offsetX * leftBound) > treshold - valueRow
-		//   offsetX * x > treshold - valueRow + (offsetX * leftBound)
+		//   x must satisfy the equation valueRow + (offsetX * (x - leftBound)) > threshold
+		//   offsetX * (x - leftBound) > threshold - valueRow
+		//   (offsetX * x) - (offsetX * leftBound) > threshold - valueRow
+		//   offsetX * x > threshold - valueRow + (offsetX * leftBound)
 		//   offsetX * x > limit
-		int64_t limit = treshold - valueRow + (offsetX * leftBound);
+		int64_t limit = threshold - valueRow + (offsetX * leftBound);
 		if (normalX < 0) { // Left
 			for (int32_t y = topBound; y < bottomBound; y++) {
 				int32_t rowIndex = y - topBound;
@@ -139,7 +139,7 @@ static void cutConvexEdge(const LVector2D& startPoint, const LVector2D& endPoint
 		int64_t valueRow = valueOrigin + (offsetY * (topBound - topBound));
 		for (int32_t y = topBound; y < bottomBound; y++) {
 			int32_t rowIndex = y - topBound;
-			if (valueRow > treshold) { // If outside of the current edge
+			if (valueRow > threshold) { // If outside of the current edge
 				rows[rowIndex].left = rightBound;
 				rows[rowIndex].right = leftBound;
 			}

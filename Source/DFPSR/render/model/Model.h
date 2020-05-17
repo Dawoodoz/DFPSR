@@ -118,9 +118,9 @@ public:
 	int getNumberOfPoints() const;
 	FVector3D getPoint(int pointIndex) const;
 	void setPoint(int pointIndex, const FVector3D& position);
-	int findPoint(const FVector3D &position, float treshold) const;
+	int findPoint(const FVector3D &position, float threshold) const;
 	int addPoint(const FVector3D &position);
-	int addPointIfNeeded(const FVector3D &position, float treshold); // Returns the index of a new point or the first existing within treshold in euclidean 3D distance
+	int addPointIfNeeded(const FVector3D &position, float threshold); // Returns the index of a new point or the first existing within threshold in euclidean 3D distance
 	// Vertex interface
 	int getVertexPointIndex(int partIndex, int polygonIndex, int vertexIndex) const;
 	void setVertexPointIndex(int partIndex, int polygonIndex, int vertexIndex, int pointIndex);

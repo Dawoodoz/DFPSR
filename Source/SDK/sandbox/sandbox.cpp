@@ -45,7 +45,7 @@ VISUALS:
 		Used like passive lights but drawing to the diffuse layer and ignoring dynamic sprites.
 		Will only be drawn when updating passive blocks or adding to existing background blocks.
 		A 3D transform defines where the decal is placed like a cube in world space.
-			The near and far clipping can use a fading treshold to allow placing explosion decals without creating hard seams.
+			The near and far clipping can use a fading threshold to allow placing explosion decals without creating hard seams.
 		New sprites added after a decal should not be affected by an old sprite.
 			How can this be solved without resorting to dangerous polymorphism.
 		Allow defining decals locally for each level by loading their images from a temporary image pool of level specific content.

@@ -337,10 +337,10 @@ static Model convertFromDMF1(const Model_DMF1 &nativeModel, ResourcePool &pool, 
 			}
 			for (int inputTriangleIndex = 0; inputTriangleIndex < inputPart->triangles.length(); inputTriangleIndex++) {
 				const Triangle_DMF1 *inputTriangle = &(inputPart->triangles[inputTriangleIndex]);
-				const float treshold = 0.00001f;
-				int posIndexA = result->addPointIfNeeded(inputTriangle->vertices[0].position, treshold);
-				int posIndexB = result->addPointIfNeeded(inputTriangle->vertices[1].position, treshold);
-				int posIndexC = result->addPointIfNeeded(inputTriangle->vertices[2].position, treshold);
+				const float threshold = 0.00001f;
+				int posIndexA = result->addPointIfNeeded(inputTriangle->vertices[0].position, threshold);
+				int posIndexB = result->addPointIfNeeded(inputTriangle->vertices[1].position, threshold);
+				int posIndexC = result->addPointIfNeeded(inputTriangle->vertices[2].position, threshold);
 				VertexData dataA(inputTriangle->vertices[0].texCoord, inputTriangle->vertices[0].color);
 				VertexData dataB(inputTriangle->vertices[1].texCoord, inputTriangle->vertices[1].color);
 				VertexData dataC(inputTriangle->vertices[2].texCoord, inputTriangle->vertices[2].color);

@@ -117,8 +117,8 @@ namespace dsr {
 	);
 
 	// Draw one RGBA image to another using alpha clipping
-	//   Source is solid where alpha is greater than treshold, which can be used for animations
-	void draw_alphaClip(ImageRgbaU8& target, const ImageRgbaU8& source, int32_t left = 0, int32_t top = 0, int32_t treshold = 127);
+	//   Source is solid where alpha is greater than threshold, which can be used for animations
+	void draw_alphaClip(ImageRgbaU8& target, const ImageRgbaU8& source, int32_t left = 0, int32_t top = 0, int32_t threshold = 127);
 	// Draw a uniform color using a grayscale silhouette as the alpha channel
 	void draw_silhouette(ImageRgbaU8& target, const ImageU8& silhouette, const ColorRgbaI32& color, int32_t left = 0, int32_t top = 0);
 
