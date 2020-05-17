@@ -193,12 +193,14 @@ void model_setLightMapByName(Model& model, int partIndex, ResourcePool &pool, co
 
 // Single-threaded rendering for the simple cases where you just want it to work
 void model_render(const Model& model, const Transform3D &modelToWorldTransform, ImageRgbaU8& colorBuffer, ImageF32& depthBuffer, const Camera &camera) {
-	MUST_EXIST(model,model_render);
-	model->render((CommandQueue*)nullptr, colorBuffer, depthBuffer, modelToWorldTransform, camera);
+	if (model.get() != nullptr) {
+		model->render((CommandQueue*)nullptr, colorBuffer, depthBuffer, modelToWorldTransform, camera);
+	}
 }
 void model_renderDepth(const Model& model, const Transform3D &modelToWorldTransform, ImageF32& depthBuffer, const Camera &camera) {
-	MUST_EXIST(model,model_renderDepth);
-	model->renderDepth(depthBuffer, modelToWorldTransform, camera);
+	if (model.get() != nullptr) {
+		model->renderDepth(depthBuffer, modelToWorldTransform, camera);
+	}
 }
 
 // Context for rendering multiple models at the same time for improved speed
@@ -262,7 +264,9 @@ void renderer_begin(Renderer& renderer, ImageRgbaU8& colorBuffer, ImageF32& dept
 //         Enabling vertex light, reflection maps and bone animation
 void renderer_giveTask(Renderer& renderer, const Model& model, const Transform3D &modelToWorldTransform, const Camera &camera) {
 	MUST_EXIST(renderer,renderer_giveTask);
-	renderer->giveTask(model, modelToWorldTransform, camera);
+	if (model.get() != nullptr) {
+		renderer->giveTask(model, modelToWorldTransform, camera);
+	}
 }
 
 void renderer_end(Renderer& renderer) {
