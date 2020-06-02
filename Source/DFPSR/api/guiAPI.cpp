@@ -225,7 +225,7 @@ String dsr::component_getProperty(const Component& component, const ReadableStri
 		}
 		return U"";
 	} else {
-		return component->toString();
+		return target->toString();
 	}
 }
 
