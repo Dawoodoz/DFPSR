@@ -30,8 +30,10 @@ PERSISTENT_DEFINITION(PersistentStringList)
 
 bool PersistentStringList::assignValue(const ReadableString &text) {
 	bool quoted = false;
-	bool hadComma = true;
+	bool first = true;
+	bool hadComma = false;
 	int start = 0;
+	this->value.clear();
 	for (int i = 0; i < text.length(); i++) {
 		DsrChar c = text[i];
 		if (quoted) {
@@ -54,10 +56,11 @@ bool PersistentStringList::assignValue(const ReadableString &text) {
 				}
 			} else if (c == U'\"') { // Quote sign
 				// Start the quote
-				if (!hadComma) {
+				if (!(first || hadComma)) {
 					throwError(U"String lists must be separated by commas!\n");
 				}
 				quoted = true;
+				first = false;
 				start = i;
 			}
 		}

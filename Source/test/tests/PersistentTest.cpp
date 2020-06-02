@@ -159,11 +159,32 @@ START_TEST(Persistent)
 	std::shared_ptr<Persistent> treeCopy = createPersistentClassFromText(exampleThree);
 	ASSERT_MATCH(treeCopy->toString(), exampleThree);
 
+	// Persistent string lists
 	PersistentStringList myList = PersistentStringList();
 	ASSERT_EQUAL(myList.value.length(), 0);
 	ASSERT_MATCH(myList.toString(), U"");
 
-	myList = PersistentStringList(U"\"Zero 0\", \"One 1\", \"Two 2\", \"Three 3\"");
+	myList = PersistentStringList(U"\"\"");
+	ASSERT_EQUAL(myList.value.length(), 1);
+	ASSERT_MATCH(myList.value[0], U"");
+	ASSERT_MATCH(myList.toString(), U"\"\"");
+
+	myList = PersistentStringList(U"\"A\", \"B\"");
+	ASSERT_EQUAL(myList.value.length(), 2);
+	ASSERT_MATCH(myList.value[0], U"A");
+	ASSERT_MATCH(myList.value[1], U"B");
+	ASSERT_MATCH(myList.toString(), U"\"A\", \"B\"");
+
+	myList.assignValue(U"\"Only element\"");
+	ASSERT_EQUAL(myList.value.length(), 1);
+	ASSERT_MATCH(myList.value[0], U"Only element");
+	ASSERT_MATCH(myList.toString(), U"\"Only element\"");
+
+	myList = PersistentStringList(U"");
+	ASSERT_EQUAL(myList.value.length(), 0);
+	ASSERT_MATCH(myList.toString(), U"");
+
+	myList.assignValue(U"\"Zero 0\", \"One 1\", \"Two 2\", \"Three 3\"");
 	ASSERT_EQUAL(myList.value.length(), 4);
 	ASSERT_MATCH(myList.value[0], U"Zero 0");
 	ASSERT_MATCH(myList.value[1], U"One 1");
