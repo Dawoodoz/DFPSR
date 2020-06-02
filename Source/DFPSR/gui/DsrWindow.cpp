@@ -25,6 +25,7 @@
 #include "DsrWindow.h"
 #include "components/Panel.h"
 #include "components/Button.h"
+#include "components/ListBox.h"
 #include "../math/scalar.h"
 #include "../math/IVector.h"
 #include "../api/imageAPI.h"
@@ -38,6 +39,7 @@ static void initializeGui() {
 		// Register built-in components by name
 		REGISTER_PERSISTENT_CLASS(Panel)
 		REGISTER_PERSISTENT_CLASS(Button)
+		REGISTER_PERSISTENT_CLASS(ListBox)
 		initialized = true;
 	}
 }
