@@ -230,12 +230,12 @@ String dsr::component_getProperty(const Component& component, const ReadableStri
 	}
 }
 
-void dsr::component_call(const Component& component, const ReadableString& methodName, const ReadableString& arguments) {
+String dsr::component_call(const Component& component, const ReadableString& methodName, const ReadableString& arguments) {
 	MUST_EXIST(component, component_call);
-	component->call(methodName, arguments);
+	return component->call(methodName, arguments);
 }
-void dsr::component_call(const Component& component, const ReadableString& methodName) {
-	component_call(component, methodName, U"");
+String dsr::component_call(const Component& component, const ReadableString& methodName) {
+	return component_call(component, methodName, U"");
 }
 
 void dsr::window_applyTheme(const Window& window, const VisualTheme& theme) {

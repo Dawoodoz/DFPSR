@@ -181,8 +181,8 @@ namespace dsr {
 	String component_getProperty(const Component& component, const ReadableString& propertyName, bool mustExist = true);
 
 	// Call a named method in the component using optional text arguments
-	void component_call(const Component& component, const ReadableString& methodName);
-	void component_call(const Component& component, const ReadableString& methodName, const ReadableString& arguments);
+	String component_call(const Component& component, const ReadableString& methodName);
+	String component_call(const Component& component, const ReadableString& methodName, const ReadableString& arguments);
 
 // Component events
 	// The main activation of clickable components.
