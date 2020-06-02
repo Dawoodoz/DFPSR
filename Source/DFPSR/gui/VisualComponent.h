@@ -205,6 +205,8 @@ public:
 	virtual void changedAttribute(const ReadableString &name) {};
 	// Override to be notified about location changes
 	virtual void changedLocation(IRect &oldLocation, IRect &newLocation) {};
+	// Custom call handler to manipulate components across a generic API
+	virtual String call(const ReadableString &methodName, const ReadableString &arguments);
 };
 
 }

@@ -180,6 +180,10 @@ namespace dsr {
 	//     Returns an empty string when propertyName isn't found.
 	String component_getProperty(const Component& component, const ReadableString& propertyName, bool mustExist = true);
 
+	// Call a named method in the component using optional text arguments
+	void component_call(const Component& component, const ReadableString& methodName);
+	void component_call(const Component& component, const ReadableString& methodName, const ReadableString& arguments);
+
 // Component events
 	// The main activation of clickable components.
 	//   The pressed callback doesn't take any arguments, because it should be possible to generate from multiple input methods.

@@ -351,3 +351,7 @@ VisualTheme VisualComponent::getTheme() const {
 
 void VisualComponent::changedTheme(VisualTheme newTheme) {}
 
+String VisualComponent::call(const ReadableString &methodName, const ReadableString &arguments) {
+	throwError("Unimplemented custom call received");
+	return U"";
+}
