@@ -68,6 +68,8 @@ static OrderedImageRgbaU8 generateButtonImage(MediaMethod imageGenerator, int pr
 void Button::generateGraphics() {
 	int width = this->location.width();
 	int height = this->location.height();
+	if (width < 1) { width = 1; }
+	if (height < 1) { height = 1; }
 	if (!this->hasImages) {
 		completeAssets();
 		this->imageUp = generateButtonImage(this->button, 0, width, height, this->color.value, this->text.value, this->font);
