@@ -41,18 +41,16 @@ private:
 	void generateGraphics();
 	MediaMethod background;
 	OrderedImageRgbaU8 imageBackground; // Alpha is copied to the target and should be 255
-	//OrderedImageRgbaU8 imagePassive; // TODO: Use for passive rendering of child components in cluttered panels
 	// Generated
 	bool hasImages = false;
-	int lastWidth = 0;
-	int lastHeight = 0;
-	ColorRgbI32 lastColor;
 public:
 	Panel();
 public:
 	bool isContainer() const;
 	void drawSelf(ImageRgbaU8& targetImage, const IRect &relativeLocation) override;
 	void changedTheme(VisualTheme newTheme) override;
+	void changedLocation(IRect &oldLocation, IRect &newLocation) override;
+	void changedAttribute(const ReadableString &name) override;
 };
 
 }

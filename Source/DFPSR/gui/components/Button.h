@@ -48,10 +48,6 @@ private:
 	void generateGraphics();
 	// Generated
 	bool hasImages = false;
-	int lastWidth = 0;
-	int lastHeight = 0;
-	String lastText;
-	ColorRgbI32 lastColor;
 	OrderedImageRgbaU8 imageUp;
 	OrderedImageRgbaU8 imageDown;
 public:
@@ -62,6 +58,8 @@ public:
 	void receiveMouseEvent(const MouseEvent& event) override;
 	bool pointIsInside(const IVector2D& pixelPosition) override;
 	void changedTheme(VisualTheme newTheme) override;
+	void changedLocation(IRect &oldLocation, IRect &newLocation) override;
+	void changedAttribute(const ReadableString &name) override;
 };
 
 }

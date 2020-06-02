@@ -88,6 +88,7 @@ void VisualComponent::setLocation(IRect newLocation) {
 	if (oldLocation != newLocation) {
 		this->updateLocationEvent(oldLocation, newLocation);
 	}
+	this->changedLocation(oldLocation, newLocation);
 }
 
 void VisualComponent::applyLayout(IVector2D parentSize) {

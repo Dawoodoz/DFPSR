@@ -207,6 +207,7 @@ ReturnCode dsr::component_setProperty(const Component& component, const Readable
 		return ReturnCode::KeyNotFound;
 	} else {
 		if (target->assignValue(value)) {
+			component->changedAttribute(propertyName);
 			return ReturnCode::Good;
 		} else {
 			if (mustAssign) {

@@ -68,14 +68,10 @@ static OrderedImageRgbaU8 generateButtonImage(MediaMethod imageGenerator, int pr
 void Button::generateGraphics() {
 	int width = this->location.width();
 	int height = this->location.height();
-	if (!this->hasImages || this->lastWidth != width || this->lastHeight != height || !string_match(this->text.value, this->lastText) || this->color.value != this->lastColor) {
+	if (!this->hasImages) {
 		completeAssets();
 		this->imageUp = generateButtonImage(this->button, 0, width, height, this->color.value, this->text.value, this->font);
 		this->imageDown = generateButtonImage(this->button, 1, width, height, this->color.value, this->text.value, this->font);
-		this->lastWidth = width;
-		this->lastHeight = height;
-		this->lastText = this->text.value;
-		this->lastColor = this->color.value;
 		this->hasImages = true;
 	}
 }
@@ -118,4 +114,16 @@ void Button::completeAssets() {
 	if (this->font.get() == nullptr) {
 		this->font = font_getDefault();
 	}
+}
+
+void Button::changedLocation(IRect &oldLocation, IRect &newLocation) {
+	// If the component has changed dimensions then redraw the image
+	if (oldLocation.size() != newLocation.size()) {
+		this->hasImages = false;
+	}
+}
+
+void Button::changedAttribute(const ReadableString &name) {
+	// If an attribute has changed then force the image to be redrawn
+	this->hasImages = false;
 }

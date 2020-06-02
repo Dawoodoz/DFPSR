@@ -52,12 +52,9 @@ bool Panel::isContainer() const {
 void Panel::generateGraphics() {
 	int width = this->location.width();
 	int height = this->location.height();
-	if (!this->hasImages || this->lastWidth != width || this->lastHeight != height || this->color.value != this->lastColor) {
+	if (!this->hasImages) {
 		completeAssets();
 		this->background(width, height, this->color.value.red, this->color.value.green, this->color.value.blue)(this->imageBackground);
-		this->lastWidth = width;
-		this->lastHeight = height;
-		this->lastColor = this->color.value;
 		this->hasImages = true;
 	}
 }
@@ -80,4 +77,16 @@ void Panel::completeAssets() {
 	if (this->background.methodIndex == -1) {
 		this->background = theme_getScalableImage(theme_getDefault(), U"Panel");
 	}
+}
+
+void Panel::changedLocation(IRect &oldLocation, IRect &newLocation) {
+	// If the component has changed dimensions then redraw the image
+	if (oldLocation.size() != newLocation.size()) {
+		this->hasImages = false;
+	}
+}
+
+void Panel::changedAttribute(const ReadableString &name) {
+	// If an attribute has changed then force the image to be redrawn
+	this->hasImages = false;
 }
