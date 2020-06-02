@@ -29,8 +29,8 @@
 namespace dsr {
 
 class PersistentInteger : public Persistent {
-PERSISTENT_DECLARATION(PersistentInteger)
 public:
+	PERSISTENT_DECLARATION(PersistentInteger)
 	int64_t value;
 public:
 	PersistentInteger() : value(0) {}

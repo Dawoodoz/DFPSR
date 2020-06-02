@@ -30,8 +30,8 @@
 namespace dsr {
 
 class PersistentColor : public Persistent {
-PERSISTENT_DECLARATION(PersistentColor)
 public:
+	PERSISTENT_DECLARATION(PersistentColor)
 	ColorRgbI32 value;
 public:
 	PersistentColor() : value(0, 0, 0) {}

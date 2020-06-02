@@ -29,12 +29,13 @@
 namespace dsr {
 
 class PersistentString : public Persistent {
-PERSISTENT_DECLARATION(PersistentString)
 public:
+	PERSISTENT_DECLARATION(PersistentString)
 	String value;
 public:
 	PersistentString() : value("") {}
-	explicit PersistentString(String text) : value(text) {}
+	// Because the constructor from text is used for serialization, an explicit constructor must be used to avoid mangling
+	static PersistentString unmangled(const ReadableString &text);
 public:
 	virtual bool assignValue(const ReadableString &text) override;
 	virtual String& toStreamIndented(String& out, const ReadableString& indentation) const override;

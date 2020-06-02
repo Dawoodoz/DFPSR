@@ -29,8 +29,8 @@
 namespace dsr {
 
 class PersistentBoolean : public Persistent {
-PERSISTENT_DECLARATION(PersistentBoolean)
 public:
+	PERSISTENT_DECLARATION(PersistentBoolean)
 	bool value;
 public:
 	PersistentBoolean() : value(0) {}

@@ -11,7 +11,7 @@ public:
 	PersistentString b;
 public:
 	MyClass() {}
-	MyClass(int a, const String &b) : a(a), b(b) {}
+	MyClass(int a, const String &b) : a(a), b(PersistentString::unmangled(b)) {}
 public:
 	void declareAttributes(StructureDefinition &target) const override {
 		target.declareAttribute(U"a");
@@ -154,7 +154,6 @@ START_TEST(Persistent)
 	tree.addChild(std::make_shared<MySubClass>(34, U"foo", 56, 78));
 	second->addChild(std::make_shared<MyClass>(3, U"third"));
 	ASSERT_MATCH(tree.toString(), exampleThree);
-	//printText(tree.toString(), U"\n");
 
 	// Tree structure from text
 	std::shared_ptr<Persistent> treeCopy = createPersistentClassFromText(exampleThree);

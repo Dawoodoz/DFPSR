@@ -27,6 +27,12 @@ using namespace dsr;
 
 PERSISTENT_DEFINITION(PersistentString)
 
+PersistentString PersistentString::unmangled(const ReadableString &text) {
+	PersistentString result;
+	result.value = text;
+	return result;
+}
+
 bool PersistentString::assignValue(const ReadableString &text) {
 	this->value = string_unmangleQuote(text);
 	return true;
