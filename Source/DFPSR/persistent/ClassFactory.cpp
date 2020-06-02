@@ -144,16 +144,16 @@ std::shared_ptr<Persistent> dsr::createPersistentClassFromText(const ReadableStr
 		int equalityIndex = line.findFirst('=');
 		if (equalityIndex > -1) {
 			// Assignment
-			String key = string_removeAllWhiteSpace(line.before(equalityIndex));
-			String value = string_removeAllWhiteSpace(line.after(equalityIndex));
+			String key = string_removeOuterWhiteSpace(line.before(equalityIndex));
+			String value = string_removeOuterWhiteSpace(line.after(equalityIndex));
 			stack.last()->setProperty(key, value);
 		} else {
 			int colonIndex = line.findFirst(':');
 			if (colonIndex > -1) {
 				// Declaration
-				String keyword = string_removeAllWhiteSpace(line.before(colonIndex));
+				String keyword = string_removeOuterWhiteSpace(line.before(colonIndex));
 				if (string_caseInsensitiveMatch(keyword, U"Begin")) {
-					String type = string_removeAllWhiteSpace(line.after(colonIndex));
+					String type = string_removeOuterWhiteSpace(line.after(colonIndex));
 					newObject = dsr::createPersistentClass(type);
 					if (rootObject.get() == nullptr) {
 						rootObject = newObject;
@@ -166,7 +166,7 @@ std::shared_ptr<Persistent> dsr::createPersistentClassFromText(const ReadableStr
 				}
 			} else {
 				// Single keyword or empty line
-				String keyword = string_removeAllWhiteSpace(line);
+				String keyword = string_removeOuterWhiteSpace(line);
 				if (string_caseInsensitiveMatch(keyword, U"End")) {
 					if (stack.length() > 0) {
 						stack.pop();
