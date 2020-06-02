@@ -5,5 +5,6 @@
 #include "atomic/PersistentBoolean.h"
 #include "atomic/PersistentInteger.h"
 #include "atomic/PersistentString.h"
+#include "atomic/PersistentStringList.h"
 #include "atomic/PersistentColor.h"
 

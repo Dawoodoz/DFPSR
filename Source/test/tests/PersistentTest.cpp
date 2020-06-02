@@ -158,5 +158,16 @@ START_TEST(Persistent)
 	// Tree structure from text
 	std::shared_ptr<Persistent> treeCopy = createPersistentClassFromText(exampleThree);
 	ASSERT_MATCH(treeCopy->toString(), exampleThree);
-END_TEST
 
+	PersistentStringList myList = PersistentStringList();
+	ASSERT_EQUAL(myList.value.length(), 0);
+	ASSERT_MATCH(myList.toString(), U"");
+
+	myList = PersistentStringList(U"\"Zero 0\", \"One 1\", \"Two 2\", \"Three 3\"");
+	ASSERT_EQUAL(myList.value.length(), 4);
+	ASSERT_MATCH(myList.value[0], U"Zero 0");
+	ASSERT_MATCH(myList.value[1], U"One 1");
+	ASSERT_MATCH(myList.value[2], U"Two 2");
+	ASSERT_MATCH(myList.value[3], U"Three 3");
+	ASSERT_MATCH(myList.toString(), U"\"Zero 0\", \"One 1\", \"Two 2\", \"Three 3\"");
+END_TEST
