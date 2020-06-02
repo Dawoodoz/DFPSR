@@ -336,7 +336,7 @@ String dsr::string_unmangleQuote(const ReadableString& mangledText) {
 	int lastQuote = mangledText.findLast('\"');
 	String result;
 	if (firstQuote == -1 || lastQuote == -1 || firstQuote == lastQuote) {
-		throwError(U"Cannot unmangle using string_unmangleQuote without beginning and ending with quote signs!\n");
+		throwError(U"Cannot unmangle using string_unmangleQuote without beginning and ending with quote signs!\n", mangledText, "\n");
 	} else {
 		for (int i = firstQuote + 1; i < lastQuote; i++) {
 			DsrChar c = mangledText[i];
@@ -367,25 +367,25 @@ String dsr::string_unmangleQuote(const ReadableString& mangledText) {
 			} else {
 				// Detect bad input
 				if (c == U'\"') { // Double quote
-					 throwError(U"Unmangled double quote sign detected in string_unmangleQuote!\n");
+					 throwError(U"Unmangled double quote sign detected in string_unmangleQuote!\n", mangledText, "\n");
 				} else if (c == U'\\') { // Back slash
-					 throwError(U"Unmangled back slash detected in string_unmangleQuote!\n");
+					 throwError(U"Unmangled back slash detected in string_unmangleQuote!\n", mangledText, "\n");
 				} else if (c == U'\a') { // Audible bell
-					 throwError(U"Unmangled audible bell detected in string_unmangleQuote!\n");
+					 throwError(U"Unmangled audible bell detected in string_unmangleQuote!\n", mangledText, "\n");
 				} else if (c == U'\b') { // Backspace
-					 throwError(U"Unmangled backspace detected in string_unmangleQuote!\n");
+					 throwError(U"Unmangled backspace detected in string_unmangleQuote!\n", mangledText, "\n");
 				} else if (c == U'\f') { // Form feed
-					 throwError(U"Unmangled form feed detected in string_unmangleQuote!\n");
+					 throwError(U"Unmangled form feed detected in string_unmangleQuote!\n", mangledText, "\n");
 				} else if (c == U'\n') { // Line feed
-					 throwError(U"Unmangled line feed detected in string_unmangleQuote!\n");
+					 throwError(U"Unmangled line feed detected in string_unmangleQuote!\n", mangledText, "\n");
 				} else if (c == U'\r') { // Carriage return
-					 throwError(U"Unmangled carriage return detected in string_unmangleQuote!\n");
+					 throwError(U"Unmangled carriage return detected in string_unmangleQuote!\n", mangledText, "\n");
 				} else if (c == U'\t') { // Horizontal tab
-					 throwError(U"Unmangled horizontal tab detected in string_unmangleQuote!\n");
+					 throwError(U"Unmangled horizontal tab detected in string_unmangleQuote!\n", mangledText, "\n");
 				} else if (c == U'\v') { // Vertical tab
-					 throwError(U"Unmangled vertical tab detected in string_unmangleQuote!\n");
+					 throwError(U"Unmangled vertical tab detected in string_unmangleQuote!\n", mangledText, "\n");
 				} else if (c == U'\0') { // Null terminator
-					 throwError(U"Unmangled null terminator detected in string_unmangleQuote!\n");
+					 throwError(U"Unmangled null terminator detected in string_unmangleQuote!\n", mangledText, "\n");
 				} else {
 					result.appendChar(c);
 				}
