@@ -33,7 +33,6 @@ void ListBox::declareAttributes(StructureDefinition &target) const {
 	target.declareAttribute(U"Color");
 	target.declareAttribute(U"List");
 	target.declareAttribute(U"SelectedIndex");
-	target.declareAttribute(U"LockScrolling");
 }
 
 Persistent* ListBox::findAttribute(const ReadableString &name) {
@@ -43,8 +42,6 @@ Persistent* ListBox::findAttribute(const ReadableString &name) {
 		return &(this->list);
 	} else if (string_caseInsensitiveMatch(name, U"SelectedIndex")) {
 		return &(this->selectedIndex);
-	} else if (string_caseInsensitiveMatch(name, U"LockScrolling")) {
-		return &(this->lockScrolling);
 	} else {
 		return VisualComponent::findAttribute(name);
 	}
@@ -235,34 +232,29 @@ int64_t ListBox::getVisibleScrollRange() {
 // Optional limit of scrolling, to be applied when the user don't explicitly scroll away from the selection
 // limitSelection should be called before limitScrolling, because scrolling limits depend on selection
 void ListBox::limitScrolling(bool keepSelectedVisible) {
-	if (this->lockScrolling.value) {
-		this->firstVisible = 0;
-		this->hasVerticalScroll = false;
+	// Try to load the font before estimating how big the view is
+	this->completeAssets();
+	if (this->font.get() == nullptr) {
+		throwError("Cannot get the font size because ListBox failed to get a font!\n");
+	}
+	int64_t itemCount = this->list.value.length();
+	int64_t visibleRange = this->getVisibleScrollRange();
+	int64_t maxScroll;
+	int64_t minScroll;
+	// Big enough list to need scrolling but big enough list-box to fit two buttons inside
+	this->hasVerticalScroll = itemCount > visibleRange && this->location.width() >= scrollWidth * 2 && this->location.height() >= scrollEndHeight * 2;
+	if (keepSelectedVisible) {
+		maxScroll = this->selectedIndex.value;
+		minScroll = maxScroll + 1 - visibleRange;
 	} else {
-		// Try to load the font before estimating how big the view is
-		this->completeAssets();
-		if (this->font.get() == nullptr) {
-			throwError("Cannot get the font size because ListBox failed to get a font!\n");
-		}
-		int64_t itemCount = this->list.value.length();
-		int64_t visibleRange = this->getVisibleScrollRange();
-		int64_t maxScroll;
-		int64_t minScroll;
-		// Big enough list to need scrolling but big enough list-box to fit two buttons inside
-		this->hasVerticalScroll = itemCount > visibleRange && this->location.width() >= scrollWidth * 2 && this->location.height() >= scrollEndHeight * 2;
-		if (keepSelectedVisible) {
-			maxScroll = this->selectedIndex.value;
-			minScroll = maxScroll + 1 - visibleRange;
-		} else {
-			maxScroll = itemCount - visibleRange;
-			minScroll = 0;
-		}
-		if (this->firstVisible > maxScroll) {
-			this->firstVisible = maxScroll;
-		}
-		if (this->firstVisible < minScroll) {
-			this->firstVisible = minScroll;
-		}
+		maxScroll = itemCount - visibleRange;
+		minScroll = 0;
+	}
+	if (this->firstVisible > maxScroll) {
+		this->firstVisible = maxScroll;
+	}
+	if (this->firstVisible < minScroll) {
+		this->firstVisible = minScroll;
 	}
 }
 
