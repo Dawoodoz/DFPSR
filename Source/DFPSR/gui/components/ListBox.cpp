@@ -55,9 +55,10 @@ bool ListBox::isContainer() const {
 
 static const int textBorderLeft = 6;
 static const int textBorderTop = 4;
-static const int scrollWidth = 15; // The width of the scroll bar
-static const int scrollEndHeight = 15; // The height of upper and lower scroll buttons
+static const int scrollWidth = 16; // The width of the scroll bar
+static const int scrollEndHeight = 14; // The height of upper and lower scroll buttons
 static const int border = 1; // Scroll-bar edge thickness
+static const int knobErosion = border; // Scroll-bar knob erosion
 
 void ListBox::generateGraphics() {
 	int width = this->location.width();
@@ -93,11 +94,13 @@ void ListBox::generateGraphics() {
 			IRect upper = IRect(whole.left() + border, whole.top() + border, whole.width() - border * 2, scrollEndHeight - border * 2);
 			IRect middle = IRect(whole.left() + border, whole.top() + scrollEndHeight + border, whole.width() - border * 2, whole.height() - (border + scrollEndHeight) * 2);
 			IRect lower = IRect(whole.left() + border, whole.bottom() - scrollEndHeight + border, whole.width() - border * 2, scrollEndHeight - border * 2);
-			// Upper button
+			IRect knob = this->getKnobLocation();
+			// Scroll-bar
 			draw_rectangle(this->image, whole, borderColor);
 			draw_rectangle(this->image, upper, buttonColor);
 			draw_rectangle(this->image, middle, barColor);
 			draw_rectangle(this->image, lower, buttonColor);
+			draw_rectangle(this->image, knob, buttonColor);
 		}
 		this->hasImages = true;
 	}
@@ -110,9 +113,10 @@ void ListBox::drawSelf(ImageRgbaU8& targetImage, const IRect &relativeLocation) 
 
 void ListBox::pressScrollBar(int64_t localY) {
 	int64_t maxScroll = this->list.value.length() - this->getVisibleScrollRange();
-	// The height of the scroll-bar excluding upper and lower buttons
-	int64_t barHeight = this->location.height() - (scrollEndHeight * 2);
-	this->firstVisible = ((localY - scrollEndHeight) * maxScroll) / barHeight;
+	int64_t knobHeight = this->getKnobLocation().height();
+	int64_t endDistance = scrollEndHeight + knobHeight / 2;
+	int64_t barHeight = this->location.height() - (endDistance * 2);
+	this->firstVisible = ((localY - endDistance) * maxScroll) / barHeight;
 	this->limitScrolling();
 	this->hasImages = false; // Force redraw
 }
@@ -131,8 +135,10 @@ void ListBox::receiveMouseEvent(const MouseEvent& event) {
 			this->pressedIndex = -1;
 			if (event.position.y < scrollEndHeight) {
 				// Upper scroll button
+				this->firstVisible--;
 			} else if (event.position.y > this->location.height() - scrollEndHeight) {
 				// Lower scroll button
+				this->firstVisible++;
 			} else {
 				// Start scrolling with the mouse using the relative height on the scroll bar.
 				this->pressScrollBar(event.position.y);
@@ -142,9 +148,10 @@ void ListBox::receiveMouseEvent(const MouseEvent& event) {
 		} else {
 			this->pressedIndex = hoverIndex;
 		}
+		this->limitScrolling();
 		this->hasImages = false; // Force redraw
-	} else if (this->pressedIndex > -1 && event.mouseEventType == MouseEventType::MouseUp) {
-		if (this->inside && !onScrollBar && hoverIndex == this->pressedIndex) {
+	} else if (event.mouseEventType == MouseEventType::MouseUp) {
+		if (this->pressedIndex > -1 && this->inside && !onScrollBar && hoverIndex == this->pressedIndex) {
 			this->selectedIndex.value = hoverIndex;
 			this->limitScrolling(true);
 			this->callback_pressedEvent();
@@ -158,6 +165,7 @@ void ListBox::receiveMouseEvent(const MouseEvent& event) {
 		} else if (event.key == MouseKeyEnum::ScrollDown) {
 			this->firstVisible++;
 		}
+		this->holdingScrollBar = false;
 		this->limitScrolling();
 		this->hasImages = false; // Force redraw
 	} else if (event.mouseEventType == MouseEventType::MouseMove) {
@@ -214,7 +222,7 @@ int64_t ListBox::getSelectedIndex() {
 
 void ListBox::limitSelection() {
 	// Get the maximum index
-	int maxIndex = this->list.value.length() - 1;
+	int64_t maxIndex = this->list.value.length() - 1;
 	if (maxIndex < 0) {
 		maxIndex = 0;
 	}
@@ -227,6 +235,31 @@ void ListBox::limitSelection() {
 int64_t ListBox::getVisibleScrollRange() {
 	int64_t verticalStep = this->font->size;
 	return (this->location.height() - textBorderTop * 2) / verticalStep;
+}
+
+IRect ListBox::getScrollBarLocation_includingButtons() {
+	return IRect(this->location.width() - scrollWidth, 0, scrollWidth, this->location.height());
+}
+
+IRect ListBox::getScrollBarLocation_excludingButtons() {
+	return IRect(this->location.width() - scrollWidth, scrollEndHeight, scrollWidth, this->location.height() - (scrollEndHeight * 2));
+}
+
+IRect ListBox::getKnobLocation() {
+	// Eroded scroll-bar excluding buttons
+	// The final knob is a sub-set of this region corresponding to the visibility
+	IRect erodedBar = this->getScrollBarLocation_excludingButtons().expanded(-knobErosion);
+	// Item ranges
+	int64_t visibleRange = this->getVisibleScrollRange(); // 0..visibleRange-1
+	int64_t itemCount = this->list.value.length(); // 0..itemCount-1
+	int64_t maxScroll = itemCount - visibleRange; // 0..maxScroll
+	// Dimensions
+	int64_t knobHeight = (erodedBar.height() * visibleRange) / itemCount;
+	// Visual range for center
+	int64_t scrollStart = erodedBar.top() + knobHeight / 2;
+	int64_t scrollDistance = erodedBar.height() - knobHeight;
+	int64_t knobCenterY = scrollStart + ((this->firstVisible * scrollDistance) / maxScroll);
+	return IRect(erodedBar.left(), knobCenterY - (knobHeight / 2), erodedBar.width(), knobHeight);
 }
 
 // Optional limit of scrolling, to be applied when the user don't explicitly scroll away from the selection

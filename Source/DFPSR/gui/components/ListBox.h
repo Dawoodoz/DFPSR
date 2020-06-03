@@ -59,6 +59,9 @@ private:
 	void limitSelection(); // Clamp selection to valid range
 	void limitScrolling(bool keepSelectedVisible = false); // Clamp scrolling
 	int64_t getVisibleScrollRange(); // Return the number of items that are visible at once
+	IRect getScrollBarLocation_includingButtons(); // Return the location of the scroll-bar with buttons
+	IRect getScrollBarLocation_excludingButtons(); // Return the location of the scroll-bar without buttons
+	IRect getKnobLocation(); // Return the location of the scroll-bar's knob
 	void pressScrollBar(int64_t localY); // Press the scroll-bar at localY in pixels
 public:
 	ListBox();
