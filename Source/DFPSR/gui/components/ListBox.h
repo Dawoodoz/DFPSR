@@ -41,7 +41,7 @@ public:
 	Persistent* findAttribute(const ReadableString &name) override;
 private:
 	// Temporary
-	bool pressed = false;
+	bool holdingScrollBar = false;
 	bool inside = false;
 	bool hasVerticalScroll = false;
 	int64_t pressedIndex = -1; // Index of pressed item or -1 for none.
@@ -57,8 +57,10 @@ private:
 	// Helper methods
 	// Returns the selected index referring to an existing element or -1 if none is selected
 	int64_t getSelectedIndex();
-	void limitSelection();
-	void limitScrolling(bool keepSelectedVisible = false);
+	void limitSelection(); // Clamp selection to valid range
+	void limitScrolling(bool keepSelectedVisible = false); // Clamp scrolling
+	int64_t getVisibleScrollRange(); // Return the number of items that are visible at once
+	void pressScrollBar(int64_t localY); // Press the scroll-bar at localY in pixels
 public:
 	ListBox();
 public:
