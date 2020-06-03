@@ -3,87 +3,39 @@ Begin : Panel
 	Solid = 0
 	Begin : Panel
 		Name = "menuBar"
-		Bottom = +55
+		Bottom = +50
 		Solid = 1
-		Color = 200,200,200
+		Color = 180,180,180
 		Begin : Button
-			Name = "menuButtonNew"
+			Name = "buttonClear"
 			Left = +5
 			Top = +5
-			Right = +45
+			Right = +95
 			Bottom = +45
-			Color = 150,150,150
-			Text = "New"
+			Color = 160,150,150
+			Text = "Clear"
 		End
 		Begin : Button
-			Name = "menuButtonLoad"
-			Left = +50
+			Name = "buttonAdd"
+			Left = +105
 			Top = +5
-			Right = +90
+			Right = +195
 			Bottom = +45
-			Color = 150,150,150
-			Text = "Load"
-		End
-		Begin : Button
-			Name = "menuButtonSave"
-			Left = +95
-			Top = +5
-			Right = +135
-			Bottom = +45
-			Color = 150,150,150
-			Text = "Save"
+			Color = 150,160,150
+			Text = "Add"
 		End
 	End
 	Begin : Panel
 		Name = "workspace"
-		Top = +55
-		Solid = 0
-		Begin : Panel
-			Name = "toolPanel"
-			Right = +150
-			Solid = 1
-			Color = 150,150,150
-			Begin : Button
-				Name = "buttonA"
-				Left = +10
-				Top = +10
-				Right = 100%-10
-				Bottom = +50
-				Color = 200,200,200
-				Text = "A"
-			End
-			Begin : Button
-				Name = "buttonB"
-				Left = +10
-				Top = +60
-				Right = 100%-10
-				Bottom = +100
-				Color = 200,200,200
-				Text = "B"
-			End
-		End
-		Begin : Panel
-			Name = "designBorder"
-			Left = +150
-			Right = 100%-150
-			Solid = 1
-			Color = 50,50,50
-			Begin : Panel
-				Name = "designWindow"
-				Left = +10
-				Top = +10
-				Right = 100%-10
-				Bottom = 100%-10
-				Solid = 1
-				Color = 150,150,150
-			End
-		End
-		Begin : Panel
-			Name = "propertyPanel"
-			Left = 100%-150
-			Solid = 1
-			Color = 150,150,150
+		Top = +50
+		Solid = 1
+		Color = 100,100,100
+		Begin : ListBox
+			Name = "myListBox"
+			right = 10%+100
+			Color = 180,180,180
+			List = "Testing", "1", "2", "3", "One Two Three"
+			SelectedIndex = 2
 		End
 	End
 End
-

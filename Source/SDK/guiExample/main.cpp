@@ -7,12 +7,17 @@ using namespace dsr;
 const String mediaPath = string_combine(U"media", file_separator());
 bool running = true;
 
-// The window handle
+// GUI handles
 Window window;
+Component buttonClear;
+Component buttonAdd;
+Component myListBox;
 
 int main(int argn, char **argv) {
 	// Create a window
 	window = window_create(U"GUI example", 1000, 700);
+	// Register your custom components here
+	//REGISTER_PERSISTENT_CLASS(className);
 	// Load an interface to the window
 	window_loadInterfaceFromFile(window, mediaPath + U"interface.lof");
 
@@ -22,15 +27,32 @@ int main(int argn, char **argv) {
 	});
 
 	// Look up components by name
-	Component buttonA = window_findComponentByName(window, U"buttonA");
-	Component buttonB = window_findComponentByName(window, U"buttonB");
+	buttonClear = window_findComponentByName(window, U"buttonClear");
+	buttonAdd = window_findComponentByName(window, U"buttonAdd");
+	myListBox = window_findComponentByName(window, U"myListBox");
 
 	// Connect components with actions
-	component_setPressedEvent(buttonA, []() {
-		printText("Pressed buttonA!\n");
+	component_setPressedEvent(buttonClear, []() {
+		// Clear list
+		component_call(myListBox, U"ClearAll");
 	});
-	component_setPressedEvent(buttonB, []() {
-		printText("Pressed buttonB!\n");
+	component_setPressedEvent(buttonAdd, []() {
+		// Add to list
+		component_call(myListBox, U"PushElement", U"New item");
+	});
+	component_setKeyDownEvent(myListBox, [](const KeyboardEvent& event) {
+		if (event.dsrKey == DsrKey_Delete) {
+			// Delete from list
+			int64_t index = string_parseInteger(component_call(myListBox, U"GetSelectedIndex"));
+			if (index > -1) {
+				component_call(myListBox, U"RemoveElement", string_combine(index));
+			}
+		}
+	});
+	component_setPressedEvent(myListBox, []() {
+		int64_t index = string_parseInteger(component_call(myListBox, U"GetSelectedIndex"));
+		String content = component_call(myListBox, U"GetSelectedText");
+		printText("content is (", content, ") at index ", index, "\n");
 	});
 
 	// Execute
@@ -47,4 +69,3 @@ int main(int argn, char **argv) {
 		window_showCanvas(window);
 	}
 }
-
