@@ -43,6 +43,7 @@ private:
 	// Temporary
 	bool pressed = false;
 	bool inside = false;
+	bool hasVerticalScroll = false;
 	int64_t pressedIndex = -1; // Index of pressed item or -1 for none.
 	int64_t firstVisible = 0; // Index of first visible element for scrolling. May never go below zero.
 	// Given from the style
@@ -57,7 +58,7 @@ private:
 	// Returns the selected index referring to an existing element or -1 if none is selected
 	int64_t getSelectedIndex();
 	void limitSelection();
-	void limitScrolling();
+	void limitScrolling(bool keepSelectedVisible = false);
 public:
 	ListBox();
 public:

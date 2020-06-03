@@ -107,6 +107,7 @@ void ListBox::receiveMouseEvent(const MouseEvent& event) {
 	} else if (this->pressedIndex > -1 && event.mouseEventType == MouseEventType::MouseUp) {
 		if (this->inside && hoverIndex == this->pressedIndex) {
 			this->selectedIndex.value = hoverIndex;
+			this->limitScrolling(true);
 			this->callback_pressedEvent();
 		}
 		this->pressedIndex = -1;
@@ -178,22 +179,34 @@ void ListBox::limitSelection() {
 
 // Optional limit of scrolling, to be applied when the user don't explicitly scroll away from the selection
 // limitSelection should be called before limitScrolling, because scrolling limits depend on selection
-void ListBox::limitScrolling() {
+void ListBox::limitScrolling(bool keepSelectedVisible) {
 	if (this->lockScrolling.value) {
 		this->firstVisible = 0;
+		this->hasVerticalScroll = false;
 	} else {
 		// Try to load the font before estimating how big the view is
 		this->completeAssets();
 		if (this->font.get() == nullptr) {
 			throwError("Cannot get the font size because ListBox failed to get a font!\n");
 		}
-		int visibleRange = this->location.height() / (this->font->size);
-		int maxScroll = this->selectedIndex.value;
-		int minScroll = maxScroll + 1 - visibleRange;
+		int itemCount = this->list.value.length();
+		int verticalStep = this->font->size;
+		int visibleRange = (this->location.height() - textBorderTop * 2) / verticalStep;
+		int maxScroll;
+		int minScroll;
+		this->hasVerticalScroll = itemCount > visibleRange;
+		if (keepSelectedVisible) {
+			maxScroll = this->selectedIndex.value;
+			minScroll = maxScroll + 1 - visibleRange;
+		} else {
+			maxScroll = itemCount - visibleRange;
+			minScroll = 0;
+		}
+		if (this->firstVisible > maxScroll) {
+			this->firstVisible = maxScroll;
+		}
 		if (this->firstVisible < minScroll) {
 			this->firstVisible = minScroll;
-		} else if (this->firstVisible > maxScroll) {
-			this->firstVisible = maxScroll;
 		}
 	}
 }
@@ -211,7 +224,7 @@ String ListBox::call(const ReadableString &methodName, const ReadableString &arg
 		// No quote mangling needed for this single argument.
 		this->list.value.push(arguments);
 		this->selectedIndex.value = this->list.value.length() - 1;
-		this->limitScrolling();
+		this->limitScrolling(true);
 		this->hasImages = false;
 		return U"";
 	} else if (string_caseInsensitiveMatch(methodName, U"RemoveElement")) {
@@ -222,7 +235,7 @@ String ListBox::call(const ReadableString &methodName, const ReadableString &arg
 		}
 		this->list.value.remove(index);
 		this->limitSelection();
-		this->limitScrolling();
+		this->limitScrolling(true);
 		this->hasImages = false;
 		return U"";
 	} else if (string_caseInsensitiveMatch(methodName, U"GetLength")) {
