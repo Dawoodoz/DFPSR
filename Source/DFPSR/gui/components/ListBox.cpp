@@ -33,6 +33,7 @@ void ListBox::declareAttributes(StructureDefinition &target) const {
 	target.declareAttribute(U"Color");
 	target.declareAttribute(U"List");
 	target.declareAttribute(U"SelectedIndex");
+	target.declareAttribute(U"LockScrolling");
 }
 
 Persistent* ListBox::findAttribute(const ReadableString &name) {
@@ -42,6 +43,8 @@ Persistent* ListBox::findAttribute(const ReadableString &name) {
 		return &(this->list);
 	} else if (string_caseInsensitiveMatch(name, U"SelectedIndex")) {
 		return &(this->selectedIndex);
+	} else if (string_caseInsensitiveMatch(name, U"LockScrolling")) {
+		return &(this->lockScrolling);
 	} else {
 		return VisualComponent::findAttribute(name);
 	}
@@ -111,15 +114,10 @@ void ListBox::receiveMouseEvent(const MouseEvent& event) {
 	} else if (event.mouseEventType == MouseEventType::Scroll) {
 		if (event.key == MouseKeyEnum::ScrollUp) {
 			this->firstVisible--;
-			if (this->firstVisible < 0) {
-				this->firstVisible = 0;
-			}
 		} else if (event.key == MouseKeyEnum::ScrollDown) {
 			this->firstVisible++;
-			if (this->firstVisible > maxIndex) {
-				this->firstVisible = maxIndex;
-			}
 		}
+		this->limitScrolling();
 		this->hasImages = false; // Force redraw
 	}
 	VisualComponent::receiveMouseEvent(event);
@@ -181,18 +179,22 @@ void ListBox::limitSelection() {
 // Optional limit of scrolling, to be applied when the user don't explicitly scroll away from the selection
 // limitSelection should be called before limitScrolling, because scrolling limits depend on selection
 void ListBox::limitScrolling() {
-	// Try to load the font before estimating how big the view is
-	this->completeAssets();
-	if (this->font.get() == nullptr) {
-		throwError("Cannot get the font size because ListBox failed to get a font!\n");
-	}
-	int visibleRange = this->location.height() / (this->font->size);
-	int maxScroll = this->selectedIndex.value;
-	int minScroll = maxScroll + 1 - visibleRange;
-	if (this->firstVisible < minScroll) {
-		this->firstVisible = minScroll;
-	} else if (this->firstVisible > maxScroll) {
-		this->firstVisible = maxScroll;
+	if (this->lockScrolling.value) {
+		this->firstVisible = 0;
+	} else {
+		// Try to load the font before estimating how big the view is
+		this->completeAssets();
+		if (this->font.get() == nullptr) {
+			throwError("Cannot get the font size because ListBox failed to get a font!\n");
+		}
+		int visibleRange = this->location.height() / (this->font->size);
+		int maxScroll = this->selectedIndex.value;
+		int minScroll = maxScroll + 1 - visibleRange;
+		if (this->firstVisible < minScroll) {
+			this->firstVisible = minScroll;
+		} else if (this->firstVisible > maxScroll) {
+			this->firstVisible = maxScroll;
+		}
 	}
 }
 

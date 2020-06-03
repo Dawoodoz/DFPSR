@@ -36,6 +36,7 @@ public:
 	PersistentColor color;
 	PersistentStringList list;
 	PersistentInteger selectedIndex; // Should always be inside of the list's 0..length-1 bound or zero.
+	PersistentBoolean lockScrolling; // When true, the first item will always be visible at the top.
 	void declareAttributes(StructureDefinition &target) const override;
 	Persistent* findAttribute(const ReadableString &name) override;
 private:
