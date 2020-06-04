@@ -41,6 +41,7 @@ public:
 private:
 	// Temporary
 	bool holdingScrollBar = false;
+	int64_t knobHoldOffset = 0; // The number of pixels down from the center that the knob grabbed last time.
 	bool inside = false;
 	bool hasVerticalScroll = false;
 	int64_t pressedIndex = -1; // Index of pressed item or -1 for none.
