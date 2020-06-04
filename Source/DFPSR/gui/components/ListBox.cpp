@@ -67,7 +67,7 @@ void ListBox::generateGraphics() {
 	if (height < 1) { height = 1; }
 	if (!this->hasImages) {
 		completeAssets();
-	 	this->listBox(width, height, this->color.value.red, this->color.value.green, this->color.value.blue)(this->image);
+	 	this->scalableImage_listBox(width, height, this->color.value.red, this->color.value.green, this->color.value.blue)(this->image);
 		int verticalStep = this->font->size;
 		int left = textBorderLeft;
 		int top = textBorderTop;
@@ -91,9 +91,9 @@ void ListBox::generateGraphics() {
 			ColorRgbaI32 barColor = ColorRgbaI32(this->color.value.red / 2, this->color.value.green / 2, this->color.value.blue / 2, 255);
 			ColorRgbaI32 borderColor = ColorRgbaI32(0, 0, 0, 255);
 			IRect whole = IRect(this->location.width() - scrollWidth, 0, scrollWidth, this->location.height());
-			IRect upper = IRect(whole.left() + border, whole.top() + border, whole.width() - border * 2, scrollEndHeight - border * 2);
+			IRect upper = IRect(whole.left(), whole.top(), whole.width(), scrollEndHeight);
 			IRect middle = IRect(whole.left() + border, whole.top() + scrollEndHeight + border, whole.width() - border * 2, whole.height() - (border + scrollEndHeight) * 2);
-			IRect lower = IRect(whole.left() + border, whole.bottom() - scrollEndHeight + border, whole.width() - border * 2, scrollEndHeight - border * 2);
+			IRect lower = IRect(whole.left(), whole.bottom() - scrollEndHeight, whole.width(), scrollEndHeight);
 			IRect knob = this->getKnobLocation();
 			// Scroll-bar
 			draw_rectangle(this->image, whole, borderColor);
@@ -101,6 +101,8 @@ void ListBox::generateGraphics() {
 			draw_rectangle(this->image, middle, barColor);
 			draw_rectangle(this->image, lower, buttonColor);
 			draw_rectangle(this->image, knob, buttonColor);
+			draw_copy(this->image, (this->pressScrollUp) ? this->scrollButtonTop_pressed : this->scrollButtonTop_normal, upper.left(), upper.top());
+			draw_copy(this->image, (this->pressScrollDown && this->inside) ? this->scrollButtonBottom_pressed : this->scrollButtonBottom_normal, lower.left(), lower.top());
 		}
 		this->hasImages = true;
 	}
@@ -112,13 +114,17 @@ void ListBox::drawSelf(ImageRgbaU8& targetImage, const IRect &relativeLocation) 
 }
 
 void ListBox::pressScrollBar(int64_t localY) {
+	int64_t oldIndex = this->firstVisible;
 	int64_t maxScroll = this->list.value.length() - this->getVisibleScrollRange();
 	int64_t knobHeight = this->getKnobLocation().height();
 	int64_t endDistance = scrollEndHeight + knobHeight / 2;
 	int64_t barHeight = this->location.height() - (endDistance * 2);
 	this->firstVisible = ((localY - endDistance) * maxScroll) / barHeight;
 	this->limitScrolling();
-	this->hasImages = false; // Force redraw
+	// Avoid expensive redrawing if the index did not change
+	if (this->firstVisible != oldIndex) {
+		this->hasImages = false; // Force redraw
+	}
 }
 
 void ListBox::receiveMouseEvent(const MouseEvent& event) {
@@ -135,9 +141,11 @@ void ListBox::receiveMouseEvent(const MouseEvent& event) {
 			this->pressedIndex = -1;
 			if (event.position.y < scrollEndHeight) {
 				// Upper scroll button
+				this->pressScrollUp = true;
 				this->firstVisible--;
 			} else if (event.position.y > this->location.height() - scrollEndHeight) {
 				// Lower scroll button
+				this->pressScrollDown = true;
 				this->firstVisible++;
 			} else {
 				// Start scrolling with the mouse using the relative height on the scroll bar.
@@ -162,6 +170,8 @@ void ListBox::receiveMouseEvent(const MouseEvent& event) {
 			this->limitScrolling(true);
 			this->callback_pressedEvent();
 		}
+		this->pressScrollUp = false;
+		this->pressScrollDown = false;
 		this->pressedIndex = -1;
 		this->holdingScrollBar = false;
 		this->hasImages = false; // Force redraw
@@ -185,14 +195,25 @@ void ListBox::receiveMouseEvent(const MouseEvent& event) {
 	}
 }
 
+void ListBox::loadTheme(VisualTheme theme) {
+	this->scalableImage_listBox = theme_getScalableImage(theme, U"ListBox");
+	this->scalableImage_scrollButton = theme_getScalableImage(theme, U"ScrollButton");
+	// Generate fixed size buttons for the scroll buttons (because their size is currently given by constants)
+	ColorRgbI32 color = this->color.value;
+	this->scalableImage_scrollButton(scrollWidth, scrollEndHeight, false, color.red, color.green, color.blue)(this->scrollButtonTop_normal);
+	this->scalableImage_scrollButton(scrollWidth, scrollEndHeight, true, color.red, color.green, color.blue)(this->scrollButtonTop_pressed);
+	this->scalableImage_scrollButton(scrollWidth, scrollEndHeight, false, color.red, color.green, color.blue)(this->scrollButtonBottom_normal);
+	this->scalableImage_scrollButton(scrollWidth, scrollEndHeight, true, color.red, color.green, color.blue)(this->scrollButtonBottom_pressed);
+}
+
 void ListBox::changedTheme(VisualTheme newTheme) {
-	this->listBox = theme_getScalableImage(newTheme, U"Panel");
+	this->loadTheme(newTheme);
 	this->hasImages = false; // Force redraw
 }
 
 void ListBox::completeAssets() {
-	if (this->listBox.methodIndex == -1) {
-		this->listBox = theme_getScalableImage(theme_getDefault(), U"Panel");
+	if (this->scalableImage_listBox.methodIndex == -1) {
+		this->loadTheme(theme_getDefault());
 	}
 	if (this->font.get() == nullptr) {
 		this->font = font_getDefault();

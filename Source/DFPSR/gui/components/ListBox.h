@@ -40,6 +40,8 @@ public:
 	Persistent* findAttribute(const ReadableString &name) override;
 private:
 	// Temporary
+	bool pressScrollUp = false;
+	bool pressScrollDown = false;
 	bool holdingScrollBar = false;
 	int64_t knobHoldOffset = 0; // The number of pixels down from the center that the knob grabbed last time.
 	bool inside = false;
@@ -47,12 +49,14 @@ private:
 	int64_t pressedIndex = -1; // Index of pressed item or -1 for none.
 	int64_t firstVisible = 0; // Index of first visible element for scrolling. May never go below zero.
 	// Given from the style
-	MediaMethod listBox;
+	MediaMethod scalableImage_listBox;
+	MediaMethod scalableImage_scrollButton;
 	std::shared_ptr<RasterFont> font;
 	void completeAssets();
 	void generateGraphics();
 	// Generated
 	bool hasImages = false;
+	OrderedImageRgbaU8 scrollButtonTop_normal, scrollButtonTop_pressed, scrollButtonBottom_normal, scrollButtonBottom_pressed;
 	OrderedImageRgbaU8 image;
 	// Helper methods
 	// Returns the selected index referring to an existing element or -1 if none is selected
@@ -64,6 +68,7 @@ private:
 	IRect getScrollBarLocation_excludingButtons(); // Return the location of the scroll-bar without buttons
 	IRect getKnobLocation(); // Return the location of the scroll-bar's knob
 	void pressScrollBar(int64_t localY); // Press the scroll-bar at localY in pixels
+	void loadTheme(VisualTheme theme);
 public:
 	ListBox();
 public:

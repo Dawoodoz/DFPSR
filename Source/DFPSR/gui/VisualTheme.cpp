@@ -28,7 +28,6 @@
 
 namespace dsr {
 
-// TODO: A sub-routine call drawing a rounded rectangle with a solid background
 // The default theme
 //   Copy and modify and compile with theme_create to get a custom theme
 static const ReadableString defaultThemeCode =
@@ -100,7 +99,46 @@ BEGIN: Button
 	PACK_RGBA: colorImage, redImage, greenImage, blueImage, visImage
 	END:
 
+BEGIN: ScrollButton
+	INPUT: FixedPoint, width
+	INPUT: FixedPoint, height
+	INPUT: FixedPoint, pressed
+	INPUT: FixedPoint, red
+	INPUT: FixedPoint, green
+	INPUT: FixedPoint, blue
+	OUTPUT: ImageRgbaU8, colorImage
+	# Scale by 2 / 255 so that 127.5 represents full intensity in patternImage
+	MUL: normRed<FixedPoint>, red, 0.007843138
+	MUL: normGreen<FixedPoint>, green, 0.007843138
+	MUL: normBlue<FixedPoint>, blue, 0.007843138
+	CREATE: patternImage<ImageU8>, width, height
+	MUL: pressDarknessHigh<FixedPoint>, pressed, 80
+	MUL: pressDarknessLow<FixedPoint>, pressed, 10
+	SUB: highLuma<FixedPoint>, 150, pressDarknessHigh
+	SUB: lowLuma<FixedPoint>, 100, pressDarknessLow
+	FADE_LINEAR: patternImage,  0, 0, highLuma,  0, height, lowLuma
+	CALL: generate_rounded_rectangle, lumaImage<ImageU8>, width, height, 3, 1
+	MUL: lumaImage, lumaImage, patternImage, 0.003921569
+	MUL: redImage<ImageU8>, lumaImage, normRed
+	MUL: greenImage<ImageU8>, lumaImage, normGreen
+	MUL: blueImage<ImageU8>, lumaImage, normBlue
+	PACK_RGBA: colorImage, redImage, greenImage, blueImage, 255
+	END:
+
 BEGIN: Panel
+	INPUT: FixedPoint, width
+	INPUT: FixedPoint, height
+	INPUT: FixedPoint, red
+	INPUT: FixedPoint, green
+	INPUT: FixedPoint, blue
+	OUTPUT: ImageRgbaU8, colorImage
+	CREATE: colorImage, width, height
+	SUB: w2<FixedPoint>, width, 2
+	SUB: h2<FixedPoint>, height, 2
+	RECTANGLE: colorImage, 1, 1, w2, h2, red, green, blue, 255
+	END:
+
+BEGIN: ListBox
 	INPUT: FixedPoint, width
 	INPUT: FixedPoint, height
 	INPUT: FixedPoint, red
