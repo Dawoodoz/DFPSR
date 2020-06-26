@@ -22,6 +22,7 @@
 //    distribution.
 
 #include "Buffer.h"
+#include <cstdlib>
 #include "../math/scalar.h"
 
 using namespace dsr;
