@@ -41,7 +41,7 @@ namespace dsr {
 //   Minimalism reduces the cost of porting core functionality to new operating systems.
 //     All other features should be optional.
 class BackendWindow {
-protected:
+public:
 	String title;
 	// Events
 	List<InputEvent*> eventQueue;
@@ -52,7 +52,7 @@ private:
 	int requestingResize = false;
 	int requestedWidth = 0;
 	int requestedHeight = 0;
-protected:
+public:
 	// Request to resize the window.
 	//   When the implementation receives a resize, call receiveWindowResize with the new dimensions.
 	//     If requestingResize is already true, it will just overwrite the old request.
@@ -69,7 +69,7 @@ public:
 	virtual bool isFullScreen() = 0;
 	virtual int getWidth() const = 0;
 	virtual int getHeight() const = 0;
-protected:
+public:
 	// Back-end interface
 	// Responsible for adding events to eventQueue
 	virtual void prefetchEvents() = 0;
