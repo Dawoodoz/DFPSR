@@ -16,7 +16,7 @@ Real-time dynamic light with depth-based casted shadows and normal mapping at 29
 * **Create your legacy.** Make software that future generations might be able to port, compile and run natively without the need for emulators.
 
 ## More than a graphics API, less than a graphics engine
-It is a rendering API, image processing framework and graphical user interface system in a static C++14 library meant to minimize the use of dynamic dependencies in long-term projects while still offering the power to make your own abstractions on top of low-level rendering operations. The core library itself is mostly pure math and can be compiled on most systems using GNU's C++14, but the window backends that takes user input and displays the final image buffer are implemented outside of the library for each platform. This places most platform dependent code into a single module that can be ported relatively easy if you have worked with the system's native API before. A window backend for X11 is currently supporting Linux, which is recommended for trying the SDK and learning. On embedded systems, you can output images as ascii art via SSH to debug robotic vision.
+It is a rendering API, image processing framework and graphical user interface system in a static C++14 library meant to minimize the use of dynamic dependencies in long-term projects while still offering the power to make your own abstractions on top of low-level rendering operations. The core library itself is mostly pure math and can be compiled on most systems using GNU's C++14, but the window backends that takes user input and displays the final image buffer are implemented outside of the library for each platform. This places most platform dependent code into a single module that can be ported relatively easy if you have worked with the system's native API before. A window backend for X11 is currently supporting Linux, which is recommended for trying the SDK and learning. A partial port without full-screen exists for MS-Windows. On embedded systems, you can output images as ascii art via SSH to debug robotic vision.
 
 ## Still a public beta
 Don't use it for safety-critical projects unless you verify correctness yourself and take all responsibility. Either way, it's probably a lot safer than using OpenGL, OpenCL or Direct3D simply by being a single implementation where bugs will be mostly the same on each platform. Stack memory for VLA may vary. Test everything with billions of cases.
@@ -27,7 +27,7 @@ Don't use it for safety-critical projects unless you verify correctness yourself
 * Tested with Ubuntu mate on Raspberry Pi 3B and Pine64. (Ubuntu Mate didn't work on Raspberry Pi Zero)
 * Tested with Raspbian Buster on Raspberry Pi Zero W (X11 doesn't work on older versions of Raspbian)
 * Linux Mint need the compiler and X11 headers, so run "sudo apt install g++" and "sudo apt install libx11-dev" before compiling.
-* There's a half finished Win32 port that's not published because it wasn't fast enough when emulated on 64-bit Windows. Might have to write for 64-bit only on Windows to prevent poor performance.
+* Runs slowly on Windows 7 without full-screen.
 
 ## Supported CPU hardware
 * Intel/AMD using SSE2 intrinsics.
