@@ -380,10 +380,6 @@ String dsr::string_unmangleQuote(const ReadableString& mangledText) {
 					 throwError(U"Unmangled line feed detected in string_unmangleQuote!\n", mangledText, "\n");
 				} else if (c == U'\r') { // Carriage return
 					 throwError(U"Unmangled carriage return detected in string_unmangleQuote!\n", mangledText, "\n");
-				} else if (c == U'\t') { // Horizontal tab
-					 throwError(U"Unmangled horizontal tab detected in string_unmangleQuote!\n", mangledText, "\n");
-				} else if (c == U'\v') { // Vertical tab
-					 throwError(U"Unmangled vertical tab detected in string_unmangleQuote!\n", mangledText, "\n");
 				} else if (c == U'\0') { // Null terminator
 					 throwError(U"Unmangled null terminator detected in string_unmangleQuote!\n", mangledText, "\n");
 				} else {
