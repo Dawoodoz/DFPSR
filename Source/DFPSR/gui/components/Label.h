@@ -1,0 +1,61 @@
+// zlib open source license
+//
+// Copyright (c) 2018 to 2019 David Forsgren Piuva
+// 
+// This software is provided 'as-is', without any express or implied
+// warranty. In no event will the authors be held liable for any damages
+// arising from the use of this software.
+// 
+// Permission is granted to anyone to use this software for any purpose,
+// including commercial applications, and to alter it and redistribute it
+// freely, subject to the following restrictions:
+// 
+//    1. The origin of this software must not be misrepresented; you must not
+//    claim that you wrote the original software. If you use this software
+//    in a product, an acknowledgment in the product documentation would be
+//    appreciated but is not required.
+// 
+//    2. Altered source versions must be plainly marked as such, and must not be
+//    misrepresented as being the original software.
+// 
+//    3. This notice may not be removed or altered from any source
+//    distribution.
+
+#ifndef DFPSR_GUI_COMPONENT_LABEL
+#define DFPSR_GUI_COMPONENT_LABEL
+
+#include "../VisualComponent.h"
+#include "../Font.h"
+
+namespace dsr {
+
+class Label : public VisualComponent {
+PERSISTENT_DECLARATION(Label)
+public:
+	// Attributes
+	PersistentColor color;
+	// TODO: Why is "PersistentInteger opacity(255);" not recognizing the constructor?
+	PersistentInteger opacity = PersistentInteger(255); // 0 is fully invisible, 255 is fully opaque
+	PersistentString text;
+	// Attribute access
+	void declareAttributes(StructureDefinition &target) const override;
+	Persistent* findAttribute(const ReadableString &name) override;
+private:
+	// Temporary
+	bool pressed = false;
+	bool inside = false;
+	// Given from the style
+	std::shared_ptr<RasterFont> font;
+	void completeAssets();
+public:
+	Label();
+public:
+	bool isContainer() const;
+	void drawSelf(ImageRgbaU8& targetImage, const IRect &relativeLocation) override;
+	bool pointIsInside(const IVector2D& pixelPosition) override;
+};
+
+}
+
+#endif
+

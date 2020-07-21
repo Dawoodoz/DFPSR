@@ -160,13 +160,16 @@ void RasterFont::printMultiLine(ImageRgbaU8& target, const ReadableString& conte
 	int rowStartIndex = 0; // The start of the current row or the unprinted remainder that didn't fit inside the bound.
 	int lastWordBreak = 0; // The last scanned location where the current row could've been broken off.
 	bool wordStarted = false; // True iff the physical line after word wrapping has scanned the beginning of a word.
-	for (int i = 0; i <= content.length(); i++) {
-		// Fake an additional line-break at the end
-		DsrChar code = (i >= content.length()) ? 10 : content[i];
+	if (bound.height() < this->size) {
+		// Not enough height to print anything
+		return;
+	}
+	for (int i = 0; i < content.length(); i++) {
+		DsrChar code = content[i];
 		if (code == 10) {
 			// Print the completed line
 			this->printLine(target, content.exclusiveRange(rowStartIndex, i), IVector2D(bound.left(), y), color);
-			y += this->size; if (y >= bound.bottom()) { return; }
+			y += this->size; if (y + this->size > bound.bottom()) { return; }
 			lineWidth = 0;
 			rowStartIndex = i + 1;
 			lastWordBreak = rowStartIndex;
@@ -187,12 +190,12 @@ void RasterFont::printMultiLine(ImageRgbaU8& target, const ReadableString& conte
 						if (i > rowStartIndex) {
 							splitIndex = i - 1;
 						} else {
-							// Not enough space to print a single character, skipping content to avoid printing outside.
+							// Not enough width to print a single character, skipping content to avoid printing outside.
 							splitIndex = i;
 						}
 					}
 					this->printLine(target, content.exclusiveRange(rowStartIndex, splitIndex), IVector2D(bound.left(), y), color);
-					y += this->size; if (y >= bound.bottom()) { return; }
+					y += this->size; if (y + this->size > bound.bottom()) { return; }
 					lineWidth = 0;
 					// Continue after splitIndex
 					i = splitIndex + 1;
@@ -208,6 +211,7 @@ void RasterFont::printMultiLine(ImageRgbaU8& target, const ReadableString& conte
 			}
 		}
 	}
+	this->printLine(target, content.from(rowStartIndex), IVector2D(bound.left(), y), color);
 }
 
 int32_t RasterFont::getLineWidth(const ReadableString& content) const {

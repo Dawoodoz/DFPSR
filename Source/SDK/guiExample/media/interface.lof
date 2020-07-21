@@ -37,5 +37,15 @@ Begin : Panel
 			List = "Testing", "1", "2", "3", "One Two Three"
 			SelectedIndex = 2
 		End
+		Begin : Label
+			Name = "myLabel"
+			Text = "Testing multi-line label.\nABCDEFGHIJKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyz 0123456789\n	indented\n  aligned\n\nEnd of test!"
+			Color = 0,50,0
+			Opacity = 128
+			left = 10%+120
+			right = 100%-20
+			top = 20
+			bottom = 100%-20
+		End
 	End
 End

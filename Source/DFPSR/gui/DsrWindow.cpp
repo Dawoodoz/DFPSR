@@ -23,9 +23,13 @@
 //    distribution.
 
 #include "DsrWindow.h"
+
 #include "components/Panel.h"
 #include "components/Button.h"
 #include "components/ListBox.h"
+#include "components/Label.h"
+// <<<< Include new components here
+
 #include "../math/scalar.h"
 #include "../math/IVector.h"
 #include "../api/imageAPI.h"
@@ -40,6 +44,9 @@ static void initializeGui() {
 		REGISTER_PERSISTENT_CLASS(Panel)
 		REGISTER_PERSISTENT_CLASS(Button)
 		REGISTER_PERSISTENT_CLASS(ListBox)
+		REGISTER_PERSISTENT_CLASS(Label)
+		// <<<< Register new components here
+
 		initialized = true;
 	}
 }
