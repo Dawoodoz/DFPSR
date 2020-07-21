@@ -47,7 +47,7 @@ Persistent* Button::findAttribute(const ReadableString &name) {
 Button::Button() {}
 
 bool Button::isContainer() const {
-	return true;
+	return false;
 }
 
 static OrderedImageRgbaU8 generateButtonImage(MediaMethod imageGenerator, int pressed, int width, int height, ColorRgbI32 backColor, String text, const std::shared_ptr<RasterFont>& font) {
