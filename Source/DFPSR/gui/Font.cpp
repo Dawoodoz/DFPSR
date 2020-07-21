@@ -104,11 +104,15 @@ void RasterFont::registerLatinOne16x16(const ImageU8& atlas) {
 }
 
 int32_t RasterFont::getCharacterWidth(DsrChar unicodeValue) const {
-	int32_t index = this->indices[unicodeValue];
-	if (index > -1) {
-		return this->characters[index].width + this->spacing;
+	if (unicodeValue == 0 || unicodeValue == 10 || unicodeValue == 13) {
+		return 0;
 	} else {
-		return spaceWidth;
+		int32_t index = this->indices[unicodeValue];
+		if (index > -1) {
+			return this->characters[index].width + this->spacing;
+		} else {
+			return spaceWidth;
+		}
 	}
 }
 
@@ -127,16 +131,81 @@ int32_t RasterFont::printCharacter(ImageRgbaU8& target, DsrChar unicodeValue, co
 	}
 }
 
+// Lets the print coordinate x jump to the next tab stop starting from the left origin
+static void tabJump(int &x, int leftOrigin, int tabWidth) {
+	// Get the pixel location relative to the origin
+	int localX = x - leftOrigin;
+	// Get the remaining pixels until the next tab stop
+	// If modulo returns zero at a tab stop, it will jump to the next with a full tab width
+	int remainder = tabWidth - (localX % tabWidth);
+	x += remainder;
+}
+
 void RasterFont::printLine(ImageRgbaU8& target, const ReadableString& content, const IVector2D& location, const ColorRgbaI32& color) const {
 	IVector2D currentLocation = location;
-	for (int i = 0; i < (int)(content.length()); i++) {
-		DsrChar code = (DsrChar)(content[i]);
+	for (int i = 0; i < content.length(); i++) {
+		DsrChar code = content[i];
 		if (code == 9) { // Tab
-			// TODO: Jump to the next tab-stop in pixels relative to a tab line given from the caller
-			currentLocation.x += this->tabWidth;
+			tabJump(currentLocation.x, location.x, this->tabWidth);
 		} else {
 			// TODO: Would right to left printing of Arabic text be too advanced to have in the core framework?
 			currentLocation.x += this->printCharacter(target, code, currentLocation, color);
+		}
+	}
+}
+
+void RasterFont::printMultiLine(ImageRgbaU8& target, const ReadableString& content, const IRect& bound, const ColorRgbaI32& color) const {
+	int y = bound.top(); // The upper vertical location of the currently printed row in pixels.
+	int lineWidth = 0; // The size of the currently scanned row, to make sure that it can be printed.
+	int rowStartIndex = 0; // The start of the current row or the unprinted remainder that didn't fit inside the bound.
+	int lastWordBreak = 0; // The last scanned location where the current row could've been broken off.
+	bool wordStarted = false; // True iff the physical line after word wrapping has scanned the beginning of a word.
+	for (int i = 0; i <= content.length(); i++) {
+		// Fake an additional line-break at the end
+		DsrChar code = (i >= content.length()) ? 10 : content[i];
+		if (code == 10) {
+			// Print the completed line
+			this->printLine(target, content.exclusiveRange(rowStartIndex, i), IVector2D(bound.left(), y), color);
+			y += this->size; if (y >= bound.bottom()) { return; }
+			lineWidth = 0;
+			rowStartIndex = i + 1;
+			lastWordBreak = rowStartIndex;
+			wordStarted = false;
+		} else {
+			int newCharWidth = this->getCharacterWidth(code);
+			if (code == ' ' || code == 9) {
+				if (wordStarted) {
+					lastWordBreak = i;
+					wordStarted = false;
+				}
+			} else {
+				wordStarted = true;
+				if (lineWidth + newCharWidth > bound.width()) {
+					int splitIndex = lastWordBreak;
+					if (lastWordBreak == rowStartIndex) {
+						// The word is too big to be printed as a whole
+						if (i > rowStartIndex) {
+							splitIndex = i - 1;
+						} else {
+							// Not enough space to print a single character, skipping content to avoid printing outside.
+							splitIndex = i;
+						}
+					}
+					this->printLine(target, content.exclusiveRange(rowStartIndex, splitIndex), IVector2D(bound.left(), y), color);
+					y += this->size; if (y >= bound.bottom()) { return; }
+					lineWidth = 0;
+					// Continue after splitIndex
+					i = splitIndex + 1;
+					rowStartIndex = i;
+					lastWordBreak = i;
+					wordStarted = false;
+				}
+			}
+			if (code == 9) { // Tab
+				tabJump(lineWidth, bound.left(), this->tabWidth);
+			} else {
+				lineWidth += newCharWidth;
+			}
 		}
 	}
 }
@@ -146,8 +215,7 @@ int32_t RasterFont::getLineWidth(const ReadableString& content) const {
 	for (int i = 0; i < content.length(); i++) {
 		DsrChar code = content[i];
 		if (code == 9) { // Tab
-			// TODO: Jump to the next tab-stop in pixels relative to a tab line given from the caller
-			result += this->tabWidth;
+			tabJump(result, 0, this->tabWidth);
 		} else {
 			result += this->getCharacterWidth(code);
 		}

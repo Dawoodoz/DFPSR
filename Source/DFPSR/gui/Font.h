@@ -81,11 +81,16 @@ public:
 	int32_t getLineWidth(const ReadableString& content) const;
 	// Prints a character and returns the horizontal stride in pixels
 	int32_t printCharacter(ImageRgbaU8& target, DsrChar unicodeValue, const IVector2D& location, const ColorRgbaI32& color) const;
+	// Prints a whole line of text from location
 	void printLine(ImageRgbaU8& target, const ReadableString& content, const IVector2D& location, const ColorRgbaI32& color) const;
+	// Prints multiple lines of text within a bound
+	void printMultiLine(ImageRgbaU8& target, const ReadableString& content, const IRect& bound, const ColorRgbaI32& color) const;
 };
 
 // Font API
 std::shared_ptr<RasterFont> font_getDefault();
+
+// TODO: Duplicate functionality with a procedural API for consistent style
 
 }
 
