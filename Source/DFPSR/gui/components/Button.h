@@ -25,7 +25,7 @@
 #define DFPSR_GUI_COMPONENT_BUTTON
 
 #include "../VisualComponent.h"
-#include "../Font.h"
+#include "../../api/fontAPI.h"
 
 namespace dsr {
 
@@ -43,7 +43,7 @@ private:
 	bool inside = false;
 	// Given from the style
 	MediaMethod button;
-	std::shared_ptr<RasterFont> font;
+	RasterFont font;
 	void completeAssets();
 	void generateGraphics();
 	// Generated

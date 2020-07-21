@@ -84,6 +84,10 @@ using Component = std::shared_ptr<VisualComponent>;
 class VisualThemeImpl;
 using VisualTheme = std::shared_ptr<VisualThemeImpl>;
 
+// A handle to a raster font
+class RasterFontImpl;
+using RasterFont = std::shared_ptr<RasterFontImpl>;
+
 // A handle to a media machine.
 //   Media machines can be used to generate, filter and analyze images.
 //   Everything running in a media machine is guaranteed to be 100% deterministic to the last bit.

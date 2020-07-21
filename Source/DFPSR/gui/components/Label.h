@@ -25,7 +25,7 @@
 #define DFPSR_GUI_COMPONENT_LABEL
 
 #include "../VisualComponent.h"
-#include "../Font.h"
+#include "../../api/fontAPI.h"
 
 namespace dsr {
 
@@ -45,7 +45,7 @@ private:
 	bool pressed = false;
 	bool inside = false;
 	// Given from the style
-	std::shared_ptr<RasterFont> font;
+	RasterFont font;
 	void completeAssets();
 public:
 	Label();

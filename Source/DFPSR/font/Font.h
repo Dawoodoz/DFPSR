@@ -47,7 +47,7 @@ public:
 	~RasterCharacter() {}
 };
 
-class RasterFont {
+class RasterFontImpl {
 public:
 	// Font identity
 	const String name;
@@ -65,19 +65,19 @@ public:
 	int32_t indices[65536];
 public:
 	// Constructor
-	RasterFont(const String& name, int32_t size, int32_t spacing, int32_t spaceWidth);
-	static std::shared_ptr<RasterFont> createLatinOne(const String& name, const ImageU8& atlas);
+	RasterFontImpl(const String& name, int32_t size, int32_t spacing, int32_t spaceWidth);
+	static std::shared_ptr<RasterFontImpl> createLatinOne(const String& name, const ImageU8& atlas);
 	// Destructor
-	~RasterFont();
+	~RasterFontImpl();
 public:
 	// Allready registered unicode characters will be ignored if reused, so load overlapping sets in order of priority
 	void registerCharacter(const ImageU8& image, DsrChar unicodeValue, int32_t offsetY);
 	// Call after construction to register up to 256 characters in a 16x16 grid from the atlas
 	void registerLatinOne16x16(const ImageU8& atlas);
-	// Gets the width of a character including spacing
+	// Returns the width of a character including spacing in pixels
 	int32_t getCharacterWidth(DsrChar unicodeValue) const;
-	// Gets the width of a whole line
-	// Precondition: No linebreaks in content, just a single line
+	// Returns the total length of characters in pixels as if printing content
+	// If multiple lines exists it will simply keep adding to the total by ignoring line-breaks
 	int32_t getLineWidth(const ReadableString& content) const;
 	// Prints a character and returns the horizontal stride in pixels
 	int32_t printCharacter(ImageRgbaU8& target, DsrChar unicodeValue, const IVector2D& location, const ColorRgbaI32& color) const;
@@ -87,10 +87,7 @@ public:
 	void printMultiLine(ImageRgbaU8& target, const ReadableString& content, const IRect& bound, const ColorRgbaI32& color) const;
 };
 
-// Font API
-std::shared_ptr<RasterFont> font_getDefault();
-
-// TODO: Duplicate functionality with a procedural API for consistent style
+// See DFPSR/api/fontAPI.h for the procedural interface
 
 }
 

@@ -50,17 +50,17 @@ bool Button::isContainer() const {
 	return false;
 }
 
-static OrderedImageRgbaU8 generateButtonImage(MediaMethod imageGenerator, int pressed, int width, int height, ColorRgbI32 backColor, String text, const std::shared_ptr<RasterFont>& font) {
+static OrderedImageRgbaU8 generateButtonImage(MediaMethod imageGenerator, int pressed, int width, int height, ColorRgbI32 backColor, String text, RasterFont font) {
 	// Create a scaled image
 	OrderedImageRgbaU8 result;
  	imageGenerator(width, height, pressed, backColor.red, backColor.green, backColor.blue)(result);
 	if (text.length() > 0) {
-		int left = (image_getWidth(result) - font->getLineWidth(text)) / 2;
-		int top = (image_getHeight(result) - font->size) / 2;
+		int left = (image_getWidth(result) - font_getLineWidth(font, text)) / 2;
+		int top = (image_getHeight(result) - font_getSize(font)) / 2;
 		if (pressed) {
 			top += 1;
 		}
-		font->printLine(result, text, IVector2D(left, top), ColorRgbaI32(0, 0, 0, 255));
+		font_printLine(result, font, text, IVector2D(left, top), ColorRgbaI32(0, 0, 0, 255));
 	}
 	return result;
 }

@@ -407,9 +407,9 @@ void sandbox_main() {
 			debugText("Draw GUI: ", (time_getSeconds() - startTime) * 1000.0, " ms\n");
 
 			IVector2D writer = IVector2D(10, 55);
-			font_getDefault()->printLine(colorBuffer, string_combine(U"FPS: ", profileFrameRate), writer, ColorRgbaI32(255, 255, 255, 255)); writer.y += 20;
-			font_getDefault()->printLine(colorBuffer, string_combine(U"avg ms: ", 1000.0f / profileFrameRate), writer, ColorRgbaI32(255, 255, 255, 255)); writer.y += 20;
-			font_getDefault()->printLine(colorBuffer, string_combine(U"max ms: ", 1000.0f * lastMaxFrameTime), writer, ColorRgbaI32(255, 255, 255, 255)); writer.y += 20;
+			font_printLine(colorBuffer, font_getDefault(), string_combine(U"FPS: ", profileFrameRate), writer, ColorRgbaI32(255, 255, 255, 255)); writer.y += 20;
+			font_printLine(colorBuffer, font_getDefault(), string_combine(U"avg ms: ", 1000.0f / profileFrameRate), writer, ColorRgbaI32(255, 255, 255, 255)); writer.y += 20;
+			font_printLine(colorBuffer, font_getDefault(), string_combine(U"max ms: ", 1000.0f * lastMaxFrameTime), writer, ColorRgbaI32(255, 255, 255, 255)); writer.y += 20;
 		}
 
 		startTime = time_getSeconds();

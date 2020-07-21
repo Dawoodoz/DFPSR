@@ -66,9 +66,9 @@ void ListBox::generateGraphics() {
 	if (width < 1) { width = 1; }
 	if (height < 1) { height = 1; }
 	if (!this->hasImages) {
-		completeAssets();
+		this->completeAssets();
 	 	this->scalableImage_listBox(width, height, this->color.value.red, this->color.value.green, this->color.value.blue)(this->image);
-		int verticalStep = this->font->size;
+		int verticalStep = font_getSize(this->font);
 		int left = textBorderLeft;
 		int top = textBorderTop;
 		for (int64_t i = this->firstVisible; i < this->list.value.length() && top < height; i++) {
@@ -83,7 +83,7 @@ void ListBox::generateGraphics() {
 			if (i == this->selectedIndex.value) {
 				draw_rectangle(this->image, IRect(left, top, width - (textBorderLeft * 2), verticalStep), ColorRgbaI32(0, 0, 0, 255));
 			}
-			this->font->printLine(this->image, this->list.value[i], IVector2D(left, top), textColor);
+			font_printLine(this->image, this->font, this->list.value[i], IVector2D(left, top), textColor);
 			top += verticalStep;
 		}
 		if (this->hasVerticalScroll) {
@@ -132,7 +132,7 @@ void ListBox::receiveMouseEvent(const MouseEvent& event) {
 	this->inside = this->pointIsInside(event.position);
 	bool onScrollBar = this->hasVerticalScroll && event.position.x >= this->location.width() - scrollWidth;
 	int64_t maxIndex = this->list.value.length() - 1;
-	int64_t hoverIndex = this->firstVisible + ((event.position.y - this->location.top() - textBorderTop) / this->font->size);
+	int64_t hoverIndex = this->firstVisible + ((event.position.y - this->location.top() - textBorderTop) / font_getSize(this->font));
 	if (hoverIndex > maxIndex) {
 		hoverIndex = -1;
 	}
@@ -215,8 +215,11 @@ void ListBox::completeAssets() {
 	if (this->scalableImage_listBox.methodIndex == -1) {
 		this->loadTheme(theme_getDefault());
 	}
-	if (this->font.get() == nullptr) {
+	if (!font_exists(this->font)) {
 		this->font = font_getDefault();
+	}
+	if (!font_exists(this->font)) {
+		throwError("Failed to load the default font for a ListBox!\n");
 	}
 }
 
@@ -260,7 +263,8 @@ void ListBox::limitSelection() {
 }
 
 int64_t ListBox::getVisibleScrollRange() {
-	int64_t verticalStep = this->font->size;
+	this->completeAssets();
+	int64_t verticalStep = font_getSize(this->font);
 	return (this->location.height() - textBorderTop * 2) / verticalStep;
 }
 
@@ -294,9 +298,6 @@ IRect ListBox::getKnobLocation() {
 void ListBox::limitScrolling(bool keepSelectedVisible) {
 	// Try to load the font before estimating how big the view is
 	this->completeAssets();
-	if (this->font.get() == nullptr) {
-		throwError("Cannot get the font size because ListBox failed to get a font!\n");
-	}
 	int64_t itemCount = this->list.value.length();
 	int64_t visibleRange = this->getVisibleScrollRange();
 	int64_t maxScroll;

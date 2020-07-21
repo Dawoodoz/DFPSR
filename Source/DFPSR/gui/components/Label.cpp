@@ -59,7 +59,7 @@ void Label::drawSelf(ImageRgbaU8& targetImage, const IRect &relativeLocation) {
 		// Uncomment to draw a white background for debugging
 		//draw_rectangle(targetImage, relativeLocation, ColorRgbaI32(255, 255, 255, 255));
 		// Print the text directly each time without buffering, because the biggest cost is to fill pixels
-		this->font->printMultiLine(targetImage, this->text.value, relativeLocation, ColorRgbaI32(this->color.value, this->opacity.value));
+		font_printMultiLine(targetImage, this->font, this->text.value, relativeLocation, ColorRgbaI32(this->color.value, this->opacity.value));
 	}
 }
 

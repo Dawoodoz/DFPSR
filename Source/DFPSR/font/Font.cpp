@@ -23,39 +23,31 @@
 
 #include <stdint.h>
 #include "Font.h"
-#include "defaultFont.h"
 #include "../api/imageAPI.h"
 #include "../api/drawAPI.h"
 
 using namespace dsr;
 
-std::shared_ptr<RasterFont> defaultFont = RasterFont::createLatinOne(U"UbuntuMono", image_fromAscii(defaultFontAscii));;
-
-std::shared_ptr<RasterFont> dsr::font_getDefault() {
-	return defaultFont;
-}
-
-
 RasterCharacter::RasterCharacter(const ImageU8& image, DsrChar unicodeValue, int32_t offsetY)
 : image(image), unicodeValue(unicodeValue), width(image_getWidth(image)), offsetY(offsetY) {}
 
-RasterFont::RasterFont(const String& name, int32_t size, int32_t spacing, int32_t spaceWidth)
+RasterFontImpl::RasterFontImpl(const String& name, int32_t size, int32_t spacing, int32_t spaceWidth)
  : name(name), size(size), spacing(spacing), spaceWidth(spaceWidth), tabWidth(spaceWidth * 4) {
 	for (int i = 0; i < 65536; i++) {
 		this->indices[i] = -1;
 	}
 }
 
-RasterFont::~RasterFont() {}
+RasterFontImpl::~RasterFontImpl() {}
 
-std::shared_ptr<RasterFont> RasterFont::createLatinOne(const String& name, const ImageU8& atlas) {
+std::shared_ptr<RasterFontImpl> RasterFontImpl::createLatinOne(const String& name, const ImageU8& atlas) {
 	int32_t size = image_getHeight(atlas) / 16;
-	std::shared_ptr<RasterFont> result = std::make_shared<RasterFont>(name, size, size / 16, size / 2);
+	std::shared_ptr<RasterFontImpl> result = std::make_shared<RasterFontImpl>(name, size, size / 16, size / 2);
 	result->registerLatinOne16x16(atlas);
 	return result;
 }
 
-void RasterFont::registerCharacter(const ImageU8& image, DsrChar unicodeValue, int32_t offsetY) {
+void RasterFontImpl::registerCharacter(const ImageU8& image, DsrChar unicodeValue, int32_t offsetY) {
 	if (this->indices[unicodeValue] == -1) {
 		// Add the unicode character
 		this->characters.pushConstruct(image, unicodeValue, offsetY);
@@ -87,7 +79,7 @@ static IRect getCharacterBound(const ImageU8& image, const IRect& searchRegion) 
 }
 
 // Call after construction to register up to 256 characters in a 16x16 grid from the atlas
-void RasterFont::registerLatinOne16x16(const ImageU8& atlas) {
+void RasterFontImpl::registerLatinOne16x16(const ImageU8& atlas) {
 	int32_t charWidth = image_getWidth(atlas) / 16;
 	int32_t charHeight = image_getWidth(atlas) / 16;
 	for (int y = 0; y < 16; y++) {
@@ -103,7 +95,7 @@ void RasterFont::registerLatinOne16x16(const ImageU8& atlas) {
 	}
 }
 
-int32_t RasterFont::getCharacterWidth(DsrChar unicodeValue) const {
+int32_t RasterFontImpl::getCharacterWidth(DsrChar unicodeValue) const {
 	if (unicodeValue == 0 || unicodeValue == 10 || unicodeValue == 13) {
 		return 0;
 	} else {
@@ -117,7 +109,7 @@ int32_t RasterFont::getCharacterWidth(DsrChar unicodeValue) const {
 }
 
 // Prints a character and returns the horizontal stride in pixels
-int32_t RasterFont::printCharacter(ImageRgbaU8& target, DsrChar unicodeValue, const IVector2D& location, const ColorRgbaI32& color) const {
+int32_t RasterFontImpl::printCharacter(ImageRgbaU8& target, DsrChar unicodeValue, const IVector2D& location, const ColorRgbaI32& color) const {
 	if (unicodeValue < 65536) {
 		int32_t index = this->indices[unicodeValue];
 		if (index > -1) {
@@ -141,7 +133,7 @@ static void tabJump(int &x, int leftOrigin, int tabWidth) {
 	x += remainder;
 }
 
-void RasterFont::printLine(ImageRgbaU8& target, const ReadableString& content, const IVector2D& location, const ColorRgbaI32& color) const {
+void RasterFontImpl::printLine(ImageRgbaU8& target, const ReadableString& content, const IVector2D& location, const ColorRgbaI32& color) const {
 	IVector2D currentLocation = location;
 	for (int i = 0; i < content.length(); i++) {
 		DsrChar code = content[i];
@@ -154,7 +146,7 @@ void RasterFont::printLine(ImageRgbaU8& target, const ReadableString& content, c
 	}
 }
 
-void RasterFont::printMultiLine(ImageRgbaU8& target, const ReadableString& content, const IRect& bound, const ColorRgbaI32& color) const {
+void RasterFontImpl::printMultiLine(ImageRgbaU8& target, const ReadableString& content, const IRect& bound, const ColorRgbaI32& color) const {
 	int y = bound.top(); // The upper vertical location of the currently printed row in pixels.
 	int lineWidth = 0; // The size of the currently scanned row, to make sure that it can be printed.
 	int rowStartIndex = 0; // The start of the current row or the unprinted remainder that didn't fit inside the bound.
@@ -214,7 +206,7 @@ void RasterFont::printMultiLine(ImageRgbaU8& target, const ReadableString& conte
 	this->printLine(target, content.from(rowStartIndex), IVector2D(bound.left(), y), color);
 }
 
-int32_t RasterFont::getLineWidth(const ReadableString& content) const {
+int32_t RasterFontImpl::getLineWidth(const ReadableString& content) const {
 	int32_t result = 0;
 	for (int i = 0; i < content.length(); i++) {
 		DsrChar code = content[i];

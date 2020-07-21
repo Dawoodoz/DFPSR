@@ -25,7 +25,7 @@
 #define DFPSR_GUI_COMPONENT_LISTBOX
 
 #include "../VisualComponent.h"
-#include "../Font.h"
+#include "../../api/fontAPI.h"
 
 namespace dsr {
 
@@ -51,7 +51,7 @@ private:
 	// Given from the style
 	MediaMethod scalableImage_listBox;
 	MediaMethod scalableImage_scrollButton;
-	std::shared_ptr<RasterFont> font;
+	RasterFont font;
 	void completeAssets();
 	void generateGraphics();
 	// Generated
