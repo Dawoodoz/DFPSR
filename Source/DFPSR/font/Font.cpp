@@ -168,7 +168,7 @@ void RasterFontImpl::printMultiLine(ImageRgbaU8& target, const ReadableString& c
 			wordStarted = false;
 		} else {
 			int newCharWidth = this->getCharacterWidth(code);
-			if (code == ' ' || code == 9) {
+			if (code == ' ' || code == 9) { // Space or tab
 				if (wordStarted) {
 					lastWordBreak = i;
 					wordStarted = false;
@@ -179,18 +179,20 @@ void RasterFontImpl::printMultiLine(ImageRgbaU8& target, const ReadableString& c
 					int splitIndex = lastWordBreak;
 					if (lastWordBreak == rowStartIndex) {
 						// The word is too big to be printed as a whole
-						if (i > rowStartIndex) {
-							splitIndex = i - 1;
-						} else {
-							// Not enough width to print a single character, skipping content to avoid printing outside.
-							splitIndex = i;
-						}
+						splitIndex = i;
 					}
-					this->printLine(target, content.exclusiveRange(rowStartIndex, splitIndex), IVector2D(bound.left(), y), color);
+					ReadableString partialLine = content.exclusiveRange(rowStartIndex, splitIndex);
+					int partialLength = this->getLineWidth(partialLine);
+					if (partialLength <= bound.width()) {
+						this->printLine(target, partialLine, IVector2D(bound.left(), y), color);
+					}
 					y += this->size; if (y + this->size > bound.bottom()) { return; }
 					lineWidth = 0;
 					// Continue after splitIndex
-					i = splitIndex + 1;
+					i = splitIndex;
+					if (lastWordBreak > rowStartIndex) {
+						i += 1;
+					}
 					rowStartIndex = i;
 					lastWordBreak = i;
 					wordStarted = false;
