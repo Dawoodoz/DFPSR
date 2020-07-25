@@ -49,7 +49,7 @@ FVector3D dsr::getAffineWeight(const FVector2D& cornerA, const FVector2D& corner
 }
 
 ITriangle2D::ITriangle2D(ProjectedPoint posA, ProjectedPoint posB, ProjectedPoint posC)
- : position({posA, posB, posC}), wholeBound(getTriangleBound(this->position[0].flat, this->position[1].flat, this->position[2].flat)) {}
+ : position{posA, posB, posC}, wholeBound(getTriangleBound(this->position[0].flat, this->position[1].flat, this->position[2].flat)) {}
 
 // Will produce weird results if called on a triangle that needs clipping against the near plane
 bool ITriangle2D::isFrontfacing() const {
