@@ -16,9 +16,10 @@ If using a Raspberry Pi, you can use Raspbian (Buster or newer for X11 support) 
 
 Build and run an example program:
 	* Select an SDK example and open its folder in a terminal.
+	* Give permission to execute the build script.
 		chmod +x build.sh
+	* Run the build script.
 		./build.sh
-	Some examples might have additional dependencies.
 
 Run regression tests:
 	* Open the source folder in a terminal and run the test script:
