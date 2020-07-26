@@ -1,27 +1,22 @@
-LINUX
-
 Place the library's root folder inside of a new folder.
 This allow keeping your own projects and the "temporary" folder that's
 used for compiling quickly outside of the library's version history.
 
-If using Linux with an X11 server, you might need to install the X11 headers.
+If using Linux, you might need to install the X11 headers.
 If it doesn't work, your Linux distro might not have an X11 server.
 On debian based distributions:
 	sudo apt-get install libx11-dev
 
-If using a Raspberry Pi, you can use Raspbian (Buster or newer for X11 support) or Ubuntu Mate with the following performance tweaks:
-	Control panel - Sound - Activate sound for windows and buttons: Off
-	Firefox browser - Preferences - General - Use smooth scrolling: Off
-	Firefox browser - Preferences - Home - Homepage and new windows: Blank page
+If using a Raspberry Pi, you can use Raspbian (Buster or newer for X11 support) or Ubuntu Mate.
 
-Build and run an example program:
+Build and run an example program on Linux:
 	* Select an SDK example and open its folder in a terminal.
 	* Give permission to execute the build script.
 		chmod +x build.sh
 	* Run the build script.
 		./build.sh
 
-Run regression tests:
+Run regression tests on Linux:
 	* Open the source folder in a terminal and run the test script:
 		chmod +x test.sh
 		./test.sh
