@@ -14,6 +14,7 @@
 	// 2D API
 	#include "api/imageAPI.h" // Creating images and modifying pixels
 	#include "api/drawAPI.h" // Efficient drawing on images
+	#include "api/filterAPI.h" // Efficient image generation, resizing and filtering
 	// 3D API
 	#include "api/modelAPI.h" // Polygon models for 3D rendering
 	// GUI API

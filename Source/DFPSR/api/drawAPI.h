@@ -1,7 +1,7 @@
 
 // zlib open source license
 //
-// Copyright (c) 2017 to 2019 David Forsgren Piuva
+// Copyright (c) 2017 to 2020 David Forsgren Piuva
 // 
 // This software is provided 'as-is', without any express or implied
 // warranty. In no event will the authors be held liable for any damages
@@ -26,7 +26,6 @@
 #define DFPSR_API_DRAW
 
 #include "types.h"
-#include <functional>
 
 namespace dsr {
 
@@ -121,47 +120,6 @@ namespace dsr {
 	void draw_alphaClip(ImageRgbaU8& target, const ImageRgbaU8& source, int32_t left = 0, int32_t top = 0, int32_t threshold = 127);
 	// Draw a uniform color using a grayscale silhouette as the alpha channel
 	void draw_silhouette(ImageRgbaU8& target, const ImageU8& silhouette, const ColorRgbaI32& color, int32_t left = 0, int32_t top = 0);
-
-// TODO: Make a separate filter API
-
-// Image resizing
-	// The interpolate argument
-	//   Bi-linear interoplation is used when true
-	//   Nearest neighbor sampling is used when false
-	// Create a stretched version of the source image with the given dimensions and default RGBA pack order
-	OrderedImageRgbaU8 filter_resize(const ImageRgbaU8& image, Sampler interpolation, int32_t newWidth, int32_t newHeight);
-	// Resize with borders of pixels that aren't stretched
-	//   Using a larger border than half the size will be clamped, so that the center keeps at least 2x2 pixels
-	OrderedImageRgbaU8 filter_resize3x3(const ImageRgbaU8& image, Sampler interpolation, int newWidth, int newHeight, int leftBorder, int topBorder, int rightBorder, int bottomBorder);
-	// The source image is scaled by pixelWidth and pixelHeight from the upper left corner
-	// If source is too small, transparent black pixels (0, 0, 0, 0) fills the outside
-	// If source is too large, partial pixels will be cropped away completely and replaced by the black border
-	// Letting the images have the same pack order and be aligned to 16-bytes will increase speed
-	void filter_blockMagnify(ImageRgbaU8& target, const ImageRgbaU8& source, int pixelWidth, int pixelHeight);
-
-// Image generation and filtering
-//   Create new images from Lambda expressions
-//   Useful for pre-generating images for reuse, reference implementations and fast prototyping
-	// Lambda expressions for generating integer images
-	using ImageGenRgbaU8 = std::function<ColorRgbaI32(int, int)>;
-	using ImageGenF32 = std::function<float(int, int)>;
-	// In-place image generation to an existing image
-	//   The pixel at the upper left corner gets (startX, startY) as x and y arguments to the function
-	void filter_mapRgbaU8(ImageRgbaU8& target, const ImageGenRgbaU8& lambda, int startX = 0, int startY = 0);
-	void filter_mapF32(ImageF32& target, const ImageGenF32& lambda, int startX = 0, int startY = 0);
-	// A simpler image generation that constructs the image as a result
-	// Example:
-	//     int width = 64;
-	//     int height = 64;
-	//     ImageRgbaU8 fadeImage = filter_generateRgbaU8(width, height, [](int x, int y)->ColorRgbaI32 {
-	//         return ColorRgbaI32(x * 4, y * 4, 0, 255);
-	//     });
-	//     ImageRgbaU8 brighterImage = filter_generateRgbaU8(width, height, [fadeImage](int x, int y)->ColorRgbaI32 {
-	//	       ColorRgbaI32 source = image_readPixel_clamp(fadeImage, x, y);
-	//	       return ColorRgbaI32(source.red * 2, source.green * 2, source.blue * 2, source.alpha);
-	//     });
-	ImageRgbaU8 filter_generateRgbaU8(int width, int height, const ImageGenRgbaU8& lambda, int startX = 0, int startY = 0);
-	ImageF32 filter_generateF32(int width, int height, const ImageGenF32& lambda, int startX = 0, int startY = 0);
 
 }
 

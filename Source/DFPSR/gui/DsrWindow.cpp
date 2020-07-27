@@ -33,7 +33,7 @@
 #include "../math/scalar.h"
 #include "../math/IVector.h"
 #include "../api/imageAPI.h"
-#include "../api/drawAPI.h"
+#include "../api/filterAPI.h"
 
 using namespace dsr;
 
