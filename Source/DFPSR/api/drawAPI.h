@@ -163,9 +163,6 @@ namespace dsr {
 	ImageRgbaU8 filter_generateRgbaU8(int width, int height, const ImageGenRgbaU8& lambda, int startX = 0, int startY = 0);
 	ImageF32 filter_generateF32(int width, int height, const ImageGenF32& lambda, int startX = 0, int startY = 0);
 
-	// TODO: Document
-	ImageRgbaU8 filter_mulColorRgb(const ImageRgbaU8& inputImage, const ColorRgbI32& color);
-	ImageRgbaU8 filter_mulColorRgba(const ImageRgbaU8& inputImage, const ColorRgbaI32& color);
 }
 
 #endif

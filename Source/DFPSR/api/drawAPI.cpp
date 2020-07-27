@@ -91,38 +91,6 @@ ImageF32 dsr::filter_generateF32(int width, int height, const ImageGenF32& lambd
 	return result;
 }
 
-// Basic immutable image operations
-// TODO: Create optimized in-place versions for aligned images based on the reference implementations
-static const uint32_t imageMultiply_shift = 10;
-static const float imageMultiply_scale = (1u << imageMultiply_shift) / 255.0f;
-ImageRgbaU8 dsr::filter_mulColorRgb(const ImageRgbaU8& inputImage, const ColorRgbI32& color) {
-	if (inputImage) {
-		const int iR = (float)color.red * imageMultiply_scale;
-		const int iG = (float)color.green * imageMultiply_scale;
-		const int iB = (float)color.blue * imageMultiply_scale;
-		return filter_generateRgbaU8(inputImage->width, inputImage->height, [inputImage, iR, iG, iB](int x, int y)->ColorRgbaI32 {
-			ColorRgbaI32 source = image_readPixel_clamp(inputImage, x, y);
-			return ColorRgbaI32((source.red * iR) >> imageMultiply_shift, (source.green * iG) >> imageMultiply_shift, (source.blue * iB) >> imageMultiply_shift, source.alpha);
-		});
-	} else {
-		return ImageRgbaU8();
-	}
-}
-ImageRgbaU8 dsr::filter_mulColorRgba(const ImageRgbaU8& inputImage, const ColorRgbaI32& color) {
-	if (inputImage) {
-		const int iR = (float)color.red * imageMultiply_scale;
-		const int iG = (float)color.green * imageMultiply_scale;
-		const int iB = (float)color.blue * imageMultiply_scale;
-		const int iA = (float)color.alpha * imageMultiply_scale;
-		return filter_generateRgbaU8(inputImage->width, inputImage->height, [inputImage, iR, iG, iB, iA](int x, int y)->ColorRgbaI32 {
-			ColorRgbaI32 source = image_readPixel_clamp(inputImage, x, y);
-			return ColorRgbaI32((source.red * iR) >> imageMultiply_shift, (source.green * iG) >> imageMultiply_shift, (source.blue * iB) >> imageMultiply_shift, (source.alpha * iA) >> imageMultiply_shift);
-		});
-	} else {
-		return ImageRgbaU8();
-	}
-}
-
 
 // -------------------------------- Drawing shapes --------------------------------
 
