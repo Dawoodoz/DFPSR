@@ -131,129 +131,23 @@ AlignedImageF32 dsr::filter_generateF32(int width, int height, const ImageGenF32
 // -------------------------------- Resize --------------------------------
 
 
-static ImageRgbaU8Impl resizeToValue(const ImageRgbaU8Impl& image, Sampler interpolation, int32_t newWidth, int32_t newHeight) {
-	ImageRgbaU8Impl resultImage = ImageRgbaU8Impl(newWidth, newHeight);
-	imageImpl_resizeToTarget(resultImage, image, interpolation == Sampler::Linear); // TODO: Pass Sampler to internal API if more modes are created
-	return resultImage;
-}
-
-static OrderedImageRgbaU8 resizeToRef(const ImageRgbaU8Impl& image, Sampler interpolation, int32_t newWidth, int32_t newHeight) {
+static OrderedImageRgbaU8 resizeToRef(const ImageRgbaU8Impl& source, Sampler interpolation, int32_t newWidth, int32_t newHeight) {
 	OrderedImageRgbaU8 resultImage = image_create_RgbaU8(newWidth, newHeight);
-	imageImpl_resizeToTarget(*resultImage, image, interpolation == Sampler::Linear); // TODO: Pass Sampler to internal API if more modes are created
+	imageImpl_resizeToTarget(*resultImage, source, interpolation == Sampler::Linear);
 	return resultImage;
 }
 
-OrderedImageRgbaU8 dsr::filter_resize(const ImageRgbaU8& image, Sampler interpolation, int32_t newWidth, int32_t newHeight) {
-	if (image) {
-		return resizeToRef(*image, interpolation, newWidth, newHeight);
+OrderedImageRgbaU8 dsr::filter_resize(ImageRgbaU8 source, Sampler interpolation, int32_t newWidth, int32_t newHeight) {
+	if (source.get() != nullptr) {
+		return resizeToRef(*source, interpolation, newWidth, newHeight);
 	} else {
 		return OrderedImageRgbaU8(); // Null gives null
 	}
 }
 
-void dsr::filter_blockMagnify(ImageRgbaU8& target, const ImageRgbaU8& source, int pixelWidth, int pixelHeight) {
-	if (target && source) {
+void dsr::filter_blockMagnify(ImageRgbaU8 target, const ImageRgbaU8& source, int pixelWidth, int pixelHeight) {
+	if (target.get() != nullptr && source.get() != nullptr) {
 		imageImpl_blockMagnify(*target, *source, pixelWidth, pixelHeight);
 	}
-}
-
-// Get RGBA sub-images without allocating heads on the heap
-static const ImageRgbaU8Impl getView(const ImageRgbaU8Impl& image, const IRect& region) {
-	assert(region.left() >= 0); assert(region.top() >= 0); assert(region.width() >= 1); assert(region.height() >= 1);
-	assert(region.right() <= image.width); assert(region.bottom() <= image.height);
-	intptr_t newOffset = image.startOffset + (region.left() * image.pixelSize) + (region.top() * image.stride);
-	return ImageRgbaU8Impl(region.width(), region.height(), image.stride, image.buffer, newOffset, image.packOrder);
-}
-
-OrderedImageRgbaU8 dsr::filter_resize3x3(const ImageRgbaU8& image, Sampler interpolation, int newWidth, int newHeight, int leftBorder, int topBorder, int rightBorder, int bottomBorder) {
-	if (image) {
-		// Get source dimensions
-		int sourceWidth = image->width;
-		int sourceHeight = image->height;
-
-		// Limit borders to a place near the center while leaving at least 2x2 pixels at the center for bilinear interpolation
-		int maxLeftBorder = std::min(sourceWidth, newWidth) / 2 - 1;
-		int maxTopBorder = std::min(sourceHeight, newHeight) / 2 - 1;
-		int maxRightBorder = maxLeftBorder;
-		int maxBottomBorder = maxTopBorder;
-		if (leftBorder > maxLeftBorder) leftBorder = maxLeftBorder;
-		if (topBorder > maxTopBorder) topBorder = maxTopBorder;
-		if (rightBorder > maxRightBorder) rightBorder = maxRightBorder;
-		if (bottomBorder > maxBottomBorder) bottomBorder = maxBottomBorder;
-		if (leftBorder < 0) leftBorder = 0;
-		if (topBorder < 0) topBorder = 0;
-		if (rightBorder < 0) rightBorder = 0;
-		if (bottomBorder < 0) bottomBorder = 0;
-
-		// Combine dimensions
-		// L_R T_B
-		int leftRightBorder = leftBorder + rightBorder;
-		int topBottomBorder = topBorder + bottomBorder;
-		// _C_
-		int targetCenterWidth = newWidth - leftRightBorder;
-		int targetCenterHeight = newHeight - topBottomBorder;
-		// LC_ RC_
-		int targetLeftAndCenter = newWidth - rightBorder;
-		int targetTopAndCenter = newHeight - bottomBorder;
-		// _C_
-		int sourceCenterWidth = sourceWidth - leftRightBorder;
-		int sourceCenterHeight = sourceHeight - topBottomBorder;
-		// LC_ RC_
-		int sourceLeftAndCenter = sourceWidth - rightBorder;
-		int sourceTopAndCenter = sourceHeight - bottomBorder;
-
-		// Allocate target image
-		OrderedImageRgbaU8 result = image_create_RgbaU8(newWidth, newHeight);
-		ImageRgbaU8Impl* target = result.get();
-
-		// Draw corners
-		if (leftBorder > 0 && topBorder > 0) {
-			imageImpl_drawCopy(*target, getView(*image, IRect(0, 0, leftBorder, topBorder)), 0, 0);
-		}
-		if (rightBorder > 0 && topBorder > 0) {
-			imageImpl_drawCopy(*target, getView(*image, IRect(sourceLeftAndCenter, 0, rightBorder, topBorder)), targetLeftAndCenter, 0);
-		}
-		if (leftBorder > 0 && bottomBorder > 0) {
-			imageImpl_drawCopy(*target, getView(*image, IRect(0, sourceTopAndCenter, leftBorder, bottomBorder)), 0, targetTopAndCenter);
-		}
-		if (rightBorder > 0 && bottomBorder > 0) {
-			imageImpl_drawCopy(*target, getView(*image, IRect(sourceLeftAndCenter, sourceTopAndCenter, rightBorder, bottomBorder)), targetLeftAndCenter, targetTopAndCenter);
-		}
-		// Resize and draw edges
-		if (targetCenterHeight > 0) {
-			if (leftBorder > 0) {
-				ImageRgbaU8Impl edgeSource = getView(*image, IRect(0, topBorder, leftBorder, sourceCenterHeight));
-				ImageRgbaU8Impl stretchedEdge = resizeToValue(edgeSource, interpolation, leftBorder, targetCenterHeight);
-				imageImpl_drawCopy(*target, stretchedEdge, 0, topBorder);
-			}
-			if (rightBorder > 0) {
-				ImageRgbaU8Impl edgeSource = getView(*image, IRect(sourceLeftAndCenter, topBorder, rightBorder, sourceCenterHeight));
-				ImageRgbaU8Impl stretchedEdge = resizeToValue(edgeSource, interpolation, rightBorder, targetCenterHeight);
-				imageImpl_drawCopy(*target, stretchedEdge, targetLeftAndCenter, topBorder);
-			}
-		}
-		if (targetCenterWidth > 0) {
-			if (topBorder > 0) {
-				ImageRgbaU8Impl edgeSource = getView(*image, IRect(leftBorder, 0, sourceCenterWidth, topBorder));
-				ImageRgbaU8Impl stretchedEdge = resizeToValue(edgeSource, interpolation, targetCenterWidth, topBorder);
-				imageImpl_drawCopy(*target, stretchedEdge, leftBorder, 0);
-			}
-			if (bottomBorder > 0) {
-				ImageRgbaU8Impl edgeSource = getView(*image, IRect(leftBorder, sourceTopAndCenter, sourceCenterWidth, bottomBorder));
-				ImageRgbaU8Impl stretchedEdge = resizeToValue(edgeSource, interpolation, targetCenterWidth, bottomBorder);
-				imageImpl_drawCopy(*target, stretchedEdge, leftBorder, targetTopAndCenter);
-			}
-		}
-		// Resize and draw center
-		if (targetCenterWidth > 0 && targetCenterHeight > 0) {
-			ImageRgbaU8Impl centerSource = getView(*image, IRect(leftBorder, topBorder, sourceCenterWidth, sourceCenterHeight));
-			ImageRgbaU8Impl stretchedCenter = resizeToValue(centerSource, interpolation, targetCenterWidth, targetCenterHeight);
-			imageImpl_drawCopy(*target, stretchedCenter, leftBorder, topBorder);
-		}
-		return result;
-	} else {
-		return OrderedImageRgbaU8(); // Null gives null
-	}
-
 }
 

@@ -35,15 +35,13 @@ namespace dsr {
 	//   Bi-linear interoplation is used when true
 	//   Nearest neighbor sampling is used when false
 	// Create a stretched version of the source image with the given dimensions and default RGBA pack order
-	OrderedImageRgbaU8 filter_resize(const ImageRgbaU8& image, Sampler interpolation, int32_t newWidth, int32_t newHeight);
-	// Resize with borders of pixels that aren't stretched
-	//   Using a larger border than half the size will be clamped, so that the center keeps at least 2x2 pixels
-	OrderedImageRgbaU8 filter_resize3x3(const ImageRgbaU8& image, Sampler interpolation, int newWidth, int newHeight, int leftBorder, int topBorder, int rightBorder, int bottomBorder);
-	// The source image is scaled by pixelWidth and pixelHeight from the upper left corner
-	// If source is too small, transparent black pixels (0, 0, 0, 0) fills the outside
-	// If source is too large, partial pixels will be cropped away completely and replaced by the black border
-	// Letting the images have the same pack order and be aligned to 16-bytes will increase speed
-	void filter_blockMagnify(ImageRgbaU8& target, const ImageRgbaU8& source, int pixelWidth, int pixelHeight);
+	OrderedImageRgbaU8 filter_resize(ImageRgbaU8 source, Sampler interpolation, int32_t newWidth, int32_t newHeight);
+	// The nearest-neighbor resize used for up-scaling the window canvas
+	//   The source image is scaled by pixelWidth and pixelHeight from the upper left corner
+	//   If source is too small, transparent black pixels (0, 0, 0, 0) fills the outside
+	//   If source is too large, partial pixels will be cropped away completely and replaced by the black border
+	//   Letting the images have the same pack order and be aligned to 16-bytes will increase speed
+	void filter_blockMagnify(ImageRgbaU8 target, const ImageRgbaU8& source, int pixelWidth, int pixelHeight);
 
 // Image generation and filtering
 //   Create new images from Lambda expressions
