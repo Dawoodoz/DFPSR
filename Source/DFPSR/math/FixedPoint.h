@@ -51,7 +51,6 @@ private:
 	int32_t mantissa = 0;
 public:
 	FixedPoint();
-	// TODO: Can comparisons use an implicit conversion from whole integers to reduce complexity?
 	explicit FixedPoint(int64_t newMantissa);
 	static FixedPoint fromWhole(int64_t wholeInteger);
 	static FixedPoint fromMantissa(int64_t mantissa);
@@ -175,8 +174,6 @@ inline bool operator<=(const FixedPoint &left, int64_t right) {
 inline bool operator<=(int64_t left, const FixedPoint &right) {
 	return left * 65536 <= right.getMantissa();
 }
-
-// TODO: Equality and other comparisons
 
 }
 
