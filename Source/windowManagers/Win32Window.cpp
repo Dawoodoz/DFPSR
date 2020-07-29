@@ -453,16 +453,16 @@ void Win32Window::redraw(HWND& hwnd) {
 	int width = dsr::image_getWidth(this->canvas);
 	int height = dsr::image_getHeight(this->canvas);
 	InvalidateRect(this->hwnd, NULL, false);
-	BITMAP bitmap;
-	HBITMAP sourceBitmapHandle = CreateBitmap(paddedWidth, height, 1, 32, dsr::image_dangerous_getData(this->canvas));
 	PAINTSTRUCT paintStruct;
 	HDC targetContext = BeginPaint(this->hwnd, &paintStruct);
-		HDC sourceContext = CreateCompatibleDC(targetContext);
-		HGDIOBJ sourceBitmap = SelectObject(sourceContext, sourceBitmapHandle);
-		GetObject(sourceBitmapHandle, sizeof(BITMAP), &bitmap);
-		BitBlt(targetContext, 0, 0, width, height, sourceContext, 0, 0, SRCCOPY);
-		SelectObject(sourceContext, sourceBitmap);
-		DeleteDC(sourceContext);
+		BITMAPINFO bmi = {};
+		bmi.bmiHeader.biSize = sizeof(bmi.bmiHeader);
+		bmi.bmiHeader.biWidth = paddedWidth;
+		bmi.bmiHeader.biHeight = -height;
+		bmi.bmiHeader.biPlanes = 1;
+		bmi.bmiHeader.biBitCount = 32;
+		bmi.bmiHeader.biCompression = BI_RGB;
+		SetDIBitsToDevice(targetContext, 0, 0, paddedWidth, height, 0, 0, 0, height, dsr::image_dangerous_getData(this->canvas), &bmi, DIB_RGB_COLORS);
 	EndPaint(this->hwnd, &paintStruct);
 }
 
