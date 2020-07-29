@@ -93,7 +93,7 @@ using RasterFont = std::shared_ptr<RasterFontImpl>;
 //   Everything running in a media machine is guaranteed to be 100% deterministic to the last bit.
 //     This reduces the amount of code where maintenance has to be performed during porting.
 //     It also means that any use of float or double is forbidden.
-class VirtualMachine;
+struct VirtualMachine;
 struct MediaMachine : IMPL_ACCESS std::shared_ptr<VirtualMachine> {
 	MediaMachine(); // Defaults to null
 IMPL_ACCESS:

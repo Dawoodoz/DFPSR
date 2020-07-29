@@ -26,6 +26,7 @@
 
 #include <stdint.h>
 #include <math.h>
+#include <algorithm>
 #include "IVector.h"
 
 namespace dsr {
