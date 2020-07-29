@@ -27,7 +27,7 @@ Don't use it for safety-critical projects unless you verify correctness yourself
 * Tested with Ubuntu mate on Raspberry Pi 3B and Pine64. (Ubuntu Mate didn't work on Raspberry Pi Zero)
 * Tested with Raspbian Buster on Raspberry Pi Zero W (X11 doesn't work on older versions of Raspbian)
 * Linux Mint need the compiler and X11 headers, so run "sudo apt install g++" and "sudo apt install libx11-dev" before compiling.
-* Runs slowly on Windows 7 without full-screen.
+* Runs on Microsoft Windows without full-screen. (Still an early port)
 
 ## Supported CPU hardware
 * Intel/AMD using SSE2 intrinsics.
