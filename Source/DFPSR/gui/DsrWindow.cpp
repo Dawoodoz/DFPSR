@@ -173,7 +173,7 @@ int DsrWindow::getCanvasHeight() {
 }
 
 AlignedImageF32 DsrWindow::getDepthBuffer() {
-	auto fullResolutionCanvas = this->backend->getCanvas();
+	this->backend->getCanvas();
 	int smallWidth = getCanvasWidth();
 	int smallHeight = getCanvasHeight();
 	if (!image_exists(this->depthBuffer)

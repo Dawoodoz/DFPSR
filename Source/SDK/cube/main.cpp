@@ -8,7 +8,6 @@ const String mediaPath = string_combine(U"media", file_separator());
 static BasicResourcePool pool(mediaPath);
 
 // Global variables
-std::shared_ptr<VisualComponent> mainPanel;
 float distance = 4.0f;
 bool running = true;
 int detailLevel = 2;

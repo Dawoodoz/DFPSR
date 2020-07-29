@@ -223,7 +223,7 @@ void ListBox::completeAssets() {
 	}
 }
 
-void ListBox::changedLocation(IRect &oldLocation, IRect &newLocation) {
+void ListBox::changedLocation(const IRect &oldLocation, const IRect &newLocation) {
 	// If the component has changed dimensions then redraw the image
 	if (oldLocation.size() != newLocation.size()) {
 		this->hasImages = false;

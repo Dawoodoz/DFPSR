@@ -76,7 +76,7 @@ public:
 			this->vertexCount--;
 		}
 	}
-	void insertVertex(int newIndex, SubVertex newVertex) {
+	void insertVertex(int newIndex, const SubVertex &newVertex) {
 		// Check against buffer overflow in case of bugs from rounding errors
 		assert(newIndex >= 0);
 		assert(newIndex <= this->vertexCount);
@@ -280,7 +280,7 @@ static void drawClippedTriangle(CommandQueue *commandQueue, const TriangleDrawDa
 }
 
 // Clipping is applied automatically if needed
-void dsr::renderTriangleWithShader(CommandQueue *commandQueue, const TriangleDrawData &triangleDrawData, const Camera &camera, ITriangle2D &triangle, const IRect &clipBound) {
+void dsr::renderTriangleWithShader(CommandQueue *commandQueue, const TriangleDrawData &triangleDrawData, const Camera &camera, const ITriangle2D &triangle, const IRect &clipBound) {
 	// Allow small triangles to be a bit outside of the view frustum without being clipped by increasing the width and height slopes in a second test
 	// This reduces redundant clipping to improve both speed and quality
 	Visibility paddedVisibility = getTriangleVisibility(triangle, camera, true);

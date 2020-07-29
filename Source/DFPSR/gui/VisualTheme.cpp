@@ -156,7 +156,7 @@ class VisualThemeImpl {
 public:
 	MediaMachine machine;
 	// Constructor
-	VisualThemeImpl(const ReadableString& mediaCode) : machine(machine_create(mediaCode)) {}
+	explicit VisualThemeImpl(const ReadableString& mediaCode) : machine(machine_create(mediaCode)) {}
 	// Destructor
 	virtual ~VisualThemeImpl() {}
 };

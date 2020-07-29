@@ -82,20 +82,20 @@ public: // Do not modify individual settings without assigning whole new cameras
 	Transform3D location; // Only translation and rotation allowed. Scaling and tilting will obviously not work for cameras.
 	float widthSlope, heightSlope, invWidthSlope, invHeightSlope, imageWidth, imageHeight, nearClip, farClip;
 	ViewFrustum cullFrustum, clipFrustum;
-	Camera(bool perspective, Transform3D location, float imageWidth, float imageHeight, float widthSlope, float heightSlope, float nearClip, float farClip, ViewFrustum cullFrustum, ViewFrustum clipFrustum) :
+	Camera(bool perspective, const Transform3D &location, float imageWidth, float imageHeight, float widthSlope, float heightSlope, float nearClip, float farClip, const ViewFrustum &cullFrustum, const ViewFrustum &clipFrustum) :
 	  perspective(perspective), location(location), widthSlope(widthSlope), heightSlope(heightSlope),
 	  invWidthSlope(0.5f / widthSlope), invHeightSlope(0.5f / heightSlope), imageWidth(imageWidth), imageHeight(imageHeight),
 	  nearClip(nearClip), farClip(farClip), cullFrustum(cullFrustum), clipFrustum(clipFrustum) {}
 public:
 	// TODO: Create a procedural camera API
-	static Camera createPerspective(Transform3D location, float imageWidth, float imageHeight, float widthSlope = 1.0f, float nearClip = defaultNearClip, float farClip = defaultFarClip) {
+	static Camera createPerspective(const Transform3D &location, float imageWidth, float imageHeight, float widthSlope = 1.0f, float nearClip = defaultNearClip, float farClip = defaultFarClip) {
 		float heightSlope = widthSlope * imageHeight / imageWidth;
 		return Camera(true, location, imageWidth, imageHeight, widthSlope, heightSlope, nearClip, farClip,
 		  ViewFrustum(nearClip, farClip, widthSlope, heightSlope),
 		  ViewFrustum(nearClip, farClip, widthSlope * clipRatio, heightSlope * clipRatio));
 	}
 	// Orthogonal cameras doesn't have any near or far clip planes
-	static Camera createOrthogonal(Transform3D location, float imageWidth, float imageHeight, float halfWidth) {
+	static Camera createOrthogonal(const Transform3D &location, float imageWidth, float imageHeight, float halfWidth) {
 		float halfHeight = halfWidth * imageHeight / imageWidth;
 		return Camera(false, location, imageWidth, imageHeight, halfWidth, halfHeight, -std::numeric_limits<float>::max(), std::numeric_limits<float>::max(),
 		  ViewFrustum(halfWidth, halfHeight),

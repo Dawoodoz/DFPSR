@@ -50,7 +50,7 @@ IVector2D VisualComponent::getSize() const {
 	return this->location.size();
 }
 
-void VisualComponent::setRegion(FlexRegion newRegion) {
+void VisualComponent::setRegion(const FlexRegion &newRegion) {
 	this->region = newRegion;
 }
 
@@ -82,7 +82,7 @@ int VisualComponent::getIndex() const {
 	return this->index.value;
 }
 
-void VisualComponent::setLocation(IRect newLocation) {
+void VisualComponent::setLocation(const IRect &newLocation) {
 	IRect oldLocation = this->location;
 	this->location = newLocation;
 	if (oldLocation != newLocation) {
@@ -114,9 +114,10 @@ void VisualComponent::draw(ImageRgbaU8& targetImage, const IVector2D& offset) {
 	}
 }
 
-void VisualComponent::drawClipped(ImageRgbaU8& targetImage, const IVector2D& offset, const IRect& clipRegion) {
+void VisualComponent::drawClipped(ImageRgbaU8 targetImage, const IVector2D& offset, const IRect& clipRegion) {
 	IRect finalRegion = IRect::cut(clipRegion, IRect(0, 0, image_getWidth(targetImage), image_getHeight(targetImage)));
 	if (finalRegion.hasArea()) {
+		// TODO: Optimize allocation of sub-images
 		ImageRgbaU8 target = image_getSubImage(targetImage, finalRegion);
 		this->draw(target, offset - finalRegion.upperLeft());
 	}

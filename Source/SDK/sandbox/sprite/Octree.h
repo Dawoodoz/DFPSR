@@ -191,7 +191,7 @@ private:
 	// Settings
 	int initialSize; // Should be around the average total world size to create the most balanced trees
 public:
-	Octree(int initialSize)
+	explicit Octree(int initialSize)
 	: initialSize(initialSize) {}
 public:
 	// Precondition: minBound <= origin <= maxBound

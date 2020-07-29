@@ -46,10 +46,10 @@ private:
 public:
 	Panel();
 public:
-	bool isContainer() const;
+	bool isContainer() const override;
 	void drawSelf(ImageRgbaU8& targetImage, const IRect &relativeLocation) override;
 	void changedTheme(VisualTheme newTheme) override;
-	void changedLocation(IRect &oldLocation, IRect &newLocation) override;
+	void changedLocation(const IRect &oldLocation, const IRect &newLocation) override;
 	void changedAttribute(const ReadableString &name) override;
 };
 

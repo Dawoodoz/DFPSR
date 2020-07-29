@@ -725,28 +725,28 @@ void dsr::image_dangerous_replaceDestructor(ImageRgbaU8& image, const std::funct
 	if (image) { return image->buffer->replaceDestructor(newDestructor); }
 }
 
-uint8_t* dsr::image_dangerous_getData(ImageU8& image) {
+uint8_t* dsr::image_dangerous_getData(const ImageU8& image) {
 	if (image) {
 		return imageInternal::getSafeData<uint8_t>(*image).getUnsafe();
 	} else {
 		return nullptr;
 	}
 }
-uint8_t* dsr::image_dangerous_getData(ImageU16& image) {
+uint8_t* dsr::image_dangerous_getData(const ImageU16& image) {
 	if (image) {
 		return imageInternal::getSafeData<uint8_t>(*image).getUnsafe();
 	} else {
 		return nullptr;
 	}
 }
-uint8_t* dsr::image_dangerous_getData(ImageF32& image) {
+uint8_t* dsr::image_dangerous_getData(const ImageF32& image) {
 	if (image) {
 		return imageInternal::getSafeData<uint8_t>(*image).getUnsafe();
 	} else {
 		return nullptr;
 	}
 }
-uint8_t* dsr::image_dangerous_getData(ImageRgbaU8& image) {
+uint8_t* dsr::image_dangerous_getData(const ImageRgbaU8& image) {
 	if (image) {
 		return imageInternal::getSafeData<uint8_t>(*image).getUnsafe();
 	} else {

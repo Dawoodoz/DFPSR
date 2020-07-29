@@ -190,7 +190,7 @@ struct ParserState {
 	Model model, shadow;
 	int part = -1; // Current part index for model (No index used for shadows)
 	PartSettings partSettings;
-	ParserState(const String& sourcePath) : sourcePath(sourcePath), model(model_create()), shadow(model_create()) {
+	explicit ParserState(const String& sourcePath) : sourcePath(sourcePath), model(model_create()), shadow(model_create()) {
 		model_addEmptyPart(this->shadow, U"shadow");
 	}
 };
@@ -321,8 +321,6 @@ static void generateField(ParserState& state, Shape shape, const ImageU8& height
 
 static void generateBasicShape(ParserState& state, Shape shape, const ReadableString& arg1, const ReadableString& arg2, const ReadableString& arg3, bool shadow) {
 	Transform3D system = state.partSettings.location;
-	// Create a transform function based on the shape
-	TransformFunction transform;
 	Model model = shadow ? state.shadow : state.model;
 	int part = shadow ? 0 : state.part;
 	// All shapes are centered around the axis system's origin from -0.5 to +0.5 of any given size
@@ -332,18 +330,18 @@ static void generateBasicShape(ParserState& state, Shape shape, const ReadableSt
 		float height = string_parseDouble(arg2);
 		float depth = string_parseDouble(arg3);
 		// Create a bound
-		FVector3D max = FVector3D(width, height, depth) * 0.5f;
-		FVector3D min = -max;
+		FVector3D upper = FVector3D(width, height, depth) * 0.5f;
+		FVector3D lower = -upper;
 		// Positions
 		int first = model_getNumberOfPoints(model);
-		model_addPoint(model, system.transformPoint(FVector3D(min.x, min.y, min.z))); // first + 0: Left-down-near
-		model_addPoint(model, system.transformPoint(FVector3D(min.x, min.y, max.z))); // first + 1: Left-down-far
-		model_addPoint(model, system.transformPoint(FVector3D(min.x, max.y, min.z))); // first + 2: Left-up-near
-		model_addPoint(model, system.transformPoint(FVector3D(min.x, max.y, max.z))); // first + 3: Left-up-far
-		model_addPoint(model, system.transformPoint(FVector3D(max.x, min.y, min.z))); // first + 4: Right-down-near
-		model_addPoint(model, system.transformPoint(FVector3D(max.x, min.y, max.z))); // first + 5: Right-down-far
-		model_addPoint(model, system.transformPoint(FVector3D(max.x, max.y, min.z))); // first + 6: Right-up-near
-		model_addPoint(model, system.transformPoint(FVector3D(max.x, max.y, max.z))); // first + 7: Right-up-far
+		model_addPoint(model, system.transformPoint(FVector3D(lower.x, lower.y, lower.z))); // first + 0: Left-down-near
+		model_addPoint(model, system.transformPoint(FVector3D(lower.x, lower.y, upper.z))); // first + 1: Left-down-far
+		model_addPoint(model, system.transformPoint(FVector3D(lower.x, upper.y, lower.z))); // first + 2: Left-up-near
+		model_addPoint(model, system.transformPoint(FVector3D(lower.x, upper.y, upper.z))); // first + 3: Left-up-far
+		model_addPoint(model, system.transformPoint(FVector3D(upper.x, lower.y, lower.z))); // first + 4: Right-down-near
+		model_addPoint(model, system.transformPoint(FVector3D(upper.x, lower.y, upper.z))); // first + 5: Right-down-far
+		model_addPoint(model, system.transformPoint(FVector3D(upper.x, upper.y, lower.z))); // first + 6: Right-up-near
+		model_addPoint(model, system.transformPoint(FVector3D(upper.x, upper.y, upper.z))); // first + 7: Right-up-far
 		// Polygons
 		model_addQuad(model, part, first + 3, first + 2, first + 0, first + 1); // Left quad
 		model_addQuad(model, part, first + 6, first + 7, first + 5, first + 4); // Right quad
@@ -385,11 +383,6 @@ static void generateBasicShape(ParserState& state, Shape shape, const ReadableSt
 	} else {
 		printText("Basic shape generation is not implemented for ", nameOfShape(shape), "!\n");
 		return;
-	}
-	if (shadow) {
-		//createGrid(state.shadow, 0, heightMap, colorMap, transform, clipZero, mergeSides, mirror, weldNormals);
-	} else {
-		//createGrid(state.model, state.part, heightMap, colorMap, transform, clipZero, mergeSides, mirror, weldNormals);
 	}
 }
 

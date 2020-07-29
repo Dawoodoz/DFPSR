@@ -98,7 +98,7 @@ public:
 //     Otherwise, it will waste a lot of time on rasterizing triangles that are not even visible.
 //   * targetImage must be a render target because it needs some padding for reading out of bound while rendering.
 //     ImageRgbaU8Impl::createRenderTarget will automatically padd any odd dimensions given.
-void renderTriangleWithShader(CommandQueue *commandQueue, const TriangleDrawData &triangleDrawData, const Camera &camera, ITriangle2D &triangle, const IRect &clipBound);
+void renderTriangleWithShader(CommandQueue *commandQueue, const TriangleDrawData &triangleDrawData, const Camera &camera, const ITriangle2D &triangle, const IRect &clipBound);
 
 // Given a set of triangle data, this method can automatically draw it using the fastest default shader.
 // Triangle culling is handled automatically but you might want to apply culling per model or something before drawing many triangles.

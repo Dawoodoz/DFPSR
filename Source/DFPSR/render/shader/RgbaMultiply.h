@@ -53,7 +53,7 @@ private:
 		}
 		return result;
 	}
-	Shader_RgbaMultiply(const TriangleInput &triangleInput) :
+	explicit Shader_RgbaMultiply(const TriangleInput &triangleInput) :
 	  diffuseMap(triangleInput.diffuseImage ? &(triangleInput.diffuseImage->texture) : nullptr),
 	  diffuseLayer(triangleInput.diffuseImage ? &(triangleInput.diffuseImage->texture.mips[0]) : nullptr),
 	  lightLayer(triangleInput.lightImage ? &(triangleInput.lightImage->texture.mips[0]) : nullptr),

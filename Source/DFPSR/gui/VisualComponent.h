@@ -84,7 +84,7 @@ public:
 protected:
 	// Generated automatically from region in applyLayout
 	IRect location;
-	void setLocation(IRect newLocation);
+	void setLocation(const IRect &newLocation);
 	// Applied reqursively while selecting the correct theme
 	VisualTheme theme;
 public:
@@ -99,7 +99,7 @@ public:
 	virtual bool isContainer() const;
 	IRect getLocation() const;
 	IVector2D getSize() const;
-	void setRegion(FlexRegion newRegion);
+	void setRegion(const FlexRegion &newRegion);
 	FlexRegion getRegion() const;
 	void setHidden(bool hidden);
 	bool getHidden() const;
@@ -144,7 +144,7 @@ public:
 	//       drawClipped(i, o, IRect(10, 0, 10, 20)) // Right half
 	//   Drawing with the whole target image as a clip region should be equivalent to a corresponding call to draw with the same targetImage and offset.
 	//     draw(i, o) <=> drawClipped(i, o, IRect(0, 0, i.width(), i.height()))
-	void drawClipped(ImageRgbaU8& targetImage, const IVector2D& offset, const IRect& clipRegion);
+	void drawClipped(ImageRgbaU8 targetImage, const IVector2D& offset, const IRect& clipRegion);
 
 // TODO: Distinguish from the generic version
 	// Add a child component
@@ -204,7 +204,7 @@ public:
 	// Override to be notified about individual attribute changes
 	virtual void changedAttribute(const ReadableString &name) {};
 	// Override to be notified about location changes
-	virtual void changedLocation(IRect &oldLocation, IRect &newLocation) {};
+	virtual void changedLocation(const IRect &oldLocation, const IRect &newLocation) {};
 	// Custom call handler to manipulate components across a generic API
 	virtual String call(const ReadableString &methodName, const ReadableString &arguments);
 };

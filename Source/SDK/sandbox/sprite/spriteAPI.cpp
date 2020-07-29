@@ -18,7 +18,7 @@ struct SpriteConfig {
 	// Construction
 	SpriteConfig(int centerX, int centerY, int frameRows, int propertyColumns, FVector3D minBound, FVector3D maxBound)
 	: centerX(centerX), centerY(centerY), frameRows(frameRows), propertyColumns(propertyColumns), minBound(minBound), maxBound(maxBound) {}
-	SpriteConfig(const ReadableString& content) {
+	explicit SpriteConfig(const ReadableString& content) {
 		config_parse_ini(content, [this](const ReadableString& block, const ReadableString& key, const ReadableString& value) {
 			if (block.length() == 0) {
 				if (string_caseInsensitiveMatch(key, U"CenterX")) {
@@ -253,7 +253,7 @@ struct CubeMapF32 {
 	int resolution;           // The width and height of each shadow depth image or 0 if no shadows are casted
 	AlignedImageF32 cubeMap;  // A vertical sequence of reciprocal depth images for the six sides of the cube
 	ImageF32 cubeMapViews[6]; // Sub-images sharing their allocations with cubeMap as sub-images
-	CubeMapF32(int resolution) : resolution(resolution) {
+	explicit CubeMapF32(int resolution) : resolution(resolution) {
 		this->cubeMap = image_create_F32(resolution, resolution * 6);
 		for (int s = 0; s < 6; s++) {
 			this->cubeMapViews[s] = image_getSubImage(this->cubeMap, IRect(0, s * resolution, resolution, resolution));
@@ -464,7 +464,7 @@ private:
 	int shadowResolution;
 	CubeMapF32 temporaryShadowMap;
 public:
-	SpriteWorldImpl(OrthoSystem ortho, int shadowResolution)
+	SpriteWorldImpl(const OrthoSystem &ortho, int shadowResolution)
 	: ortho(ortho), passiveSprites(ortho_miniUnitsPerTile * 64), shadowResolution(shadowResolution), temporaryShadowMap(shadowResolution) {}
 public:
 	void updateBlockAt(const IRect& blockRegion, const IRect& seenRegion) {
@@ -873,9 +873,9 @@ void sprite_generateFromModel(ImageRgbaU8& targetAtlas, String& targetConfigText
 		// Convert height into an 8 bit channel for saving
 		for (int y = 0; y < height; y++) {
 			for (int x = 0; x < width; x++) {
-				int32_t opacity = image_readPixel_clamp(colorImage[a], x, y).alpha;
-				int32_t height = (image_readPixel_clamp(depthBuffer, x, y) - minBound.y) * heightScale;
-				image_writePixel(heightImage[a], x, y, ColorRgbaI32(height, 0, 0, opacity));
+				int32_t opacityPixel = image_readPixel_clamp(colorImage[a], x, y).alpha;
+				int32_t heightPixel = (image_readPixel_clamp(depthBuffer, x, y) - minBound.y) * heightScale;
+				image_writePixel(heightImage[a], x, y, ColorRgbaI32(heightPixel, 0, 0, opacityPixel));
 			}
 		}
 	}
@@ -937,11 +937,11 @@ void sprite_generateFromModel(const Model& visibleModel, const Model& shadowMode
 	string_save(targetPath + U".ini", configText);
 	printText("  Saved sprite atlas and config to ", targetPath, "\n\n");
 	if (debug) {
-		ImageRgbaU8 debugImage; String debugText;
+		ImageRgbaU8 debugImage; String garbageText;
 		// TODO: Show overlap between visible and shadow so that shadow outside of visible is displayed as bright red on a dark model.
 		//       The number of visible shadow pixels should be reported automatically
 		//       in an error message at the end of the total execution together with file names.
-		sprite_generateFromModel(debugImage, debugText, shadowModel, Model(), ortho, targetPath + U"Debug", 8);
+		sprite_generateFromModel(debugImage, garbageText, shadowModel, Model(), ortho, targetPath + U"Debug", 8);
 		image_save(debugImage, targetPath + U"Debug.png");
 	}
 }

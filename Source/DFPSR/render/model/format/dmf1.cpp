@@ -99,7 +99,7 @@ struct ParserState {
 	Model_DMF1 *model;
 	int parserState, parserSpace, propertyIndex;
 	String lastPropertyName;
-	ParserState(Model_DMF1 *model) :
+	explicit ParserState(Model_DMF1 *model) :
 	  model(model),
 	  parserState(ParserState_WaitForStatement),
 	  parserSpace(ParserSpace_Main),
@@ -167,7 +167,7 @@ static void setProperty(ParserState &state, const String &propertyName, int inde
 			Triangle_DMF1 *lastTriangle = lastPart->getLastTriangle();
 			if (!lastTriangle) {
 				printText("Cannot define vertex data after failing to create a triangle!\n");
-			} else if (index < 0 && index > 2) {
+			} else if (index < 0 || index > 2) {
 				printText("Triangle vertex index ", index, " is out of bound 0..2!\n");
 			} else {
 				if PROPERTY_MATCH(X) {

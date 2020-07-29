@@ -450,7 +450,7 @@ void Win32Window::redraw(HWND& hwnd) {
 	// Let the source bitmap use a padded width to safely handle the stride
 	// Windows require 8-byte alignment, but the image format uses 16-byte alignment.
 	int paddedWidth = dsr::image_getStride(this->canvas) / 4;
-	int width = dsr::image_getWidth(this->canvas);
+	//int width = dsr::image_getWidth(this->canvas);
 	int height = dsr::image_getHeight(this->canvas);
 	InvalidateRect(this->hwnd, NULL, false);
 	PAINTSTRUCT paintStruct;

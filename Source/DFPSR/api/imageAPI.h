@@ -219,10 +219,10 @@ namespace dsr {
 	// Warning! Reading elements larger than 8 bits will have lower and higher bytes stored based on local endianness
 	// Warning! Using bytes outside of the [0 .. stride * height - 1] range may cause crashes and undefined behaviour
 	// Warning! Using the pointer after the image's lifetime may cause crashes from trying to access freed memory
-	uint8_t* image_dangerous_getData(ImageU8& image);
-	uint8_t* image_dangerous_getData(ImageU16& image);
-	uint8_t* image_dangerous_getData(ImageF32& image);
-	uint8_t* image_dangerous_getData(ImageRgbaU8& image);
+	uint8_t* image_dangerous_getData(const ImageU8& image);
+	uint8_t* image_dangerous_getData(const ImageU16& image);
+	uint8_t* image_dangerous_getData(const ImageF32& image);
+	uint8_t* image_dangerous_getData(const ImageRgbaU8& image);
 }
 
 #endif

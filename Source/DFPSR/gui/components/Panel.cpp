@@ -81,7 +81,7 @@ void Panel::completeAssets() {
 	}
 }
 
-void Panel::changedLocation(IRect &oldLocation, IRect &newLocation) {
+void Panel::changedLocation(const IRect &oldLocation, const IRect &newLocation) {
 	// If the component has changed dimensions then redraw the image
 	if (oldLocation.size() != newLocation.size()) {
 		this->hasImages = false;

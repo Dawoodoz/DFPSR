@@ -118,7 +118,7 @@ void Button::completeAssets() {
 	}
 }
 
-void Button::changedLocation(IRect &oldLocation, IRect &newLocation) {
+void Button::changedLocation(const IRect &oldLocation, const IRect &newLocation) {
 	// If the component has changed dimensions then redraw the image
 	if (oldLocation.size() != newLocation.size()) {
 		this->hasImages = false;

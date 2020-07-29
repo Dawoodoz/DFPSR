@@ -54,11 +54,11 @@ public:
 	IRect expanded(int units) const { return IRect(this->l - units, this->t - units, this->w + units * 2, this->h + units * 2); }
 	// Returns the intersection between a and b or a rectangle that has no area if overlaps(a, b) is false
 	static IRect cut(const IRect &a, const IRect &b) {
-		int32_t left = std::max(a.left(), b.left());
-		int32_t top = std::max(a.top(), b.top());
-		int32_t right = std::min(a.right(), b.right());
-		int32_t bottom = std::min(a.bottom(), b.bottom());
-		return IRect(left, top, right - left, bottom - top);
+		int32_t leftSide = std::max(a.left(), b.left());
+		int32_t topSide = std::max(a.top(), b.top());
+		int32_t rightSide = std::min(a.right(), b.right());
+		int32_t bottomSide = std::min(a.bottom(), b.bottom());
+		return IRect(leftSide, topSide, rightSide - leftSide, bottomSide - topSide);
 	}
 	// Returns true iff the rectangles have an overlapping area
 	// Equivalent to hasArea(a * b)

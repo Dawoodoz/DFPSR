@@ -50,7 +50,7 @@ private:
 public:
 	Label();
 public:
-	bool isContainer() const;
+	bool isContainer() const override;
 	void drawSelf(ImageRgbaU8& targetImage, const IRect &relativeLocation) override;
 	bool pointIsInside(const IVector2D& pixelPosition) override;
 };

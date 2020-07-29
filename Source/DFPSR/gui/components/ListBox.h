@@ -72,11 +72,11 @@ private:
 public:
 	ListBox();
 public:
-	bool isContainer() const;
+	bool isContainer() const override;
 	void drawSelf(ImageRgbaU8& targetImage, const IRect &relativeLocation) override;
 	void receiveMouseEvent(const MouseEvent& event) override;
 	void changedTheme(VisualTheme newTheme) override;
-	void changedLocation(IRect &oldLocation, IRect &newLocation) override;
+	void changedLocation(const IRect &oldLocation, const IRect &newLocation) override;
 	void changedAttribute(const ReadableString &name) override;
 	// The call receiver decides if the input needs to be mangled into quotes
 	String call(const ReadableString &methodName, const ReadableString &arguments) override;

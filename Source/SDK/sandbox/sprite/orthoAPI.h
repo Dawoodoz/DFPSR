@@ -72,7 +72,7 @@ public:
 public:
 	// TODO: Find a way to avoid the default constructor
 	OrthoView() {}
-	OrthoView(int id, const IVector2D roundedXAxis, const IVector2D roundedZAxis, int yPixelsPerTile, FMatrix3x3 normalToWorldSpace, Direction worldDirection)
+	OrthoView(int id, const IVector2D roundedXAxis, const IVector2D roundedZAxis, int yPixelsPerTile, const FMatrix3x3 &normalToWorldSpace, Direction worldDirection)
 	: id(id), worldDirection(worldDirection), normalToWorldSpace(normalToWorldSpace),
 	  pixelOffsetPerTileX(roundedXAxis), pixelOffsetPerTileZ(roundedZAxis), yPixelsPerTile(yPixelsPerTile) {
 		// Pixel aligned 3D transformation matrix from tile (x, y, z) to screen (x, y, h)
@@ -188,7 +188,7 @@ public:
 	OrthoSystem(float cameraTilt, int pixelsPerTile) : cameraTilt(cameraTilt), pixelsPerTile(pixelsPerTile) {
 		this->update();
 	}
-	OrthoSystem(const ReadableString& content) {
+	explicit OrthoSystem(const ReadableString& content) {
 		config_parse_ini(content, [this](const ReadableString& block, const ReadableString& key, const ReadableString& value) {
 			if (block.length() == 0) {
 				if (string_caseInsensitiveMatch(key, U"DownTiltPerThousand")) {

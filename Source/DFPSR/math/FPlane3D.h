@@ -45,8 +45,8 @@ struct FPlane3D {
 	// Returns a point on the plane intersecting the line starting at point along direction
 	// Returns +-INF or NaN when there's no point of intersection
 	FVector3D rayIntersect(const FVector3D &point, const FVector3D &direction) {
-		float offset = -(this->offset + dotProduct(this->normal, point)) / dotProduct(this->normal, direction);
-		return point + (direction * offset);
+		float relativeOffset = -(this->offset + dotProduct(this->normal, point)) / dotProduct(this->normal, direction);
+		return point + (direction * relativeOffset);
 	}
 };
 
