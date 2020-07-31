@@ -19,7 +19,7 @@ public:
 	// The native windows handle
 	HWND hwnd;
 	// Double buffering to allow drawing to a canvas while displaying the previous one
-	// The image which can be drawn to, sharing memory with the X11 image
+	// The image which can be drawn to
 	dsr::AlignedImageRgbaU8 canvas;
 	// Remembers the dimensions of the window from creation and resize events
 	//   This allow requesting the size of the window at any time
@@ -66,17 +66,21 @@ static LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT message, WPARAM wParam, 
 static TCHAR windowClassName[] = _T("DfpsrWindowApplication");
 
 void Win32Window::updateTitle() {
-	//XSetStandardProperties(this->display, this->window, this->title.toStdString().c_str(), "Icon", None, NULL, 0, NULL);
+	/* TODO: Test on Windows
+	if (!SetWindowTextA(this->hwnd, this->title.toStdString().c_str())) {
+		dsr::printText("Warning! Could not assign the window title ", dsr::string_mangleQuote(this->title), ".\n");		
+	}
+	*/
 }
 
 void Win32Window::setFullScreen(bool enabled) {
 	if (this->windowState == 1 && enabled) {
-		// Clean up any previous X11 window
+		// Clean up any previous window
 		removeOldWindow();
 		// Create the new window and graphics context
 		this->createFullscreen();
 	} else if (this->windowState == 2 && !enabled) {
-		// Clean up any previous X11 window
+		// Clean up any previous window
 		removeOldWindow();
 		// Create the new window and graphics context
 		this->createWindowed(this->title, 800, 600); // TODO: Remember the dimensions from last windowed mode
