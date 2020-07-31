@@ -41,7 +41,6 @@ private:
 		this->updateTitle();
 	}
 	void removeOldWindow();
-	void createWindow(const dsr::String& title, int width, int height);
 	void createWindowed(const dsr::String& title, int width, int height);
 	void createFullscreen();
 	void prepareWindow();
@@ -104,75 +103,94 @@ void Win32Window::prepareWindow() {
 
 static bool registered = false;
 static void registerIfNeeded() {
-    if (!registered) {
-        // The Window structure
-        WNDCLASSEX wincl;
-        memset(&wincl, 0, sizeof(WNDCLASSEX));
-        wincl.hInstance = NULL;
-        wincl.lpszClassName = windowClassName;
-        wincl.lpfnWndProc = WindowProcedure;
-        wincl.style = 0;
-        wincl.cbSize = sizeof(WNDCLASSEX);
+	if (!registered) {
+		// The Window structure
+		WNDCLASSEX wincl;
+		memset(&wincl, 0, sizeof(WNDCLASSEX));
+		wincl.hInstance = NULL;
+		wincl.lpszClassName = windowClassName;
+		wincl.lpfnWndProc = WindowProcedure;
+		wincl.style = 0;
+		wincl.cbSize = sizeof(WNDCLASSEX);
 
-        // Use default icon and mouse-pointer
-        wincl.hIcon = LoadIcon (NULL, IDI_APPLICATION);
-        wincl.hIconSm = LoadIcon (NULL, IDI_APPLICATION);
-        wincl.hCursor = LoadCursor (NULL, IDC_ARROW);
-        wincl.lpszMenuName = NULL; // No menu
-        wincl.cbClsExtra = 0;      // No extra bytes after the window class
-        wincl.cbWndExtra = sizeof(LPVOID);      // structure or the window instance
-        // Use Windows's default color as the background of the window
-        wincl.hbrBackground = (HBRUSH)COLOR_BACKGROUND; // TODO: Make black
+		// Use default icon and mouse-pointer
+		wincl.hIcon = LoadIcon (NULL, IDI_APPLICATION);
+		wincl.hIconSm = LoadIcon (NULL, IDI_APPLICATION);
+		wincl.hCursor = LoadCursor (NULL, IDC_ARROW);
+		wincl.lpszMenuName = NULL;
+		wincl.cbClsExtra = 0;
+		wincl.cbWndExtra = sizeof(LPVOID);
+		// Use Windows's default color as the background of the window
+		wincl.hbrBackground = (HBRUSH)COLOR_BACKGROUND; // TODO: Make black
 
-        // Register the window class, and if it fails quit the program
-        if (!RegisterClassEx (&wincl)) {
-            dsr::throwError("Call to RegisterClassEx failed!\n");
-        }
+		// Register the window class, and if it fails quit the program
+		if (!RegisterClassEx (&wincl)) {
+			dsr::throwError("Call to RegisterClassEx failed!\n");
+		}
 
-        registered = true;
-    }
+		registered = true;
+	}
 }
 
-void Win32Window::createWindow(const dsr::String& title, int width, int height) {
+void Win32Window::createWindowed(const dsr::String& title, int width, int height) {
 	// Request to resize the canvas and interface according to the new window
 	this->windowWidth = width;
 	this->windowHeight = height;
 	this->receivedWindowResize(width, height);
 
-    // Register the Window class during first creation
-    registerIfNeeded();
+	// Register the Window class during first creation
+	registerIfNeeded();
 
 	// The class is registered, let's create the program
 	this->hwnd = CreateWindowEx(
-	  0,                   // Extended possibilites for variation
-	  windowClassName,     // Classname
-	  _T("MyWindow"),      // Title Text
-	  WS_OVERLAPPEDWINDOW, // default window
-	  CW_USEDEFAULT,       // Windows decides the position
-	  CW_USEDEFAULT,       // where the window ends up on the screen
-	  width,               // The programs width
-	  height,              // and height in pixels
-	  HWND_DESKTOP,        // The window is a child-window to desktop
-	  NULL,	               // No menu
-	  NULL,                // Program Instance handler
-	  (LPVOID)this         // Pointer to the window wrapper
+	  0,                   // dwExStyle
+	  windowClassName,     // lpClassName
+	  _T(""),              // lpWindowName
+	  WS_OVERLAPPEDWINDOW, // dwStyle
+	  CW_USEDEFAULT,       // x
+	  CW_USEDEFAULT,       // y
+	  width,               // nWidth
+	  height,              // nHeight
+	  HWND_DESKTOP,        // hWndParent
+	  NULL,	               // hMenu
+	  NULL,                // hInstance
+	  (LPVOID)this         // lpParam
 	);
 
-	// TODO: Set the title
 	this->updateTitle();
-}
-
-void Win32Window::createWindowed(const dsr::String& title, int width, int height) {
-	// Create the window
-	this->createWindow(title, width, height);
 
 	this->windowState = 1;
 	this->prepareWindow();
 }
 
 void Win32Window::createFullscreen() {
-	// TODO: Implement borderless, decorationless, maximized full-screen
-	createWindowed("Full-screen is not yet supported on Windows", 800, 600);
+	int screenWidth = GetSystemMetrics(SM_CXSCREEN);
+	int screenHeight = GetSystemMetrics(SM_CYSCREEN);
+
+	// Request to resize the canvas and interface according to the new window
+	this->windowWidth = screenWidth;
+	this->windowHeight = screenHeight;
+	this->receivedWindowResize(screenWidth, screenHeight);
+
+	// Register the Window class during first creation
+	registerIfNeeded();
+
+	// The class is registered, let's create the program
+	this->hwnd = CreateWindowEx(
+	  0,                     // dwExStyle
+	  windowClassName,       // lpClassName
+	  _T(""),                // lpWindowName
+	  WS_POPUP | WS_VISIBLE, // dwStyle
+	  0,                     // x
+	  0,                     // y
+	  screenWidth,           // nWidth
+	  screenHeight,          // nHeight
+	  HWND_DESKTOP,          // hWndParent
+	  NULL,	                 // hMenu
+	  NULL,                  // hInstance
+	  (LPVOID)this           // lpParam
+	);
+
 	this->windowState = 2;
 	this->prepareWindow();
 }
@@ -196,136 +214,136 @@ Win32Window::Win32Window(const dsr::String& title, int width, int height) {
 
 static dsr::DsrKey getDsrKey(WPARAM keyCode) {
 	dsr::DsrKey result = dsr::DsrKey_Unhandled;
-    if (keyCode == VK_ESCAPE) {
-        result = dsr::DsrKey_Escape;
-    } else if (keyCode == VK_F1) {
-        result = dsr::DsrKey_F1;
-    } else if (keyCode == VK_F2) {
-        result = dsr::DsrKey_F2;
-    } else if (keyCode == VK_F3) {
-        result = dsr::DsrKey_F3;
-    } else if (keyCode == VK_F4) {
-        result = dsr::DsrKey_F4;
-    } else if (keyCode == VK_F5) {
-        result = dsr::DsrKey_F5;
-    } else if (keyCode == VK_F6) {
-        result = dsr::DsrKey_F6;
-    } else if (keyCode == VK_F7) {
-        result = dsr::DsrKey_F7;
-    } else if (keyCode == VK_F8) {
-        result = dsr::DsrKey_F8;
-    } else if (keyCode == VK_F9) {
-        result = dsr::DsrKey_F9;
-    } else if (keyCode == VK_F10) {
-        result = dsr::DsrKey_F10;
-    } else if (keyCode == VK_F11) {
-        result = dsr::DsrKey_F11;
-    } else if (keyCode == VK_F12) {
-        result = dsr::DsrKey_F12;
-    } else if (keyCode == VK_PAUSE) {
-        result = dsr::DsrKey_Pause;
-    } else if (keyCode == VK_SPACE) {
-        result = dsr::DsrKey_Space;
+	if (keyCode == VK_ESCAPE) {
+		result = dsr::DsrKey_Escape;
+	} else if (keyCode == VK_F1) {
+		result = dsr::DsrKey_F1;
+	} else if (keyCode == VK_F2) {
+		result = dsr::DsrKey_F2;
+	} else if (keyCode == VK_F3) {
+		result = dsr::DsrKey_F3;
+	} else if (keyCode == VK_F4) {
+		result = dsr::DsrKey_F4;
+	} else if (keyCode == VK_F5) {
+		result = dsr::DsrKey_F5;
+	} else if (keyCode == VK_F6) {
+		result = dsr::DsrKey_F6;
+	} else if (keyCode == VK_F7) {
+		result = dsr::DsrKey_F7;
+	} else if (keyCode == VK_F8) {
+		result = dsr::DsrKey_F8;
+	} else if (keyCode == VK_F9) {
+		result = dsr::DsrKey_F9;
+	} else if (keyCode == VK_F10) {
+		result = dsr::DsrKey_F10;
+	} else if (keyCode == VK_F11) {
+		result = dsr::DsrKey_F11;
+	} else if (keyCode == VK_F12) {
+		result = dsr::DsrKey_F12;
+	} else if (keyCode == VK_PAUSE) {
+		result = dsr::DsrKey_Pause;
+	} else if (keyCode == VK_SPACE) {
+		result = dsr::DsrKey_Space;
 	} else if (keyCode == VK_TAB) {
-        result = dsr::DsrKey_Tab;
-    } else if (keyCode == VK_RETURN) {
-        result = dsr::DsrKey_Return;
-    } else if (keyCode == VK_BACK) {
-        result = dsr::DsrKey_BackSpace;
-    } else if (keyCode == VK_LSHIFT) {
-        result = dsr::DsrKey_LeftShift;
-    } else if (keyCode == VK_RSHIFT) {
-        result = dsr::DsrKey_RightShift;
-    } else if (keyCode == VK_LCONTROL) {
-        result = dsr::DsrKey_LeftControl;
-    } else if (keyCode == VK_RCONTROL) {
-        result = dsr::DsrKey_RightControl;
-    } else if (keyCode == VK_LMENU) {
-        result = dsr::DsrKey_LeftAlt;
-    } else if (keyCode == VK_RMENU) {
-        result = dsr::DsrKey_RightAlt;
-    } else if (keyCode == VK_DELETE) {
-        result = dsr::DsrKey_Delete;
-    } else if (keyCode == VK_LEFT) {
-        result = dsr::DsrKey_LeftArrow;
-    } else if (keyCode == VK_RIGHT) {
-        result = dsr::DsrKey_RightArrow;
-    } else if (keyCode == VK_UP) {
-        result = dsr::DsrKey_UpArrow;
-    } else if (keyCode == VK_DOWN) {
-        result = dsr::DsrKey_DownArrow;
-    } else if (keyCode == 0x30) {
-        result = dsr::DsrKey_0;
-    } else if (keyCode == 0x31) {
-        result = dsr::DsrKey_1;
-    } else if (keyCode == 0x32) {
-        result = dsr::DsrKey_2;
-    } else if (keyCode == 0x33) {
-        result = dsr::DsrKey_3;
-    } else if (keyCode == 0x34) {
-        result = dsr::DsrKey_4;
-    } else if (keyCode == 0x35) {
-        result = dsr::DsrKey_5;
-    } else if (keyCode == 0x36) {
-        result = dsr::DsrKey_6;
-    } else if (keyCode == 0x37) {
-        result = dsr::DsrKey_7;
-    } else if (keyCode == 0x38) {
-        result = dsr::DsrKey_8;
-    } else if (keyCode == 0x39) {
-        result = dsr::DsrKey_9;
-    } else if (keyCode == 0x41) {
-        result = dsr::DsrKey_A;
-    } else if (keyCode == 0x42) {
-        result = dsr::DsrKey_B;
-    } else if (keyCode == 0x43) {
-        result = dsr::DsrKey_C;
-    } else if (keyCode == 0x44) {
-        result = dsr::DsrKey_D;
-    } else if (keyCode == 0x45) {
-        result = dsr::DsrKey_E;
-    } else if (keyCode == 0x46) {
-        result = dsr::DsrKey_F;
-    } else if (keyCode == 0x47) {
-        result = dsr::DsrKey_G;
-    } else if (keyCode == 0x48) {
-        result = dsr::DsrKey_H;
-    } else if (keyCode == 0x49) {
-        result = dsr::DsrKey_I;
-    } else if (keyCode == 0x4A) {
-        result = dsr::DsrKey_J;
-    } else if (keyCode == 0x4B) {
-        result = dsr::DsrKey_K;
-    } else if (keyCode == 0x4C) {
-        result = dsr::DsrKey_L;
-    } else if (keyCode == 0x4D) {
-        result = dsr::DsrKey_M;
-    } else if (keyCode == 0x4E) {
-        result = dsr::DsrKey_N;
-    } else if (keyCode == 0x4F) {
-        result = dsr::DsrKey_O;
-    } else if (keyCode == 0x50) {
-        result = dsr::DsrKey_P;
-    } else if (keyCode == 0x51) {
-        result = dsr::DsrKey_Q;
-    } else if (keyCode == 0x52) {
-        result = dsr::DsrKey_R;
-    } else if (keyCode == 0x53) {
-        result = dsr::DsrKey_S;
-    } else if (keyCode == 0x54) {
-        result = dsr::DsrKey_T;
-    } else if (keyCode == 0x55) {
-        result = dsr::DsrKey_U;
-    } else if (keyCode == 0x56) {
-        result = dsr::DsrKey_V;
-    } else if (keyCode == 0x57) {
-        result = dsr::DsrKey_W;
-    } else if (keyCode == 0x58) {
-        result = dsr::DsrKey_X;
-    } else if (keyCode == 0x59) {
-        result = dsr::DsrKey_Y;
-    } else if (keyCode == 0x5A) {
-        result = dsr::DsrKey_Z;
+		result = dsr::DsrKey_Tab;
+	} else if (keyCode == VK_RETURN) {
+		result = dsr::DsrKey_Return;
+	} else if (keyCode == VK_BACK) {
+		result = dsr::DsrKey_BackSpace;
+	} else if (keyCode == VK_LSHIFT) {
+		result = dsr::DsrKey_LeftShift;
+	} else if (keyCode == VK_RSHIFT) {
+		result = dsr::DsrKey_RightShift;
+	} else if (keyCode == VK_LCONTROL) {
+		result = dsr::DsrKey_LeftControl;
+	} else if (keyCode == VK_RCONTROL) {
+		result = dsr::DsrKey_RightControl;
+	} else if (keyCode == VK_LMENU) {
+		result = dsr::DsrKey_LeftAlt;
+	} else if (keyCode == VK_RMENU) {
+		result = dsr::DsrKey_RightAlt;
+	} else if (keyCode == VK_DELETE) {
+		result = dsr::DsrKey_Delete;
+	} else if (keyCode == VK_LEFT) {
+		result = dsr::DsrKey_LeftArrow;
+	} else if (keyCode == VK_RIGHT) {
+		result = dsr::DsrKey_RightArrow;
+	} else if (keyCode == VK_UP) {
+		result = dsr::DsrKey_UpArrow;
+	} else if (keyCode == VK_DOWN) {
+		result = dsr::DsrKey_DownArrow;
+	} else if (keyCode == 0x30) {
+		result = dsr::DsrKey_0;
+	} else if (keyCode == 0x31) {
+		result = dsr::DsrKey_1;
+	} else if (keyCode == 0x32) {
+		result = dsr::DsrKey_2;
+	} else if (keyCode == 0x33) {
+		result = dsr::DsrKey_3;
+	} else if (keyCode == 0x34) {
+		result = dsr::DsrKey_4;
+	} else if (keyCode == 0x35) {
+		result = dsr::DsrKey_5;
+	} else if (keyCode == 0x36) {
+		result = dsr::DsrKey_6;
+	} else if (keyCode == 0x37) {
+		result = dsr::DsrKey_7;
+	} else if (keyCode == 0x38) {
+		result = dsr::DsrKey_8;
+	} else if (keyCode == 0x39) {
+		result = dsr::DsrKey_9;
+	} else if (keyCode == 0x41) {
+		result = dsr::DsrKey_A;
+	} else if (keyCode == 0x42) {
+		result = dsr::DsrKey_B;
+	} else if (keyCode == 0x43) {
+		result = dsr::DsrKey_C;
+	} else if (keyCode == 0x44) {
+		result = dsr::DsrKey_D;
+	} else if (keyCode == 0x45) {
+		result = dsr::DsrKey_E;
+	} else if (keyCode == 0x46) {
+		result = dsr::DsrKey_F;
+	} else if (keyCode == 0x47) {
+		result = dsr::DsrKey_G;
+	} else if (keyCode == 0x48) {
+		result = dsr::DsrKey_H;
+	} else if (keyCode == 0x49) {
+		result = dsr::DsrKey_I;
+	} else if (keyCode == 0x4A) {
+		result = dsr::DsrKey_J;
+	} else if (keyCode == 0x4B) {
+		result = dsr::DsrKey_K;
+	} else if (keyCode == 0x4C) {
+		result = dsr::DsrKey_L;
+	} else if (keyCode == 0x4D) {
+		result = dsr::DsrKey_M;
+	} else if (keyCode == 0x4E) {
+		result = dsr::DsrKey_N;
+	} else if (keyCode == 0x4F) {
+		result = dsr::DsrKey_O;
+	} else if (keyCode == 0x50) {
+		result = dsr::DsrKey_P;
+	} else if (keyCode == 0x51) {
+		result = dsr::DsrKey_Q;
+	} else if (keyCode == 0x52) {
+		result = dsr::DsrKey_R;
+	} else if (keyCode == 0x53) {
+		result = dsr::DsrKey_S;
+	} else if (keyCode == 0x54) {
+		result = dsr::DsrKey_T;
+	} else if (keyCode == 0x55) {
+		result = dsr::DsrKey_U;
+	} else if (keyCode == 0x56) {
+		result = dsr::DsrKey_V;
+	} else if (keyCode == 0x57) {
+		result = dsr::DsrKey_W;
+	} else if (keyCode == 0x58) {
+		result = dsr::DsrKey_X;
+	} else if (keyCode == 0x59) {
+		result = dsr::DsrKey_Y;
+	} else if (keyCode == 0x5A) {
+		result = dsr::DsrKey_Z;
 	}
 	return result;
 }
@@ -336,12 +354,12 @@ static LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT message, WPARAM wParam, 
 	Win32Window *parent = nullptr;
 	if (message == WM_CREATE) {
 		// Cast the pointer argument into CREATESTRUCT and get the lParam given to the window on creation
-        CREATESTRUCT *createStruct = (CREATESTRUCT*)lParam;
-        parent = (Win32Window*)createStruct->lpCreateParams;
+		CREATESTRUCT *createStruct = (CREATESTRUCT*)lParam;
+		parent = (Win32Window*)createStruct->lpCreateParams;
 		if (parent == nullptr) {
 			dsr::throwError("Null handle retreived from lParam (", (intptr_t)parent, ") in WM_CREATE message.\n");
 		}
-        SetWindowLongPtr(hwnd, GWLP_USERDATA, (intptr_t)parent);
+		SetWindowLongPtr(hwnd, GWLP_USERDATA, (intptr_t)parent);
 	} else {
 		// Get the parent
 		parent = (Win32Window*)GetWindowLongPtr(hwnd, GWLP_USERDATA);
@@ -396,19 +414,19 @@ static LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT message, WPARAM wParam, 
 		}
 		break;
 	case WM_KEYDOWN: case WM_KEYUP:
-	    {
-            char character = wParam; // System specific key-code
-            dsr::DsrKey dsrKey = getDsrKey(wParam); // Portable key-code
-            if (message == WM_KEYDOWN) {
-                // Physical key down
-                parent->queueInputEvent(new dsr::KeyboardEvent(dsr::KeyboardEventType::KeyDown, character, dsrKey));
-                // First press typing
-                parent->queueInputEvent(new dsr::KeyboardEvent(dsr::KeyboardEventType::KeyType, character, dsrKey));
-            } else { // message == WM_KEYUP
-                // Physical key up
-                parent->queueInputEvent(new dsr::KeyboardEvent(dsr::KeyboardEventType::KeyUp, character, dsrKey));
-            }
-        }
+		{
+			char character = wParam; // System specific key-code
+			dsr::DsrKey dsrKey = getDsrKey(wParam); // Portable key-code
+			if (message == WM_KEYDOWN) {
+				// Physical key down
+				parent->queueInputEvent(new dsr::KeyboardEvent(dsr::KeyboardEventType::KeyDown, character, dsrKey));
+				// First press typing
+				parent->queueInputEvent(new dsr::KeyboardEvent(dsr::KeyboardEventType::KeyType, character, dsrKey));
+			} else { // message == WM_KEYUP
+				// Physical key up
+				parent->queueInputEvent(new dsr::KeyboardEvent(dsr::KeyboardEventType::KeyUp, character, dsrKey));
+			}
+		}
 		break;
 	case WM_PAINT:
 		parent->queueInputEvent(new dsr::WindowEvent(dsr::WindowEventType::Redraw, parent->windowWidth, parent->windowHeight));
