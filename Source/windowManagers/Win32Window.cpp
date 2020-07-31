@@ -66,11 +66,9 @@ static LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT message, WPARAM wParam, 
 static TCHAR windowClassName[] = _T("DfpsrWindowApplication");
 
 void Win32Window::updateTitle() {
-	/* TODO: Test on Windows
 	if (!SetWindowTextA(this->hwnd, this->title.toStdString().c_str())) {
 		dsr::printText("Warning! Could not assign the window title ", dsr::string_mangleQuote(this->title), ".\n");		
 	}
-	*/
 }
 
 void Win32Window::setFullScreen(bool enabled) {
