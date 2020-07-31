@@ -67,7 +67,7 @@ static TCHAR windowClassName[] = _T("DfpsrWindowApplication");
 
 void Win32Window::updateTitle() {
 	if (!SetWindowTextA(this->hwnd, this->title.toStdString().c_str())) {
-		dsr::printText("Warning! Could not assign the window title ", dsr::string_mangleQuote(this->title), ".\n");		
+		dsr::printText("Warning! Could not assign the window title ", dsr::string_mangleQuote(this->title), ".\n");
 	}
 }
 
@@ -102,35 +102,45 @@ void Win32Window::prepareWindow() {
 	UpdateWindow(this->hwnd);
 }
 
+static bool registered = false;
+static void registerIfNeeded() {
+    if (!registered) {
+        // The Window structure
+        WNDCLASSEX wincl;
+        memset(&wincl, 0, sizeof(WNDCLASSEX));
+        wincl.hInstance = NULL;
+        wincl.lpszClassName = windowClassName;
+        wincl.lpfnWndProc = WindowProcedure;
+        wincl.style = 0;
+        wincl.cbSize = sizeof(WNDCLASSEX);
+
+        // Use default icon and mouse-pointer
+        wincl.hIcon = LoadIcon (NULL, IDI_APPLICATION);
+        wincl.hIconSm = LoadIcon (NULL, IDI_APPLICATION);
+        wincl.hCursor = LoadCursor (NULL, IDC_ARROW);
+        wincl.lpszMenuName = NULL; // No menu
+        wincl.cbClsExtra = 0;      // No extra bytes after the window class
+        wincl.cbWndExtra = sizeof(LPVOID);      // structure or the window instance
+        // Use Windows's default color as the background of the window
+        wincl.hbrBackground = (HBRUSH)COLOR_BACKGROUND; // TODO: Make black
+
+        // Register the window class, and if it fails quit the program
+        if (!RegisterClassEx (&wincl)) {
+            dsr::throwError("Call to RegisterClassEx failed!\n");
+        }
+
+        registered = true;
+    }
+}
+
 void Win32Window::createWindow(const dsr::String& title, int width, int height) {
 	// Request to resize the canvas and interface according to the new window
 	this->windowWidth = width;
 	this->windowHeight = height;
 	this->receivedWindowResize(width, height);
 
-	// The Window structure
-	WNDCLASSEX wincl;
-	memset(&wincl, 0, sizeof(WNDCLASSEX));
-	wincl.hInstance = NULL;
-	wincl.lpszClassName = windowClassName;
-	wincl.lpfnWndProc = WindowProcedure;
-	wincl.style = 0;
-	wincl.cbSize = sizeof(WNDCLASSEX);
-
-	// Use default icon and mouse-pointer
-	wincl.hIcon = LoadIcon (NULL, IDI_APPLICATION);
-	wincl.hIconSm = LoadIcon (NULL, IDI_APPLICATION);
-	wincl.hCursor = LoadCursor (NULL, IDC_ARROW);
-	wincl.lpszMenuName = NULL; // No menu
-	wincl.cbClsExtra = 0;      // No extra bytes after the window class
-	wincl.cbWndExtra = sizeof(LPVOID);      // structure or the window instance
-	// Use Windows's default color as the background of the window
-	wincl.hbrBackground = (HBRUSH)COLOR_BACKGROUND; // TODO: Make black
-
-	// Register the window class, and if it fails quit the program
-	if (!RegisterClassEx (&wincl)) {
-		dsr::throwError("Call to RegisterClassEx failed!\n");
-	}
+    // Register the Window class during first creation
+    registerIfNeeded();
 
 	// The class is registered, let's create the program
 	this->hwnd = CreateWindowEx(
