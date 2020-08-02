@@ -56,7 +56,7 @@ START_TEST(Image)
 		ASSERT_EQUAL(image_hasPyramid(image), true);
 	}
 	{ // Texture criterias
-		ImageRgbaU8 image;
+		ImageRgbaU8 image, subImage;
 		image = image_create_RgbaU8(2, 2);
 		ASSERT_EQUAL(image_isTexture(image), false); // Too small
 		image = image_create_RgbaU8(13, 8);
@@ -66,9 +66,13 @@ START_TEST(Image)
 		image = image_create_RgbaU8(4, 4);
 		ASSERT_EQUAL(image_isTexture(image), true); // Okay
 		image = image_create_RgbaU8(4, 16384);
+		subImage = image_getSubImage(image, IRect(0, 0, 4, 128));
 		ASSERT_EQUAL(image_isTexture(image), true); // Okay
+		ASSERT_EQUAL(image_isTexture(subImage), true); // Okay to use full-width vertical sub-images
 		image = image_create_RgbaU8(16384, 4);
+		subImage = image_getSubImage(image, IRect(0, 0, 128, 4));
 		ASSERT_EQUAL(image_isTexture(image), true); // Okay
+		ASSERT_EQUAL(image_isTexture(subImage), false); // Not okay to use partial width leading to partial stride
 		image = image_create_RgbaU8(16384 + 1, 4);
 		ASSERT_EQUAL(image_isTexture(image), false); // Too wide and not power-of-two width
 		image = image_create_RgbaU8(32768, 4);
