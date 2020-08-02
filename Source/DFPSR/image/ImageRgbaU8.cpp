@@ -135,9 +135,7 @@ static int32_t getSizeGroup(int32_t size) {
 		group = 13;
 	} else if (size == 16384) {
 		group = 14; // Largest allowed texture dimension
-	} else if (size == 32768) {
-		group = 15; // May exceed the the address space of 32-bit pointers! Not allowed for textures.
-	}
+	} // Higher dimensions should return -1, so that initializeRgbaImage avoids initializing the image as a texture and isTexture returns false
 	return group;
 }
 

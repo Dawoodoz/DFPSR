@@ -55,5 +55,28 @@ START_TEST(Image)
 		image_generatePyramid(image);
 		ASSERT_EQUAL(image_hasPyramid(image), true);
 	}
+	{ // Texture criterias
+		ImageRgbaU8 image;
+		image = image_create_RgbaU8(2, 2);
+		ASSERT_EQUAL(image_isTexture(image), false); // Too small
+		image = image_create_RgbaU8(13, 8);
+		ASSERT_EQUAL(image_isTexture(image), false); // Not power-of-two width
+		image = image_create_RgbaU8(4, 7);
+		ASSERT_EQUAL(image_isTexture(image), false); // Not power-of-two height
+		image = image_create_RgbaU8(4, 4);
+		ASSERT_EQUAL(image_isTexture(image), true); // Okay
+		image = image_create_RgbaU8(4, 16384);
+		ASSERT_EQUAL(image_isTexture(image), true); // Okay
+		image = image_create_RgbaU8(16384, 4);
+		ASSERT_EQUAL(image_isTexture(image), true); // Okay
+		image = image_create_RgbaU8(16384 + 1, 4);
+		ASSERT_EQUAL(image_isTexture(image), false); // Too wide and not power-of-two width
+		image = image_create_RgbaU8(32768, 4);
+		ASSERT_EQUAL(image_isTexture(image), false); // Too wide
+		image = image_create_RgbaU8(4, 16384 + 1);
+		ASSERT_EQUAL(image_isTexture(image), false); // Too high and not power-of-two height
+		image = image_create_RgbaU8(4, 32768);
+		ASSERT_EQUAL(image_isTexture(image), false); // Too high
+	}
 END_TEST
 
