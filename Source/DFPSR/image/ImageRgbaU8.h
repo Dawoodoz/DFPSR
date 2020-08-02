@@ -72,6 +72,7 @@ public:
 	TextureRgba texture; // The texture view
 	void initializeRgbaImage(); // Points to level 0 from all bins to allow rendering
 	void generatePyramid(); // Fills the following bins with smaller images
+	void removePyramid();
 	bool isTexture() const;
 	static bool isTexture(const ImageRgbaU8Impl* image); // Null cannot be sampled as a texture
 public:

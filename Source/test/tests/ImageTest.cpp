@@ -38,6 +38,10 @@ START_TEST(Image)
 		ASSERT_EQUAL(image_hasPyramid(image), false);
 		image_generatePyramid(image);
 		ASSERT_EQUAL(image_hasPyramid(image), true);
+		image_removePyramid(image);
+		ASSERT_EQUAL(image_hasPyramid(image), false);
+		image_generatePyramid(image);
+		ASSERT_EQUAL(image_hasPyramid(image), true);
 	}
 END_TEST
 

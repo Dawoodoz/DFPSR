@@ -110,7 +110,7 @@ static int32_t getSizeGroup(int32_t size) {
 	} else if (size == 2) {
 		group = 1; // Too small for 16-byte alignment!
 	} else if (size == 4) {
-		group = 2;
+		group = 2; // Smallest allowed texture dimension
 	} else if (size == 8) {
 		group = 3;
 	} else if (size == 16) {
@@ -134,9 +134,9 @@ static int32_t getSizeGroup(int32_t size) {
 	} else if (size == 8192) {
 		group = 13;
 	} else if (size == 16384) {
-		group = 14; // Not recommended to use!
+		group = 14; // Largest allowed texture dimension
 	} else if (size == 32768) {
-		group = 15; // Exceeding the address space of 32-bit pointers!
+		group = 15; // May exceed the the address space of 32-bit pointers! Not allowed for textures.
 	}
 	return group;
 }
@@ -196,8 +196,8 @@ void ImageRgbaU8Impl::generatePyramid() {
 	if (!this->isTexture()) {
 		if (this->width < 4 || this->height < 4) {
 			printText("Cannot generate a pyramid from an image smaller than 4x4 pixels.\n");
-		} else if (this->width > 32768 || this->height > 32768) {
-			printText("Cannot generate a pyramid from an image larger than 32768x32768 pixels.\n");
+		} else if (this->width > 16384 || this->height > 16384) {
+			printText("Cannot generate a pyramid from an image larger than 16384x16384 pixels.\n");
 		} else if (getSizeGroup(this->width) == -1 || getSizeGroup(this->height) == -1) {
 			printText("Cannot generate a pyramid from image dimensions that are not powers of two.\n");
 		} else if (this->stride > this->width * pixelSize) {
@@ -234,6 +234,18 @@ void ImageRgbaU8Impl::generatePyramid() {
 		// Fill unused mip levels with duplicates of the last mip level
 		for (int32_t m = mipmaps; m < MIP_BIN_COUNT; m++) {
 			this->texture.mips[m] = this->texture.mips[m - 1];
+		}
+	}
+}
+
+void ImageRgbaU8Impl::removePyramid() {
+	// Only try to remove if it has a pyramid
+	if (this->texture.pyramidBuffer.get() != nullptr) {
+		// Remove the pyramid's buffer
+		this->texture.pyramidBuffer = std::shared_ptr<Buffer>();
+		// Re-initialize
+		for (int32_t m = 0; m < MIP_BIN_COUNT; m++) {
+			this->texture.mips[m] = TextureRgbaLayer(imageInternal::getSafeData<uint8_t>(*this).getUnsafe(), this->width, this->height);
 		}
 	}
 }

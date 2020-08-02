@@ -108,6 +108,11 @@ void dsr::image_generatePyramid(ImageRgbaU8& image) {
 		image->generatePyramid();
 	}
 }
+void dsr::image_removePyramid(ImageRgbaU8& image) {
+	if (image) {
+		image->removePyramid();
+	}
+}
 bool dsr::image_hasPyramid(const ImageRgbaU8& image) {
 	GET_OPTIONAL(image->texture.hasMipBuffer(), false);
 }
