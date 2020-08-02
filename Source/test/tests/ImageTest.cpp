@@ -82,5 +82,70 @@ START_TEST(Image)
 		image = image_create_RgbaU8(4, 32768);
 		ASSERT_EQUAL(image_isTexture(image), false); // Too high
 	}
+	{ // Sub-images
+		ImageU8 parentImage = image_fromAscii(
+			"< .x>"
+			"< ..  .. >"
+			"<..x..x..>"
+			"<.xx..xx.>"
+			"< ..xx.. >"
+			"< ..xx.. >"
+			"<.xx..xx.>"
+			"<..x..x..>"
+			"< ..  .. >"
+		);
+		ImageU8 upperLeftSubImage = image_getSubImage(parentImage, IRect(0, 0, 4, 4));
+		ImageU8 upperRightSubImage = image_getSubImage(parentImage, IRect(4, 0, 4, 4));
+		ImageU8 lowerLeftSubImage = image_getSubImage(parentImage, IRect(0, 4, 4, 4));
+		ImageU8 lowerRightSubImage = image_getSubImage(parentImage, IRect(4, 4, 4, 4));
+		ImageU8 centerSubImage = image_getSubImage(parentImage, IRect(2, 2, 4, 4));
+		ASSERT_EQUAL(image_maxDifference(upperLeftSubImage, image_fromAscii(
+			"< .x>"
+			"< .. >"
+			"<..x.>"
+			"<.xx.>"
+			"< ..x>"
+		)), 0);
+		ASSERT_EQUAL(image_maxDifference(upperRightSubImage, image_fromAscii(
+			"< .x>"
+			"< .. >"
+			"<.x..>"
+			"<.xx.>"
+			"<x.. >"
+		)), 0);
+		ASSERT_EQUAL(image_maxDifference(lowerLeftSubImage, image_fromAscii(
+			"< .x>"
+			"< ..x>"
+			"<.xx.>"
+			"<..x.>"
+			"< .. >"
+		)), 0);
+		ASSERT_EQUAL(image_maxDifference(lowerRightSubImage, image_fromAscii(
+			"< .x>"
+			"<x.. >"
+			"<.xx.>"
+			"<.x..>"
+			"< .. >"
+		)), 0);
+		ASSERT_EQUAL(image_maxDifference(centerSubImage, image_fromAscii(
+			"< .x>"
+			"<x..x>"
+			"<.xx.>"
+			"<.xx.>"
+			"<x..x>"
+		)), 0);
+		image_fill(centerSubImage, 0);
+		ASSERT_EQUAL(image_maxDifference(parentImage, image_fromAscii(
+			"< .x>"
+			"< ..  .. >"
+			"<..x..x..>"
+			"<.x    x.>"
+			"< .    . >"
+			"< .    . >"
+			"<.x    x.>"
+			"<..x..x..>"
+			"< ..  .. >"
+		)), 0);
+	}
 END_TEST
 

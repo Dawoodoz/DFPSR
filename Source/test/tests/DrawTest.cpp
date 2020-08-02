@@ -40,7 +40,7 @@ START_TEST(Draw)
 	draw_rectangle(imageA, IRect(11, 11, 2, 2), white);
 
 	// TODO: Make a reusable macro for comparing images and showing them when a test fails.
-	ASSERT_LESSER_OR_EQUAL(image_maxDifference(imageA, expected1), 1);
+	ASSERT_EQUAL(image_maxDifference(imageA, expected1), 0);
 	//printText("imageA:\n", image_toAscii(imageA, " .x"), "\n");
 END_TEST
 
