@@ -2,7 +2,7 @@
 
 Since august 12 2017
 
-## Why use this software renderer instead of OpenGL
+## Why use this software renderer instead of OpenGL or Direct3D
 
 * No core dependencies, just a static library defining all rendering mathematically in C++.
 
@@ -60,7 +60,7 @@ Even when running without a supported SIMD instruction set, the emulated scalar 
 
 ## Requirements
 
-* Just like when building your own desktop computer, ARM based mini-computers also need cooling if you plan to do something resource intensive non-stop for hours.
+* ARM based mini-computers also need cooling if you plan to do something resource intensive non-stop for hours.
 
 * Big-endian mode is untested and gives a warning if compiling using the DSR_BIG_ENDIAN macro. The file endian.h only exists in case that big-endian ever comes back to personal computers in the future.
 
