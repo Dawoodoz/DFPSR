@@ -2,23 +2,23 @@
 
 Since august 12 2017
 
-## Why use this software renderer
+## Why use this software renderer instead of OpenGL
 
-* No core dependencies, just a static library defining all rendering mathematically in C++. You can render without any GPU and save directly to files without depending on a window manager. You can show grayscale images as ascii art in the terminal for debugging. If you want a window manager, you can inject one from the outside by creating a backend class and inject into a portable DsrWindow.
+* No core dependencies, just a static library defining all rendering mathematically in C++.
 
 * No device lost exceptions randomly erasing all your buffers. This may happen on GPUs because of poor hardware design that never considered general purpose computations.
 
-* No shader compilation failure at end users. It's all compiled with the application.
+* No shader compilation failure at end users. It's all compiled once with the application and doesn't require any SPIR extension.
 
 * No visible shader source code exposing secret algoritms to competitors. It's just more code in your executable where identifiers can be obfuscated.
 
-* No missing GPU extensions. You don't even need a GPU if you save the result to a file or send it over a network.
+* No missing GPU extensions. You don't even need a 3D accelerated graphics card. Using a window manager is optional, because you can render to images and save to a png file (used to generate sprites in the Sandbox example) or print ascii art in a command line interface over SSH (useful for embedded projects).
 
 ### Classic games
 
-Making a classic game without defining how rendering is done in pure high-level math makes as little sense as saving the last copy of your family history book for generations to come in a platform specific encrypted DRM format. If someone's going to restore your game into playable conditions 500 years from now by porting the code, they shouldn't have to guess what OpenGL is nor which month's driver patch it requires to run.
+If you create or reimplement a classic game to preserve with source code for people to play 100 to 500 years into the future as a part of our computer pioneering history, you probably want them to have most pieces of the puzzle intact, including the whole graphics pipeline and graphical user interface system in a minimalistic mathematical representation. It will be hard enough to automatically translate the code from standard C++, so don't make them look for a specific revision of graphics drivers, service packs to operating systems, rare versions of script interpreters and hundreds of third-party libraries that you didn't even need.
 
-### Long lifetime projects
+### Long development time
 
 If you plan to make something that takes 30 years to develop and should be operational far into the future, you need a statically linked framework that defines everything clearly and precisely in one place without leving room for alternative interpretation by external libraries.
 
