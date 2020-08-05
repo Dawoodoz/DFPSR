@@ -38,11 +38,11 @@ public:
 	  position(position),
 	  transform(transform) {}
 
-	// Transform the point by multiplying with the matrix
+	// Transform the point by multiplying with the 3x3 matrix and adding the translation
 	FVector3D transformPoint(const FVector3D &p) const {
 		return this->transform.transform(p) + this->position;
 	}
-	// Transform the vector by multiplying with the matrix
+	// Transform the vector by multiplying with the 3x3 matrix
 	FVector3D transformVector(const FVector3D &p) const {
 		return this->transform.transform(p);
 	}
