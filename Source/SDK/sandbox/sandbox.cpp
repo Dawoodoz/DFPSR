@@ -286,6 +286,7 @@ void sandbox_main() {
 	sprite_loadTypeFromFile(imagePath, U"WoodenFence");
 	sprite_loadTypeFromFile(imagePath, U"WoodenBarrel");
 	sprite_loadTypeFromFile(imagePath, U"Pillar");
+	sprite_loadTypeFromFile(imagePath, U"Character_Mage");
 
 	// Create passive sprites
 	for (int z = -300; z < 300; z++) {
@@ -299,6 +300,9 @@ void sandbox_main() {
 			if (random(1, 4) == 1) {
 				// Obstacles should cast shadows when possible
 				spriteWorld_addBackgroundSprite(world, Sprite(random(2, 4), random(0, 3) * dir90, IVector3D(x * ortho_miniUnitsPerTile, 0, z * ortho_miniUnitsPerTile), true));
+			} else if (random(1, 20) == 1) {
+				// Characters are just static geometry for testing
+				spriteWorld_addBackgroundSprite(world, Sprite(5, random(0, 7) * dir45, IVector3D(x * ortho_miniUnitsPerTile, 0, z * ortho_miniUnitsPerTile), true));
 			}
 		}
 	}
