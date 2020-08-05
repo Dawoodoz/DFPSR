@@ -834,115 +834,141 @@ static void sprite_render(Model model, OrthoView view, ImageF32 depthBuffer, Ima
 }
 
 void sprite_generateFromModel(ImageRgbaU8& targetAtlas, String& targetConfigText, const Model& visibleModel, const Model& shadowModel, const OrthoSystem& ortho, const String& targetPath, int cameraAngles) {
-	// Measure the bounding cylinder for determining the uncropped image size
-	FVector3D minBound = FVector3D(std::numeric_limits<float>::max());
-	FVector3D maxBound = FVector3D(-std::numeric_limits<float>::max());
-	for (int p = 0; p < model_getNumberOfPoints(visibleModel); p++) {
-		FVector3D point = model_getPoint(visibleModel, p);
-		if (point.x < minBound.x) { minBound.x = point.x; }
-		if (point.y < minBound.y) { minBound.y = point.y; }
-		if (point.z < minBound.z) { minBound.z = point.z; }
-		if (point.x > maxBound.x) { maxBound.x = point.x; }
-		if (point.y > maxBound.y) { maxBound.y = point.y; }
-		if (point.z > maxBound.z) { maxBound.z = point.z; }
-	}
-	printText("  Representing height from ", minBound.y, " to ", maxBound.y, " encoded using 8-bits\n");
-
-	// Calculate initial image size
-	float worstCaseDiameter = (std::max(maxBound.x, -minBound.x) + std::max(maxBound.y, -minBound.y) + std::max(maxBound.z, -minBound.z)) * 2;
-	int maxRes = roundUp(worstCaseDiameter * ortho.pixelsPerTile, 2) + 4; // Round up to even pixels and add 4 padding pixels
-
-	// Allocate square images from the pessimistic size estimation
-	int width = maxRes;
-	int height = maxRes;
-	ImageF32 depthBuffer = image_create_F32(width, height);
-	ImageRgbaU8 colorImage[cameraAngles];
-	ImageRgbaU8 heightImage[cameraAngles];
-	ImageRgbaU8 normalImage[cameraAngles];
-	for (int a = 0; a < cameraAngles; a++) {
-		colorImage[a] = image_create_RgbaU8(width, height);
-		heightImage[a] = image_create_RgbaU8(width, height);
-		normalImage[a] = image_create_RgbaU8(width, height);
-	}
-	// Render the model to multiple render targets at once
-	float heightScale = 255.0f / (maxBound.y - minBound.y);
-	for (int a = 0; a < cameraAngles; a++) {
-		image_fill(depthBuffer, -1000000000.0f);
-		image_fill(colorImage[a], ColorRgbaI32(0, 0, 0, 0));
-		sprite_render(visibleModel, ortho.view[a], depthBuffer, colorImage[a], normalImage[a]);
-		// Convert height into an 8 bit channel for saving
-		for (int y = 0; y < height; y++) {
-			for (int x = 0; x < width; x++) {
-				int32_t opacityPixel = image_readPixel_clamp(colorImage[a], x, y).alpha;
-				int32_t heightPixel = (image_readPixel_clamp(depthBuffer, x, y) - minBound.y) * heightScale;
-				image_writePixel(heightImage[a], x, y, ColorRgbaI32(heightPixel, 0, 0, opacityPixel));
-			}
+	// Validate input
+	if (cameraAngles < 1) {
+		printText("  Need at least one camera angle to generate a sprite!\n");
+		return;
+	} else if (!model_exists(visibleModel)) {
+		printText("  There's nothing to render, because visible model does not exist!\n");
+		return;
+	} else if (model_getNumberOfParts(visibleModel) == 0) {
+		printText("  There's nothing to render in the visible model, because there are no parts in the visible model!\n");
+		return;
+	} else {
+		// Measure the bounding cylinder for determining the uncropped image size
+		FVector3D minBound = FVector3D(std::numeric_limits<float>::max());
+		FVector3D maxBound = FVector3D(-std::numeric_limits<float>::max());
+		for (int p = 0; p < model_getNumberOfPoints(visibleModel); p++) {
+			FVector3D point = model_getPoint(visibleModel, p);
+			if (point.x < minBound.x) { minBound.x = point.x; }
+			if (point.y < minBound.y) { minBound.y = point.y; }
+			if (point.z < minBound.z) { minBound.z = point.z; }
+			if (point.x > maxBound.x) { maxBound.x = point.x; }
+			if (point.y > maxBound.y) { maxBound.y = point.y; }
+			if (point.z > maxBound.z) { maxBound.z = point.z; }
 		}
-	}
+		// Check if generating a bound failed
+		if (minBound.x > maxBound.x) {
+			printText("  There's nothing visible in the model, because the 3D bounding box had no points to be created from!\n");
+			return;
+		}
 
-	// Crop all images uniformly for easy atlas packing
-	int32_t minX = width;
-	int32_t minY = height;
-	int32_t maxX = 0;
-	int32_t maxY = 0;
-	for (int a = 0; a < cameraAngles; a++) {
-		for (int y = 0; y < height; y++) {
-			for (int x = 0; x < width; x++) {
-				if (image_readPixel_border(colorImage[a], x, y).alpha) {
-					if (x < minX) minX = x;
-					if (x > maxX) maxX = x;
-					if (y < minY) minY = y;
-					if (y > maxY) maxY = y;
+		printText("  Representing height from ", minBound.y, " to ", maxBound.y, " encoded using 8-bits\n");
+
+		// Calculate initial image size
+		float worstCaseDiameter = (std::max(maxBound.x, -minBound.x) + std::max(maxBound.y, -minBound.y) + std::max(maxBound.z, -minBound.z)) * 2;
+		int maxRes = roundUp(worstCaseDiameter * ortho.pixelsPerTile, 2) + 4; // Round up to even pixels and add 4 padding pixels
+
+		// Allocate square images from the pessimistic size estimation
+		int width = maxRes;
+		int height = maxRes;
+		ImageF32 depthBuffer = image_create_F32(width, height);
+		ImageRgbaU8 colorImage[cameraAngles];
+		ImageRgbaU8 heightImage[cameraAngles];
+		ImageRgbaU8 normalImage[cameraAngles];
+		for (int a = 0; a < cameraAngles; a++) {
+			colorImage[a] = image_create_RgbaU8(width, height);
+			heightImage[a] = image_create_RgbaU8(width, height);
+			normalImage[a] = image_create_RgbaU8(width, height);
+		}
+		// Render the model to multiple render targets at once
+		float heightScale = 255.0f / (maxBound.y - minBound.y);
+		for (int a = 0; a < cameraAngles; a++) {
+			image_fill(depthBuffer, -1000000000.0f);
+			image_fill(colorImage[a], ColorRgbaI32(0, 0, 0, 0));
+			sprite_render(visibleModel, ortho.view[a], depthBuffer, colorImage[a], normalImage[a]);
+			// Convert height into an 8 bit channel for saving
+			for (int y = 0; y < height; y++) {
+				for (int x = 0; x < width; x++) {
+					int32_t opacityPixel = image_readPixel_clamp(colorImage[a], x, y).alpha;
+					int32_t heightPixel = (image_readPixel_clamp(depthBuffer, x, y) - minBound.y) * heightScale;
+					image_writePixel(heightImage[a], x, y, ColorRgbaI32(heightPixel, 0, 0, opacityPixel));
 				}
 			}
 		}
-	}
-	IRect cropRegion = IRect(minX, minY, (maxX + 1) - minX, (maxY + 1) - minY);
-	if (cropRegion.width() < 1 || cropRegion.height() < 1) {
-		printText("  Cropping failed to find any drawn pixels!\n");
-		return;
-	}
-	for (int a = 0; a < cameraAngles; a++) {
-		colorImage[a] = image_getSubImage(colorImage[a], cropRegion);
-		heightImage[a] = image_getSubImage(heightImage[a], cropRegion);
-		normalImage[a] = image_getSubImage(normalImage[a], cropRegion);
-	}
-	int croppedWidth = cropRegion.width();
-	int croppedHeight = cropRegion.height();
-	int centerX = width / 2 - cropRegion.left();
-	int centerY = height / 2 - cropRegion.top();
-	printText("  Cropped images of ", croppedWidth, "x", croppedHeight, " pixels with centers at (", centerX, ", ", centerY, ")\n");
 
-	// Pack everything into an image atlas
-	targetAtlas = image_create_RgbaU8(croppedWidth * 3, croppedHeight * cameraAngles);
-	for (int a = 0; a < cameraAngles; a++) {
-		draw_copy(targetAtlas, colorImage[a], 0, a * croppedHeight);
-		draw_copy(targetAtlas, heightImage[a], croppedWidth, a * croppedHeight);
-		draw_copy(targetAtlas, normalImage[a], croppedWidth * 2, a * croppedHeight);
-	}
+		// Crop all images uniformly for easy atlas packing
+		int32_t minX = width;
+		int32_t minY = height;
+		int32_t maxX = 0;
+		int32_t maxY = 0;
+		for (int a = 0; a < cameraAngles; a++) {
+			for (int y = 0; y < height; y++) {
+				for (int x = 0; x < width; x++) {
+					if (image_readPixel_border(colorImage[a], x, y).alpha) {
+						if (x < minX) minX = x;
+						if (x > maxX) maxX = x;
+						if (y < minY) minY = y;
+						if (y > maxY) maxY = y;
+					}
+				}
+			}
+		}
+		// Check if cropping failed
+		if (minX > maxX) {
+			printText("  There's nothing visible in the model, because cropping the final images returned nothing!\n");
+			return;
+		}
 
-	SpriteConfig config = SpriteConfig(centerX, centerY, cameraAngles, 3, minBound, maxBound);
-	if (model_exists(shadowModel) && model_getNumberOfPoints(shadowModel) > 0) {
-		config.appendShadow(shadowModel);
+		IRect cropRegion = IRect(minX, minY, (maxX + 1) - minX, (maxY + 1) - minY);
+		if (cropRegion.width() < 1 || cropRegion.height() < 1) {
+			printText("  Cropping failed to find any drawn pixels!\n");
+			return;
+		}
+		for (int a = 0; a < cameraAngles; a++) {
+			colorImage[a] = image_getSubImage(colorImage[a], cropRegion);
+			heightImage[a] = image_getSubImage(heightImage[a], cropRegion);
+			normalImage[a] = image_getSubImage(normalImage[a], cropRegion);
+		}
+		int croppedWidth = cropRegion.width();
+		int croppedHeight = cropRegion.height();
+		int centerX = width / 2 - cropRegion.left();
+		int centerY = height / 2 - cropRegion.top();
+		printText("  Cropped images of ", croppedWidth, "x", croppedHeight, " pixels with centers at (", centerX, ", ", centerY, ")\n");
+
+		// Pack everything into an image atlas
+		targetAtlas = image_create_RgbaU8(croppedWidth * 3, croppedHeight * cameraAngles);
+		for (int a = 0; a < cameraAngles; a++) {
+			draw_copy(targetAtlas, colorImage[a], 0, a * croppedHeight);
+			draw_copy(targetAtlas, heightImage[a], croppedWidth, a * croppedHeight);
+			draw_copy(targetAtlas, normalImage[a], croppedWidth * 2, a * croppedHeight);
+		}
+
+		SpriteConfig config = SpriteConfig(centerX, centerY, cameraAngles, 3, minBound, maxBound);
+		if (model_exists(shadowModel) && model_getNumberOfPoints(shadowModel) > 0) {
+			config.appendShadow(shadowModel);
+		}
+		targetConfigText = config.toIni();
 	}
-	targetConfigText = config.toIni();
 }
 
 void sprite_generateFromModel(const Model& visibleModel, const Model& shadowModel, const OrthoSystem& ortho, const String& targetPath, int cameraAngles, bool debug) {
 	// Generate an image and a configuration file from the visible model
 	ImageRgbaU8 atlasImage; String configText;
 	sprite_generateFromModel(atlasImage, configText, visibleModel, shadowModel, ortho, targetPath, cameraAngles);
-	// Save the result
-	image_save(atlasImage, targetPath + U".png");
-	string_save(targetPath + U".ini", configText);
-	printText("  Saved sprite atlas and config to ", targetPath, "\n\n");
-	if (debug) {
-		ImageRgbaU8 debugImage; String garbageText;
-		// TODO: Show overlap between visible and shadow so that shadow outside of visible is displayed as bright red on a dark model.
-		//       The number of visible shadow pixels should be reported automatically
-		//       in an error message at the end of the total execution together with file names.
-		sprite_generateFromModel(debugImage, garbageText, shadowModel, Model(), ortho, targetPath + U"Debug", 8);
-		image_save(debugImage, targetPath + U"Debug.png");
+	// Save the result on success
+	if (configText.length() > 0) {
+		image_save(atlasImage, targetPath + U".png");
+		string_save(targetPath + U".ini", configText);
+		printText("  Saved sprite atlas and config to ", targetPath, "\n\n");
+		if (debug) {
+			ImageRgbaU8 debugImage; String garbageText;
+			// TODO: Show overlap between visible and shadow so that shadow outside of visible is displayed as bright red on a dark model.
+			//       The number of visible shadow pixels should be reported automatically
+			//       in an error message at the end of the total execution together with file names.
+			sprite_generateFromModel(debugImage, garbageText, shadowModel, Model(), ortho, targetPath + U"Debug", 8);
+			image_save(debugImage, targetPath + U"Debug.png");
+		}
 	}
 }
 
