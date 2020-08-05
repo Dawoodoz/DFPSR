@@ -395,6 +395,16 @@ static void loadPlyModel(ParserState& state, const ReadableString& content, bool
 	PlyDataInput inputMode = PlyDataInput::Ignore;
 	// Temporary geometry
 	List<PlyVertex> vertices;
+	if (lines.length() < 2) {
+		printText("loadPlyModel: Failed to identify line-breaks in the PLY file!\n");
+		return;
+	} else if (!string_caseInsensitiveMatch(string_removeOuterWhiteSpace(lines[0]), U"PLY")) {
+		printText("loadPlyModel: Failed to identify the file as PLY!\n");
+		return;
+	} else if (!string_caseInsensitiveMatch(string_removeOuterWhiteSpace(lines[1]), U"FORMAT ASCII 1.0")) {
+		printText("loadPlyModel: Only supporting the ascii 1.0 format!\n");
+		return;
+	}
 	for (int l = 0; l < lines.length(); l++) {
 		// Tokenize the current line
 		ReadableString currentLine = string_removeOuterWhiteSpace(lines[l]);
