@@ -240,13 +240,13 @@ FMatrix3x3 ShadowCubeMapSides[6] = {
 // TODO: Move to the ortho API using a safe getter in modulo
 FMatrix3x3 spriteDirections[8] = {
 	FMatrix3x3::makeAxisSystem(FVector3D( 0.0f, 0.0f, 1.0f), FVector3D(0.0f, 1.0f, 0.0f)),
-	FMatrix3x3::makeAxisSystem(FVector3D(-1.0f, 0.0f, 1.0f), FVector3D(0.0f, 1.0f, 0.0f)),
-	FMatrix3x3::makeAxisSystem(FVector3D(-1.0f, 0.0f, 0.0f), FVector3D(0.0f, 1.0f, 0.0f)),
-	FMatrix3x3::makeAxisSystem(FVector3D(-1.0f, 0.0f,-1.0f), FVector3D(0.0f, 1.0f, 0.0f)),
-	FMatrix3x3::makeAxisSystem(FVector3D( 0.0f, 0.0f,-1.0f), FVector3D(0.0f, 1.0f, 0.0f)),
-	FMatrix3x3::makeAxisSystem(FVector3D( 1.0f, 0.0f,-1.0f), FVector3D(0.0f, 1.0f, 0.0f)),
+	FMatrix3x3::makeAxisSystem(FVector3D( 1.0f, 0.0f, 1.0f), FVector3D(0.0f, 1.0f, 0.0f)),
 	FMatrix3x3::makeAxisSystem(FVector3D( 1.0f, 0.0f, 0.0f), FVector3D(0.0f, 1.0f, 0.0f)),
-	FMatrix3x3::makeAxisSystem(FVector3D( 1.0f, 0.0f, 1.0f), FVector3D(0.0f, 1.0f, 0.0f))
+	FMatrix3x3::makeAxisSystem(FVector3D( 1.0f, 0.0f,-1.0f), FVector3D(0.0f, 1.0f, 0.0f)),
+	FMatrix3x3::makeAxisSystem(FVector3D( 0.0f, 0.0f,-1.0f), FVector3D(0.0f, 1.0f, 0.0f)),
+	FMatrix3x3::makeAxisSystem(FVector3D(-1.0f, 0.0f,-1.0f), FVector3D(0.0f, 1.0f, 0.0f)),
+	FMatrix3x3::makeAxisSystem(FVector3D(-1.0f, 0.0f, 0.0f), FVector3D(0.0f, 1.0f, 0.0f)),
+	FMatrix3x3::makeAxisSystem(FVector3D(-1.0f, 0.0f, 1.0f), FVector3D(0.0f, 1.0f, 0.0f))
 };
 
 struct CubeMapF32 {
