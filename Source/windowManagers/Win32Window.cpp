@@ -372,9 +372,6 @@ static LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT message, WPARAM wParam, 
 	// Handle the message
 	int result = 0;
 	switch (message) {
-	case -1:
-		dsr::throwError("Unknown error in Window handler!\n");
-		break;
 	case WM_QUIT:
 		PostQuitMessage(wParam);
 		break;
