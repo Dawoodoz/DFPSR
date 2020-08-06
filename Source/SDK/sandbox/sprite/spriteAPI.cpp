@@ -977,9 +977,15 @@ void sprite_generateFromModel(const Model& visibleModel, const Model& shadowMode
 			printText("  Saved atlas to ", targetPath, ".\n");
 		}
 
-		// TODO: Make a comparison against the old config file and see if it's significant enough to not be caused by rounding errors
-		string_save(targetPath + U".ini", configText);
-		printText("  Saved sprite config to ", targetPath, ".\n\n");
+		// Save the configuration
+		String configPath = targetPath + U".ini";
+		String oldConfixText = string_load(configPath, false);
+		if (string_match(configText, oldConfixText)) {
+			printText("  No significant changes against ", targetPath, ".\n\n");
+		} else {
+			string_save(targetPath + U".ini", configText);
+			printText("  Saved sprite config to ", targetPath, ".\n\n");
+		}
 
 		if (debug) {
 			ImageRgbaU8 debugImage; String garbageText;

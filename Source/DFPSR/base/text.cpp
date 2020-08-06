@@ -455,7 +455,7 @@ void dsr::doubleToString_arabic(String& target, double value) {
 	} \
 	TARGET[SOURCE.length()] = '\0';
 
-String dsr::string_load(const ReadableString& filename) {
+String dsr::string_load(const ReadableString& filename, bool mustExist) {
 	// TODO: Load files using Unicode filenames
 	TO_RAW_ASCII(asciiFilename, filename);
 	std::ifstream inputFile(asciiFilename);
@@ -472,8 +472,11 @@ String dsr::string_load(const ReadableString& filename) {
 		inputFile.close();
 		return result;
 	} else {
-		throwError("Failed to load ", filename, "\n");
-		return U"";
+		if (mustExist) {
+			throwError("Failed to load ", filename, "\n");
+		}
+		// If the file cound not be found and opened, a null string is returned
+		return String();
 	}
 }
 

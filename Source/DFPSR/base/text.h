@@ -190,20 +190,43 @@ String& string_toStreamIndented(String& target, const int8_t& value, const Reada
 String& string_toStreamIndented(String& target, const uint8_t& value, const ReadableString& indentation);
 
 // Procedural API
-// TODO: Create procedural constructors
-// TODO: Make wrappers around member methods
-String string_load(const ReadableString& filename);
+
+// Post-condition:
+//   Returns the content of the file referred to be filename.
+//   If mustExist is true, then failure to load will throw an exception.
+//   If mustExist is false, then failure to load will return an empty string.
+String string_load(const ReadableString& filename, bool mustExist = true);
+// Side-effect: Saves content to filename.
 void string_save(const ReadableString& filename, const ReadableString& content);
+// Post-condition: Returns true iff strings a and b are exactly equal.
 bool string_match(const ReadableString& a, const ReadableString& b);
+// Post-condition: Returns true iff strings a and b are roughly equal using a case insensitive match.
 bool string_caseInsensitiveMatch(const ReadableString& a, const ReadableString& b);
+// Post-condition: Returns text converted to upper case.
 String string_upperCase(const ReadableString &text);
+// Post-condition: Returns text converted to lower case.
 String string_lowerCase(const ReadableString &text);
+// Post-condition: Returns a clone of text without any white-space (space, tab and carriage-return).
 String string_removeAllWhiteSpace(const ReadableString &text);
+// Post-condition: Returns a sub-set of text without surrounding white-space (space, tab and carriage-return).
+// Unlike string_removeAllWhiteSpace, string_removeOuterWhiteSpace does not require allocating a new buffer.
 ReadableString string_removeOuterWhiteSpace(const ReadableString &text);
+// Pre-condition: Content must contain an integer, or unexpected things may happen.
+// Post-condition: Returns the numerical integer value of content while ignoring any forbidden characters.
+// Examples:
+//   string_parseInteger(U"-25") == -25 // Good case
+//   string_parseInteger(U" -25 ") == -25 // Still works
+//   string_parseInteger(U" 10x10 ") == 1010 // Any digits are simply added in order while ignoring the rest
 int64_t string_parseInteger(const ReadableString& content);
+// Post-condition: Returns the double-precision floating-point approximation of content's numerical value
 double string_parseDouble(const ReadableString& content);
+// Post-condition: Returns rawText wrapped in a quote.
+// Special characters are included using escape characters, so that one can quote multiple lines but store it easily.
 String string_mangleQuote(const ReadableString &rawText);
+// Pre-condition: mangledText must be enclosed in double quotes and special characters must use escape characters (tabs in quotes are okay though).
+// Post-condition: Returns mangledText with quotes removed and excape tokens interpreted.
 String string_unmangleQuote(const ReadableString& mangledText);
+
 // Append one element
 template<typename TYPE>
 inline void string_append(String& target, TYPE value) {
