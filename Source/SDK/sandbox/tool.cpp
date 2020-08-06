@@ -743,26 +743,28 @@ static void parse_dsm(ParserState& state, const ReadableString& content) {
 		// Skip comments
 		int commentIndex = line.findFirst(U';');
 		if (commentIndex > -1) {
-			line = line.before(commentIndex);
+			line = string_removeOuterWhiteSpace(line.before(commentIndex));
 		}
-		// Find assignments
-		int assignmentIndex = line.findFirst(U'=');
-		int colonIndex = line.findFirst(U':');
-		int blockStartIndex = line.findFirst(U'<');
-		int blockEndIndex = line.findFirst(U'>');
-		if (assignmentIndex > -1) {
-			ReadableString key = string_removeOuterWhiteSpace(line.before(assignmentIndex));
-			ReadableString value = string_removeOuterWhiteSpace(line.after(assignmentIndex));
-			parse_assignment(state, key, value);
-		} else if (colonIndex > -1) {
-			ReadableString command = string_removeOuterWhiteSpace(line.before(colonIndex));
-			ReadableString argContent = line.after(colonIndex);
-			parse_command(state, command, argContent);
-		} else if (blockStartIndex > -1 && blockEndIndex > -1) {
-			String block = string_removeOuterWhiteSpace(line.inclusiveRange(blockStartIndex + 1, blockEndIndex - 1));
-			parse_scope(state, block);
-		} else if (line.length() > 0) {
-			printText("Unrecognized line \"", line, "\".\n");
+		if (line.length() > 0) {
+			// Find assignments
+			int assignmentIndex = line.findFirst(U'=');
+			int colonIndex = line.findFirst(U':');
+			int blockStartIndex = line.findFirst(U'<');
+			int blockEndIndex = line.findFirst(U'>');
+			if (assignmentIndex > -1) {
+				ReadableString key = string_removeOuterWhiteSpace(line.before(assignmentIndex));
+				ReadableString value = string_removeOuterWhiteSpace(line.after(assignmentIndex));
+				parse_assignment(state, key, value);
+			} else if (colonIndex > -1) {
+				ReadableString command = string_removeOuterWhiteSpace(line.before(colonIndex));
+				ReadableString argContent = line.after(colonIndex);
+				parse_command(state, command, argContent);
+			} else if (blockStartIndex > -1 && blockEndIndex > -1) {
+				String block = string_removeOuterWhiteSpace(line.inclusiveRange(blockStartIndex + 1, blockEndIndex - 1));
+				parse_scope(state, block);
+			} else {
+				printText("Unrecognized content \"", line, "\" on line ", l + 1, ".\n");
+			}
 		}
 	}
 }
