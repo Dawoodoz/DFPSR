@@ -7,7 +7,7 @@ angles = 8
 	YAxis  = 0.0, 1.0, 0.0
 	ZAxis  = 0.0, 0.0, 1.0
 	Origin = 0.0, 0.0, 0.0
-	// Right handed models will automatically have the X axis negated and triangles reversed
+	; Right handed models will automatically have the X axis negated and triangles reversed
 	Visible: RightHandedModel, Character_Mage.ply
 	Shadow: RightHandedModel, Character_Mage_Shadow.ply
 

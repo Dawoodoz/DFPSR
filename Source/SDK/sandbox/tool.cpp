@@ -433,38 +433,73 @@ static void loadPlyModel(ParserState& state, const ReadableString& content, bool
 								if (vertices.length() == 0) {
 									printText("loadPlyModel: This ply importer does not support feeding polygons before vertices! Using vertices before defining them would require an additional intermediate representation.\n");
 								}
-								// Polygon generating a triangle fan
 								bool flipSides = flipX;
-								int indexA = string_parseInteger(tokens[tokenIndex]);
-								int indexB = string_parseInteger(tokens[tokenIndex + 1]);
-								FVector4D colorA = vertices[indexA].color;
-								FVector4D colorB = vertices[indexB].color;
-								for (int i = 2; i < listLength; i++) {
-									int indexC = string_parseInteger(tokens[tokenIndex + i]);
+								if (listLength == 4) {
+									// Use a quad to save memory
+									int indexA = string_parseInteger(tokens[tokenIndex]);
+									int indexB = string_parseInteger(tokens[tokenIndex + 1]);
+									int indexC = string_parseInteger(tokens[tokenIndex + 2]);
+									int indexD = string_parseInteger(tokens[tokenIndex + 3]);
+									FVector4D colorA = vertices[indexA].color;
+									FVector4D colorB = vertices[indexB].color;
 									FVector4D colorC = vertices[indexC].color;
-									// Create a triangle
+									FVector4D colorD = vertices[indexD].color;
 									if (flipSides) {
-										int polygon = model_addTriangle(targetModel, targetPart,
+										int polygon = model_addQuad(targetModel, targetPart,
+										  startPointIndex + indexD,
 										  startPointIndex + indexC,
 										  startPointIndex + indexB,
 										  startPointIndex + indexA
 										);
-										model_setVertexColor(targetModel, targetPart, polygon, 0, colorC);
-										model_setVertexColor(targetModel, targetPart, polygon, 1, colorB);
-										model_setVertexColor(targetModel, targetPart, polygon, 2, colorA);
+										model_setVertexColor(targetModel, targetPart, polygon, 0, colorD);
+										model_setVertexColor(targetModel, targetPart, polygon, 1, colorC);
+										model_setVertexColor(targetModel, targetPart, polygon, 2, colorB);
+										model_setVertexColor(targetModel, targetPart, polygon, 3, colorA);
 									} else {
-										int polygon = model_addTriangle(targetModel, targetPart,
+										int polygon = model_addQuad(targetModel, targetPart,
 										  startPointIndex + indexA,
 										  startPointIndex + indexB,
-										  startPointIndex + indexC
+										  startPointIndex + indexC,
+										  startPointIndex + indexD
 										);
 										model_setVertexColor(targetModel, targetPart, polygon, 0, colorA);
 										model_setVertexColor(targetModel, targetPart, polygon, 1, colorB);
 										model_setVertexColor(targetModel, targetPart, polygon, 2, colorC);
+										model_setVertexColor(targetModel, targetPart, polygon, 3, colorD);
 									}
-									// Iterate the triangle fan
-									indexB = indexC;
-									colorB = colorC;
+								} else {
+									// Polygon generating a triangle fan
+									int indexA = string_parseInteger(tokens[tokenIndex]);
+									int indexB = string_parseInteger(tokens[tokenIndex + 1]);
+									FVector4D colorA = vertices[indexA].color;
+									FVector4D colorB = vertices[indexB].color;
+									for (int i = 2; i < listLength; i++) {
+										int indexC = string_parseInteger(tokens[tokenIndex + i]);
+										FVector4D colorC = vertices[indexC].color;
+										// Create a triangle
+										if (flipSides) {
+											int polygon = model_addTriangle(targetModel, targetPart,
+											  startPointIndex + indexC,
+											  startPointIndex + indexB,
+											  startPointIndex + indexA
+											);
+											model_setVertexColor(targetModel, targetPart, polygon, 0, colorC);
+											model_setVertexColor(targetModel, targetPart, polygon, 1, colorB);
+											model_setVertexColor(targetModel, targetPart, polygon, 2, colorA);
+										} else {
+											int polygon = model_addTriangle(targetModel, targetPart,
+											  startPointIndex + indexA,
+											  startPointIndex + indexB,
+											  startPointIndex + indexC
+											);
+											model_setVertexColor(targetModel, targetPart, polygon, 0, colorA);
+											model_setVertexColor(targetModel, targetPart, polygon, 1, colorB);
+											model_setVertexColor(targetModel, targetPart, polygon, 2, colorC);
+										}
+										// Iterate the triangle fan
+										indexB = indexC;
+										colorB = colorC;
+									}
 								}
 							}
 							tokenIndex += listLength;
