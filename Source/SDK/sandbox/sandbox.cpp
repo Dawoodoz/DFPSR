@@ -158,7 +158,7 @@ static const float cameraSpeed = 1.0f;
 
 // World
 static SpriteWorld world;
-bool sunlight = false;
+bool ambientLight = true;
 
 void sandbox_main() {
 	// Create the world
@@ -202,7 +202,7 @@ void sandbox_main() {
 			} else if (key >= DsrKey_1 && key <= DsrKey_9) {
 				window_setPixelScale(window, key - DsrKey_0);
 			} else if (key == DsrKey_R) {
-				sunlight = !sunlight;
+				ambientLight = !ambientLight;
 			} else if (key == DsrKey_T) {
 				tileAlign = !tileAlign;
 			} else if (key == DsrKey_F) {
@@ -307,9 +307,6 @@ void sandbox_main() {
 		}
 	}
 
-	// Initialize the sun
-	sunlight = true;
-
 	// Animation timing
 	double frameStartTime = time_getSeconds();
 	double secondsPerFrame = 0.0;
@@ -356,9 +353,9 @@ void sandbox_main() {
 			brush.location = ortho_roundToTile(brush.location);
 		}
 
-		// Illuminate the world using a sun
-		if (sunlight) {
-			spriteWorld_createTemporary_directedLight(world, FVector3D(1.0f, -1.0f, 0.0f), 0.3f, ColorRgbI32(255, 255, 255));
+		// Illuminate the world using soft light from the sky
+		if (ambientLight) {
+			spriteWorld_createTemporary_directedLight(world, FVector3D(1.0f, -1.0f, 0.0f), 0.1f, ColorRgbI32(255, 255, 255));
 		}
 
 		// Create a temporary point light over the brush
