@@ -79,7 +79,6 @@ public:
 	  minLeafBound(original.minLeafBound),
 	  maxLeafBound(original.maxLeafBound),
 	  divided(original.divided),
-	  childNodes(original.childNodes),
 	  leaves(original.leaves) {
 		for (int n = 0; n < 8; n++) {
 			this->childNodes[n] = original.childNodes[n];
