@@ -777,7 +777,7 @@ void processScript(const String& sourcePath, const String& targetPath, OrthoSyst
 	printText("Generating ", scriptPath, "\n");
 	parse_dsm(state, string_load(scriptPath));
 	// Render the model
-	sprite_generateFromModel(state.model, state.shadow, ortho, targetPath + scriptName, state.angles, true);
+	sprite_generateFromModel(state.model, state.shadow, ortho, targetPath + scriptName, state.angles, false);
 }
 
 // The first argument is the source folder in which the model scripts are stored.
