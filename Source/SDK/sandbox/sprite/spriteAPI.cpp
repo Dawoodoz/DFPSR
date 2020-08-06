@@ -958,9 +958,29 @@ void sprite_generateFromModel(const Model& visibleModel, const Model& shadowMode
 	sprite_generateFromModel(atlasImage, configText, visibleModel, shadowModel, ortho, targetPath, cameraAngles);
 	// Save the result on success
 	if (configText.length() > 0) {
-		image_save(atlasImage, targetPath + U".png");
+		// Save the atlas
+		String atlasPath = targetPath + U".png";
+		// Try loading any existing image
+		ImageRgbaU8 existingAtlasImage = image_load_RgbaU8(atlasPath, false);
+		if (image_exists(existingAtlasImage)) {
+			int difference = image_maxDifference(atlasImage, existingAtlasImage);
+			if (difference <= 2) {
+				printText("  No significant changes against ", targetPath, ".\n");
+			} else {
+				image_save(atlasImage, atlasPath);
+				printText("  Updated ", targetPath, " with a deviation of ", difference, ".\n");
+			}
+		} else {
+			// Only save if there was no existing image or it differed significantly from the new result
+			// This comparison is made to avoid flooding version history with changes from invisible differences in color rounding
+			image_save(atlasImage, atlasPath);
+			printText("  Saved atlas to ", targetPath, ".\n");
+		}
+
+		// TODO: Make a comparison against the old config file and see if it's significant enough to not be caused by rounding errors
 		string_save(targetPath + U".ini", configText);
-		printText("  Saved sprite atlas and config to ", targetPath, "\n\n");
+		printText("  Saved sprite config to ", targetPath, ".\n\n");
+
 		if (debug) {
 			ImageRgbaU8 debugImage; String garbageText;
 			// TODO: Show overlap between visible and shadow so that shadow outside of visible is displayed as bright red on a dark model.
