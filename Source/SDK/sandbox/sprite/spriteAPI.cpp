@@ -952,6 +952,56 @@ void sprite_generateFromModel(ImageRgbaU8& targetAtlas, String& targetConfigText
 	}
 }
 
+static bool isDigit(DsrChar c) {
+	return c >= U'0' && c <= U'9';
+}
+static bool isValue(DsrChar c) {
+	return c == U'-' || c == U'.' || isDigit(c);
+}
+
+// Allowing the last decimals to deviate a bit because floating-point operations are rounded differently between computers
+static bool approximateTextMatch(const ReadableString &a, const ReadableString &b, double tolerance = 0.00002) {
+	int readerA = 0, readerB = 0;
+	while (readerA < a.length() && readerB < b.length()) {
+		DsrChar charA = a[readerA];
+		DsrChar charB = b[readerB];
+		if (isValue(charA) && isValue(charB)) {
+			// Scan forward on both sides while consuming content and comparing the actual value
+			int startA = readerA;
+			int startB = readerB;
+			// Only move forward on valid characters
+			if (a[readerA] == U'-') { readerA++; }
+			if (b[readerB] == U'-') { readerB++; }
+			while (isDigit(a[readerA])) { readerA++; }
+			while (isDigit(b[readerB])) { readerB++; }
+			if (a[readerA] == U'.') { readerA++; }
+			if (b[readerB] == U'.') { readerB++; }
+			while (isDigit(a[readerA])) { readerA++; }
+			while (isDigit(b[readerB])) { readerB++; }
+			// Approximate values
+			double valueA = string_parseDouble(a.exclusiveRange(startA, readerA));
+			double valueB = string_parseDouble(b.exclusiveRange(startB, readerB));
+			// Check the difference
+			double diff = valueB - valueA;
+			if (diff > tolerance || diff < -tolerance) {
+				// Too big difference, this is probably not a rounding error
+				return false;
+			}
+		} else if (charA != charB) {
+			// Difference with a non-value involved
+			return false;
+		}
+		readerA++;
+		readerB++;
+	}
+	if (readerA < a.length() - 1 || readerB < b.length() - 1) {
+		// One text had unmatched remains after the other reached its end
+		return false;
+	} else {
+		return true;
+	}
+}
+
 void sprite_generateFromModel(const Model& visibleModel, const Model& shadowModel, const OrthoSystem& ortho, const String& targetPath, int cameraAngles, bool debug) {
 	// Generate an image and a configuration file from the visible model
 	ImageRgbaU8 atlasImage; String configText;
@@ -980,7 +1030,7 @@ void sprite_generateFromModel(const Model& visibleModel, const Model& shadowMode
 		// Save the configuration
 		String configPath = targetPath + U".ini";
 		String oldConfixText = string_load(configPath, false);
-		if (string_match(configText, oldConfixText)) {
+		if (approximateTextMatch(configText, oldConfixText)) {
 			printText("  No significant changes against ", targetPath, ".\n\n");
 		} else {
 			string_save(targetPath + U".ini", configText);
