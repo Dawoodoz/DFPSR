@@ -29,7 +29,7 @@
 
 using namespace dsr;
 
-static int strlen_utf16(const char32_t *content) {
+static int strlen_utf32(const char32_t *content) {
 	int length = 0;
 	while (content[length] != 0) {
 		length++;
@@ -473,7 +473,7 @@ ReadableString::ReadableString(const DsrChar *content, int sectionLength)
 : readSection(content), sectionLength(sectionLength) {}
 
 ReadableString::ReadableString(const DsrChar *content)
-: readSection(content), sectionLength(strlen_utf16(content)) {}
+: readSection(content), sectionLength(strlen_utf32(content)) {}
 
 String::String() {}
 String::String(const char* source) { this->append(source); }
@@ -618,7 +618,7 @@ void String::clear() {
 void String::append(const char* source) { APPEND(this, source, strlen(source)); }
 // TODO: Use memcpy when appending input of the same format
 void String::append(const ReadableString& source) { APPEND(this, source, source.length()); }
-void String::append(const char32_t* source) { APPEND(this, source, strlen_utf16(source)); }
+void String::append(const char32_t* source) { APPEND(this, source, strlen_utf32(source)); }
 void String::append(const std::string& source) { APPEND(this, source.c_str(), (int)source.size()); }
 void String::appendChar(DsrChar source) { APPEND(this, &source, 1); }
 
