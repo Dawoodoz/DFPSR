@@ -255,15 +255,15 @@ FixedPoint FixedPoint::fromMantissa(int64_t mantissa) {
 
 FixedPoint FixedPoint::fromText(const ReadableString& text) {
 	ReadableString content = string_removeOuterWhiteSpace(text);
-	bool isSigned = content.findFirst(U'-') > -1; // Should also be last
-	int decimal = content.findFirst(U'.');
-	int colon = content.findFirst(U':');
+	bool isSigned = string_findFirst(content, U'-') > -1; // Should also be last
+	int decimal = string_findFirst(content, U'.');
+	int colon = string_findFirst(content, U':');
 	int64_t result = 0;
 	if (decimal > -1 && colon == -1) {
 		// Floating-point decimal
 		// TODO: Give warnings for incorrect whole integers
-		int64_t wholeInteger = string_parseInteger(content.before(decimal));
-		ReadableString decimals = content.after(decimal);
+		int64_t wholeInteger = string_parseInteger(string_before(content, decimal));
+		ReadableString decimals = string_after(content, decimal);
 		uint64_t fraction = 0; // Extra high precision for accumulation
 		for (int i = 0; i < decimals.length(); i++) {
 			DsrChar digit = decimals[i];
@@ -278,8 +278,8 @@ FixedPoint FixedPoint::fromText(const ReadableString& text) {
 	} else if (decimal == -1 && colon > -1) {
 		// Whole integer and 16-bit fraction
 		// TODO: Give warnings for incorrect integers
-		int64_t wholeInteger = string_parseInteger(content.before(colon));
-		int64_t fraction = string_parseInteger(content.after(colon));
+		int64_t wholeInteger = string_parseInteger(string_before(content, colon));
+		int64_t fraction = string_parseInteger(string_after(content, colon));
 		clampForSaturatedWhole(wholeInteger);
 		if (isSigned) { fraction = -fraction; }
 		result = (wholeInteger * 65536) + fraction;

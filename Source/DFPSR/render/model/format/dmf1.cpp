@@ -229,7 +229,7 @@ static void readToken(ParserState &state, const String &fileContent, int start, 
 		if (fileContent[start] == U'(' && fileContent[end] == U')') {
 			// Property
 			if (state.parserState == ParserState_WaitForProperty || state.parserState == ParserState_WaitForIndexOrProperty) {
-				setProperty(state, state.lastPropertyName, state.propertyIndex, fileContent.inclusiveRange(start + 1, end - 1));
+				setProperty(state, state.lastPropertyName, state.propertyIndex, string_inclusiveRange(fileContent, start + 1, end - 1));
 				state.parserState = ParserState_WaitForStatement;
 				state.propertyIndex = 0; // Reset index for the next property
 			} else {
@@ -238,7 +238,7 @@ static void readToken(ParserState &state, const String &fileContent, int start, 
 		} else if (fileContent[start] == U'[' && fileContent[end] == U']') {
 			// Index
 			if (state.parserState == ParserState_WaitForIndexOrProperty) {
-				state.propertyIndex = roundIndex(string_parseDouble(fileContent.inclusiveRange(start + 1, end - 1)));
+				state.propertyIndex = roundIndex(string_parseDouble(string_inclusiveRange(fileContent, start + 1, end - 1)));
 			} else {
 				printText("Unexpected index!\n");
 			}
@@ -249,7 +249,7 @@ static void readToken(ParserState &state, const String &fileContent, int start, 
 					printText("Name of namespace is too long!\n");
 				} else {
 					// Change namespace and create things
-					changeNamespace(state, fileContent.inclusiveRange(start + 1, end - 1));
+					changeNamespace(state, string_inclusiveRange(fileContent, start + 1, end - 1));
 				}
 			} else {
 				printText("Change of namespace before finishing the last statement!\n");
@@ -261,7 +261,7 @@ static void readToken(ParserState &state, const String &fileContent, int start, 
 				if (end - start > 258) {
 					printText("Name of property is too long!\n");
 				} else {
-					state.lastPropertyName = fileContent.inclusiveRange(start, end);
+					state.lastPropertyName = string_inclusiveRange(fileContent, start, end);
 					state.parserState = ParserState_WaitForIndexOrProperty;
 				}
 			}

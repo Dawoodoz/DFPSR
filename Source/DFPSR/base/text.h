@@ -62,34 +62,18 @@ protected:
 	bool checkBound(int start, int length, bool warning = true) const;
 	// Internal constructor
 	ReadableString(const DsrChar *content, int sectionLength);
+public:
 	// Create a string from an existing string
 	// When there's no reference counter, it's important that the memory remains allocated until the application terminates
 	// Just like when reading elements in a for loop, out-of-range only causes an exception if length > 0
 	//   Length lesser than 1 will always return an empty string
 	virtual ReadableString getRange(int start, int length) const;
-public:
 	// Converting to unknown character encoding using only the ascii character subset
 	// A bug in GCC linking forces these to be virtual
 	virtual std::ostream& toStream(std::ostream& out) const;
 	virtual std::string toStdString() const;
 public:
-	// Get the index of the first character in content matching toFind, or -1 if it doesn't exist.
-	int findFirst(DsrChar toFind, int startIndex = 0) const;
-	// Get the index of the last character in content matching toFind, or -1 if it doesn't exist.
-	int findLast(DsrChar toFind) const;
-	// Exclusive intervals represent the divisions between characters |⁰ A |¹ B |² C |³...
-	//   0..2 of "ABC" then equals "AB", which has length 2 just like the index difference
-	//   0..3 gets the whole "ABC" range, by starting from zero and ending with the character count
-	ReadableString exclusiveRange(int inclusiveStart, int exclusiveEnd) const;
-	// Inclusive intervals represent whole characters | A⁰ | B¹ | C² |...
-	//   0..2 of "ABC" then equals "ABC", by taking character 0 (A), 1 (B) and 2 (C)
-	ReadableString inclusiveRange(int inclusiveStart, int inclusiveEnd) const;
-	// Simplified ranges
-	ReadableString before(int exclusiveEnd) const;
-	ReadableString until(int inclusiveEnd) const;
-	ReadableString from(int inclusiveStart) const;
-	ReadableString after(int exclusiveStart) const;
-	// Value conversion
+	// TODO: Remove
 	int64_t toInteger() const;
 	double toDouble() const;
 };
@@ -128,13 +112,12 @@ protected:
 	std::shared_ptr<Buffer> buffer;
 	// Same as readSection, but with write access
 	char32_t* writeSection = nullptr;
+	// Internal constructor
+	String(std::shared_ptr<Buffer> buffer, DsrChar *content, int sectionLength);
 public:
 	// The number of DsrChar characters that can be contained in the allocation before reaching the buffer's end
 	//   This doesn't imply that it's always okay to write to the remaining space, because the buffer may be shared
 	int capacity();
-protected:
-	// Internal constructor
-	String(std::shared_ptr<Buffer> buffer, DsrChar *content, int sectionLength);
 	// Create a string from the existing buffer without allocating any heap memory
 	ReadableString getRange(int start, int length) const override;
 private:
@@ -214,6 +197,15 @@ std::ostream& string_toStream(std::ostream& target, const T& source) {
 
 // ---------------- Procedural API ----------------
 
+
+int string_findFirst(const ReadableString& source, DsrChar toFind, int startIndex = 0);
+int string_findLast(const ReadableString& source, DsrChar toFind);
+ReadableString string_exclusiveRange(const ReadableString& source, int inclusiveStart, int exclusiveEnd);
+ReadableString string_inclusiveRange(const ReadableString& source, int inclusiveStart, int inclusiveEnd);
+ReadableString string_before(const ReadableString& source, int exclusiveEnd);
+ReadableString string_until(const ReadableString& source, int inclusiveEnd);
+ReadableString string_from(const ReadableString& source, int inclusiveStart);
+ReadableString string_after(const ReadableString& source, int exclusiveStart);
 
 // Post-condition:
 //   Returns a list of strings from source by splitting along separator.

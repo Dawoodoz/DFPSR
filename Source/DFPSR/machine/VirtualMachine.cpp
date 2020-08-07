@@ -43,15 +43,15 @@ VirtualMachine::VirtualMachine(const ReadableString& code, const std::shared_ptr
 	for (int l = 0; l < lines.length(); l++) {
 		ReadableString currentLine = lines[l];
 		// If the line has a comment, then skip everything from #
-		int commentIndex = currentLine.findFirst(U'#');
+		int commentIndex = string_findFirst(currentLine, U'#');
 		if (commentIndex > -1) {
-			currentLine = currentLine.before(commentIndex);
+			currentLine = string_before(currentLine, commentIndex);
 		}
 		currentLine = string_removeOuterWhiteSpace(currentLine);
-		int colonIndex = currentLine.findFirst(U':');
+		int colonIndex = string_findFirst(currentLine, U':');
 		if (colonIndex > -1) {
-			ReadableString command = string_removeOuterWhiteSpace(currentLine.before(colonIndex));
-			ReadableString argumentLine = currentLine.after(colonIndex);
+			ReadableString command = string_removeOuterWhiteSpace(string_before(currentLine, colonIndex));
+			ReadableString argumentLine = string_after(currentLine, colonIndex);
 			string_split_inPlace(arguments, argumentLine, U',');
 			this->interpretMachineWord(command, arguments);
 		} else if (currentLine.length() > 0) {
@@ -192,12 +192,12 @@ VMA VirtualMachine::VMAfromText(int methodIndex, const ReadableString& content) 
 	} else if (first >= U'0' && first <= U'9') {
 		return VMA(FixedPoint::fromText(content));
 	} else {
-		int leftIndex = content.findFirst(U'<');
-		int rightIndex = content.findLast(U'>');
+		int leftIndex = string_findFirst(content, U'<');
+		int rightIndex = string_findLast(content, U'>');
 		if (leftIndex > -1 && rightIndex > -1) {
-			ReadableString name = string_removeOuterWhiteSpace(content.before(leftIndex));
-			ReadableString typeName = string_removeOuterWhiteSpace(content.inclusiveRange(leftIndex + 1, rightIndex - 1));
-			ReadableString remainder = string_removeOuterWhiteSpace(content.after(rightIndex));
+			ReadableString name = string_removeOuterWhiteSpace(string_before(content, leftIndex));
+			ReadableString typeName = string_removeOuterWhiteSpace(string_inclusiveRange(content, leftIndex + 1, rightIndex - 1));
+			ReadableString remainder = string_removeOuterWhiteSpace(string_after(content, rightIndex));
 			if (remainder.length() > 0) {
 				throwError("No code allowed after > for in-place temp declarations!\n");
 			}

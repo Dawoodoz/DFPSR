@@ -49,48 +49,6 @@ static bool isWhiteSpace(DsrChar c) {
 	return c <= U' ' || c == U'\t' || c == U'\r';
 }
 
-int ReadableString::findFirst(DsrChar toFind, int startIndex) const {
-	for (int i = startIndex; i < this->length(); i++) {
-		if (this->readSection[i] == toFind) {
-			return i;
-		}
-	}
-	return -1;
-}
-
-int ReadableString::findLast(DsrChar toFind) const {
-	for (int i = this->length() - 1; i >= 0; i--) {
-		if (this->readSection[i] == toFind) {
-			return i;
-		}
-	}
-	return -1;
-}
-
-ReadableString ReadableString::exclusiveRange(int inclusiveStart, int exclusiveEnd) const {
-	return this->getRange(inclusiveStart, exclusiveEnd - inclusiveStart);
-}
-
-ReadableString ReadableString::inclusiveRange(int inclusiveStart, int inclusiveEnd) const {
-	return this->getRange(inclusiveStart, inclusiveEnd + 1 - inclusiveStart);
-}
-
-ReadableString ReadableString::before(int exclusiveEnd) const {
-	return this->exclusiveRange(0, exclusiveEnd);
-}
-
-ReadableString ReadableString::until(int inclusiveEnd) const {
-	return this->inclusiveRange(0, inclusiveEnd);
-}
-
-ReadableString ReadableString::from(int inclusiveStart) const {
-	return this->exclusiveRange(inclusiveStart, this->length());
-}
-
-ReadableString ReadableString::after(int exclusiveStart) const {
-	return this->from(exclusiveStart + 1);
-}
-
 String& Printable::toStream(String& target) const {
 	return this->toStreamIndented(target, U"");
 }
@@ -217,7 +175,7 @@ ReadableString dsr::string_removeOuterWhiteSpace(const ReadableString &text) {
 		return ReadableString();
 	} else {
 		// Subset
-		return text.inclusiveRange(first, last);
+		return string_inclusiveRange(text, first, last);
 	}
 }
 
@@ -264,8 +222,8 @@ String dsr::string_mangleQuote(const ReadableString &rawText) {
 }
 
 String dsr::string_unmangleQuote(const ReadableString& mangledText) {
-	int firstQuote = mangledText.findFirst('\"');
-	int lastQuote = mangledText.findLast('\"');
+	int firstQuote = string_findFirst(mangledText, '\"');
+	int lastQuote = string_findLast(mangledText, '\"');
 	String result;
 	if (firstQuote == -1 || lastQuote == -1 || firstQuote == lastQuote) {
 		throwError(U"Cannot unmangle using string_unmangleQuote without beginning and ending with quote signs!\n", mangledText, "\n");
@@ -708,12 +666,12 @@ void dsr::string_split_inPlace(List<ReadableString> &target, const ReadableStrin
 	for (int i = 0; i < source.length(); i++) {
 		DsrChar c = source[i];
 		if (c == separator) {
-			target.push(source.exclusiveRange(sectionStart, i));
+			target.push(string_exclusiveRange(source, sectionStart, i));
 			sectionStart = i + 1;
 		}
 	}
 	if (source.length() > sectionStart) {
-		target.push(source.exclusiveRange(sectionStart, source.length()));;
+		target.push(string_exclusiveRange(source, sectionStart, source.length()));;
 	}
 }
 
@@ -831,5 +789,47 @@ double dsr::string_toDouble(const ReadableString& source) {
 	} else {
 		return result;
 	}
+}
+
+int dsr::string_findFirst(const ReadableString& source, DsrChar toFind, int startIndex) {
+	for (int i = startIndex; i < source.length(); i++) {
+		if (source[i] == toFind) {
+			return i;
+		}
+	}
+	return -1;
+}
+
+int dsr::string_findLast(const ReadableString& source, DsrChar toFind) {
+	for (int i = source.length() - 1; i >= 0; i--) {
+		if (source[i] == toFind) {
+			return i;
+		}
+	}
+	return -1;
+}
+
+ReadableString dsr::string_exclusiveRange(const ReadableString& source, int inclusiveStart, int exclusiveEnd) {
+	return source.getRange(inclusiveStart, exclusiveEnd - inclusiveStart);
+}
+
+ReadableString dsr::string_inclusiveRange(const ReadableString& source, int inclusiveStart, int inclusiveEnd) {
+	return source.getRange(inclusiveStart, inclusiveEnd + 1 - inclusiveStart);
+}
+
+ReadableString dsr::string_before(const ReadableString& source, int exclusiveEnd) {
+	return string_exclusiveRange(source, 0, exclusiveEnd);
+}
+
+ReadableString dsr::string_until(const ReadableString& source, int inclusiveEnd) {
+	return string_inclusiveRange(source, 0, inclusiveEnd);
+}
+
+ReadableString dsr::string_from(const ReadableString& source, int inclusiveStart) {
+	return string_exclusiveRange(source, inclusiveStart, source.length());
+}
+
+ReadableString dsr::string_after(const ReadableString& source, int exclusiveStart) {
+	return string_from(source, exclusiveStart + 1);
 }
 

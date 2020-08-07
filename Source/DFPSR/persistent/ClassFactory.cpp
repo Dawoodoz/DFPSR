@@ -141,19 +141,19 @@ std::shared_ptr<Persistent> dsr::createPersistentClassFromText(const ReadableStr
 	List<ReadableString> lines = string_split(text, U'\n');
 	for (int l = 0; l < lines.length(); l++) {
 		ReadableString line = lines[l];
-		int equalityIndex = line.findFirst('=');
+		int equalityIndex = string_findFirst(line, '=');
 		if (equalityIndex > -1) {
 			// Assignment
-			String key = string_removeOuterWhiteSpace(line.before(equalityIndex));
-			String value = string_removeOuterWhiteSpace(line.after(equalityIndex));
+			String key = string_removeOuterWhiteSpace(string_before(line, equalityIndex));
+			String value = string_removeOuterWhiteSpace(string_after(line, equalityIndex));
 			stack.last()->setProperty(key, value);
 		} else {
-			int colonIndex = line.findFirst(':');
+			int colonIndex = string_findFirst(line, ':');
 			if (colonIndex > -1) {
 				// Declaration
-				String keyword = string_removeOuterWhiteSpace(line.before(colonIndex));
+				String keyword = string_removeOuterWhiteSpace(string_before(line, colonIndex));
 				if (string_caseInsensitiveMatch(keyword, U"Begin")) {
-					String type = string_removeOuterWhiteSpace(line.after(colonIndex));
+					String type = string_removeOuterWhiteSpace(string_after(line, colonIndex));
 					newObject = dsr::createPersistentClass(type);
 					if (rootObject.get() == nullptr) {
 						rootObject = newObject;

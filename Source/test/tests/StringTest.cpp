@@ -46,15 +46,15 @@ START_TEST(String)
 	{ // Sub-strings
 		dsr::ReadableString abcd = U"abcd";
 		dsr::String efgh = U"efgh";
-		ASSERT_MATCH(abcd.inclusiveRange(0, 3), U"abcd");
-		ASSERT_MATCH(abcd.exclusiveRange(1, 2), U"b");
-		ASSERT_MATCH(efgh.inclusiveRange(2, 3), U"gh");
-		ASSERT_MATCH(efgh.exclusiveRange(3, 4), U"h");
-		ASSERT_MATCH(dsr::string_combine(abcd.from(2), efgh.before(2)), U"cdef");
-		ASSERT_MATCH(abcd.exclusiveRange(0, 0), U""); // No size returns nothing
-		ASSERT_MATCH(abcd.exclusiveRange(-1, -2), U""); // A negative size doesn't have to be inside
-		ASSERT_CRASH(abcd.inclusiveRange(-1, -1)); // Index below bound expected
-		ASSERT_CRASH(abcd.inclusiveRange(4, 4)); // Index above bound expected
+		ASSERT_MATCH(dsr::string_inclusiveRange(abcd, 0, 3), U"abcd");
+		ASSERT_MATCH(dsr::string_exclusiveRange(abcd, 1, 2), U"b");
+		ASSERT_MATCH(dsr::string_inclusiveRange(efgh, 2, 3), U"gh");
+		ASSERT_MATCH(dsr::string_exclusiveRange(efgh, 3, 4), U"h");
+		ASSERT_MATCH(dsr::string_combine(string_from(abcd, 2), string_before(efgh, 2)), U"cdef");
+		ASSERT_MATCH(dsr::string_exclusiveRange(abcd, 0, 0), U""); // No size returns nothing
+		ASSERT_MATCH(dsr::string_exclusiveRange(abcd, -1, -2), U""); // A negative size doesn't have to be inside
+		ASSERT_CRASH(dsr::string_inclusiveRange(abcd, -1, -1)); // Index below bound expected
+		ASSERT_CRASH(dsr::string_inclusiveRange(abcd, 4, 4)); // Index above bound expected
 	}
 	{ // Processing
 		dsr::String buffer = U"Garbage";

@@ -597,11 +597,11 @@ static void loadPlyModel(ParserState& state, const ReadableString& content, bool
 }
 
 static void loadModel(ParserState& state, const ReadableString& filename, bool shadow, bool flipX) {
-	int lastDotIndex = filename.findLast(U'.');
+	int lastDotIndex = string_findLast(filename, U'.');
 	if (lastDotIndex == -1) {
 		printText("The model's filename ", filename, " does not have an extension!\n");
 	} else {
-		ReadableString extension = filename.after(lastDotIndex);
+		ReadableString extension = string_after(filename, lastDotIndex);
 		if (string_caseInsensitiveMatch(extension, U"PLY")) {
 			// Store the whole model file in a string for fast reading
 			String content = string_load(state.sourcePath + filename);
@@ -729,23 +729,23 @@ static void parse_dsm(ParserState& state, const ReadableString& content) {
 		// Get the current line
 		ReadableString line = lines[l];
 		// Skip comments
-		int commentIndex = line.findFirst(U';');
+		int commentIndex = string_findFirst(line, U';');
 		if (commentIndex > -1) {
-			line = string_removeOuterWhiteSpace(line.before(commentIndex));
+			line = string_removeOuterWhiteSpace(string_before(line, commentIndex));
 		}
 		if (line.length() > 0) {
 			// Find assignments
-			int assignmentIndex = line.findFirst(U'=');
-			int colonIndex = line.findFirst(U':');
-			int blockStartIndex = line.findFirst(U'<');
-			int blockEndIndex = line.findFirst(U'>');
+			int assignmentIndex = string_findFirst(line, U'=');
+			int colonIndex = string_findFirst(line, U':');
+			int blockStartIndex = string_findFirst(line, U'<');
+			int blockEndIndex = string_findFirst(line, U'>');
 			if (assignmentIndex > -1) {
-				ReadableString key = string_removeOuterWhiteSpace(line.before(assignmentIndex));
-				ReadableString value = string_removeOuterWhiteSpace(line.after(assignmentIndex));
+				ReadableString key = string_removeOuterWhiteSpace(string_before(line, assignmentIndex));
+				ReadableString value = string_removeOuterWhiteSpace(string_after(line, assignmentIndex));
 				parse_assignment(state, key, value);
 			} else if (colonIndex > -1) {
-				ReadableString command = string_removeOuterWhiteSpace(line.before(colonIndex));
-				ReadableString argContent = line.after(colonIndex);
+				ReadableString command = string_removeOuterWhiteSpace(string_before(line, colonIndex));
+				ReadableString argContent = string_after(line, colonIndex);
 				string_split_inPlace(args, argContent, U',');
 				for (int a = 0; a < args.length(); a++) {
 					args[a] = string_removeOuterWhiteSpace(args[a]);
@@ -758,7 +758,7 @@ static void parse_dsm(ParserState& state, const ReadableString& content) {
 					printText("    Unrecognized command ", command, ".\n");
 				}
 			} else if (blockStartIndex > -1 && blockEndIndex > -1) {
-				String block = string_removeOuterWhiteSpace(line.inclusiveRange(blockStartIndex + 1, blockEndIndex - 1));
+				String block = string_removeOuterWhiteSpace(string_inclusiveRange(line, blockStartIndex + 1, blockEndIndex - 1));
 				parse_scope(state, block);
 			} else {
 				printText("Unrecognized content \"", line, "\" on line ", l + 1, ".\n");

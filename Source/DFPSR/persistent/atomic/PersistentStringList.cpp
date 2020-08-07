@@ -41,7 +41,7 @@ bool PersistentStringList::assignValue(const ReadableString &text) {
 				i++; // Skip the following character as content
 			} else if (c == U'\"') { // Quote sign
 				// End the quote
-				String content = string_unmangleQuote(string_removeOuterWhiteSpace(text.inclusiveRange(start, i)));
+				String content = string_unmangleQuote(string_removeOuterWhiteSpace(string_inclusiveRange(text, start, i)));
 				this->value.push(content);
 				hadComma = false;
 				quoted = false;

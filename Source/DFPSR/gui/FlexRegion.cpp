@@ -28,17 +28,17 @@ using namespace dsr;
 PERSISTENT_DEFINITION(FlexValue)
 
 bool FlexValue::assignValue(const ReadableString &text) {
-	int perCentIndex = text.findFirst('%');
+	int perCentIndex = string_findFirst(text, U'%');
 	if (perCentIndex > -1) {
 		// Explicit %
-		ReadableString leftSide = text.before(perCentIndex);
-		ReadableString rightSide = text.after(perCentIndex);
-		this->ratio = leftSide.toInteger();
-		this->offset = rightSide.toInteger();
+		ReadableString leftSide = string_before(text, perCentIndex);
+		ReadableString rightSide = string_after(text, perCentIndex);
+		this->ratio = string_toInteger(leftSide);
+		this->offset = string_toInteger(rightSide);
 	} else {
 		// Implicitly 0%
 		this->ratio = 0;
-		this->offset = text.toInteger();
+		this->offset = string_toInteger(text);
 	}
 	return true; // TODO: Discriminate bad input
 }

@@ -160,7 +160,7 @@ void RasterFontImpl::printMultiLine(ImageRgbaU8& target, const ReadableString& c
 		DsrChar code = content[i];
 		if (code == 10) {
 			// Print the completed line
-			this->printLine(target, content.exclusiveRange(rowStartIndex, i), IVector2D(bound.left(), y), color);
+			this->printLine(target, string_exclusiveRange(content, rowStartIndex, i), IVector2D(bound.left(), y), color);
 			y += this->size; if (y + this->size > bound.bottom()) { return; }
 			lineWidth = 0;
 			rowStartIndex = i + 1;
@@ -181,7 +181,7 @@ void RasterFontImpl::printMultiLine(ImageRgbaU8& target, const ReadableString& c
 						// The word is too big to be printed as a whole
 						splitIndex = i;
 					}
-					ReadableString partialLine = content.exclusiveRange(rowStartIndex, splitIndex);
+					ReadableString partialLine = string_exclusiveRange(content, rowStartIndex, splitIndex);
 					int partialLength = this->getLineWidth(partialLine);
 					if (partialLength <= bound.width()) {
 						this->printLine(target, partialLine, IVector2D(bound.left(), y), color);
@@ -205,7 +205,7 @@ void RasterFontImpl::printMultiLine(ImageRgbaU8& target, const ReadableString& c
 			}
 		}
 	}
-	this->printLine(target, content.from(rowStartIndex), IVector2D(bound.left(), y), color);
+	this->printLine(target, string_from(content, rowStartIndex), IVector2D(bound.left(), y), color);
 }
 
 int32_t RasterFontImpl::getLineWidth(const ReadableString& content) const {

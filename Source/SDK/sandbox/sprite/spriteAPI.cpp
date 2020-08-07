@@ -979,8 +979,8 @@ static bool approximateTextMatch(const ReadableString &a, const ReadableString &
 			while (isDigit(a[readerA])) { readerA++; }
 			while (isDigit(b[readerB])) { readerB++; }
 			// Approximate values
-			double valueA = string_parseDouble(a.exclusiveRange(startA, readerA));
-			double valueB = string_parseDouble(b.exclusiveRange(startB, readerB));
+			double valueA = string_parseDouble(string_exclusiveRange(a, startA, readerA));
+			double valueB = string_parseDouble(string_exclusiveRange(b, startB, readerB));
 			// Check the difference
 			double diff = valueB - valueA;
 			if (diff > tolerance || diff < -tolerance) {
