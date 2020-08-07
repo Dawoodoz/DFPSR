@@ -28,8 +28,13 @@ using namespace dsr;
 PERSISTENT_DEFINITION(PersistentInteger)
 
 bool PersistentInteger::assignValue(const ReadableString &text) {
-	this->value = string_toInteger(text);
-	return true; // TODO: Discriminate bad input
+	if (string_isInteger(text)) {
+		this->value = string_toInteger(text);
+		return true;
+	} else {
+		this->value = 0;
+		return false;
+	}
 }
 
 String& PersistentInteger::toStreamIndented(String& out, const ReadableString& indentation) const {

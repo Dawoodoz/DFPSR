@@ -238,10 +238,38 @@ List<ReadableString> string_split(const ReadableString& source, DsrChar separato
 //   If appendResult is true, the result is appended to the existing target list.
 void string_split_inPlace(List<ReadableString> &target, const ReadableString& source, DsrChar separator, bool appendResult = false);
 
+// Post-condition: Returns true iff c is a digit.
+//   Digit <- '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9'
+bool character_isDigit(DsrChar c);
+// Post-condition: Returns true iff c is an integer character.
+//   IntegerCharacter <- '-' | '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9'
+bool character_isIntegerCharacter(DsrChar c);
+// Post-condition: Returns true iff c is a value character.
+//   ValueCharacter <- '.' | '-' | '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9'
+bool character_isValueCharacter(DsrChar c);
+// Post-condition: Returns true iff c is a white-space character.
+//   WhiteSpace <- ' ' | '\t' | '\v' | '\f' | '\n' | '\r'
+//   Null terminators are excluded, because it's reserved for out of bound results.
+bool character_isWhiteSpace(DsrChar c);
+// Post-condition: Returns true iff source is a valid integer. IntegerAllowingWhiteSpace is also allowed iff allowWhiteSpace is true.
+//   UnsignedInteger <- Digit+
+//   Integer <- UnsignedInteger | '-' UnsignedInteger
+//   IntegerAllowingWhiteSpace <- WhiteSpace* Integer WhiteSpace*
+bool string_isInteger(const ReadableString& source, bool allowWhiteSpace = true);
+// Post-condition: Returns true iff source is a valid integer or decimal number. DoubleAllowingWhiteSpace is also allowed iff allowWhiteSpace is true.
+//   UnsignedDouble <- Digit+ | Digit* '.' Digit+
+//   Double <- UnsignedDouble | '-' UnsignedDouble
+//   DoubleAllowingWhiteSpace <- WhiteSpace* Double WhiteSpace*
+// Only dots are allowed as decimals.
+//   Because being able to read files from another country without crashes is a lot more important than a detail that most people don't even notice.
+//   Automatic nationalization made sense when most applications were written in-house before the internet existed.
+bool string_isDouble(const ReadableString& source, bool allowWhiteSpace = true);
+// Pre-condition: source must be a valid integer according to string_isInteger. Otherwise unexpected characters are simply ignored.
 // Post-condition: Returns the integer representation of source.
 // The result is signed, because the input might unexpectedly have a negation sign.
 // The result is large, so that one can easily check the range before assigning to a smaller integer type.
 int64_t string_toInteger(const ReadableString& source);
+// Pre-condition: source must be a valid double according to string_isDouble. Otherwise unexpected characters are simply ignored.
 // Post-condition: Returns the double precision floating-point representation of source.
 double string_toDouble(const ReadableString& source);
 
@@ -263,7 +291,7 @@ String string_upperCase(const ReadableString &text);
 // Post-condition: Returns text converted to lower case.
 String string_lowerCase(const ReadableString &text);
 
-// Post-condition: Returns a clone of text without any white-space (space, tab and carriage-return).
+// Post-condition: Returns a clone of text without any white-space (space, tab, carriage-return, null terminator, et cetera).
 String string_removeAllWhiteSpace(const ReadableString &text);
 // Post-condition: Returns a sub-set of text without surrounding white-space (space, tab and carriage-return).
 // Unlike string_removeAllWhiteSpace, string_removeOuterWhiteSpace does not require allocating a new buffer.

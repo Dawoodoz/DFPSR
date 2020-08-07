@@ -45,10 +45,6 @@ static char toAscii(DsrChar c) {
 	}
 }
 
-static bool isWhiteSpace(DsrChar c) {
-	return c <= U' ' || c == U'\t' || c == U'\r';
-}
-
 String& Printable::toStream(String& target) const {
 	return this->toStreamIndented(target, U"");
 }
@@ -146,7 +142,7 @@ String dsr::string_removeAllWhiteSpace(const ReadableString &text) {
 	result.reserve(text.length());
 	for (int i = 0; i < text.length(); i++) {
 		DsrChar c = text[i];
-		if (!isWhiteSpace(c)) {
+		if (!character_isWhiteSpace(c)) {
 			result.appendChar(c);
 		}
 	}
@@ -158,14 +154,14 @@ ReadableString dsr::string_removeOuterWhiteSpace(const ReadableString &text) {
 	int last = -1;
 	for (int i = 0; i < text.length(); i++) {
 		DsrChar c = text[i];
-		if (!isWhiteSpace(c)) {
+		if (!character_isWhiteSpace(c)) {
 			first = i;
 			break;
 		}
 	}
 	for (int i = text.length() - 1; i >= 0; i--) {
 		DsrChar c = text[i];
-		if (!isWhiteSpace(c)) {
+		if (!character_isWhiteSpace(c)) {
 			last = i;
 			break;
 		}
@@ -771,5 +767,77 @@ ReadableString dsr::string_from(const ReadableString& source, int inclusiveStart
 
 ReadableString dsr::string_after(const ReadableString& source, int exclusiveStart) {
 	return string_from(source, exclusiveStart + 1);
+}
+
+bool dsr::character_isDigit(DsrChar c) {
+	return c >= U'0' && c <= U'9';
+}
+
+bool dsr::character_isIntegerCharacter(DsrChar c) {
+	return c == U'-' || character_isDigit(c);
+}
+
+bool dsr::character_isValueCharacter(DsrChar c) {
+	return c == U'.' || character_isIntegerCharacter(c);
+}
+
+bool dsr::character_isWhiteSpace(DsrChar c) {
+	return c == U' ' || c == U'\t' || c == U'\v' || c == U'\f' || c == U'\n' || c == U'\r';
+}
+
+// Macros for implementing regular expressions with a greedy approach consuming the first match
+//   Optional accepts 0 or 1 occurence
+//   Forced accepts 1 occurence
+//   Star accepts 0..N occurence
+//   Plus accepts 1..N occurence
+#define CHARACTER_OPTIONAL(CHARACTER) if (source[readIndex] == CHARACTER) { readIndex++; }
+#define CHARACTER_FORCED(CHARACTER) if (source[readIndex] == CHARACTER) { readIndex++; } else { return false; }
+#define CHARACTER_STAR(CHARACTER) while (source[readIndex] == CHARACTER) { readIndex++; }
+#define CHARACTER_PLUS(CHARACTER) CHARACTER_FORCED(CHARACTER) CHARACTER_STAR(CHARACTER)
+#define PATTERN_OPTIONAL(PATTERN) if (character_is##PATTERN(source[readIndex])) { readIndex++; }
+#define PATTERN_FORCED(PATTERN) if (character_is##PATTERN(source[readIndex])) { readIndex++; } else { return false; }
+#define PATTERN_STAR(PATTERN) while (character_is##PATTERN(source[readIndex])) { readIndex++; }
+#define PATTERN_PLUS(PATTERN) PATTERN_FORCED(PATTERN) PATTERN_STAR(PATTERN)
+
+// The greedy approach works here, because there's no ambiguity
+bool dsr::string_isInteger(const ReadableString& source, bool allowWhiteSpace) {
+	int readIndex = 0;
+	if (allowWhiteSpace) {
+		PATTERN_STAR(WhiteSpace);
+	}
+	CHARACTER_OPTIONAL(U'-');
+	// At least one digit required
+	PATTERN_PLUS(IntegerCharacter);
+	if (allowWhiteSpace) {
+		PATTERN_STAR(WhiteSpace);
+	}
+	return true;
+}
+
+// To avoid consuming the all digits on Digit* before reaching Digit+ when there is no decimal, whole integers are judged by string_isInteger
+bool dsr::string_isDouble(const ReadableString& source, bool allowWhiteSpace) {
+	// Solving the UnsignedDouble <- Digit+ | Digit* '.' Digit+ ambiguity is done easiest by checking if there's a decimal before handling the white-space and negation
+	if (string_findFirst(source, U'.') == -1) {
+		// No decimal detected
+		return string_isInteger(source, allowWhiteSpace);
+	} else {
+		int readIndex = 0;
+		if (allowWhiteSpace) {
+			PATTERN_STAR(WhiteSpace);
+		}
+		// Double <- UnsignedDouble | '-' UnsignedDouble
+		CHARACTER_OPTIONAL(U'-');
+		// UnsignedDouble <- Digit* '.' Digit+
+		// Any number of integer digits
+		PATTERN_STAR(IntegerCharacter);
+		// Only dot for decimal
+		CHARACTER_FORCED(U'.')
+		// At least one decimal digit
+		PATTERN_PLUS(IntegerCharacter);
+		if (allowWhiteSpace) {
+			PATTERN_STAR(WhiteSpace);
+		}
+		return true;
+	}
 }
 

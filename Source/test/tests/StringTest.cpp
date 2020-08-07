@@ -29,6 +29,19 @@ START_TEST(String)
 		ASSERT_EQUAL(string_length(U"abc"), 3);
 		ASSERT_EQUAL(string_length(U"0123456789"), 10);
 	}
+	{ // Reading characters
+		ASSERT_EQUAL(dsr::ReadableString(U"ABC")[0], U'A');
+		ASSERT_EQUAL(dsr::ReadableString(U"ABC")[1], U'B');
+		ASSERT_EQUAL(dsr::ReadableString(U"ABC")[2], U'C');
+		ASSERT_EQUAL(dsr::ReadableString(U"ABC")[3], U'\0');
+		ASSERT_EQUAL(dsr::ReadableString(U"ABC")[10], U'\0');
+		ASSERT_EQUAL(dsr::ReadableString(U"ABC")[1000000], U'\0');
+		ASSERT_EQUAL(dsr::ReadableString(U"ABC")[-1], U'\0');
+		ASSERT_EQUAL(dsr::ReadableString(U"ABC")[-1000000], U'\0');
+		ASSERT_EQUAL(dsr::ReadableString(U"")[-1], U'\0');
+		ASSERT_EQUAL(dsr::ReadableString(U"")[0], U'\0');
+		ASSERT_EQUAL(dsr::ReadableString(U"")[1], U'\0');
+	}
 	{ // Comparison
 		dsr::ReadableString litA = U"Testing \u0444";
 		dsr::ReadableString litB = U"Testing ф";
@@ -79,6 +92,80 @@ START_TEST(String)
 		dsr::String values = dsr::string_combine(U"x = ", x, U", y = ", y, U", z = ", z);
 		ASSERT_MATCH(values, U"x = 0, y = -123456, z = 100200300400500600");
 	}
+	{ // Identifying numbers
+		ASSERT_EQUAL(dsr::character_isDigit(U'0' - 1), false);
+		ASSERT_EQUAL(dsr::character_isDigit(U'0'), true);
+		ASSERT_EQUAL(dsr::character_isDigit(U'1'), true);
+		ASSERT_EQUAL(dsr::character_isDigit(U'2'), true);
+		ASSERT_EQUAL(dsr::character_isDigit(U'3'), true);
+		ASSERT_EQUAL(dsr::character_isDigit(U'4'), true);
+		ASSERT_EQUAL(dsr::character_isDigit(U'5'), true);
+		ASSERT_EQUAL(dsr::character_isDigit(U'6'), true);
+		ASSERT_EQUAL(dsr::character_isDigit(U'7'), true);
+		ASSERT_EQUAL(dsr::character_isDigit(U'8'), true);
+		ASSERT_EQUAL(dsr::character_isDigit(U'9'), true);
+		ASSERT_EQUAL(dsr::character_isDigit(U'9' + 1), false);
+		ASSERT_EQUAL(dsr::character_isDigit(U'a'), false);
+		ASSERT_EQUAL(dsr::character_isDigit(U' '), false);
+		ASSERT_EQUAL(dsr::character_isIntegerCharacter(U'-'), true);
+		ASSERT_EQUAL(dsr::character_isIntegerCharacter(U'0' - 1), false);
+		ASSERT_EQUAL(dsr::character_isIntegerCharacter(U'0'), true);
+		ASSERT_EQUAL(dsr::character_isIntegerCharacter(U'9'), true);
+		ASSERT_EQUAL(dsr::character_isIntegerCharacter(U'9' + 1), false);
+		ASSERT_EQUAL(dsr::character_isIntegerCharacter(U'a'), false);
+		ASSERT_EQUAL(dsr::character_isIntegerCharacter(U' '), false);
+		ASSERT_EQUAL(dsr::character_isValueCharacter(U'-'), true);
+		ASSERT_EQUAL(dsr::character_isValueCharacter(U'.'), true);
+		ASSERT_EQUAL(dsr::character_isValueCharacter(U'0' - 1), false);
+		ASSERT_EQUAL(dsr::character_isValueCharacter(U'0'), true);
+		ASSERT_EQUAL(dsr::character_isValueCharacter(U'9'), true);
+		ASSERT_EQUAL(dsr::character_isValueCharacter(U'9' + 1), false);
+		ASSERT_EQUAL(dsr::character_isValueCharacter(U'a'), false);
+		ASSERT_EQUAL(dsr::character_isValueCharacter(U' '), false);
+		ASSERT_EQUAL(dsr::character_isWhiteSpace(U' '), true);
+		ASSERT_EQUAL(dsr::character_isWhiteSpace(U'\t'), true);
+		ASSERT_EQUAL(dsr::character_isWhiteSpace(U'\r'), true);
+		ASSERT_EQUAL(dsr::character_isWhiteSpace(U'\0'), false);
+		ASSERT_EQUAL(dsr::character_isWhiteSpace(U'a'), false);
+		ASSERT_EQUAL(dsr::character_isWhiteSpace(U'1'), false);
+		ASSERT_EQUAL(dsr::character_isWhiteSpace(U'('), false);
+		ASSERT_EQUAL(dsr::character_isWhiteSpace(U')'), false);
+		ASSERT_EQUAL(dsr::character_isWhiteSpace(U'.'), false);
+		ASSERT_EQUAL(dsr::character_isWhiteSpace(U','), false);
+		ASSERT_EQUAL(dsr::character_isWhiteSpace(U'-'), false);
+		ASSERT_EQUAL(dsr::character_isWhiteSpace(U'_'), false);
+		ASSERT_EQUAL(dsr::character_isWhiteSpace(U'|'), false);
+		ASSERT_EQUAL(dsr::string_isInteger(U"0"), true);
+		ASSERT_EQUAL(dsr::string_isInteger(U"1"), true);
+		ASSERT_EQUAL(dsr::string_isInteger(U"-0"), true);
+		ASSERT_EQUAL(dsr::string_isInteger(U"-1"), true);
+		ASSERT_EQUAL(dsr::string_isInteger(U"0", false), true);
+		ASSERT_EQUAL(dsr::string_isInteger(U" 0 "), true);
+		ASSERT_EQUAL(dsr::string_isInteger(U" 0 ", false), false);
+		ASSERT_EQUAL(dsr::string_isInteger(U" 123"), true);
+		ASSERT_EQUAL(dsr::string_isInteger(U"-123"), true);
+		ASSERT_EQUAL(dsr::string_isInteger(U""), false);
+		ASSERT_EQUAL(dsr::string_isDouble(U"0"), true);
+		ASSERT_EQUAL(dsr::string_isDouble(U"-0"), true);
+		ASSERT_EQUAL(dsr::string_isDouble(U"1"), true);
+		ASSERT_EQUAL(dsr::string_isDouble(U"-1"), true);
+		ASSERT_EQUAL(dsr::string_isDouble(U"1.1"), true);
+		ASSERT_EQUAL(dsr::string_isDouble(U"-1.1"), true);
+		ASSERT_EQUAL(dsr::string_isDouble(U".1"), true);
+		ASSERT_EQUAL(dsr::string_isDouble(U"-.1"), true);
+		ASSERT_EQUAL(dsr::string_isDouble(U"0", false), true);
+		ASSERT_EQUAL(dsr::string_isDouble(U" 0 "), true);
+		ASSERT_EQUAL(dsr::string_isDouble(U" 0 ", false), false);
+		ASSERT_EQUAL(dsr::string_isDouble(U" 123"), true);
+		ASSERT_EQUAL(dsr::string_isDouble(U"-123"), true);
+		ASSERT_EQUAL(dsr::string_isDouble(U"0.5"), true);
+		ASSERT_EQUAL(dsr::string_isDouble(U"-0.5"), true);
+		ASSERT_EQUAL(dsr::string_isDouble(U".5"), true);
+		ASSERT_EQUAL(dsr::string_isDouble(U"-.5"), true);
+		ASSERT_EQUAL(dsr::string_isDouble(U"0.54321"), true);
+		ASSERT_EQUAL(dsr::string_isDouble(U"-0.54321"), true);
+		ASSERT_EQUAL(dsr::string_isDouble(U""), false);
+	}
 	// Upper case
 	ASSERT_MATCH(dsr::string_upperCase(U"a"), U"A");
 	ASSERT_MATCH(dsr::string_upperCase(U"aB"), U"AB");
@@ -96,7 +183,7 @@ START_TEST(String)
 	// Complete white space removal
 	ASSERT_MATCH(dsr::string_removeAllWhiteSpace(U" "), U"");
 	ASSERT_MATCH(dsr::string_removeAllWhiteSpace(U" abc\n	"), U"abc");
-	ASSERT_MATCH(dsr::string_removeAllWhiteSpace(U" a \f sentence \r surrounded	\n by space	\a"), U"asentencesurroundedbyspace");
+	ASSERT_MATCH(dsr::string_removeAllWhiteSpace(U" a \f sentence \r surrounded	\n by spa\vce	\t"), U"asentencesurroundedbyspace");
 	// White space removal by pointing to a section of the original input
 	ASSERT_MATCH(dsr::string_removeOuterWhiteSpace(U" "), U"");
 	ASSERT_MATCH(dsr::string_removeOuterWhiteSpace(U"  abc  "), U"abc");

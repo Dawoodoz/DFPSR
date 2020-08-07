@@ -952,32 +952,25 @@ void sprite_generateFromModel(ImageRgbaU8& targetAtlas, String& targetConfigText
 	}
 }
 
-static bool isDigit(DsrChar c) {
-	return c >= U'0' && c <= U'9';
-}
-static bool isValue(DsrChar c) {
-	return c == U'-' || c == U'.' || isDigit(c);
-}
-
 // Allowing the last decimals to deviate a bit because floating-point operations are rounded differently between computers
 static bool approximateTextMatch(const ReadableString &a, const ReadableString &b, double tolerance = 0.00002) {
 	int readerA = 0, readerB = 0;
 	while (readerA < string_length(a) && readerB < string_length(b)) {
 		DsrChar charA = a[readerA];
 		DsrChar charB = b[readerB];
-		if (isValue(charA) && isValue(charB)) {
+		if (character_isValueCharacter(charA) && character_isValueCharacter(charB)) {
 			// Scan forward on both sides while consuming content and comparing the actual value
 			int startA = readerA;
 			int startB = readerB;
 			// Only move forward on valid characters
 			if (a[readerA] == U'-') { readerA++; }
 			if (b[readerB] == U'-') { readerB++; }
-			while (isDigit(a[readerA])) { readerA++; }
-			while (isDigit(b[readerB])) { readerB++; }
+			while (character_isDigit(a[readerA])) { readerA++; }
+			while (character_isDigit(b[readerB])) { readerB++; }
 			if (a[readerA] == U'.') { readerA++; }
 			if (b[readerB] == U'.') { readerB++; }
-			while (isDigit(a[readerA])) { readerA++; }
-			while (isDigit(b[readerB])) { readerB++; }
+			while (character_isDigit(a[readerA])) { readerA++; }
+			while (character_isDigit(b[readerB])) { readerB++; }
 			// Approximate values
 			double valueA = string_toDouble(string_exclusiveRange(a, startA, readerA));
 			double valueB = string_toDouble(string_exclusiveRange(b, startB, readerB));
