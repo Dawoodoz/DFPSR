@@ -198,13 +198,38 @@ std::ostream& string_toStream(std::ostream& target, const T& source) {
 // ---------------- Procedural API ----------------
 
 
+// Post-condition: Returns the length of source.
+//   Example: string_length(U"ABC") == 3
+int string_length(const ReadableString& source);
+// Post-condition: Returns the base-zero index of source's first occurence of toFind, starting from startIndex. Returns -1 if not found.
+//   Example: string_findFirst(U"ABCABCABC", U'A') == 0
+//   Example: string_findFirst(U"ABCABCABC", U'B') == 1
+//   Example: string_findFirst(U"ABCABCABC", U'C') == 2
+//   Example: string_findFirst(U"ABCABCABC", U'D') == -1
 int string_findFirst(const ReadableString& source, DsrChar toFind, int startIndex = 0);
+// Post-condition: Returns the base-zero index of source's last occurence of toFind.  Returns -1 if not found.
+//   Example: string_findLast(U"ABCABCABC", U'A') == 6
+//   Example: string_findLast(U"ABCABCABC", U'B') == 7
+//   Example: string_findLast(U"ABCABCABC", U'C') == 8
+//   Example: string_findLast(U"ABCABCABC", U'D') == -1
 int string_findLast(const ReadableString& source, DsrChar toFind);
+// Post-condition: Returns a sub-string of source from before the character at inclusiveStart to before the character at exclusiveEnd
+//   Example: string_exclusiveRange(U"0123456789", 2, 4) == U"23"
 ReadableString string_exclusiveRange(const ReadableString& source, int inclusiveStart, int exclusiveEnd);
+// Post-condition: Returns a sub-string of source from before the character at inclusiveStart to after the character at inclusiveEnd
+//   Example: string_inclusiveRange(U"0123456789", 2, 4) == U"234"
 ReadableString string_inclusiveRange(const ReadableString& source, int inclusiveStart, int inclusiveEnd);
+// Post-condition: Returns a sub-string of source from the start to before the character at exclusiveEnd
+//   Example: string_before(U"0123456789", 5) == U"01234"
 ReadableString string_before(const ReadableString& source, int exclusiveEnd);
+// Post-condition: Returns a sub-string of source from the start to after the character at inclusiveEnd
+//   Example: string_until(U"0123456789", 5) == U"012345"
 ReadableString string_until(const ReadableString& source, int inclusiveEnd);
+// Post-condition: Returns a sub-string of source from before the character at inclusiveStart to the end
+//   Example: string_from(U"0123456789", 5) == U"56789"
 ReadableString string_from(const ReadableString& source, int inclusiveStart);
+// Post-condition: Returns a sub-string of source from after the character at exclusiveStart to the end
+//   Example: string_after(U"0123456789", 5) == U"6789"
 ReadableString string_after(const ReadableString& source, int exclusiveStart);
 
 // Post-condition:

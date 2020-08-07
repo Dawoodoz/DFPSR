@@ -15,7 +15,7 @@ void fooInPlace(dsr::String& target, const dsr::ReadableString& a, const dsr::Re
 
 dsr::String foo(const dsr::ReadableString& a, const dsr::ReadableString& b) {
 	dsr::String result;
-	result.reserve(a.length() + b.length());
+	result.reserve(string_length(a) + string_length(b));
 	fooInPlace(result, a, b);
 	return result;
 }
@@ -154,26 +154,26 @@ START_TEST(String)
 	{ // Splitting
 		List<ReadableString> result;
 		string_split_inPlace(result, U"a.b.c.d", U'.');
-		ASSERT_EQUAL(result.length(), 4);
+		ASSERT_EQUAL(string_length(result), 4);
 		ASSERT_MATCH(result[0], U"a");
 		ASSERT_MATCH(result[1], U"b");
 		ASSERT_MATCH(result[2], U"c");
 		ASSERT_MATCH(result[3], U"d");
 		String content = U"One Two Three";
 		result = string_split(content, U' ');
-		ASSERT_EQUAL(result.length(), 3);
+		ASSERT_EQUAL(string_length(result), 3);
 		ASSERT_MATCH(result[0], U"One");
 		ASSERT_MATCH(result[1], U"Two");
 		ASSERT_MATCH(result[2], U"Three");
 		string_split_inPlace(result, U"Four.Five", U'.', true);
-		ASSERT_EQUAL(result.length(), 5);
+		ASSERT_EQUAL(string_length(result), 5);
 		ASSERT_MATCH(result[0], U"One");
 		ASSERT_MATCH(result[1], U"Two");
 		ASSERT_MATCH(result[2], U"Three");
 		ASSERT_MATCH(result[3], U"Four");
 		ASSERT_MATCH(result[4], U"Five");
 		string_split_inPlace(result, U" 1 | 2 ", U'|');
-		ASSERT_EQUAL(result.length(), 2);
+		ASSERT_EQUAL(string_length(result), 2);
 		ASSERT_MATCH(result[0], U" 1 ");
 		ASSERT_MATCH(result[1], U" 2 ");
 	}

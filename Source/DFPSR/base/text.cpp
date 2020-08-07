@@ -791,6 +791,10 @@ double dsr::string_toDouble(const ReadableString& source) {
 	}
 }
 
+int dsr::string_length(const ReadableString& source) {
+	return source.length();
+}
+
 int dsr::string_findFirst(const ReadableString& source, DsrChar toFind, int startIndex) {
 	for (int i = startIndex; i < source.length(); i++) {
 		if (source[i] == toFind) {
