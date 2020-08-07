@@ -179,14 +179,6 @@ ReadableString dsr::string_removeOuterWhiteSpace(const ReadableString &text) {
 	}
 }
 
-int64_t dsr::string_parseInteger(const ReadableString& content) {
-	return content.toInteger();
-}
-
-double dsr::string_parseDouble(const ReadableString& content) {
-	return content.toDouble();
-}
-
 String dsr::string_mangleQuote(const ReadableString &rawText) {
 	String result;
 	result.reserve(rawText.length() + 2);
@@ -679,62 +671,6 @@ List<ReadableString> dsr::string_split(const ReadableString& source, DsrChar sep
 	List<ReadableString> result;
 	string_split_inPlace(result, source, separator);
 	return result;
-}
-
-// TODO: Delete
-int64_t ReadableString::toInteger() const {
-	int64_t result;
-	bool negated;
-	result = 0;
-	negated = false;
-	for (int i = 0; i < this->length(); i++) {
-		DsrChar c = this->readSection[i];
-		if (c == '-' || c == '~') {
-			negated = !negated;
-		} else if (c >= '0' && c <= '9') {
-			result = (result * 10) + (int)(c - '0');
-		} else if (c == ',' || c == '.') {
-			// Truncate any decimals by ignoring them
-			break;
-		}
-	}
-	if (negated) {
-		return -result;
-	} else {
-		return result;
-	}
-}
-
-// TODO: Delete
-double ReadableString::toDouble() const {
-	double result;
-	bool negated;
-	bool reachedDecimal;
-	int digitDivider;
-	result = 0.0;
-	negated = false;
-	reachedDecimal = false;
-	digitDivider = 1;
-	for (int i = 0; i < this->length(); i++) {
-		DsrChar c = this->readSection[i];
-		if (c == '-' || c == '~') {
-			negated = !negated;
-		} else if (c >= '0' && c <= '9') {
-			if (reachedDecimal) {
-				digitDivider = digitDivider * 10;
-				result = result + ((double)(c - '0') / (double)digitDivider);
-			} else {
-				result = (result * 10) + (double)(c - '0');
-			}
-		} else if (c == ',' || c == '.') {
-			reachedDecimal = true;
-		}
-	}
-	if (negated) {
-		return -result;
-	} else {
-		return result;
-	}
 }
 
 int64_t dsr::string_toInteger(const ReadableString& source) {

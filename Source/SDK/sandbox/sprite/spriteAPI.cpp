@@ -22,13 +22,13 @@ struct SpriteConfig {
 		config_parse_ini(content, [this](const ReadableString& block, const ReadableString& key, const ReadableString& value) {
 			if (string_length(block) == 0) {
 				if (string_caseInsensitiveMatch(key, U"CenterX")) {
-					this->centerX = string_parseInteger(value);
+					this->centerX = string_toInteger(value);
 				} else if (string_caseInsensitiveMatch(key, U"CenterY")) {
-					this->centerY = string_parseInteger(value);
+					this->centerY = string_toInteger(value);
 				} else if (string_caseInsensitiveMatch(key, U"FrameRows")) {
-					this->frameRows = string_parseInteger(value);
+					this->frameRows = string_toInteger(value);
 				} else if (string_caseInsensitiveMatch(key, U"PropertyColumns")) {
-					this->propertyColumns = string_parseInteger(value);
+					this->propertyColumns = string_toInteger(value);
 				} else if (string_caseInsensitiveMatch(key, U"MinBound")) {
 					this->minBound = parseFVector3D(value);
 				} else if (string_caseInsensitiveMatch(key, U"MaxBound")) {
@@ -41,7 +41,7 @@ struct SpriteConfig {
 						this->points.clear();
 						this->points.reserve(values.length() / 3);
 						for (int v = 0; v < values.length(); v += 3) {
-							this->points.push(FVector3D(string_parseDouble(values[v]), string_parseDouble(values[v+1]), string_parseDouble(values[v+2])));
+							this->points.push(FVector3D(string_toDouble(values[v]), string_toDouble(values[v+1]), string_toDouble(values[v+2])));
 						}
 					}
 				} else if (string_caseInsensitiveMatch(key, U"TriangleIndices")) {
@@ -52,7 +52,7 @@ struct SpriteConfig {
 						this->triangleIndices.clear();
 						this->triangleIndices.reserve(values.length());
 						for (int v = 0; v < values.length(); v++) {
-							this->triangleIndices.push(string_parseInteger(values[v]));
+							this->triangleIndices.push(string_toInteger(values[v]));
 						}
 					}
 				} else {
@@ -979,8 +979,8 @@ static bool approximateTextMatch(const ReadableString &a, const ReadableString &
 			while (isDigit(a[readerA])) { readerA++; }
 			while (isDigit(b[readerB])) { readerB++; }
 			// Approximate values
-			double valueA = string_parseDouble(string_exclusiveRange(a, startA, readerA));
-			double valueB = string_parseDouble(string_exclusiveRange(b, startB, readerB));
+			double valueA = string_toDouble(string_exclusiveRange(a, startA, readerA));
+			double valueB = string_toDouble(string_exclusiveRange(b, startB, readerB));
 			// Check the difference
 			double diff = valueB - valueA;
 			if (diff > tolerance || diff < -tolerance) {

@@ -47,6 +47,7 @@ protected:
 public:
 	int length() const;
 	DsrChar read(int index) const;
+	// Returning the character by value prevents writing to memory that might be a constant literal or shared with other strings
 	DsrChar operator[] (int index) const;
 public:
 	// Empty string
@@ -72,10 +73,6 @@ public:
 	// A bug in GCC linking forces these to be virtual
 	virtual std::ostream& toStream(std::ostream& out) const;
 	virtual std::string toStdString() const;
-public:
-	// TODO: Remove
-	int64_t toInteger() const;
-	double toDouble() const;
 };
 
 class String;
@@ -252,15 +249,6 @@ void string_split_inPlace(List<ReadableString> &target, const ReadableString& so
 int64_t string_toInteger(const ReadableString& source);
 // Post-condition: Returns the double precision floating-point representation of source.
 double string_toDouble(const ReadableString& source);
-// Pre-condition: Content must contain an integer, or unexpected things may happen.
-// Post-condition: Returns the numerical integer value of content while ignoring any forbidden characters.
-// Examples:
-//   string_parseInteger(U"-25") == -25 // Good case
-//   string_parseInteger(U" -25 ") == -25 // Still works
-//   string_parseInteger(U" 10x10 ") == 1010 // Any digits are simply added in order while ignoring the rest
-int64_t string_parseInteger(const ReadableString& content);
-// Post-condition: Returns the double-precision floating-point approximation of content's numerical value
-double string_parseDouble(const ReadableString& content);
 
 // Post-condition:
 //   Returns the content of the file referred to be filename.

@@ -192,9 +192,9 @@ public:
 		config_parse_ini(content, [this](const ReadableString& block, const ReadableString& key, const ReadableString& value) {
 			if (string_length(block) == 0) {
 				if (string_caseInsensitiveMatch(key, U"DownTiltPerThousand")) {
-					this->cameraTilt = (float)string_parseInteger(value) * -0.001f;
+					this->cameraTilt = (float)string_toInteger(value) * -0.001f;
 				} else if (string_caseInsensitiveMatch(key, U"PixelsPerTile")) {
-					this->pixelsPerTile = string_parseInteger(value);
+					this->pixelsPerTile = string_toInteger(value);
 				} else {
 					printText("Unrecognized key \"", key, "\" in orthogonal camera configuration file.\n");
 				}

@@ -223,17 +223,17 @@ if (string_caseInsensitiveMatch(key, NAME)) { \
 	} \
 }
 static void parse_assignment(ParserState& state, const ReadableString& key, const ReadableString& value) {
-	MATCH_ASSIGN_GLOBAL(U"Angles", state.angles, string_parseInteger, "camera angle count")
+	MATCH_ASSIGN_GLOBAL(U"Angles", state.angles, string_toInteger, "camera angle count")
 	else MATCH_ASSIGN(part, U"Origin", state.partSettings.location.position, parseFVector3D, "origin")
 	else MATCH_ASSIGN(part, U"XAxis", state.partSettings.location.transform.xAxis, parseFVector3D, "X-Axis")
 	else MATCH_ASSIGN(part, U"YAxis", state.partSettings.location.transform.yAxis, parseFVector3D, "Y-Axis")
 	else MATCH_ASSIGN(part, U"ZAxis", state.partSettings.location.transform.zAxis, parseFVector3D, "Z-Axis")
-	else MATCH_ASSIGN(part, U"Displacement", state.partSettings.displacement, string_parseDouble, "displacement")
-	else MATCH_ASSIGN(part, U"ClipZero", state.partSettings.clipZero, string_parseInteger, "zero clipping")
-	else MATCH_ASSIGN(part, U"Mirror", state.partSettings.mirror, string_parseInteger, "mirror flag")
-	else MATCH_ASSIGN(part, U"PatchWidth", state.partSettings.patchWidth, string_parseDouble, "patch width")
-	else MATCH_ASSIGN(part, U"PatchHeight", state.partSettings.patchHeight, string_parseDouble, "patch height")
-	else MATCH_ASSIGN(part, U"Radius", state.partSettings.radius, string_parseDouble, "radius")
+	else MATCH_ASSIGN(part, U"Displacement", state.partSettings.displacement, string_toDouble, "displacement")
+	else MATCH_ASSIGN(part, U"ClipZero", state.partSettings.clipZero, string_toInteger, "zero clipping")
+	else MATCH_ASSIGN(part, U"Mirror", state.partSettings.mirror, string_toInteger, "mirror flag")
+	else MATCH_ASSIGN(part, U"PatchWidth", state.partSettings.patchWidth, string_toDouble, "patch width")
+	else MATCH_ASSIGN(part, U"PatchHeight", state.partSettings.patchHeight, string_toDouble, "patch height")
+	else MATCH_ASSIGN(part, U"Radius", state.partSettings.radius, string_toDouble, "radius")
 	else {
 		printText("    Tried to assign ", value, " to unrecognized key ", key, ".\n");
 	}
@@ -427,7 +427,7 @@ static void loadPlyModel(ParserState& state, const ReadableString& content, bool
 						}
 						PlyProperty *currentProperty = &(currentElement->properties[propertyIndex]);
 						if (currentProperty->list) {
-							int listLength = string_parseInteger(tokens[tokenIndex]);
+							int listLength = string_toInteger(tokens[tokenIndex]);
 							tokenIndex++;
 							// Detect polygons
 							if (inputMode == PlyDataInput::Face && string_caseInsensitiveMatch(currentProperty->name, U"VERTEX_INDICES")) {
@@ -437,10 +437,10 @@ static void loadPlyModel(ParserState& state, const ReadableString& content, bool
 								bool flipSides = flipX;
 								if (listLength == 4) {
 									// Use a quad to save memory
-									int indexA = string_parseInteger(tokens[tokenIndex]);
-									int indexB = string_parseInteger(tokens[tokenIndex + 1]);
-									int indexC = string_parseInteger(tokens[tokenIndex + 2]);
-									int indexD = string_parseInteger(tokens[tokenIndex + 3]);
+									int indexA = string_toInteger(tokens[tokenIndex]);
+									int indexB = string_toInteger(tokens[tokenIndex + 1]);
+									int indexC = string_toInteger(tokens[tokenIndex + 2]);
+									int indexD = string_toInteger(tokens[tokenIndex + 3]);
 									FVector4D colorA = vertices[indexA].color;
 									FVector4D colorB = vertices[indexB].color;
 									FVector4D colorC = vertices[indexC].color;
@@ -470,12 +470,12 @@ static void loadPlyModel(ParserState& state, const ReadableString& content, bool
 									}
 								} else {
 									// Polygon generating a triangle fan
-									int indexA = string_parseInteger(tokens[tokenIndex]);
-									int indexB = string_parseInteger(tokens[tokenIndex + 1]);
+									int indexA = string_toInteger(tokens[tokenIndex]);
+									int indexB = string_toInteger(tokens[tokenIndex + 1]);
 									FVector4D colorA = vertices[indexA].color;
 									FVector4D colorB = vertices[indexB].color;
 									for (int i = 2; i < listLength; i++) {
-										int indexC = string_parseInteger(tokens[tokenIndex + i]);
+										int indexC = string_toInteger(tokens[tokenIndex + i]);
 										FVector4D colorC = vertices[indexC].color;
 										// Create a triangle
 										if (flipSides) {
@@ -507,7 +507,7 @@ static void loadPlyModel(ParserState& state, const ReadableString& content, bool
 						} else {
 							// Detect vertex data
 							if (inputMode == PlyDataInput::Vertex) {
-								float value = string_parseDouble(tokens[tokenIndex]) / (double)currentProperty->scale;
+								float value = string_toDouble(tokens[tokenIndex]) / (double)currentProperty->scale;
 								// Swap X, Y and Z to convert from PLY coordinates
 								if (string_caseInsensitiveMatch(currentProperty->name, U"X")) {
 									if (flipX) {
@@ -570,7 +570,7 @@ static void loadPlyModel(ParserState& state, const ReadableString& content, bool
 					}
 				} else if (tokens.length() >= 3) {
 					if (string_caseInsensitiveMatch(tokens[0], U"ELEMENT")) {
-						elements.push(PlyElement(tokens[1], string_parseInteger(tokens[2])));
+						elements.push(PlyElement(tokens[1], string_toInteger(tokens[2])));
 						elementIndex = elements.length() - 1;
 					} else if (string_caseInsensitiveMatch(tokens[0], U"PROPERTY")) {
 						if (elementIndex < 0) {
@@ -620,9 +620,9 @@ static void generateBasicShape(ParserState& state, Shape shape, const ReadableSt
 	// All shapes are centered around the axis system's origin from -0.5 to +0.5 of any given size
 	if (shape == Shape::Box) {
 		// Parse arguments
-		float width = string_parseDouble(arg1);
-		float height = string_parseDouble(arg2);
-		float depth = string_parseDouble(arg3);
+		float width = string_toDouble(arg1);
+		float height = string_toDouble(arg2);
+		float depth = string_toDouble(arg3);
 		// Create a bound
 		FVector3D upper = FVector3D(width, height, depth) * 0.5f;
 		FVector3D lower = -upper;
@@ -645,9 +645,9 @@ static void generateBasicShape(ParserState& state, Shape shape, const ReadableSt
 		model_addQuad(model, part, first + 0, first + 4, first + 5, first + 1); // Bottom quad
 	} else if (shape == Shape::Cylinder) {
 		// Parse arguments
-		float radius = string_parseDouble(arg1);
-		float height = string_parseDouble(arg2);
-		int sideCount = string_parseDouble(arg3);
+		float radius = string_toDouble(arg1);
+		float height = string_toDouble(arg2);
+		int sideCount = string_toDouble(arg3);
 		// Create a bound
 		float topHeight = height * 0.5f;
 		float bottomHeight = height * -0.5f;

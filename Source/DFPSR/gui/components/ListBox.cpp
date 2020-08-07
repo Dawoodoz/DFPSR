@@ -338,7 +338,7 @@ String ListBox::call(const ReadableString &methodName, const ReadableString &arg
 		return U"";
 	} else if (string_caseInsensitiveMatch(methodName, U"RemoveElement")) {
 		// Remove an element who's index is given in the only input argument
-		int64_t index = string_parseInteger(arguments);
+		int64_t index = string_toInteger(arguments);
 		if (index < 0 || index >= this->list.value.length()) {
 			throwError("Index (", arguments, " = ", index, ") out of bound in RemoveElement!\n");
 		}

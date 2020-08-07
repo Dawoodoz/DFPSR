@@ -262,7 +262,7 @@ FixedPoint FixedPoint::fromText(const ReadableString& text) {
 	if (decimal > -1 && colon == -1) {
 		// Floating-point decimal
 		// TODO: Give warnings for incorrect whole integers
-		int64_t wholeInteger = string_parseInteger(string_before(content, decimal));
+		int64_t wholeInteger = string_toInteger(string_before(content, decimal));
 		ReadableString decimals = string_after(content, decimal);
 		uint64_t fraction = 0; // Extra high precision for accumulation
 		for (int i = 0; i < string_length(decimals); i++) {
@@ -278,14 +278,14 @@ FixedPoint FixedPoint::fromText(const ReadableString& text) {
 	} else if (decimal == -1 && colon > -1) {
 		// Whole integer and 16-bit fraction
 		// TODO: Give warnings for incorrect integers
-		int64_t wholeInteger = string_parseInteger(string_before(content, colon));
-		int64_t fraction = string_parseInteger(string_after(content, colon));
+		int64_t wholeInteger = string_toInteger(string_before(content, colon));
+		int64_t fraction = string_toInteger(string_after(content, colon));
 		clampForSaturatedWhole(wholeInteger);
 		if (isSigned) { fraction = -fraction; }
 		result = (wholeInteger * 65536) + fraction;
 	} else if (decimal == -1 && colon == -1) {
 		// Whole
-		int64_t wholeInteger = string_parseInteger(content);
+		int64_t wholeInteger = string_toInteger(content);
 		clampForSaturatedWhole(wholeInteger);
 		result = wholeInteger * 65536; // Does this need to saturate again?
 	} // TODO: Give a warning if both . and : is used!

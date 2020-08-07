@@ -17,7 +17,7 @@ inline FVector3D parseFVector3D(const ReadableString& content) {
 		printText("Expected a vector of three decimal values.\n");
 		return FVector3D();
 	} else {
-		return FVector3D(string_parseDouble(args[0]), string_parseDouble(args[1]), string_parseDouble(args[2]));
+		return FVector3D(string_toDouble(args[0]), string_toDouble(args[1]), string_toDouble(args[2]));
 	}
 }
 

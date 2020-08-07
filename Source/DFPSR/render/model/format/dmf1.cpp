@@ -112,7 +112,7 @@ static int roundIndex(double value) {
 }
 
 static void setProperty(ParserState &state, const String &propertyName, int index, const ReadableString &content) {
-	float value = (float)string_parseDouble(content);
+	float value = (float)string_toDouble(content);
 	if (state.parserSpace == ParserSpace_Main) {
 		if PROPERTY_MATCH(FilterType) {
 			PARSER_NOINDEX
@@ -238,7 +238,7 @@ static void readToken(ParserState &state, const String &fileContent, int start, 
 		} else if (fileContent[start] == U'[' && fileContent[end] == U']') {
 			// Index
 			if (state.parserState == ParserState_WaitForIndexOrProperty) {
-				state.propertyIndex = roundIndex(string_parseDouble(string_inclusiveRange(fileContent, start + 1, end - 1)));
+				state.propertyIndex = roundIndex(string_toDouble(string_inclusiveRange(fileContent, start + 1, end - 1)));
 			} else {
 				printText("Unexpected index!\n");
 			}

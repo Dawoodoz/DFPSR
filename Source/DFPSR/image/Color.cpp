@@ -45,11 +45,11 @@ ColorRgbI32::ColorRgbI32(const ReadableString &content) : red(0), green(0), blue
 	List<ReadableString> elements = string_split(content, U',');
 	int givenChannels = elements.length();
 	if (givenChannels >= 1) {
-		this-> red = string_parseInteger(elements[0]);
+		this-> red = string_toInteger(elements[0]);
 		if (givenChannels >= 2) {
-			this-> green = string_parseInteger(elements[1]);
+			this-> green = string_toInteger(elements[1]);
 			if (givenChannels >= 3) {
-				this-> blue = string_parseInteger(elements[2]);
+				this-> blue = string_toInteger(elements[2]);
 			}
 		}
 	}
@@ -77,13 +77,13 @@ ColorRgbaI32::ColorRgbaI32(const ReadableString &content) : red(0), green(0), bl
 	List<ReadableString> elements = string_split(content, U',');
 	int givenChannels = elements.length();
 	if (givenChannels >= 1) {
-		this-> red = string_parseInteger(elements[0]);
+		this-> red = string_toInteger(elements[0]);
 		if (givenChannels >= 2) {
-			this-> green = string_parseInteger(elements[1]);
+			this-> green = string_toInteger(elements[1]);
 			if (givenChannels >= 3) {
-				this-> blue = string_parseInteger(elements[2]);
+				this-> blue = string_toInteger(elements[2]);
 				if (givenChannels >= 4) {
-					this-> alpha = string_parseInteger(elements[3]);
+					this-> alpha = string_toInteger(elements[3]);
 				}
 			}
 		}

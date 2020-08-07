@@ -28,7 +28,7 @@ using namespace dsr;
 PERSISTENT_DEFINITION(PersistentInteger)
 
 bool PersistentInteger::assignValue(const ReadableString &text) {
-	this->value = string_parseInteger(text);
+	this->value = string_toInteger(text);
 	return true; // TODO: Discriminate bad input
 }
 

@@ -43,14 +43,14 @@ int main(int argn, char **argv) {
 	component_setKeyDownEvent(myListBox, [](const KeyboardEvent& event) {
 		if (event.dsrKey == DsrKey_Delete) {
 			// Delete from list
-			int64_t index = string_parseInteger(component_call(myListBox, U"GetSelectedIndex"));
+			int64_t index = string_toInteger(component_call(myListBox, U"GetSelectedIndex"));
 			if (index > -1) {
 				component_call(myListBox, U"RemoveElement", string_combine(index));
 			}
 		}
 	});
 	component_setPressedEvent(myListBox, []() {
-		int64_t index = string_parseInteger(component_call(myListBox, U"GetSelectedIndex"));
+		int64_t index = string_toInteger(component_call(myListBox, U"GetSelectedIndex"));
 		String content = component_call(myListBox, U"GetSelectedText");
 		printText("content is (", content, ") at index ", index, "\n");
 	});
