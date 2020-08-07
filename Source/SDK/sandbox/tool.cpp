@@ -387,7 +387,7 @@ static void loadPlyModel(ParserState& state, const ReadableString& content, bool
 	int startPointIndex = model_getNumberOfPoints(targetModel);
 	int targetPart = shadow ? 0 : state.part;
 	// Split lines
-	List<ReadableString> lines = content.split(U'\n');
+	List<ReadableString> lines = string_split(content, U'\n');
 	List<PlyElement> elements;
 	bool readingContent = false; // True after passing end_header
 	int elementIndex = -1; // current member of elements
@@ -408,7 +408,8 @@ static void loadPlyModel(ParserState& state, const ReadableString& content, bool
 	for (int l = 0; l < lines.length(); l++) {
 		// Tokenize the current line
 		ReadableString currentLine = string_removeOuterWhiteSpace(lines[l]);
-		List<ReadableString> tokens = currentLine.split(U' ');
+		List<ReadableString> tokens;
+		string_split_inPlace(tokens, currentLine, U' ');
 		if (tokens.length() > 0 && !string_caseInsensitiveMatch(tokens[0], U"COMMENT")) {
 			if (readingContent) {
 				// Parse geometry
@@ -721,22 +722,9 @@ static void parse_shape(ParserState& state, List<ReadableString>& args, bool sha
 	}
 }
 
-static void parse_command(ParserState& state, const ReadableString& command, const ReadableString& argContent) {
-	List<ReadableString> args = argContent.split(U',');
-	for (int a = 0; a < args.length(); a++) {
-		args[a] = string_removeOuterWhiteSpace(args[a]);
-	}
-	if (string_caseInsensitiveMatch(command, U"Visible")) {
-		parse_shape(state, args, false);
-	} else if (string_caseInsensitiveMatch(command, U"Shadow")) {
-		parse_shape(state, args, true);
-	} else {
-		printText("    Unrecognized command ", command, ".\n");
-	}
-}
-
 static void parse_dsm(ParserState& state, const ReadableString& content) {
-	List<ReadableString> lines = content.split(U'\n');
+	List<ReadableString> lines = string_split(content, U'\n');
+	List<ReadableString> args; // Reusing the buffer for in-place splitting of arguments on each line
 	for (int l = 0; l < lines.length(); l++) {
 		// Get the current line
 		ReadableString line = lines[l];
@@ -758,7 +746,17 @@ static void parse_dsm(ParserState& state, const ReadableString& content) {
 			} else if (colonIndex > -1) {
 				ReadableString command = string_removeOuterWhiteSpace(line.before(colonIndex));
 				ReadableString argContent = line.after(colonIndex);
-				parse_command(state, command, argContent);
+				string_split_inPlace(args, argContent, U',');
+				for (int a = 0; a < args.length(); a++) {
+					args[a] = string_removeOuterWhiteSpace(args[a]);
+				}
+				if (string_caseInsensitiveMatch(command, U"Visible")) {
+					parse_shape(state, args, false);
+				} else if (string_caseInsensitiveMatch(command, U"Shadow")) {
+					parse_shape(state, args, true);
+				} else {
+					printText("    Unrecognized command ", command, ".\n");
+				}
 			} else if (blockStartIndex > -1 && blockEndIndex > -1) {
 				String block = string_removeOuterWhiteSpace(line.inclusiveRange(blockStartIndex + 1, blockEndIndex - 1));
 				parse_scope(state, block);

@@ -89,9 +89,6 @@ public:
 	ReadableString until(int inclusiveEnd) const;
 	ReadableString from(int inclusiveStart) const;
 	ReadableString after(int exclusiveStart) const;
-	// Split into a list of strings without allocating any new text buffers
-	//   The result can be kept after the original string has been freed, because the buffer is reference counted
-	List<ReadableString> split(DsrChar separator) const;
 	// Value conversion
 	int64_t toInteger() const;
 	double toDouble() const;
@@ -189,28 +186,55 @@ String& string_toStreamIndented(String& target, const uint16_t& value, const Rea
 String& string_toStreamIndented(String& target, const int8_t& value, const ReadableString& indentation);
 String& string_toStreamIndented(String& target, const uint8_t& value, const ReadableString& indentation);
 
-// Procedural API
+// Templates reused for all types
+// The source must inherit from Printable or have its own string_feedIndented overload
+template<typename T>
+String& string_toStream(String& target, const T& source) {
+	return string_toStreamIndented(target, source, U"");
+}
+template<typename T>
+String string_toStringIndented(const T& source, const ReadableString& indentation) {
+	String result;
+	string_toStreamIndented(result, source, indentation);
+	return result;
+}
+template<typename T>
+String string_toString(const T& source) {
+	return string_toStringIndented(source, U"");
+}
+template<typename T>
+std::ostream& string_toStreamIndented(std::ostream& target, const T& source, const ReadableString& indentation) {
+	return target << string_toStringIndented(source, indentation);
+}
+template<typename T>
+std::ostream& string_toStream(std::ostream& target, const T& source) {
+	return target << string_toString(source);
+}
+
+
+// ---------------- Procedural API ----------------
+
 
 // Post-condition:
-//   Returns the content of the file referred to be filename.
-//   If mustExist is true, then failure to load will throw an exception.
-//   If mustExist is false, then failure to load will return an empty string.
-String string_load(const ReadableString& filename, bool mustExist = true);
-// Side-effect: Saves content to filename.
-void string_save(const ReadableString& filename, const ReadableString& content);
-// Post-condition: Returns true iff strings a and b are exactly equal.
-bool string_match(const ReadableString& a, const ReadableString& b);
-// Post-condition: Returns true iff strings a and b are roughly equal using a case insensitive match.
-bool string_caseInsensitiveMatch(const ReadableString& a, const ReadableString& b);
-// Post-condition: Returns text converted to upper case.
-String string_upperCase(const ReadableString &text);
-// Post-condition: Returns text converted to lower case.
-String string_lowerCase(const ReadableString &text);
-// Post-condition: Returns a clone of text without any white-space (space, tab and carriage-return).
-String string_removeAllWhiteSpace(const ReadableString &text);
-// Post-condition: Returns a sub-set of text without surrounding white-space (space, tab and carriage-return).
-// Unlike string_removeAllWhiteSpace, string_removeOuterWhiteSpace does not require allocating a new buffer.
-ReadableString string_removeOuterWhiteSpace(const ReadableString &text);
+//   Returns a list of strings from source by splitting along separator.
+// The separating characters are excluded from the resulting strings.
+// The number of strings returned in the list will equal the number of separating characters plus one, so the result may contain empty strings.
+// Each string in the list reuses memory from the input string using reference counting, but the list itself will be allocated.
+List<ReadableString> string_split(const ReadableString& source, DsrChar separator);
+// Use string_split_inPlace instead of string_split if you want to reuse the memory of an existing list.
+//   It will then only allocate when running out of buffer space.
+// Side-effects:
+//   Fills the target list with strings from source by splitting along separator.
+//   If appendResult is false (default), any pre-existing elements in the target list will be cleared before writing the result.
+//   If appendResult is true, the result is appended to the existing target list.
+void string_split_inPlace(List<ReadableString> &target, const ReadableString& source, DsrChar separator, bool appendResult = false);
+
+// Post-condition: Returns the integer representation of source.
+// The result is signed, because the input might unexpectedly have a negation sign.
+// The result is large, so that one can easily check the range before assigning to a smaller integer type.
+int64_t string_toInteger(const ReadableString& source);
+// Post-condition: Returns the double precision floating-point representation of source.
+double string_toDouble(const ReadableString& source);
 // Pre-condition: Content must contain an integer, or unexpected things may happen.
 // Post-condition: Returns the numerical integer value of content while ignoring any forbidden characters.
 // Examples:
@@ -220,6 +244,31 @@ ReadableString string_removeOuterWhiteSpace(const ReadableString &text);
 int64_t string_parseInteger(const ReadableString& content);
 // Post-condition: Returns the double-precision floating-point approximation of content's numerical value
 double string_parseDouble(const ReadableString& content);
+
+// Post-condition:
+//   Returns the content of the file referred to be filename.
+//   If mustExist is true, then failure to load will throw an exception.
+//   If mustExist is false, then failure to load will return an empty string.
+String string_load(const ReadableString& filename, bool mustExist = true);
+// Side-effect: Saves content to filename.
+void string_save(const ReadableString& filename, const ReadableString& content);
+
+// Post-condition: Returns true iff strings a and b are exactly equal.
+bool string_match(const ReadableString& a, const ReadableString& b);
+// Post-condition: Returns true iff strings a and b are roughly equal using a case insensitive match.
+bool string_caseInsensitiveMatch(const ReadableString& a, const ReadableString& b);
+
+// Post-condition: Returns text converted to upper case.
+String string_upperCase(const ReadableString &text);
+// Post-condition: Returns text converted to lower case.
+String string_lowerCase(const ReadableString &text);
+
+// Post-condition: Returns a clone of text without any white-space (space, tab and carriage-return).
+String string_removeAllWhiteSpace(const ReadableString &text);
+// Post-condition: Returns a sub-set of text without surrounding white-space (space, tab and carriage-return).
+// Unlike string_removeAllWhiteSpace, string_removeOuterWhiteSpace does not require allocating a new buffer.
+ReadableString string_removeOuterWhiteSpace(const ReadableString &text);
+
 // Post-condition: Returns rawText wrapped in a quote.
 // Special characters are included using escape characters, so that one can quote multiple lines but store it easily.
 String string_mangleQuote(const ReadableString &rawText);
@@ -247,6 +296,10 @@ inline String string_combine(ARGS... args) {
 	return result;
 }
 
+
+// ---------------- Infix syntax ----------------
+
+
 // Operations
 inline String operator+ (const ReadableString& a, const ReadableString& b) { return string_combine(a, b); }
 inline String operator+ (const char32_t* a, const ReadableString& b) { return string_combine(a, b); }
@@ -256,6 +309,10 @@ inline String operator+ (const char32_t* a, const String& b) { return string_com
 inline String operator+ (const String& a, const char32_t* b) { return string_combine(a, b); }
 inline String operator+ (const String& a, const ReadableString& b) { return string_combine(a, b); }
 inline String operator+ (const ReadableString& a, const String& b) { return string_combine(a, b); }
+
+
+// Methods used so often that they don't need to use the string_ prefix
+
 
 // Print information
 template<typename... ARGS>
@@ -286,35 +343,8 @@ void throwError(ARGS... args) {
 }
 
 
-// ---------------- Overloaded serialization ----------------
-
-
-// Templates reused for all types
-// The source must inherit from Printable or have its own string_feedIndented overload
-template<typename T>
-String& string_toStream(String& target, const T& source) {
-	return string_toStreamIndented(target, source, U"");
-}
-template<typename T>
-String string_toStringIndented(const T& source, const ReadableString& indentation) {
-	String result;
-	string_toStreamIndented(result, source, indentation);
-	return result;
-}
-template<typename T>
-String string_toString(const T& source) {
-	return string_toStringIndented(source, U"");
-}
-template<typename T>
-std::ostream& string_toStreamIndented(std::ostream& target, const T& source, const ReadableString& indentation) {
-	return target << string_toStringIndented(source, indentation);
-}
-template<typename T>
-std::ostream& string_toStream(std::ostream& target, const T& source) {
-	return target << string_toString(source);
-}
-
-// ---------------- Below uses hard-coded portability for specific operating systems ----------------
+// ---------------- Hard-coded portability for specific operating systems ----------------
+// TODO: Try to find a place for this outside of the library, similar to how window managers were implemented
 
 
 // Get a path separator for the target operating system.

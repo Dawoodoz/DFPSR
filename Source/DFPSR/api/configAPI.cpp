@@ -26,7 +26,7 @@
 using namespace dsr;
 
 void dsr::config_parse_ini(const ReadableString& content, ConfigIniCallback receiverLambda) {
-	List<ReadableString> lines = content.split(U'\n');
+	List<ReadableString> lines = string_split(content, U'\n');
 	String block = U"";
 	for (int l = 0; l < lines.length(); l++) {
 		// Get the current line

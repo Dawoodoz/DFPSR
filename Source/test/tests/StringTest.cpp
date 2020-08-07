@@ -136,6 +136,47 @@ START_TEST(String)
 	ASSERT_MATCH(dsr::string_combine(1u), U"1");
 	ASSERT_MATCH(dsr::string_combine(14u), U"14");
 	ASSERT_MATCH(dsr::string_combine(135u), U"135");
+	// Number parsing
+	ASSERT_EQUAL(string_toInteger(U"0"), 0);
+	ASSERT_EQUAL(string_toInteger(U"-0"), 0);
+	ASSERT_EQUAL(string_toInteger(U"No digits here."), 0);
+	ASSERT_EQUAL(string_toInteger(U" (12 garbage 34) "), 1234); // You are supposed to catch these errors before converting to an integer
+	ASSERT_EQUAL(string_toInteger(U""), 0);
+	ASSERT_EQUAL(string_toInteger(U"1"), 1);
+	ASSERT_EQUAL(string_toInteger(U"-1"), -1);
+	ASSERT_EQUAL(string_toInteger(U"1024"), 1024);
+	ASSERT_EQUAL(string_toInteger(U"-1024"), -1024);
+	ASSERT_EQUAL(string_toInteger(U"1000000"), 1000000);
+	ASSERT_EQUAL(string_toInteger(U"-1000000"), -1000000);
+	ASSERT_EQUAL(string_toInteger(U"123"), 123);
+	ASSERT_EQUAL(string_toDouble(U"123"), 123.0);
+	ASSERT_EQUAL(string_toDouble(U"123.456"), 123.456);
+	{ // Splitting
+		List<ReadableString> result;
+		string_split_inPlace(result, U"a.b.c.d", U'.');
+		ASSERT_EQUAL(result.length(), 4);
+		ASSERT_MATCH(result[0], U"a");
+		ASSERT_MATCH(result[1], U"b");
+		ASSERT_MATCH(result[2], U"c");
+		ASSERT_MATCH(result[3], U"d");
+		String content = U"One Two Three";
+		result = string_split(content, U' ');
+		ASSERT_EQUAL(result.length(), 3);
+		ASSERT_MATCH(result[0], U"One");
+		ASSERT_MATCH(result[1], U"Two");
+		ASSERT_MATCH(result[2], U"Three");
+		string_split_inPlace(result, U"Four.Five", U'.', true);
+		ASSERT_EQUAL(result.length(), 5);
+		ASSERT_MATCH(result[0], U"One");
+		ASSERT_MATCH(result[1], U"Two");
+		ASSERT_MATCH(result[2], U"Three");
+		ASSERT_MATCH(result[3], U"Four");
+		ASSERT_MATCH(result[4], U"Five");
+		string_split_inPlace(result, U" 1 | 2 ", U'|');
+		ASSERT_EQUAL(result.length(), 2);
+		ASSERT_MATCH(result[0], U" 1 ");
+		ASSERT_MATCH(result[1], U" 2 ");
+	}
 	// TODO: Test taking a part of a parent string with a start offset, leaving the parent scope,
 	//       and expanding with append while the buffer isn't shared but has an offset from buffer start.
 	// TODO: Assert that buffers are shared when they should, but prevents side-effects when one is being written to.

@@ -12,7 +12,7 @@ namespace dsr {
 
 // TODO: Make into a constructor for each vector type
 inline FVector3D parseFVector3D(const ReadableString& content) {
-	List<ReadableString> args = content.split(U',');
+	List<ReadableString> args = string_split(content, U',');
 	if (args.length() != 3) {
 		printText("Expected a vector of three decimal values.\n");
 		return FVector3D();

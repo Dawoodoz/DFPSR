@@ -42,7 +42,7 @@ ColorRgbI32 ColorRgbI32::mix(const ColorRgbI32& colorA, const ColorRgbI32& color
 	return (colorA * invWeight) + (colorB * weight);
 }
 ColorRgbI32::ColorRgbI32(const ReadableString &content) : red(0), green(0), blue(0) {
-	List<ReadableString> elements = content.split(U',');
+	List<ReadableString> elements = string_split(content, U',');
 	int givenChannels = elements.length();
 	if (givenChannels >= 1) {
 		this-> red = string_parseInteger(elements[0]);
@@ -74,7 +74,7 @@ ColorRgbaI32 ColorRgbaI32::mix(const ColorRgbaI32& colorA, const ColorRgbaI32& c
 	return (colorA * invWeight) + (colorB * weight);
 }
 ColorRgbaI32::ColorRgbaI32(const ReadableString &content) : red(0), green(0), blue(0), alpha(255) {
-	List<ReadableString> elements = content.split(U',');
+	List<ReadableString> elements = string_split(content, U',');
 	int givenChannels = elements.length();
 	if (givenChannels >= 1) {
 		this-> red = string_parseInteger(elements[0]);

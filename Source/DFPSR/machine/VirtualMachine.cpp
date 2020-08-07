@@ -35,10 +35,11 @@ VirtualMachine::VirtualMachine(const ReadableString& code, const std::shared_ptr
 		printText("Starting media machine.\n");
 	#endif
 	this->methods.pushConstruct(U"<init>", 0, this->machineTypeCount);
-	List<ReadableString> lines = code.split(U'\n');
+	List<ReadableString> lines = string_split(code, U'\n');
 	#ifdef VIRTUAL_MACHINE_DEBUG_PRINT
 		printText("Reading assembly.\n");
 	#endif
+	List<ReadableString> arguments; // Re-using the buffer for in-place splitting
 	for (int l = 0; l < lines.length(); l++) {
 		ReadableString currentLine = lines[l];
 		// If the line has a comment, then skip everything from #
@@ -51,7 +52,7 @@ VirtualMachine::VirtualMachine(const ReadableString& code, const std::shared_ptr
 		if (colonIndex > -1) {
 			ReadableString command = string_removeOuterWhiteSpace(currentLine.before(colonIndex));
 			ReadableString argumentLine = currentLine.after(colonIndex);
-			List<ReadableString> arguments = argumentLine.split(U',');
+			string_split_inPlace(arguments, argumentLine, U',');
 			this->interpretMachineWord(command, arguments);
 		} else if (currentLine.length() > 0) {
 			throwError("Unexpected line \"", currentLine, "\".\n");

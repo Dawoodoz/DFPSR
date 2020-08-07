@@ -138,7 +138,7 @@ std::shared_ptr<Persistent> dsr::createPersistentClass(const String &type, bool 
 std::shared_ptr<Persistent> dsr::createPersistentClassFromText(const ReadableString &text) {
 	std::shared_ptr<Persistent> rootObject, newObject;
 	List<std::shared_ptr<Persistent>> stack;
-	List<ReadableString> lines = text.split(U'\n');
+	List<ReadableString> lines = string_split(text, U'\n');
 	for (int l = 0; l < lines.length(); l++) {
 		ReadableString line = lines[l];
 		int equalityIndex = line.findFirst('=');

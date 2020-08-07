@@ -91,76 +91,6 @@ ReadableString ReadableString::after(int exclusiveStart) const {
 	return this->from(exclusiveStart + 1);
 }
 
-List<ReadableString> ReadableString::split(DsrChar separator) const {
-	List<ReadableString> result;
-	int lineStart = 0;
-	for (int i = 0; i < this->length(); i++) {
-		DsrChar c = this->readSection[i];
-		if (c == separator) {
-			result.push(this->exclusiveRange(lineStart, i));
-			lineStart = i + 1;
-		}
-	}
-	if (this->length() > lineStart) {
-		result.push(this->exclusiveRange(lineStart, this->length()));;
-	}
-	return result;
-}
-
-int64_t ReadableString::toInteger() const {
-	int64_t result;
-	bool negated;
-	result = 0;
-	negated = false;
-	for (int i = 0; i < this->length(); i++) {
-		DsrChar c = this->readSection[i];
-		if (c == '-' || c == '~') {
-			negated = !negated;
-		} else if (c >= '0' && c <= '9') {
-			result = (result * 10) + (int)(c - '0');
-		} else if (c == ',' || c == '.') {
-			// Truncate any decimals by ignoring them
-			break;
-		}
-	}
-	if (negated) {
-		return -result;
-	} else {
-		return result;
-	}
-}
-
-double ReadableString::toDouble() const {
-	double result;
-	bool negated;
-	bool reachedDecimal;
-	int digitDivider;
-	result = 0.0;
-	negated = false;
-	reachedDecimal = false;
-	digitDivider = 1;
-	for (int i = 0; i < this->length(); i++) {
-		DsrChar c = this->readSection[i];
-		if (c == '-' || c == '~') {
-			negated = !negated;
-		} else if (c >= '0' && c <= '9') {
-			if (reachedDecimal) {
-				digitDivider = digitDivider * 10;
-				result = result + ((double)(c - '0') / (double)digitDivider);
-			} else {
-				result = (result * 10) + (double)(c - '0');
-			}
-		} else if (c == ',' || c == '.') {
-			reachedDecimal = true;
-		}
-	}
-	if (negated) {
-		return -result;
-	} else {
-		return result;
-	}
-}
-
 String& Printable::toStream(String& target) const {
 	return this->toStreamIndented(target, U"");
 }
@@ -193,6 +123,8 @@ std::string Printable::toStdString() const {
 	this->toStream(result);
 	return result.str();
 }
+
+Printable::~Printable() {}
 
 bool dsr::string_match(const ReadableString& a, const ReadableString& b) {
 	if (a.length() != b.length()) {
@@ -534,8 +466,6 @@ DsrChar ReadableString::read(int index) const {
 
 DsrChar ReadableString::operator[] (int index) const { return this->read(index); }
 
-Printable::~Printable() {}
-
 ReadableString::ReadableString() {}
 ReadableString::~ReadableString() {}
 
@@ -769,3 +699,137 @@ String& dsr::string_toStreamIndented(String& target, const uint8_t& value, const
 void dsr::throwErrorMessage(const String& message) {
 	throw std::runtime_error(message.toStdString());
 }
+
+void dsr::string_split_inPlace(List<ReadableString> &target, const ReadableString& source, DsrChar separator, bool appendResult) {
+	if (!appendResult) {
+		target.clear();
+	}
+	int sectionStart = 0;
+	for (int i = 0; i < source.length(); i++) {
+		DsrChar c = source[i];
+		if (c == separator) {
+			target.push(source.exclusiveRange(sectionStart, i));
+			sectionStart = i + 1;
+		}
+	}
+	if (source.length() > sectionStart) {
+		target.push(source.exclusiveRange(sectionStart, source.length()));;
+	}
+}
+
+List<ReadableString> dsr::string_split(const ReadableString& source, DsrChar separator) {
+	List<ReadableString> result;
+	string_split_inPlace(result, source, separator);
+	return result;
+}
+
+// TODO: Delete
+int64_t ReadableString::toInteger() const {
+	int64_t result;
+	bool negated;
+	result = 0;
+	negated = false;
+	for (int i = 0; i < this->length(); i++) {
+		DsrChar c = this->readSection[i];
+		if (c == '-' || c == '~') {
+			negated = !negated;
+		} else if (c >= '0' && c <= '9') {
+			result = (result * 10) + (int)(c - '0');
+		} else if (c == ',' || c == '.') {
+			// Truncate any decimals by ignoring them
+			break;
+		}
+	}
+	if (negated) {
+		return -result;
+	} else {
+		return result;
+	}
+}
+
+// TODO: Delete
+double ReadableString::toDouble() const {
+	double result;
+	bool negated;
+	bool reachedDecimal;
+	int digitDivider;
+	result = 0.0;
+	negated = false;
+	reachedDecimal = false;
+	digitDivider = 1;
+	for (int i = 0; i < this->length(); i++) {
+		DsrChar c = this->readSection[i];
+		if (c == '-' || c == '~') {
+			negated = !negated;
+		} else if (c >= '0' && c <= '9') {
+			if (reachedDecimal) {
+				digitDivider = digitDivider * 10;
+				result = result + ((double)(c - '0') / (double)digitDivider);
+			} else {
+				result = (result * 10) + (double)(c - '0');
+			}
+		} else if (c == ',' || c == '.') {
+			reachedDecimal = true;
+		}
+	}
+	if (negated) {
+		return -result;
+	} else {
+		return result;
+	}
+}
+
+int64_t dsr::string_toInteger(const ReadableString& source) {
+	int64_t result;
+	bool negated;
+	result = 0;
+	negated = false;
+	for (int i = 0; i < source.length(); i++) {
+		DsrChar c = source[i];
+		if (c == '-' || c == '~') {
+			negated = !negated;
+		} else if (c >= '0' && c <= '9') {
+			result = (result * 10) + (int)(c - '0');
+		} else if (c == ',' || c == '.') {
+			// Truncate any decimals by ignoring them
+			break;
+		}
+	}
+	if (negated) {
+		return -result;
+	} else {
+		return result;
+	}
+}
+
+double dsr::string_toDouble(const ReadableString& source) {
+	double result;
+	bool negated;
+	bool reachedDecimal;
+	int digitDivider;
+	result = 0.0;
+	negated = false;
+	reachedDecimal = false;
+	digitDivider = 1;
+	for (int i = 0; i < source.length(); i++) {
+		DsrChar c = source[i];
+		if (c == '-' || c == '~') {
+			negated = !negated;
+		} else if (c >= '0' && c <= '9') {
+			if (reachedDecimal) {
+				digitDivider = digitDivider * 10;
+				result = result + ((double)(c - '0') / (double)digitDivider);
+			} else {
+				result = (result * 10) + (double)(c - '0');
+			}
+		} else if (c == ',' || c == '.') {
+			reachedDecimal = true;
+		}
+	}
+	if (negated) {
+		return -result;
+	} else {
+		return result;
+	}
+}
+
