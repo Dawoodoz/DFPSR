@@ -94,7 +94,7 @@ public:
 static const VMTypeDef mediaMachineTypes[] = {
 	VMTypeDef(U"FixedPoint", DataType_FixedPoint, true,
 	[](VirtualMachine& machine, int globalIndex, const ReadableString& defaultValueText){
-		FixedPoint defaultValue = defaultValueText.length() > 0 ? FixedPoint::fromText(defaultValueText) : FixedPoint();
+		FixedPoint defaultValue = string_length(defaultValueText) > 0 ? FixedPoint::fromText(defaultValueText) : FixedPoint();
 		List<VMA> args;
 		args.pushConstruct(DataType_FixedPoint, globalIndex);
 		args.pushConstruct(defaultValue);

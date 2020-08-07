@@ -733,7 +733,7 @@ static void parse_dsm(ParserState& state, const ReadableString& content) {
 		if (commentIndex > -1) {
 			line = string_removeOuterWhiteSpace(string_before(line, commentIndex));
 		}
-		if (line.length() > 0) {
+		if (string_length(line) > 0) {
 			// Find assignments
 			int assignmentIndex = string_findFirst(line, U'=');
 			int colonIndex = string_findFirst(line, U':');

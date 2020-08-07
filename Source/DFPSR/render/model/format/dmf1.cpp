@@ -273,7 +273,7 @@ static void readToken(ParserState &state, const String &fileContent, int start, 
 static Model_DMF1 loadNative_DMF1(const String &fileContent) {
 	Model_DMF1 resultModel;
 	ParserState state(&resultModel);
-	if (fileContent.length() < 4 || (fileContent[0] != 'D' || fileContent[1] != 'M' || fileContent[2] != 'F' || fileContent[3] != '1')) {
+	if (string_length(fileContent) < 4 || (fileContent[0] != 'D' || fileContent[1] != 'M' || fileContent[2] != 'F' || fileContent[3] != '1')) {
 		printText("The file does not start with \"DMF1\"!\n");
 		return resultModel;
 	}
@@ -281,7 +281,7 @@ static Model_DMF1 loadNative_DMF1(const String &fileContent) {
 	int readIndex = 4;
 	// Scan the string and send tokens to the state machine
 	DsrChar firstCharOfToken = U'\0';
-	for (readIndex = tokenStart; readIndex < fileContent.length(); readIndex++) {
+	for (readIndex = tokenStart; readIndex < string_length(fileContent); readIndex++) {
 		DsrChar curChar = fileContent[readIndex];
 		if (firstCharOfToken == U'\0' && (curChar == tab || curChar == space || curChar == lineFeed || curChar == carriageReturn)) {
 			// Finish the current token and don't save this character

@@ -20,7 +20,7 @@ struct SpriteConfig {
 	: centerX(centerX), centerY(centerY), frameRows(frameRows), propertyColumns(propertyColumns), minBound(minBound), maxBound(maxBound) {}
 	explicit SpriteConfig(const ReadableString& content) {
 		config_parse_ini(content, [this](const ReadableString& block, const ReadableString& key, const ReadableString& value) {
-			if (block.length() == 0) {
+			if (string_length(block) == 0) {
 				if (string_caseInsensitiveMatch(key, U"CenterX")) {
 					this->centerX = string_parseInteger(value);
 				} else if (string_caseInsensitiveMatch(key, U"CenterY")) {
@@ -962,7 +962,7 @@ static bool isValue(DsrChar c) {
 // Allowing the last decimals to deviate a bit because floating-point operations are rounded differently between computers
 static bool approximateTextMatch(const ReadableString &a, const ReadableString &b, double tolerance = 0.00002) {
 	int readerA = 0, readerB = 0;
-	while (readerA < a.length() && readerB < b.length()) {
+	while (readerA < string_length(a) && readerB < string_length(b)) {
 		DsrChar charA = a[readerA];
 		DsrChar charB = b[readerB];
 		if (isValue(charA) && isValue(charB)) {
@@ -994,7 +994,7 @@ static bool approximateTextMatch(const ReadableString &a, const ReadableString &
 		readerA++;
 		readerB++;
 	}
-	if (readerA < a.length() - 1 || readerB < b.length() - 1) {
+	if (readerA < string_length(a) - 1 || readerB < string_length(b) - 1) {
 		// One text had unmatched remains after the other reached its end
 		return false;
 	} else {
@@ -1007,7 +1007,7 @@ void sprite_generateFromModel(const Model& visibleModel, const Model& shadowMode
 	ImageRgbaU8 atlasImage; String configText;
 	sprite_generateFromModel(atlasImage, configText, visibleModel, shadowModel, ortho, targetPath, cameraAngles);
 	// Save the result on success
-	if (configText.length() > 0) {
+	if (string_length(configText) > 0) {
 		// Save the atlas
 		String atlasPath = targetPath + U".png";
 		// Try loading any existing image

@@ -41,7 +41,7 @@ int BasicResourcePool::findImageRgba(const String& name) const {
 const ImageRgbaU8 BasicResourcePool::fetchImageRgba(const String& name) {
 	ImageRgbaU8 result;
 	// Using "" will return an empty reference to allow removing textures
-	if (name.length() > 0) {
+	if (string_length(name) > 0) {
 		int existingIndex = this->findImageRgba(name);
 		if (existingIndex > -1) {
 			result = imageRgbaList[existingIndex].ref;

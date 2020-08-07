@@ -135,7 +135,7 @@ static void tabJump(int &x, int leftOrigin, int tabWidth) {
 
 void RasterFontImpl::printLine(ImageRgbaU8& target, const ReadableString& content, const IVector2D& location, const ColorRgbaI32& color) const {
 	IVector2D currentLocation = location;
-	for (int i = 0; i < content.length(); i++) {
+	for (int i = 0; i < string_length(content); i++) {
 		DsrChar code = content[i];
 		if (code == 9) { // Tab
 			tabJump(currentLocation.x, location.x, this->tabWidth);
@@ -156,7 +156,7 @@ void RasterFontImpl::printMultiLine(ImageRgbaU8& target, const ReadableString& c
 		// Not enough height to print anything
 		return;
 	}
-	for (int i = 0; i < content.length(); i++) {
+	for (int i = 0; i < string_length(content); i++) {
 		DsrChar code = content[i];
 		if (code == 10) {
 			// Print the completed line
@@ -210,7 +210,7 @@ void RasterFontImpl::printMultiLine(ImageRgbaU8& target, const ReadableString& c
 
 int32_t RasterFontImpl::getLineWidth(const ReadableString& content) const {
 	int32_t result = 0;
-	for (int i = 0; i < content.length(); i++) {
+	for (int i = 0; i < string_length(content); i++) {
 		DsrChar code = content[i];
 		if (code == 9) { // Tab
 			tabJump(result, 0, this->tabWidth);

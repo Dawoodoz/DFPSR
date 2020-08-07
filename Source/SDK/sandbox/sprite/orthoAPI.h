@@ -190,7 +190,7 @@ public:
 	}
 	explicit OrthoSystem(const ReadableString& content) {
 		config_parse_ini(content, [this](const ReadableString& block, const ReadableString& key, const ReadableString& value) {
-			if (block.length() == 0) {
+			if (string_length(block) == 0) {
 				if (string_caseInsensitiveMatch(key, U"DownTiltPerThousand")) {
 					this->cameraTilt = (float)string_parseInteger(value) * -0.001f;
 				} else if (string_caseInsensitiveMatch(key, U"PixelsPerTile")) {

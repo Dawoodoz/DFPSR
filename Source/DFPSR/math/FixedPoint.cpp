@@ -265,7 +265,7 @@ FixedPoint FixedPoint::fromText(const ReadableString& text) {
 		int64_t wholeInteger = string_parseInteger(string_before(content, decimal));
 		ReadableString decimals = string_after(content, decimal);
 		uint64_t fraction = 0; // Extra high precision for accumulation
-		for (int i = 0; i < decimals.length(); i++) {
+		for (int i = 0; i < string_length(decimals); i++) {
 			DsrChar digit = decimals[i];
 			if (digit >= U'1' && digit <= U'9') {
 				fraction += getDecimalFraction64(i, digit - U'0');

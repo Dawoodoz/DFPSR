@@ -54,7 +54,7 @@ static OrderedImageRgbaU8 generateButtonImage(MediaMethod imageGenerator, int pr
 	// Create a scaled image
 	OrderedImageRgbaU8 result;
  	imageGenerator(width, height, pressed, backColor.red, backColor.green, backColor.blue)(result);
-	if (text.length() > 0) {
+	if (string_length(text) > 0) {
 		int left = (image_getWidth(result) - font_getLineWidth(font, text)) / 2;
 		int top = (image_getHeight(result) - font_getSize(font)) / 2;
 		if (pressed) {

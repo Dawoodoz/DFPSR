@@ -55,7 +55,7 @@ bool Label::isContainer() const {
 
 void Label::drawSelf(ImageRgbaU8& targetImage, const IRect &relativeLocation) {
 	completeAssets();
-	if (this->text.value.length() > 0) {
+	if (string_length(this->text.value) > 0) {
 		// Uncomment to draw a white background for debugging
 		//draw_rectangle(targetImage, relativeLocation, ColorRgbaI32(255, 255, 255, 255));
 		// Print the text directly each time without buffering, because the biggest cost is to fill pixels

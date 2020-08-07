@@ -54,7 +54,7 @@ VirtualMachine::VirtualMachine(const ReadableString& code, const std::shared_ptr
 			ReadableString argumentLine = string_after(currentLine, colonIndex);
 			string_split_inPlace(arguments, argumentLine, U',');
 			this->interpretMachineWord(command, arguments);
-		} else if (currentLine.length() > 0) {
+		} else if (string_length(currentLine) > 0) {
 			throwError("Unexpected line \"", currentLine, "\".\n");
 		}
 	}
@@ -173,7 +173,7 @@ Variable* VirtualMachine::declareVariable(int methodIndex, AccessType access, co
 		// Loop over type definitions to find a match
 		const VMTypeDef* typeDef = getMachineType(typeName);
 		if (typeDef) {
-			if (defaultValueText.length() > 0 && !typeDef->allowDefaultValue) {
+			if (string_length(defaultValueText) > 0 && !typeDef->allowDefaultValue) {
 				throwError("The variable \"", name, "\" doesn't have an immediate constructor for \"", typeName, "\".\n");
 			}
 			return this->declareVariable_aux(*typeDef, methodIndex, access, name, initialize, defaultValueText);
@@ -198,7 +198,7 @@ VMA VirtualMachine::VMAfromText(int methodIndex, const ReadableString& content) 
 			ReadableString name = string_removeOuterWhiteSpace(string_before(content, leftIndex));
 			ReadableString typeName = string_removeOuterWhiteSpace(string_inclusiveRange(content, leftIndex + 1, rightIndex - 1));
 			ReadableString remainder = string_removeOuterWhiteSpace(string_after(content, rightIndex));
-			if (remainder.length() > 0) {
+			if (string_length(remainder) > 0) {
 				throwError("No code allowed after > for in-place temp declarations!\n");
 			}
 			Variable* resource = this->declareVariable(methodIndex, AccessType::Hidden, typeName, name, false, U"");
@@ -273,7 +273,7 @@ void VirtualMachine::addCallInstructions(const List<ReadableString>& arguments) 
 	int outputCount = 0;
 	for (int a = 1; a < arguments.length(); a++) {
 		ReadableString content = string_removeOuterWhiteSpace(arguments[a]);
-		if (content.length() > 0) {
+		if (string_length(content) > 0) {
 			if (outputCount < calledMethod->outputCount) {
 				outputArguments.push(this->VMAfromText(currentMethodIndex, getArg(arguments, a)));
 				outputCount++;
@@ -396,7 +396,7 @@ void VirtualMachine::interpretMachineWord(const ReadableString& command, const L
 		List<VMA> resolvedArguments;
 		for (int a = 0; a < arguments.length(); a++) {
 			ReadableString content = string_removeOuterWhiteSpace(arguments[a]);
-			if (content.length() > 0) {
+			if (string_length(content) > 0) {
 				resolvedArguments.push(this->VMAfromText(methodIndex, getArg(arguments, a)));
 			}
 		}

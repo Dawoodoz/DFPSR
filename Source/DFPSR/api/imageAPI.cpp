@@ -459,7 +459,7 @@ String dsr::image_toAscii(const ImageU8& image, const String& alphabet) {
 	}
 	String result;
 	char alphabetMap[256];
-	int alphabetSize = alphabet.length();
+	int alphabetSize = string_length(alphabet);
 	int width = image_getWidth(image);
 	int height = image_getHeight(image);
 	result.reserve(((width + 4) * height) + alphabetSize + 5);
@@ -502,7 +502,7 @@ AlignedImageU8 dsr::image_fromAscii(const String& content) {
 	int width = 0;
 	int height = 0;
 	int alphabetSize = 0;
-	int contentSize = content.length();
+	int contentSize = string_length(content);
 	bool quoted = false;
 	int i = 0;
 	while (i < contentSize && ((current = content[i]) != '\0')) {

@@ -34,7 +34,7 @@ bool PersistentStringList::assignValue(const ReadableString &text) {
 	bool hadComma = false;
 	int start = 0;
 	this->value.clear();
-	for (int i = 0; i < text.length(); i++) {
+	for (int i = 0; i < string_length(text); i++) {
 		DsrChar c = text[i];
 		if (quoted) {
 			if (c == U'\\') { // Escape sequence
