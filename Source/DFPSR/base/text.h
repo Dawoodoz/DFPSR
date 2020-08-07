@@ -77,11 +77,6 @@ public:
 
 class String;
 
-// Reusable conversion methods
-void uintToString_arabic(String& target, uint64_t value);
-void intToString_arabic(String& target, int64_t value);
-void doubleToString_arabic(String& target, double value);
-
 // Used as format tags around numbers passed to string_append or string_combine
 // New types can implement printing to String by making wrappers from this class
 class Printable {

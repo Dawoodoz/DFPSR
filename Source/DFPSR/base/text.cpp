@@ -273,7 +273,7 @@ String dsr::string_unmangleQuote(const ReadableString& mangledText) {
 	return result;
 }
 
-void dsr::uintToString_arabic(String& target, uint64_t value) {
+static void uintToString_arabic(String& target, uint64_t value) {
 	static const int bufferSize = 20;
 	DsrChar digits[bufferSize];
 	int usedSize = 0;
@@ -296,7 +296,7 @@ void dsr::uintToString_arabic(String& target, uint64_t value) {
 	}
 }
 
-void dsr::intToString_arabic(String& target, int64_t value) {
+static void intToString_arabic(String& target, int64_t value) {
 	if (value >= 0) {
 		uintToString_arabic(target, (uint64_t)value);
 	} else {
@@ -306,7 +306,7 @@ void dsr::intToString_arabic(String& target, int64_t value) {
 }
 
 // TODO: Implement own version to ensure that nothing strange is happening from buggy std implementations
-void dsr::doubleToString_arabic(String& target, double value) {
+static void doubleToString_arabic(String& target, double value) {
 	std::ostringstream buffer;
 	buffer << std::fixed << value; // Generate using a fixed number of decimals
 	std::string result = buffer.str();
