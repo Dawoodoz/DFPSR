@@ -61,7 +61,7 @@ private:
 	// Helper methods
 	// Returns the selected index referring to an existing element or -1 if none is selected
 	int64_t getSelectedIndex();
-	void limitSelection(); // Clamp selection to valid range
+	void limitSelection(bool indexChangedMeaning); // Clamp selection to valid range
 	void limitScrolling(bool keepSelectedVisible = false); // Clamp scrolling
 	int64_t getVisibleScrollRange(); // Return the number of items that are visible at once
 	IRect getScrollBarLocation_includingButtons(); // Return the location of the scroll-bar with buttons
@@ -69,12 +69,15 @@ private:
 	IRect getKnobLocation(); // Return the location of the scroll-bar's knob
 	void pressScrollBar(int64_t localY); // Press the scroll-bar at localY in pixels
 	void loadTheme(VisualTheme theme);
+	// If a new selection inherited the old index, forceUpdate will send the select event anyway
+	void setSelectedIndex(int index, bool forceUpdate);
 public:
 	ListBox();
 public:
 	bool isContainer() const override;
 	void drawSelf(ImageRgbaU8& targetImage, const IRect &relativeLocation) override;
 	void receiveMouseEvent(const MouseEvent& event) override;
+	void receiveKeyboardEvent(const KeyboardEvent& event) override;
 	void changedTheme(VisualTheme newTheme) override;
 	void changedLocation(const IRect &oldLocation, const IRect &newLocation) override;
 	void changedAttribute(const ReadableString &name) override;

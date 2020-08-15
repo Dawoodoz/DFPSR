@@ -117,6 +117,7 @@ public:
 	DECLARE_CALLBACK(keyDownEvent, keyboardCallback);
 	DECLARE_CALLBACK(keyUpEvent, keyboardCallback);
 	DECLARE_CALLBACK(keyTypeEvent, keyboardCallback);
+	DECLARE_CALLBACK(selectEvent, indexCallback);
 private:
 	std::shared_ptr<VisualComponent> getDirectChild(const IVector2D& pixelPosition, bool includeInvisible);
 public:

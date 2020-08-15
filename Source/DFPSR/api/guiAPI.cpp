@@ -190,6 +190,10 @@ void dsr::component_setKeyTypeEvent(const Component& component, const KeyboardCa
 	MUST_EXIST(component, component_setKeyTypeEvent);
 	component->keyTypeEvent() = keyboardEvent;
 }
+void dsr::component_setSelectEvent(const Component& component, const IndexCallback& selectEvent) {
+	MUST_EXIST(component, component_setKeyTypeEvent);
+	component->selectEvent() = selectEvent;
+}
 
 bool dsr::component_hasProperty(const Component& component, const ReadableString& propertyName) {
 	MUST_EXIST(component, component_hasProperty);

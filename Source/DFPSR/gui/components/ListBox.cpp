@@ -47,7 +47,10 @@ Persistent* ListBox::findAttribute(const ReadableString &name) {
 	}
 }
 
-ListBox::ListBox() {}
+ListBox::ListBox() {
+	// Changed from nothing to zero
+	this->callback_selectEvent(0);
+}
 
 bool ListBox::isContainer() const {
 	return true;
@@ -166,7 +169,7 @@ void ListBox::receiveMouseEvent(const MouseEvent& event) {
 		this->hasImages = false; // Force redraw
 	} else if (event.mouseEventType == MouseEventType::MouseUp) {
 		if (this->pressedIndex > -1 && this->inside && !onScrollBar && hoverIndex == this->pressedIndex) {
-			this->selectedIndex.value = hoverIndex;
+			this->setSelectedIndex(hoverIndex, false);
 			this->limitScrolling(true);
 			this->callback_pressedEvent();
 		}
@@ -193,6 +196,21 @@ void ListBox::receiveMouseEvent(const MouseEvent& event) {
 	if (!supressEvent) {
 		VisualComponent::receiveMouseEvent(event);
 	}
+}
+
+void ListBox::receiveKeyboardEvent(const KeyboardEvent& event) {
+	if (event.keyboardEventType == KeyboardEventType::KeyDown) {
+		int contentLength = this->list.value.length();
+		int oldIndex = this->selectedIndex.value;
+		if (contentLength > 1) {
+			if (oldIndex > 0 && event.dsrKey == DsrKey::DsrKey_UpArrow) {
+				this->setSelectedIndex(oldIndex - 1, true);
+			} else if (oldIndex < contentLength - 1 && event.dsrKey == DsrKey::DsrKey_DownArrow) {
+				this->setSelectedIndex(oldIndex + 1, true);
+			}
+		}
+	}
+	VisualComponent::receiveKeyboardEvent(event);
 }
 
 void ListBox::loadTheme(VisualTheme theme) {
@@ -236,10 +254,18 @@ void ListBox::changedAttribute(const ReadableString &name) {
 	this->hasImages = false;
 	if (string_caseInsensitiveMatch(name, U"List")) {
 		// Reset selection on full list updates
-		this->selectedIndex.value = 0;
+		this->setSelectedIndex(0, true);
 	}
-	this->limitSelection();
+	this->limitSelection(false);
 	this->limitScrolling();
+}
+
+void ListBox::setSelectedIndex(int index, bool forceUpdate) {
+	if (forceUpdate || this->selectedIndex.value != index) {
+		this->selectedIndex.value = index;
+		this->hasImages = false;
+		this->callback_selectEvent(index);
+	}
 }
 
 int64_t ListBox::getSelectedIndex() {
@@ -250,7 +276,7 @@ int64_t ListBox::getSelectedIndex() {
 	return index;
 }
 
-void ListBox::limitSelection() {
+void ListBox::limitSelection(bool indexChangedMeaning) {
 	// Get the maximum index
 	int64_t maxIndex = this->list.value.length() - 1;
 	if (maxIndex < 0) {
@@ -258,7 +284,7 @@ void ListBox::limitSelection() {
 	}
 	// Reset selection on out of bound
 	if (this->selectedIndex.value < 0 || this->selectedIndex.value > maxIndex) {
-		this->selectedIndex.value = 0;
+		setSelectedIndex(0, indexChangedMeaning);
 	}
 }
 
@@ -343,7 +369,7 @@ String ListBox::call(const ReadableString &methodName, const ReadableString &arg
 			throwError("Index (", arguments, " = ", index, ") out of bound in RemoveElement!\n");
 		}
 		this->list.value.remove(index);
-		this->limitSelection();
+		this->limitSelection(true);
 		this->limitScrolling(true);
 		this->hasImages = false;
 		return U"";

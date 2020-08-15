@@ -49,10 +49,17 @@ int main(int argn, char **argv) {
 			}
 		}
 	});
+	// Called when the selected index has changed, when indices have changed their meaning
+	//   Triggered by mouse, keyboard, list changes and initialization
+	component_setSelectEvent(myListBox, [](int64_t index) {
+		String content = component_call(myListBox, U"GetSelectedText");
+		printText("Select event: content is (", content, ") at index ", index, "\n");
+	});
+	// Only triggered by mouse presses like any other component
 	component_setPressedEvent(myListBox, []() {
 		int64_t index = string_toInteger(component_call(myListBox, U"GetSelectedIndex"));
 		String content = component_call(myListBox, U"GetSelectedText");
-		printText("content is (", content, ") at index ", index, "\n");
+		printText("Pressed event: content is (", content, ") at index ", index, "\n");
 	});
 
 	// Execute

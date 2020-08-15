@@ -219,6 +219,9 @@ namespace dsr {
 	//   Raises an exception if component doesn't exist.
 	//   There's usually a second's delay before quickly repeating.
 	void component_setKeyTypeEvent(const Component& component, const KeyboardCallback& keyboardEvent);
+	// Select events are sent when the selected index of something has changed.
+	//   Used in Listbox to cover updates from all different ways the selection may change.
+	void component_setSelectEvent(const Component& component, const IndexCallback& selectEvent);
 
 // Theme
 	// Apply the given theme recursively to all components in the window's interface.

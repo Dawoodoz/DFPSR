@@ -119,6 +119,8 @@ public:
 // The callback templates and types
 static std::function<void()> emptyCallback = []() {};
 using EmptyCallback = decltype(emptyCallback) ;
+static std::function<void(int)> indexCallback = [](int64_t index) {};
+using IndexCallback = decltype(indexCallback);
 static std::function<void(int, int)> sizeCallback = [](int width, int height) {};
 using SizeCallback = decltype(sizeCallback);
 static std::function<void(const KeyboardEvent&)> keyboardCallback = [](const KeyboardEvent& event) {};
