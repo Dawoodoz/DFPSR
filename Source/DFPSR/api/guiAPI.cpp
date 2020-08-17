@@ -202,7 +202,7 @@ bool dsr::component_hasProperty(const Component& component, const ReadableString
 }
 
 ReturnCode dsr::component_setProperty(const Component& component, const ReadableString& propertyName, const ReadableString& value, bool mustAssign) {
-	MUST_EXIST(component, component_setProperty_string);
+	MUST_EXIST(component, component_setProperty);
 	Persistent* target = component->findAttribute(propertyName);
 	if (target == nullptr) {
 		if (mustAssign) {
@@ -222,7 +222,7 @@ ReturnCode dsr::component_setProperty(const Component& component, const Readable
 	}
 }
 String dsr::component_getProperty(const Component& component, const ReadableString& propertyName, bool mustExist) {
-	MUST_EXIST(component, component_getProperty_string);
+	MUST_EXIST(component, component_getProperty);
 	Persistent* target = component->findAttribute(propertyName);
 	if (target == nullptr) {
 		if (mustExist) {
