@@ -233,6 +233,43 @@ String dsr::component_getProperty(const Component& component, const ReadableStri
 		return target->toString();
 	}
 }
+ReturnCode dsr::component_setProperty_string(const Component& component, const ReadableString& propertyName, const ReadableString& value, bool mustAssign) {
+	MUST_EXIST(component, component_setProperty);
+	Persistent* target = component->findAttribute(propertyName);
+	PersistentString* stringTarget = dynamic_cast<PersistentString*>(target);
+	if (target == nullptr) {
+		if (mustAssign) {
+			throwError("component_setProperty_string: ", propertyName, " in ", component->getClassName(), " could not be found.\n");
+		}
+		return ReturnCode::KeyNotFound;
+	} else if (stringTarget == nullptr) {
+		if (mustAssign) {
+			throwError("component_setProperty_string: ", propertyName, " in ", component->getClassName(), " was a ", target->getClassName(), " instead of a string.\n");
+		}
+		return ReturnCode::KeyNotFound;
+	} else {
+		stringTarget->value = value;
+		return ReturnCode::Good;
+	}
+}
+String dsr::component_getProperty_string(const Component& component, const ReadableString& propertyName, bool mustExist) {
+	MUST_EXIST(component, component_getProperty);
+	Persistent* target = component->findAttribute(propertyName);
+	PersistentString* stringTarget = dynamic_cast<PersistentString*>(target);
+	if (target == nullptr) {
+		if (mustExist) {
+			throwError("component_getProperty_string: ", propertyName, " in ", component->getClassName(), " could not be found.\n");
+		}
+		return U"";
+	} else if (stringTarget == nullptr) {
+		if (mustExist) {
+			throwError("component_getProperty_string: ", propertyName, " in ", component->getClassName(), " was a ", target->getClassName(), " instead of a string.\n");
+		}
+		return U"";
+	} else {
+		return stringTarget->value;
+	}
+}
 
 String dsr::component_call(const Component& component, const ReadableString& methodName, const ReadableString& arguments) {
 	MUST_EXIST(component, component_call);

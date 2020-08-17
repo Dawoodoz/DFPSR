@@ -171,6 +171,9 @@ namespace dsr {
 	//   Unless mustAssign forces an exception.
 	//     Returns ReturnCode::ParsingFailure if propertyName was found but value couldn't be converted to its type.
 	ReturnCode component_setProperty(const Component& component, const ReadableString& propertyName, const ReadableString& value, bool mustAssign = true);
+	// A version optimized for basic strings to bypass quote mangling
+	//   The new value is given as it is without unmangling.
+	ReturnCode component_setProperty_string(const Component& component, const ReadableString& propertyName, const ReadableString& value, bool mustAssign = true);
 	// Returns a property found using propertyName in component.
 	//   Raises an exception if component doesn't exist.
 	//   Matching of propertyName is case insensitive.
@@ -179,6 +182,9 @@ namespace dsr {
 	//   If mustExist is false
 	//     Returns an empty string when propertyName isn't found.
 	String component_getProperty(const Component& component, const ReadableString& propertyName, bool mustExist = true);
+	// A version optimized for basic strings to bypass quote mangling
+	//   Returns the result without adding any quote signs or escape characters
+	String component_getProperty_string(const Component& component, const ReadableString& propertyName, bool mustExist = true);
 
 	// Call a named method in the component using optional text arguments
 	String component_call(const Component& component, const ReadableString& methodName);
