@@ -333,6 +333,7 @@ static void doubleToString_arabic(String& target, double value) {
 	} \
 	TARGET[SOURCE.length()] = '\0';
 
+/*
 String dsr::string_load(const ReadableString& filename, bool mustExist) {
 	// TODO: Load files using Unicode filenames
 	TO_RAW_ASCII(asciiFilename, filename);
@@ -357,6 +358,128 @@ String dsr::string_load(const ReadableString& filename, bool mustExist) {
 		return String();
 	}
 }
+*/
+
+// TODO: Give as a lambda with target captured, so that pre-allocation can measure the
+//       needed space exactly using a lambda that increases a character counter instead.
+// Interpreting a character's value and appends it to the string.
+static void feedCharacterFromFile(String &target, DsrChar character) {
+	if (character != U'\r') {
+		target.appendChar(character);
+	}
+}
+
+// Appends the content of buffer as a BOM-free Latin-1 file into target
+static void AppendStringFromFileBuffer_Latin1(String &target, const uint8_t* buffer, int64_t fileLength) {
+	for (int64_t i = 0; i < fileLength; i++) {
+		feedCharacterFromFile(target, (DsrChar)(buffer[i]));
+	}
+}
+// Appends the content of buffer as a BOM-free UTF-8 file into target
+static void AppendStringFromFileBuffer_UTF8(String &target, const uint8_t* buffer, int64_t fileLength) {
+	// We know that the result will be at least one character per given byte for UTF-8
+	target.reserve(string_length(target) + fileLength);
+	for (int64_t i = 0; i < fileLength; i++) {
+		uint8_t byteA = buffer[i];
+		if (byteA < 0b10000000) {
+			// Single byte (1xxxxxxx)
+			feedCharacterFromFile(target, (DsrChar)byteA);
+		} else {
+			uint32_t character = 0;
+			int extraBytes = 0;
+			if (byteA >= 0b11000000) { // At least two leading ones
+				if (byteA < 0b11100000) { // Less than three leading ones
+					character = byteA & 0b00011111;
+					extraBytes = 1;
+				} else if (byteA < 0b11110000) { // Less than four leading ones
+					character = byteA & 0b00011111;
+					extraBytes = 2;
+				} else if (byteA < 0b11111000) { // Less than five leading ones
+					character = byteA & 0b00011111;
+					extraBytes = 3;
+				} else {
+					// Invalid UTF-8 format
+					throwError(U"Invalid UTF-8 multi-chatacter beginning with 0b111111xx!");
+				}
+			} else {
+				// Invalid UTF-8 format
+				throwError(U"Invalid UTF-8 multi-chatacter beginning with 0b10xxxxxx!");
+			}
+			while (extraBytes > 0) {
+				i += 1; uint32_t nextByte = buffer[i];
+				character = (character << 6) | (nextByte & 0b00111111);
+				extraBytes--;
+			}
+			feedCharacterFromFile(target, (DsrChar)character);
+		}
+	}
+}
+// Appends the content of buffer as a text file of unknown format into target
+static void AppendStringFromFileBuffer(String &target, const uint8_t* buffer, int64_t fileLength) {
+	// After removing the BOM bytes, the rest can be seen as a BOM-free text file with a known format
+	if (fileLength >= 3 && buffer[0] == 0xEF && buffer[1] == 0xBB && buffer[2] == 0xBF) {
+		AppendStringFromFileBuffer_UTF8(target, buffer + 3, fileLength - 3);
+	} else if (fileLength >= 3 && buffer[0] == 0xF7 && buffer[1] == 0x64 && buffer[2] == 0x4C) {
+		//AppendStringFromFileBuffer_UTF1(target, buffer + 3, fileLength - 3);
+		throwError(U"UTF-1 format is not yet supported!");
+	} else if (fileLength >= 3 && buffer[0] == 0x0E && buffer[1] == 0xFE && buffer[2] == 0xFF) {
+		//AppendStringFromFileBuffer_SCSU(target, buffer + 3, fileLength - 3);
+		throwError(U"SCSU format is not yet supported!");
+	} else if (fileLength >= 3 && buffer[0] == 0xFB && buffer[1] == 0xEE && buffer[2] == 0x28) {
+		//AppendStringFromFileBuffer_BOCU-1(target, buffer + 3, fileLength - 3);
+		throwError(U"BOCU-1 format is not yet supported!");
+	} else if (fileLength >= 2 && buffer[0] == 0xFE && buffer[1] == 0xFF) {
+		//AppendStringFromFileBuffer_UTF16BE(target, buffer + 2, fileLength - 2);
+		throwError(U"UTF-16 BE format is not yet supported!");
+	} else if (fileLength >= 2 && buffer[0] == 0xFF && buffer[1] == 0xFE) {
+		//AppendStringFromFileBuffer_UTF16LE(target, buffer + 2, fileLength - 2);
+		throwError(U"UTF-16 LE format is not yet supported!");
+	} else if (fileLength >= 4 && buffer[0] == 0x00 && buffer[1] == 0x00 && buffer[2] == 0xFE && buffer[3] == 0xFF) {
+		//AppendStringFromFileBuffer_UTF32BE(target, buffer + 4, fileLength - 4);
+		throwError(U"UTF-32 BE format is not yet supported!");
+	} else if (fileLength >= 4 && buffer[0] == 0xFF && buffer[1] == 0xFE && buffer[2] == 0x00 && buffer[3] == 0x00) {
+		//AppendStringFromFileBuffer_UTF32BE(target, buffer + 4, fileLength - 4);
+		throwError(U"UTF-32 LE format is not yet supported!");
+	} else if (fileLength >= 4 && buffer[0] == 0x2B && buffer[1] == 0x2F && buffer[2] == 0x76) {
+		// Ignoring fourth byte with the dialect of UTF-7 when just showing the error message
+		throwError(U"UTF-7 format is not yet supported!");
+	} else {
+		// No BOM detected, assuming Latin-1 (because it directly corresponds to a unicode sub-set)
+		AppendStringFromFileBuffer_Latin1(target, buffer, fileLength);
+	}
+}
+
+String dsr::string_loadFromMemory(const Buffer &fileContent) {
+	String result;
+	AppendStringFromFileBuffer(result, fileContent.getUnsafeData(), fileContent.size);
+	return result;
+}
+
+// Loads a text file of unknown format
+//   Removes carriage-return characters to make processing easy with only line-feed for breaking lines.
+String dsr::string_load(const ReadableString& filename, bool mustExist) {
+	// TODO: Load files using Unicode filenames when available
+	TO_RAW_ASCII(asciiFilename, filename);
+	std::ifstream fileStream(asciiFilename, std::ios_base::in | std::ios_base::binary);
+	if (fileStream.is_open()) {
+		String result;
+		// Get the file's length and allocate an array for the raw encoding
+		fileStream.seekg (0, fileStream.end);
+		int64_t fileLength = fileStream.tellg();
+		fileStream.seekg (0, fileStream.beg);
+		uint8_t* buffer = (uint8_t*)malloc(fileLength);
+		fileStream.read((char*)buffer, fileLength);
+		AppendStringFromFileBuffer(result, buffer, fileLength);
+		free(buffer);
+		return result;
+	} else {
+		if (mustExist) {
+			throwError(U"The text file ", filename, U" could not be opened for reading.\n");
+		}
+		// If the file cound not be found and opened, a null string is returned
+		return String();
+	}
+}
 
 void dsr::string_save(const ReadableString& filename, const ReadableString& content) {
 	// TODO: Load files using Unicode filenames
@@ -371,6 +494,27 @@ void dsr::string_save(const ReadableString& filename, const ReadableString& cont
 		throwError("Failed to save ", filename, "\n");
 	}
 }
+/*
+// TODO: Choose how to encode characters and line endings using enums
+class enum textEncoding {
+	UTF1, UTF7, UTF8, UTF16BE, UTF16LE, UTF32BE, UTF32LE, UTF-EBCDIC, SCSU, BOCU1, GB18030
+};
+* class enum lineEncoding {
+	UTF1, UTF7, UTF8, UTF16BE, UTF16LE, UTF32BE, UTF32LE, UTF-EBCDIC, SCSU, BOCU1, GB18030
+};
+void dsr::string_save(const ReadableString& filename, const ReadableString& content) {
+	// TODO: Load files using Unicode filenames
+	TO_RAW_ASCII(asciiFilename, filename);
+	TO_RAW_ASCII(asciiContent, content);
+	std::ofstream fileStream(asciiFilename, std::ios_base::out | std::ios_base::binary);
+	if (fileStream.is_open()) {
+		fileStream << asciiContent;
+		fileStream.close();
+	} else {
+		throwError("Failed to save ", filename, "\n");
+	}
+}
+*/
 
 const char32_t* dsr::file_separator() {
 	#ifdef _WIN32

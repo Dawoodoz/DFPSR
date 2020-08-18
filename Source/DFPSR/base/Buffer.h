@@ -44,16 +44,20 @@ public:
 	~Buffer();
 public:
 	void replaceDestructor(const std::function<void(uint8_t *)>& newDestructor);
+	// Set all bytes to the same value
 	void set(uint8_t value);
+	// Get a dangerous pointer to the raw data
 	uint8_t *getUnsafeData() {
 		return this->data;
 	}
-	// Get the buffer
+	const uint8_t *getUnsafeData() const {
+		return this->data;
+	}
+	// Get a safe pointer to the raw data
 	template <typename T>
 	SafePointer<T> getSafeData(const char *name) {
 		return SafePointer<T>(name, (T*)this->data, this->bufferSize, (T*)this->data);
 	}
-	// Get the buffer
 	template <typename T>
 	const SafePointer<T> getSafeData(const char *name) const {
 		return SafePointer<T>(name, (T*)this->data, this->bufferSize, (T*)this->data);

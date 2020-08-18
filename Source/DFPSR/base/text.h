@@ -278,6 +278,10 @@ double string_toDouble(const ReadableString& source);
 //   If mustExist is true, then failure to load will throw an exception.
 //   If mustExist is false, then failure to load will return an empty string.
 String string_load(const ReadableString& filename, bool mustExist = true);
+// A version loading the text from a binary representation of the file's content instead of the filename
+//   Makes it easier to test character encoding and load arbitrary files from archives.
+String string_loadFromMemory(const Buffer &fileContent);
+
 // Side-effect: Saves content to filename.
 void string_save(const ReadableString& filename, const ReadableString& content);
 
