@@ -40,7 +40,14 @@ using DsrChar = char32_t;
 
 // Text files support loading UTF-8/16 BE/LE with BOM or Latin-1 without BOM
 enum class CharacterEncoding {
-	Raw_Latin1, UTF8, UTF16BE, UTF16LE
+	Raw_Latin1, BOM_UTF8, BOM_UTF16BE, BOM_UTF16LE
+};
+
+// Carriage-return is removed when loading text files to prevent getting double lines
+// A line-feed without a line-feed character is nonsense
+// LineEncoding allow re-adding carriage-return before or after each line-break when saving
+enum class LineEncoding {
+	CrLf, Lf, LfCr
 };
 
 class ReadableString {
@@ -288,7 +295,11 @@ String string_load(const ReadableString& filename, bool mustExist = true);
 String string_loadFromMemory(const Buffer &fileContent);
 
 // Side-effect: Saves content to filename.
-void string_save(const ReadableString& filename, const ReadableString& content);
+// UTF-8 with BOM is default by being both compact and capable of storing 21 bits of unicode
+void string_save(const ReadableString& filename, const ReadableString& content,
+  CharacterEncoding characterEncoding = CharacterEncoding::BOM_UTF8,
+  LineEncoding lineEncoding = LineEncoding::CrLf
+);
 
 // Post-condition: Returns true iff strings a and b are exactly equal.
 bool string_match(const ReadableString& a, const ReadableString& b);

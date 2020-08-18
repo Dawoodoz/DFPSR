@@ -105,7 +105,7 @@ START_TEST(TextEncoding)
 		ASSERT_MATCH(fileLatin1, expected_latin1);
 
 		String fileUTF8 = string_load(folderPath + U"BomUtf8.txt", true);
-		compareCharacterCodes(fileUTF8, expected_utf8);
+		//compareCharacterCodes(fileUTF8, expected_utf8);
 		ASSERT_MATCH(fileUTF8, expected_utf8);
 
 		//String fileUTF16LE = string_load(folderPath + U"BomUtf16Le.txt", true);
@@ -117,8 +117,14 @@ START_TEST(TextEncoding)
 		//ASSERT_MATCH(fileUTF16BE, expected_utf16be);
 	}
 	{ // Saving text to files
-		String originalContent = U"你好我的朋友";
+		String originalContent = U"Hello my friend\n你好我的朋友";
 		
+		// Latin-1 should write ? for complex characters
+		string_save(folderPath + U"Saved_Latin1.txt", originalContent, CharacterEncoding::Raw_Latin1, LineEncoding::CrLf);
+		ASSERT_MATCH(string_load(folderPath + U"Saved_Latin1.txt", true), U"Hello my friend\n??????");
 		
+		// UFT-8 should store the Chinese characters correctly
+		string_save(folderPath + U"Saved_UTF8.txt", originalContent, CharacterEncoding::BOM_UTF8, LineEncoding::CrLf);
+		ASSERT_MATCH(string_load(folderPath + U"Saved_UTF8.txt", true), originalContent);
 	}
 END_TEST

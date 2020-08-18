@@ -394,28 +394,28 @@ static void AppendStringFromFileBuffer(String &target, const uint8_t* buffer, in
 		AppendStringFromFileBuffer_UTF8(target, buffer + 3, fileLength - 3);
 	} else if (fileLength >= 3 && buffer[0] == 0xF7 && buffer[1] == 0x64 && buffer[2] == 0x4C) {
 		//AppendStringFromFileBuffer_UTF1(target, buffer + 3, fileLength - 3);
-		throwError(U"UTF-1 format is not yet supported!");
+		throwError(U"UTF-1 format is not yet supported!\n");
 	} else if (fileLength >= 3 && buffer[0] == 0x0E && buffer[1] == 0xFE && buffer[2] == 0xFF) {
 		//AppendStringFromFileBuffer_SCSU(target, buffer + 3, fileLength - 3);
-		throwError(U"SCSU format is not yet supported!");
+		throwError(U"SCSU format is not yet supported!\n");
 	} else if (fileLength >= 3 && buffer[0] == 0xFB && buffer[1] == 0xEE && buffer[2] == 0x28) {
 		//AppendStringFromFileBuffer_BOCU-1(target, buffer + 3, fileLength - 3);
-		throwError(U"BOCU-1 format is not yet supported!");
+		throwError(U"BOCU-1 format is not yet supported!\n");
 	} else if (fileLength >= 2 && buffer[0] == 0xFE && buffer[1] == 0xFF) {
 		//AppendStringFromFileBuffer_UTF16BE(target, buffer + 2, fileLength - 2);
-		throwError(U"UTF-16 BE format is not yet supported!");
+		throwError(U"UTF-16 BE format is not yet supported!\n");
 	} else if (fileLength >= 2 && buffer[0] == 0xFF && buffer[1] == 0xFE) {
 		//AppendStringFromFileBuffer_UTF16LE(target, buffer + 2, fileLength - 2);
-		throwError(U"UTF-16 LE format is not yet supported!");
+		throwError(U"UTF-16 LE format is not yet supported!\n");
 	} else if (fileLength >= 4 && buffer[0] == 0x00 && buffer[1] == 0x00 && buffer[2] == 0xFE && buffer[3] == 0xFF) {
 		//AppendStringFromFileBuffer_UTF32BE(target, buffer + 4, fileLength - 4);
-		throwError(U"UTF-32 BE format is not yet supported!");
+		throwError(U"UTF-32 BE format is not yet supported!\n");
 	} else if (fileLength >= 4 && buffer[0] == 0xFF && buffer[1] == 0xFE && buffer[2] == 0x00 && buffer[3] == 0x00) {
 		//AppendStringFromFileBuffer_UTF32BE(target, buffer + 4, fileLength - 4);
-		throwError(U"UTF-32 LE format is not yet supported!");
+		throwError(U"UTF-32 LE format is not yet supported!\n");
 	} else if (fileLength >= 4 && buffer[0] == 0x2B && buffer[1] == 0x2F && buffer[2] == 0x76) {
 		// Ignoring fourth byte with the dialect of UTF-7 when just showing the error message
-		throwError(U"UTF-7 format is not yet supported!");
+		throwError(U"UTF-7 format is not yet supported!\n");
 	} else {
 		// No BOM detected, assuming Latin-1 (because it directly corresponds to a unicode sub-set)
 		AppendStringFromFileBuffer_Latin1(target, buffer, fileLength);
@@ -454,34 +454,108 @@ String dsr::string_load(const ReadableString& filename, bool mustExist) {
 	}
 }
 
-void dsr::string_save(const ReadableString& filename, const ReadableString& content) {
-	// TODO: Load files using Unicode filenames
-	TO_RAW_ASCII(asciiFilename, filename);
-	TO_RAW_ASCII(asciiContent, content);
-	std::ofstream outputFile;
-	outputFile.open(asciiFilename);
-	if (outputFile.is_open()) {
-		outputFile << asciiContent;
-		outputFile.close();
-	} else {
-		throwError("Failed to save ", filename, "\n");
+static inline void byteToStream(std::ostream &target, int value) {
+	uint8_t byte = value;
+	target.write((char*)&byte, 1);
+}
+
+template <CharacterEncoding characterEncoding>
+static void encodeCharacterToStream(std::ostream &target, DsrChar character) {
+	if (characterEncoding == CharacterEncoding::Raw_Latin1) {
+		// Replace any illegal characters with questionmarks
+		if (character > 255) { character = U'?'; }
+		byteToStream(target, character);
+	} else if (characterEncoding == CharacterEncoding::BOM_UTF8) {
+		if (character < (1 << 7)) {
+			// 0xxxxxxx
+			byteToStream(target, character);
+		} else if (character < (1 << 11)) {
+			// 110xxxxx 10xxxxxx
+			byteToStream(target, 0b11000000 | ((character & (0b11111 << 6)) >> 6));
+			byteToStream(target, 0b10000000 | (character & 0b111111));
+		} else if (character < (1 << 16)) {
+			// 1110xxxx 10xxxxxx 10xxxxxx
+			byteToStream(target, 0b11100000 | ((character & (0b1111 << 12)) >> 12));
+			byteToStream(target, 0b10000000 | ((character & (0b111111 << 6)) >> 6));
+			byteToStream(target, 0b10000000 | (character & 0b111111));
+		} else if (character < (1 << 21)) {
+			// 11110xxx 10xxxxxx 10xxxxxx 10xxxxxx
+			byteToStream(target, 0b11110000 | ((character & (0b111 << 18)) >> 18));
+			byteToStream(target, 0b10000000 | ((character & (0b111111 << 12)) >> 12));
+			byteToStream(target, 0b10000000 | ((character & (0b111111 << 6)) >> 6));
+			byteToStream(target, 0b10000000 | (character & 0b111111));
+		}
+	} else if (characterEncoding == CharacterEncoding::BOM_UTF16BE) {
+		throwError(U"Saving text files in UTF-16 BE is not yet implemented.\n");
+	} else { // Assuming that characterEncoding == CharacterEncoding::BOM_UTF16LE
+		throwError(U"Saving text files in UTF-16 LE is not yet implemented.\n");
 	}
 }
-/*
-// TODO: Choose how to encode characters and line endings using enums
-void dsr::string_save(const ReadableString& filename, const ReadableString& content) {
+
+// Template for writing a whole string to a file
+template <CharacterEncoding characterEncoding, LineEncoding lineEncoding>
+static void writeCharacterToStream(std::ostream &target, String content) {
+	// Write byte order marks
+	if (characterEncoding == CharacterEncoding::BOM_UTF8) {
+		byteToStream(target, 0xEF);
+		byteToStream(target, 0xBB);
+		byteToStream(target, 0xBF);
+	} else if (characterEncoding == CharacterEncoding::BOM_UTF16BE) {
+		byteToStream(target, 0xFE);
+		byteToStream(target, 0xFF);
+	} else if (characterEncoding == CharacterEncoding::BOM_UTF16LE) {
+		byteToStream(target, 0xFF);
+		byteToStream(target, 0xFE);
+	}
+	// Write encoded content
+	for (int i = 0; i < string_length(content); i++) {
+		DsrChar character = content[i];
+		if (character == U'\n') {
+			if (lineEncoding == LineEncoding::CrLf) {
+				encodeCharacterToStream<characterEncoding>(target, U'\r');
+				encodeCharacterToStream<characterEncoding>(target, U'\n');
+			} else if (lineEncoding == LineEncoding::LfCr) {
+				encodeCharacterToStream<characterEncoding>(target, U'\n');
+				encodeCharacterToStream<characterEncoding>(target, U'\r');
+			} else { // Assuming that lineEncoding == LineEncoding::Lf
+				encodeCharacterToStream<characterEncoding>(target, U'\n');
+			}
+		} else {
+			encodeCharacterToStream<characterEncoding>(target, character);
+		}
+	}
+}
+
+// Macros for dynamcally selecting templates
+#define WRITE_TEXT_STRING(CHAR_ENCODING, LINE_ENCODING) \
+	writeCharacterToStream<CHAR_ENCODING, LINE_ENCODING>(fileStream, content);
+#define WRITE_TEXT_LINE_ENCODINGS(CHAR_ENCODING) \
+	if (lineEncoding == LineEncoding::CrLf) { \
+		WRITE_TEXT_STRING(CHAR_ENCODING, LineEncoding::CrLf); \
+	} else if (lineEncoding == LineEncoding::Lf) { \
+		WRITE_TEXT_STRING(CHAR_ENCODING, LineEncoding::Lf); \
+	} else if (lineEncoding == LineEncoding::LfCr) { \
+		WRITE_TEXT_STRING(CHAR_ENCODING, LineEncoding::LfCr); \
+	}
+void dsr::string_save(const ReadableString& filename, const ReadableString& content, CharacterEncoding characterEncoding, LineEncoding lineEncoding) {
 	// TODO: Load files using Unicode filenames
 	TO_RAW_ASCII(asciiFilename, filename);
-	TO_RAW_ASCII(asciiContent, content);
 	std::ofstream fileStream(asciiFilename, std::ios_base::out | std::ios_base::binary);
 	if (fileStream.is_open()) {
-		fileStream << asciiContent;
+		if (characterEncoding == CharacterEncoding::Raw_Latin1) {
+			WRITE_TEXT_LINE_ENCODINGS(CharacterEncoding::Raw_Latin1);
+		} else if (characterEncoding == CharacterEncoding::BOM_UTF8) {
+			WRITE_TEXT_LINE_ENCODINGS(CharacterEncoding::BOM_UTF8);
+		} else if (characterEncoding == CharacterEncoding::BOM_UTF16BE) {
+			WRITE_TEXT_LINE_ENCODINGS(CharacterEncoding::BOM_UTF16BE);
+		} else if (characterEncoding == CharacterEncoding::BOM_UTF16LE) {
+			WRITE_TEXT_LINE_ENCODINGS(CharacterEncoding::BOM_UTF16LE);
+		}
 		fileStream.close();
 	} else {
 		throwError("Failed to save ", filename, "\n");
 	}
 }
-*/
 
 const char32_t* dsr::file_separator() {
 	#ifdef _WIN32
