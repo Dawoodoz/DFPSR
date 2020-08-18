@@ -697,20 +697,20 @@ void String::clear() {
 //         * Then the buffer will be cloned when the first character is written
 //     If it doesn't share the buffer
 //       * Then no risk of writing
-#define APPEND(TARGET, SOURCE, LENGTH) { \
-	int oldLength = (TARGET)->length(); \
-	(TARGET)->expand(oldLength + (int)(LENGTH), true); \
-	for (int i = 0; i < (int)(LENGTH); i++) { \
-		(TARGET)->write(oldLength + i, (SOURCE)[i]); \
+#define APPEND(TARGET, SOURCE, LENGTH, MASK) { \
+	int64_t oldLength = (TARGET)->length(); \
+	(TARGET)->expand(oldLength + (int64_t)(LENGTH), true); \
+	for (int64_t i = 0; i < (int64_t)(LENGTH); i++) { \
+		(TARGET)->write(oldLength + i, ((SOURCE)[i]) & MASK); \
 	} \
 }
 // TODO: See if ascii litterals can be checked for values above 127 in compile-time
-void String::append(const char* source) { APPEND(this, source, strlen(source)); }
+void String::append(const char* source) { APPEND(this, source, strlen(source), 0xFF); }
 // TODO: Use memcpy when appending input of the same format
-void String::append(const ReadableString& source) { APPEND(this, source, source.length()); }
-void String::append(const char32_t* source) { APPEND(this, source, strlen_utf32(source)); }
-void String::append(const std::string& source) { APPEND(this, source.c_str(), (int)source.size()); }
-void String::appendChar(DsrChar source) { APPEND(this, &source, 1); }
+void String::append(const ReadableString& source) { APPEND(this, source, source.length(), 0xFFFFFFFF); }
+void String::append(const char32_t* source) { APPEND(this, source, strlen_utf32(source), 0xFFFFFFFF); }
+void String::append(const std::string& source) { APPEND(this, source.c_str(), (int)source.size(), 0xFF); }
+void String::appendChar(DsrChar source) { APPEND(this, &source, 1, 0xFFFFFFFF); }
 
 String& dsr::string_toStreamIndented(String& target, const Printable& source, const ReadableString& indentation) {
 	return source.toStreamIndented(target, indentation);
