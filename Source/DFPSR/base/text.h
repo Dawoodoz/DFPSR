@@ -38,6 +38,11 @@ namespace dsr {
 
 using DsrChar = char32_t;
 
+// Text files support loading UTF-8/16 BE/LE with BOM or Latin-1 without BOM
+enum class CharacterEncoding {
+	Raw_Latin1, UTF8, UTF16BE, UTF16LE
+};
+
 class ReadableString {
 protected:
 	// A local pointer to the sub-allocation

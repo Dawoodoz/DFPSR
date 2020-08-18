@@ -1,18 +1,23 @@
-
+﻿
 #include "../testTools.h"
 
+// These tests will fail if the source code document or stored files change their encoding of line breaks.
+
 String expected_latin1 =
-R"QUOTE(Hello my friend.
+R"QUOTE(Hello my friend
 Hej min vän
 Halló, vinur minn
 Hei ystäväni
 Hola mi amigo
 Ciao amico
+)QUOTE";
 
-This is Latin-1)QUOTE";
-
+// Warning!
+//   String literals containing characters above value 255 must be stored explicitly in unicode literals using U"" instead of "".
+//   Because string literals do not begin with a byte order mark to say which encoding is being used.
+//   Also make sure to save the source code document using a byte order mark so that the C++ compiler receives the correct symbol.
 String unicodeContent =
-R"QUOTE(Hello my friend.
+UR"QUOTE(Hello my friend
 Hej min vän
 Halló, vinur minn
 Hei ystäväni
@@ -71,24 +76,35 @@ void compareCharacterCodes(String textA, String textB) {
 		printCharacterCode(codeB);
 		printText(U" (", textA[i], U") (", textB[i], U")\n");
 	}
+	if (lengthA > lengthB) {
+		for (int i = minLength; i < lengthA; i++) {
+			uint32_t codeA = (uint32_t)textA[i];
+			printCharacterCode(codeA);
+			printText(U" (", textA[i], U")\n");
+		}
+	} else {
+		printText(U"                                    ");
+		for (int i = minLength; i < lengthB; i++) {
+			uint32_t codeB = (uint32_t)textB[i];
+			printCharacterCode(codeB);
+			printText(U" (", textB[i], U")\n");
+		}
+	}
 }
 
 START_TEST(TextEncoding)
+	String folderPath = string_combine(U"test", file_separator(), U"tests", file_separator(), U"resources", file_separator());
 	{ // Text encodings stored in memory
 		// TODO: Test string_loadFromMemory
 		
 		
 	}
 	{ // Loading strings of different encodings
-		String folderPath = string_combine(U"test", file_separator(), U"tests", file_separator(), U"resources", file_separator());
-
 		String fileLatin1 = string_load(folderPath + U"Latin1.txt", true);
-		printText("Latin1.txt contains:\n", fileLatin1, "\n");
-		compareCharacterCodes(fileLatin1, expected_latin1);
+		//compareCharacterCodes(fileLatin1, expected_latin1);
 		ASSERT_MATCH(fileLatin1, expected_latin1);
 
 		String fileUTF8 = string_load(folderPath + U"BomUtf8.txt", true);
-		printText("BomUtf8.txt contains:\n", fileUTF8, "\n");
 		compareCharacterCodes(fileUTF8, expected_utf8);
 		ASSERT_MATCH(fileUTF8, expected_utf8);
 
@@ -99,5 +115,10 @@ START_TEST(TextEncoding)
 		//String fileUTF16BE = string_load(folderPath + U"BomUtf16Be.txt", true);
 		//printText("BomUtf16Be.txt contains:\n", fileUTF16BE, "\n");
 		//ASSERT_MATCH(fileUTF16BE, expected_utf16be);
+	}
+	{ // Saving text to files
+		String originalContent = U"你好我的朋友";
+		
+		
 	}
 END_TEST

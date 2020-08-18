@@ -333,33 +333,6 @@ static void doubleToString_arabic(String& target, double value) {
 	} \
 	TARGET[SOURCE.length()] = '\0';
 
-/*
-String dsr::string_load(const ReadableString& filename, bool mustExist) {
-	// TODO: Load files using Unicode filenames
-	TO_RAW_ASCII(asciiFilename, filename);
-	std::ifstream inputFile(asciiFilename);
-	if (inputFile.is_open()) {
-		std::stringstream outputBuffer;
-		// TODO: Feed directly to String
-		outputBuffer << inputFile.rdbuf();
-		std::string content = outputBuffer.str();
-		String result;
-		result.reserve(content.size());
-		for (int i = 0; i < (int)(content.size()); i++) {
-			result.appendChar(content[i]);
-		}
-		inputFile.close();
-		return result;
-	} else {
-		if (mustExist) {
-			throwError("Failed to load ", filename, "\n");
-		}
-		// If the file cound not be found and opened, a null string is returned
-		return String();
-	}
-}
-*/
-
 // TODO: Give as a lambda with target captured, so that pre-allocation can measure the
 //       needed space exactly using a lambda that increases a character counter instead.
 // Interpreting a character's value and appends it to the string.
@@ -496,12 +469,6 @@ void dsr::string_save(const ReadableString& filename, const ReadableString& cont
 }
 /*
 // TODO: Choose how to encode characters and line endings using enums
-class enum textEncoding {
-	UTF1, UTF7, UTF8, UTF16BE, UTF16LE, UTF32BE, UTF32LE, UTF-EBCDIC, SCSU, BOCU1, GB18030
-};
-* class enum lineEncoding {
-	UTF1, UTF7, UTF8, UTF16BE, UTF16LE, UTF32BE, UTF32LE, UTF-EBCDIC, SCSU, BOCU1, GB18030
-};
 void dsr::string_save(const ReadableString& filename, const ReadableString& content) {
 	// TODO: Load files using Unicode filenames
 	TO_RAW_ASCII(asciiFilename, filename);

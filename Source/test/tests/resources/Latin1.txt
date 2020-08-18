@@ -1,8 +1,6 @@
-Hello my friend.
+Hello my friend
 Hej min vän
 Halló, vinur minn
 Hei ystäväni
 Hola mi amigo
 Ciao amico
-
-This is Latin-1
