@@ -118,13 +118,14 @@ START_TEST(TextEncoding)
 	}
 	{ // Saving text to files
 		String originalContent = U"Hello my friend\n你好我的朋友";
+		String tempPath = folderPath + U"Temporary.txt";
 		
 		// Latin-1 should write ? for complex characters
-		string_save(folderPath + U"Saved_Latin1.txt", originalContent, CharacterEncoding::Raw_Latin1, LineEncoding::CrLf);
-		ASSERT_MATCH(string_load(folderPath + U"Saved_Latin1.txt", true), U"Hello my friend\n??????");
+		string_save(tempPath, originalContent, CharacterEncoding::Raw_Latin1, LineEncoding::CrLf);
+		ASSERT_MATCH(string_load(tempPath, true), U"Hello my friend\n??????");
 		
 		// UFT-8 should store the Chinese characters correctly
-		string_save(folderPath + U"Saved_UTF8.txt", originalContent, CharacterEncoding::BOM_UTF8, LineEncoding::CrLf);
-		ASSERT_MATCH(string_load(folderPath + U"Saved_UTF8.txt", true), originalContent);
+		string_save(tempPath, originalContent, CharacterEncoding::BOM_UTF8, LineEncoding::CrLf);
+		ASSERT_MATCH(string_load(tempPath, true), originalContent);
 	}
 END_TEST
