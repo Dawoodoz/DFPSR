@@ -47,7 +47,8 @@ enum class CharacterEncoding {
 // A line-feed without a line-feed character is nonsense
 // LineEncoding allow re-adding carriage-return before or after each line-break when saving
 enum class LineEncoding {
-	CrLf, Lf, LfCr
+	CrLf, // Microsoft Windows compatible (Can also be read on other platforms by ignoring carriage return)
+	Lf // Linux and Macintosh compatible (Might not work on non-portable text editors on Microsoft Windows)
 };
 
 class ReadableString {

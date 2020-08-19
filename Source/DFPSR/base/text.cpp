@@ -514,9 +514,6 @@ static void writeCharacterToStream(std::ostream &target, String content) {
 			if (lineEncoding == LineEncoding::CrLf) {
 				encodeCharacterToStream<characterEncoding>(target, U'\r');
 				encodeCharacterToStream<characterEncoding>(target, U'\n');
-			} else if (lineEncoding == LineEncoding::LfCr) {
-				encodeCharacterToStream<characterEncoding>(target, U'\n');
-				encodeCharacterToStream<characterEncoding>(target, U'\r');
 			} else { // Assuming that lineEncoding == LineEncoding::Lf
 				encodeCharacterToStream<characterEncoding>(target, U'\n');
 			}
@@ -534,8 +531,6 @@ static void writeCharacterToStream(std::ostream &target, String content) {
 		WRITE_TEXT_STRING(CHAR_ENCODING, LineEncoding::CrLf); \
 	} else if (lineEncoding == LineEncoding::Lf) { \
 		WRITE_TEXT_STRING(CHAR_ENCODING, LineEncoding::Lf); \
-	} else if (lineEncoding == LineEncoding::LfCr) { \
-		WRITE_TEXT_STRING(CHAR_ENCODING, LineEncoding::LfCr); \
 	}
 void dsr::string_save(const ReadableString& filename, const ReadableString& content, CharacterEncoding characterEncoding, LineEncoding lineEncoding) {
 	// TODO: Load files using Unicode filenames
