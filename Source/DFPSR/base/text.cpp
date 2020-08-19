@@ -419,7 +419,7 @@ static void AppendStringFromFileBuffer_UTF16(String &target, const uint8_t* buff
 			uint16_t wordB = read16bits<LittleEndian>(buffer, i);
 			uint32_t higher10Bits = wordA & 0b1111111111;
 			uint32_t lower10Bits = wordB & 0b1111111111;
-			feedCharacterFromFile(target, (DsrChar)((higher10Bits << 10) | lower10Bits));
+			feedCharacterFromFile(target, (DsrChar)(((higher10Bits << 10) | lower10Bits) + 0x10000));
 		}
 	}
 }
@@ -538,8 +538,9 @@ static void encodeCharacterToStream(std::ostream &target, DsrChar character) {
 			}
 		} else if (character >= 0x010000 && character <= 0x10FFFF) {
 			// 110110xxxxxxxxxx 110111xxxxxxxxxx
-			uint32_t higher10Bits = (character & 0b11111111110000000000) >> 10;
-			uint32_t lower10Bits  =  character & 0b00000000001111111111;
+			uint32_t code = character - 0x10000;
+			uint32_t higher10Bits = (code & 0b11111111110000000000) >> 10;
+			uint32_t lower10Bits  =  code & 0b00000000001111111111;
 			uint32_t byteA = (0b110110 << 2) | ((higher10Bits & (0b11 << 8)) >> 8);
 			uint32_t byteB = higher10Bits & 0b11111111;
 			uint32_t byteC = (0b110111 << 2) | ((lower10Bits & (0b11 << 8)) >> 8);

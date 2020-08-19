@@ -40,7 +40,10 @@ using DsrChar = char32_t;
 
 // Text files support loading UTF-8/16 BE/LE with BOM or Latin-1 without BOM
 enum class CharacterEncoding {
-	Raw_Latin1, BOM_UTF8, BOM_UTF16BE, BOM_UTF16LE
+	Raw_Latin1,  // U+00 to U+FF
+	BOM_UTF8,    // U+00000000 to U+0010FFFF
+	BOM_UTF16BE, // U+00000000 to U+0000D7FF, U+0000E000 to U+0000FFFF, U+00010000 to U+0010FFFF
+	BOM_UTF16LE  // U+00000000 to U+0000D7FF, U+0000E000 to U+0000FFFF, U+00010000 to U+0010FFFF
 };
 
 // Carriage-return is removed when loading text files to prevent getting double lines

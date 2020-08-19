@@ -95,9 +95,7 @@ void compareCharacterCodes(String textA, String textB) {
 START_TEST(TextEncoding)
 	String folderPath = string_combine(U"test", file_separator(), U"tests", file_separator(), U"resources", file_separator());
 	{ // Text encodings stored in memory
-		// TODO: Test string_loadFromMemory
-		
-		
+		// TODO: Test string_loadFromMemory using random character codes from the extended 0x10000..0x10FFFF range
 	}
 	{ // Loading strings of different encodings
 		String fileLatin1 = string_load(folderPath + U"Latin1.txt", true);
