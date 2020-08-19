@@ -45,7 +45,7 @@ Silav hevalê min
 )QUOTE";
 String expected_utf8 = unicodeContent + U"\nThis is UTF-8";
 String expected_utf16le = unicodeContent + U"\nThis is UTF-16 Little Endian";
-String expected_utf16be = unicodeContent + U"\nThis is UTF-8 Big Endian";
+String expected_utf16be = unicodeContent + U"\nThis is UTF-16 Big Endian";
 
 void printCharacterCode(uint32_t value) {
 	for (int i = 0; i < 32; i++) {
@@ -108,24 +108,35 @@ START_TEST(TextEncoding)
 		//compareCharacterCodes(fileUTF8, expected_utf8);
 		ASSERT_MATCH(fileUTF8, expected_utf8);
 
-		//String fileUTF16LE = string_load(folderPath + U"BomUtf16Le.txt", true);
-		//printText("BomUtf16Le.txt contains:\n", fileUTF16LE, "\n");
-		//ASSERT_MATCH(fileUTF16LE, expected_utf16le);
+		String fileUTF16LE = string_load(folderPath + U"BomUtf16Le.txt", true);
+		//compareCharacterCodes(fileUTF16LE, expected_utf16le);
+		ASSERT_MATCH(fileUTF16LE, expected_utf16le);
 
-		//String fileUTF16BE = string_load(folderPath + U"BomUtf16Be.txt", true);
-		//printText("BomUtf16Be.txt contains:\n", fileUTF16BE, "\n");
-		//ASSERT_MATCH(fileUTF16BE, expected_utf16be);
+		String fileUTF16BE = string_load(folderPath + U"BomUtf16Be.txt", true);
+		//compareCharacterCodes(fileUTF16BE, expected_utf16be);
+		ASSERT_MATCH(fileUTF16BE, expected_utf16be);
 	}
-	{ // Saving text to files
+	{ // Saving and loading text to files using every combination of character and line encoding
 		String originalContent = U"Hello my friend\n你好我的朋友";
+		String latin1Content = U"Hello my friend\n??????";
 		String tempPath = folderPath + U"Temporary.txt";
-		
-		// Latin-1 should write ? for complex characters
-		string_save(tempPath, originalContent, CharacterEncoding::Raw_Latin1, LineEncoding::CrLf);
-		ASSERT_MATCH(string_load(tempPath, true), U"Hello my friend\n??????");
-		
-		// UFT-8 should store the Chinese characters correctly
-		string_save(tempPath, originalContent, CharacterEncoding::BOM_UTF8, LineEncoding::CrLf);
-		ASSERT_MATCH(string_load(tempPath, true), originalContent);
+		for (int i = 0; i < 2; i++) {
+			LineEncoding lineEncoding = (i == 0) ? LineEncoding::CrLf : LineEncoding::Lf;
+
+			// Latin-1 should store up to 8 bits correctly, and write ? for complex characters
+			string_save(tempPath, originalContent, CharacterEncoding::Raw_Latin1, lineEncoding);
+			ASSERT_MATCH(string_load(tempPath, true), U"Hello my friend\n??????");
+
+			// UFT-8 should store up to 21 bits correctly
+			string_save(tempPath, unicodeContent, CharacterEncoding::BOM_UTF8, lineEncoding);
+			ASSERT_MATCH(string_load(tempPath, true), unicodeContent);
+
+			// UFT-16 should store up to 20 bits correctly
+			string_save(tempPath, unicodeContent, CharacterEncoding::BOM_UTF16BE, lineEncoding);
+			ASSERT_MATCH(string_load(tempPath, true), unicodeContent);
+			string_save(tempPath, unicodeContent, CharacterEncoding::BOM_UTF16LE, lineEncoding);
+			ASSERT_MATCH(string_load(tempPath, true), unicodeContent);
+			string_save(tempPath, U"This file is used when testing text encoding.");
+		}
 	}
 END_TEST

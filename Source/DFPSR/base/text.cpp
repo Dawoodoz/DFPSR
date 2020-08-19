@@ -350,7 +350,7 @@ static void AppendStringFromFileBuffer_Latin1(String &target, const uint8_t* buf
 }
 // Appends the content of buffer as a BOM-free UTF-8 file into target
 static void AppendStringFromFileBuffer_UTF8(String &target, const uint8_t* buffer, int64_t fileLength) {
-	// We know that the result will be at least one character per given byte for UTF-8
+	// We know that the result will be at most one character per given byte for UTF-8
 	target.reserve(string_length(target) + fileLength);
 	for (int64_t i = 0; i < fileLength; i++) {
 		uint8_t byteA = buffer[i];
@@ -387,33 +387,67 @@ static void AppendStringFromFileBuffer_UTF8(String &target, const uint8_t* buffe
 		}
 	}
 }
+
+template <bool LittleEndian>
+uint16_t read16bits(const uint8_t* buffer, int startOffset) {
+	uint16_t byteA = buffer[startOffset];
+	uint16_t byteB = buffer[startOffset + 1];
+	if (LittleEndian) {
+		return (byteB << 8) | byteA;
+	} else {
+		return (byteA << 8) | byteB;
+	}
+}
+
+// Appends the content of buffer as a BOM-free UTF-16 file into target
+template <bool LittleEndian>
+static void AppendStringFromFileBuffer_UTF16(String &target, const uint8_t* buffer, int64_t fileLength) {
+	// We know that the result will be at most one character per two given bytes for UTF-16
+	target.reserve(string_length(target) + (fileLength / 2));
+	for (int64_t i = 0; i < fileLength; i += 2) {
+		// Read the first 16-bit word
+		uint16_t wordA = read16bits<LittleEndian>(buffer, i);
+		// Check if another word is needed
+		//   Assuming that wordA >= 0x0000 and wordA <= 0xFFFF as uint16_t,
+		//   we can just check if it's within the range reserved for 32-bit encoding
+		if (wordA <= 0xD7FF || wordA >= 0xE000) {
+			// Not in the reserved range, just a single 16-bit character
+			feedCharacterFromFile(target, (DsrChar)wordA);
+		} else {
+			// The given range was reserved and therefore using 32 bits
+			i += 2;
+			uint16_t wordB = read16bits<LittleEndian>(buffer, i);
+			uint32_t higher10Bits = wordA & 0b1111111111;
+			uint32_t lower10Bits = wordB & 0b1111111111;
+			feedCharacterFromFile(target, (DsrChar)((higher10Bits << 10) | lower10Bits));
+		}
+	}
+}
 // Appends the content of buffer as a text file of unknown format into target
 static void AppendStringFromFileBuffer(String &target, const uint8_t* buffer, int64_t fileLength) {
 	// After removing the BOM bytes, the rest can be seen as a BOM-free text file with a known format
-	if (fileLength >= 3 && buffer[0] == 0xEF && buffer[1] == 0xBB && buffer[2] == 0xBF) {
+	if (fileLength >= 3 && buffer[0] == 0xEF && buffer[1] == 0xBB && buffer[2] == 0xBF) { // UTF-8
 		AppendStringFromFileBuffer_UTF8(target, buffer + 3, fileLength - 3);
-	} else if (fileLength >= 3 && buffer[0] == 0xF7 && buffer[1] == 0x64 && buffer[2] == 0x4C) {
-		//AppendStringFromFileBuffer_UTF1(target, buffer + 3, fileLength - 3);
-		throwError(U"UTF-1 format is not yet supported!\n");
-	} else if (fileLength >= 3 && buffer[0] == 0x0E && buffer[1] == 0xFE && buffer[2] == 0xFF) {
-		//AppendStringFromFileBuffer_SCSU(target, buffer + 3, fileLength - 3);
-		throwError(U"SCSU format is not yet supported!\n");
-	} else if (fileLength >= 3 && buffer[0] == 0xFB && buffer[1] == 0xEE && buffer[2] == 0x28) {
-		//AppendStringFromFileBuffer_BOCU-1(target, buffer + 3, fileLength - 3);
-		throwError(U"BOCU-1 format is not yet supported!\n");
-	} else if (fileLength >= 2 && buffer[0] == 0xFE && buffer[1] == 0xFF) {
-		//AppendStringFromFileBuffer_UTF16BE(target, buffer + 2, fileLength - 2);
-		throwError(U"UTF-16 BE format is not yet supported!\n");
-	} else if (fileLength >= 2 && buffer[0] == 0xFF && buffer[1] == 0xFE) {
-		//AppendStringFromFileBuffer_UTF16LE(target, buffer + 2, fileLength - 2);
-		throwError(U"UTF-16 LE format is not yet supported!\n");
-	} else if (fileLength >= 4 && buffer[0] == 0x00 && buffer[1] == 0x00 && buffer[2] == 0xFE && buffer[3] == 0xFF) {
+	} else if (fileLength >= 2 && buffer[0] == 0xFE && buffer[1] == 0xFF) { // UTF-16 BE
+		AppendStringFromFileBuffer_UTF16<false>(target, buffer + 2, fileLength - 2);
+	} else if (fileLength >= 2 && buffer[0] == 0xFF && buffer[1] == 0xFE) { // UTF-16 LE
+		AppendStringFromFileBuffer_UTF16<true>(target, buffer + 2, fileLength - 2);
+	} else if (fileLength >= 4 && buffer[0] == 0x00 && buffer[1] == 0x00 && buffer[2] == 0xFE && buffer[3] == 0xFF) { // UTF-32 BE
 		//AppendStringFromFileBuffer_UTF32BE(target, buffer + 4, fileLength - 4);
 		throwError(U"UTF-32 BE format is not yet supported!\n");
-	} else if (fileLength >= 4 && buffer[0] == 0xFF && buffer[1] == 0xFE && buffer[2] == 0x00 && buffer[3] == 0x00) {
+	} else if (fileLength >= 4 && buffer[0] == 0xFF && buffer[1] == 0xFE && buffer[2] == 0x00 && buffer[3] == 0x00) { // UTF-32 LE
 		//AppendStringFromFileBuffer_UTF32BE(target, buffer + 4, fileLength - 4);
 		throwError(U"UTF-32 LE format is not yet supported!\n");
-	} else if (fileLength >= 4 && buffer[0] == 0x2B && buffer[1] == 0x2F && buffer[2] == 0x76) {
+	} else if (fileLength >= 3 && buffer[0] == 0xF7 && buffer[1] == 0x64 && buffer[2] == 0x4C) { // UTF-1
+		//AppendStringFromFileBuffer_UTF1(target, buffer + 3, fileLength - 3);
+		throwError(U"UTF-1 format is not yet supported!\n");
+	} else if (fileLength >= 3 && buffer[0] == 0x0E && buffer[1] == 0xFE && buffer[2] == 0xFF) { // SCSU
+		//AppendStringFromFileBuffer_SCSU(target, buffer + 3, fileLength - 3);
+		throwError(U"SCSU format is not yet supported!\n");
+	} else if (fileLength >= 3 && buffer[0] == 0xFB && buffer[1] == 0xEE && buffer[2] == 0x28) { // BOCU
+		//AppendStringFromFileBuffer_BOCU-1(target, buffer + 3, fileLength - 3);
+		throwError(U"BOCU-1 format is not yet supported!\n");
+	} else if (fileLength >= 4 && buffer[0] == 0x2B && buffer[1] == 0x2F && buffer[2] == 0x76) { // UTF-7
 		// Ignoring fourth byte with the dialect of UTF-7 when just showing the error message
 		throwError(U"UTF-7 format is not yet supported!\n");
 	} else {
@@ -459,13 +493,17 @@ static inline void byteToStream(std::ostream &target, int value) {
 	target.write((char*)&byte, 1);
 }
 
+#define AT_MOST_BITS(BIT_COUNT) if (character >= 1 << BIT_COUNT) { character = U'?'; }
+
 template <CharacterEncoding characterEncoding>
 static void encodeCharacterToStream(std::ostream &target, DsrChar character) {
 	if (characterEncoding == CharacterEncoding::Raw_Latin1) {
 		// Replace any illegal characters with questionmarks
-		if (character > 255) { character = U'?'; }
+		AT_MOST_BITS(8);
 		byteToStream(target, character);
 	} else if (characterEncoding == CharacterEncoding::BOM_UTF8) {
+		// Replace any illegal characters with questionmarks
+		AT_MOST_BITS(21);
 		if (character < (1 << 7)) {
 			// 0xxxxxxx
 			byteToStream(target, character);
@@ -485,10 +523,39 @@ static void encodeCharacterToStream(std::ostream &target, DsrChar character) {
 			byteToStream(target, 0b10000000 | ((character & (0b111111 << 6)) >> 6));
 			byteToStream(target, 0b10000000 | (character & 0b111111));
 		}
-	} else if (characterEncoding == CharacterEncoding::BOM_UTF16BE) {
-		throwError(U"Saving text files in UTF-16 BE is not yet implemented.\n");
-	} else { // Assuming that characterEncoding == CharacterEncoding::BOM_UTF16LE
-		throwError(U"Saving text files in UTF-16 LE is not yet implemented.\n");
+	} else { // Assuming UTF-16
+		AT_MOST_BITS(20);
+		if (character <= 0xD7FF || (character >= 0xE000 && character <= 0xFFFF)) {
+			// xxxxxxxx xxxxxxxx (Limited range)
+			uint32_t higher8Bits = (character & 0b1111111100000000) >> 8;
+			uint32_t lower8Bits  =  character & 0b0000000011111111;
+			if (characterEncoding == CharacterEncoding::BOM_UTF16BE) {
+				byteToStream(target, higher8Bits);
+				byteToStream(target, lower8Bits);
+			} else { // Assuming UTF-16 LE
+				byteToStream(target, lower8Bits);
+				byteToStream(target, higher8Bits);
+			}
+		} else if (character >= 0x010000 && character <= 0x10FFFF) {
+			// 110110xxxxxxxxxx 110111xxxxxxxxxx
+			uint32_t higher10Bits = (character & 0b11111111110000000000) >> 10;
+			uint32_t lower10Bits  =  character & 0b00000000001111111111;
+			uint32_t byteA = (0b110110 << 2) | ((higher10Bits & (0b11 << 8)) >> 8);
+			uint32_t byteB = higher10Bits & 0b11111111;
+			uint32_t byteC = (0b110111 << 2) | ((lower10Bits & (0b11 << 8)) >> 8);
+			uint32_t byteD = lower10Bits & 0b11111111;
+			if (characterEncoding == CharacterEncoding::BOM_UTF16BE) {
+				byteToStream(target, byteA);
+				byteToStream(target, byteB);
+				byteToStream(target, byteC);
+				byteToStream(target, byteD);
+			} else { // Assuming UTF-16 LE
+				byteToStream(target, byteB);
+				byteToStream(target, byteA);
+				byteToStream(target, byteD);
+				byteToStream(target, byteC);
+			}
+		}
 	}
 }
 
