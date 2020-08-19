@@ -27,6 +27,7 @@
 
 #include <stdint.h>
 #include <vector>
+#include <algorithm>
 
 namespace dsr {
 
@@ -34,9 +35,12 @@ namespace dsr {
 void nonZeroLengthCheck(int64_t length, const char* property);
 void baseZeroBoundCheck(int64_t index, int64_t length, const char* property);
 
+// TODO: Remove the std::vector dependency by reimplementing the basic features.
+
 // An array list for constant time random access to elements in a LIFO stack.
 // Technically, there's nothing wrong with the internals of std::vector, but its interface is horrible.
 //   * Forced use of iterators for cloning and element removal is both overly complex and bloating the code.
+//     Most people joining your project won't be able to read the code if using iterators, so just don't.
 //   * Unsigned indices will either force dangerous casting from signed, or prevent
 //     the ability to loop backwards without crashing when the x < 0u criteria cannot be met.
 template <typename T>
@@ -46,45 +50,62 @@ private:
 public:
 	// Constructor
 	List() {}
-	// Clonable
-	// TODO: Make an optional performance warning
+	// Clonable by default!
+	//   Pass by reference if you don't want to lose your changes and waste time duplicating memory
 	List(const List& source) : backend(std::vector<T>(source.backend.begin(), source.backend.end())) {}
+	// Post-condition: Returns the number of elements in the array list
 	int64_t length() const {
 		return (int64_t)this->backend.size();
 	}
-	// Element access
-	//   Warning! Do not push more elements to the list while a reference is being used
+	// Post-condition: Returns the element at index from the range 0..length-1
 	T& operator[] (int64_t index) {
 		baseZeroBoundCheck(index, this->length(), "List index");
 		return this->backend[index];
 	}
+	// Post-condition: Returns the write-protected element at index from the range 0..length-1
 	const T& operator[] (int64_t index) const {
 		baseZeroBoundCheck(index, this->length(), "List index");
 		return this->backend[index];
 	}
+	// Post-condition: Returns a reference to the first element
 	T& first() {
 		nonZeroLengthCheck(this->length(), "Length");
 		return this->backend[0];
 	}
+	// Post-condition: Returns a reference to the first element from a write protected array list
 	const T& first() const {
 		nonZeroLengthCheck(this->length(), "Length");
 		return this->backend[0];
 	}
+	// Post-condition: Returns a reference to the last element
 	T& last() {
 		nonZeroLengthCheck(this->length(), "Length");
 		return this->backend[this->length() - 1];
 	}
+	// Post-condition: Returns a reference to the last element from a write protected array list
 	const T& last() const {
 		nonZeroLengthCheck(this->length(), "Length");
 		return this->backend[this->length() - 1];
 	}
+	// Side-effect: Removes all elements by setting the count to zero
 	void clear() {
 		this->backend.clear();
 	}
+	// Side-effect: Makes sure that the buffer have room for at least minimumLength elements
+	//   Warning! Reallocation may invalidate old pointers and references to elements in the replaced buffer
 	void reserve(int64_t minimumLength) {
 		this->backend.reserve(minimumLength);
 	}
-	// Warning! Reallocation may invalidate pointers and references to elements in the replaced buffer
+	// Side-effect: Swap the order of two elements
+	//   Useful for moving and sorting elements
+	void swap(int64_t indexA, int64_t indexB) {
+		baseZeroBoundCheck(indexA, this->length(), "Swap index A");
+		baseZeroBoundCheck(indexB, this->length(), "Swap index B");
+		std::swap(this->backend[indexA], this->backend[indexB]);
+	}
+	// Side-effect: Adds a new element at the end
+	//   Warning! Reallocation may invalidate old pointers and references to elements in the replaced buffer
+	// Post-condition: Returns a reference to the new element in the list
 	T& push(const T& newValue) {
 		// Optimize for speed by assuming that we have enough memory
 		if (this->length() == 0) {
@@ -95,14 +116,17 @@ public:
 		this->backend.push_back(newValue);
 		return this->last();
 	}
+	// Side-effect: Pushes a new element constructed using the given arguments
 	template<typename... ARGS>
 	T& pushConstruct(ARGS... args) {
 		this->backend.emplace_back(args...);
 		return this->last();
 	}
+	// Side-effect: Deletes the element at removedIndex
 	void remove(int64_t removedIndex) {
 		this->backend.erase(this->backend.begin() + removedIndex);
 	}
+	// Side-effect: Deletes the last element
 	void pop() {
 		this->backend.pop_back();
 	}

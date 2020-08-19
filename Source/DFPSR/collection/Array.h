@@ -36,7 +36,7 @@ void baseZeroBoundCheck(int64_t index, int64_t length, const char* property);
 // The simplest possible automatically deallocating array with bound checks.
 //   Indices use signed indices, which can be used directly from high-level algorithms.
 // Because std::vector is a list of members, not a fixed size array of values.
-//   Using a list instead of an array makes the code both dangerous and unreadable
+//   Using a list instead of an array makes the code both dangerous and unreadable.
 //   Using unsigned indices will either force dangerous casting from signed, or prevent
 //   the ability to loop backwards without crashing when the x < 0u criteria cannot be met.
 template <typename T>
