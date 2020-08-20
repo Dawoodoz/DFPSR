@@ -266,11 +266,11 @@ struct ImageReader : public ImageDimensions {
 };
 
 static ImageWriter getWriter(ImageImpl &image) {
-	return ImageWriter(ImageDimensions(image), image.buffer->getUnsafeData() + image.startOffset);
+	return ImageWriter(ImageDimensions(image), buffer_dangerous_getUnsafeData(image.buffer) + image.startOffset);
 }
 
 static ImageReader getReader(const ImageImpl &image) {
-	return ImageReader(ImageDimensions(image), image.buffer->getUnsafeData() + image.startOffset);
+	return ImageReader(ImageDimensions(image), buffer_dangerous_getUnsafeData(image.buffer) + image.startOffset);
 }
 
 static ImageImpl getGenericSubImage(const ImageImpl &image, int32_t left, int32_t top, int32_t width, int32_t height) {

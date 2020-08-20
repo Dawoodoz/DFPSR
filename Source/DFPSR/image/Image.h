@@ -27,7 +27,7 @@
 #include <cassert>
 #include <stdint.h>
 #include "../base/SafePointer.h"
-#include "../base/Buffer.h"
+#include "../api/bufferAPI.h"
 #include "../math/scalar.h"
 #include "../math/IRect.h"
 #include "PackOrder.h"
@@ -39,7 +39,7 @@ namespace dsr {
 class ImageImpl {
 public:
 	const int32_t width, height, stride, pixelSize;
-	std::shared_ptr<Buffer> buffer; // Content
+	Buffer buffer; // Content
 	const intptr_t startOffset; // Byte offset of the first pixel
 	bool isSubImage = false;
 private:
@@ -53,7 +53,7 @@ private:
 	}
 public:
 	// Sub-images
-	ImageImpl(int32_t width, int32_t height, int32_t stride, int32_t pixelSize, std::shared_ptr<Buffer> buffer, intptr_t startOffset);
+	ImageImpl(int32_t width, int32_t height, int32_t stride, int32_t pixelSize, Buffer buffer, intptr_t startOffset);
 	// New images
 	ImageImpl(int32_t width, int32_t height, int32_t stride, int32_t pixelSize);
 };

@@ -34,7 +34,7 @@ public:
 	static const int32_t pixelSize = 4;
 	// Inherit constructors
 	using ImageImpl::ImageImpl;
-	ImageF32Impl(int32_t newWidth, int32_t newHeight, int32_t newStride, std::shared_ptr<Buffer> buffer, intptr_t startOffset);
+	ImageF32Impl(int32_t newWidth, int32_t newHeight, int32_t newStride, Buffer buffer, intptr_t startOffset);
 	ImageF32Impl(int32_t newWidth, int32_t newHeight, int32_t alignment = 16);
 	// Macro defined functions
 	IMAGE_DECLARATION(ImageF32Impl, 1, float, float);
@@ -43,4 +43,3 @@ public:
 }
 
 #endif
-

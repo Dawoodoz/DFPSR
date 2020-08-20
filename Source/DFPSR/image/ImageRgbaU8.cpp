@@ -30,9 +30,9 @@ using namespace dsr;
 
 IMAGE_DEFINITION(ImageRgbaU8Impl, 4, Color4xU8, uint8_t);
 
-ImageRgbaU8Impl::ImageRgbaU8Impl(int32_t newWidth, int32_t newHeight, int32_t newStride, std::shared_ptr<Buffer> buffer, intptr_t startOffset, PackOrder packOrder) :
+ImageRgbaU8Impl::ImageRgbaU8Impl(int32_t newWidth, int32_t newHeight, int32_t newStride, Buffer buffer, intptr_t startOffset, PackOrder packOrder) :
   ImageImpl(newWidth, newHeight, newStride, sizeof(Color4xU8), buffer, startOffset), packOrder(packOrder) {
-	assert(buffer->size - startOffset >= imageInternal::getUsedBytes(this));
+	assert(buffer_getSize(buffer) - startOffset >= imageInternal::getUsedBytes(this));
 	this->initializeRgbaImage();
 }
 
@@ -209,7 +209,7 @@ void ImageRgbaU8Impl::generatePyramid() {
 		int32_t pixelSize = this->pixelSize;
 		int32_t mipmaps = std::min(std::max(getSizeGroup(std::min(this->width, this->height)) - 1, 1), MIP_BIN_COUNT);
 		if (!this->texture.hasMipBuffer()) {
-			this->texture.pyramidBuffer = Buffer::create(getPyramidSize(this->width / 2, this->height / 2, pixelSize, mipmaps - 1));
+			this->texture.pyramidBuffer = buffer_create(getPyramidSize(this->width / 2, this->height / 2, pixelSize, mipmaps - 1));
 		}
 		// Point to the image's original buffer in mip level 0
 		SafePointer<uint8_t> currentStart = imageInternal::getSafeData<uint8_t>(*this);
@@ -218,7 +218,7 @@ void ImageRgbaU8Impl::generatePyramid() {
 		this->texture.mips[0] = TextureRgbaLayer(currentStart.getUnsafe(), currentWidth, currentHeight);
 		// Create smaller pyramid images in the extra buffer
 		SafePointer<uint8_t> previousStart = currentStart;
-		currentStart = this->texture.pyramidBuffer->getSafeData<uint8_t>("Pyramid generation target");
+		currentStart = buffer_getSafeData<uint8_t>(this->texture.pyramidBuffer, "Pyramid generation target");
 		for (int32_t m = 1; m < mipmaps; m++) {
 			currentWidth /= 2;
 			currentHeight /= 2;
@@ -238,9 +238,9 @@ void ImageRgbaU8Impl::generatePyramid() {
 
 void ImageRgbaU8Impl::removePyramid() {
 	// Only try to remove if it has a pyramid
-	if (this->texture.pyramidBuffer.get() != nullptr) {
+	if (buffer_exists(this->texture.pyramidBuffer)) {
 		// Remove the pyramid's buffer
-		this->texture.pyramidBuffer = std::shared_ptr<Buffer>();
+		this->texture.pyramidBuffer = Buffer();
 		// Re-initialize
 		for (int32_t m = 0; m < MIP_BIN_COUNT; m++) {
 			this->texture.mips[m] = TextureRgbaLayer(imageInternal::getSafeData<uint8_t>(*this).getUnsafe(), this->width, this->height);

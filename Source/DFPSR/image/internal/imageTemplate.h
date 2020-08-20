@@ -37,11 +37,11 @@ namespace dsr {
 #define IMAGE_DEFINITION(IMAGE_TYPE,CHANNELS,COLOR_TYPE,ELEMENT_TYPE) \
 	void IMAGE_TYPE::writePixel(IMAGE_TYPE &image, int32_t x, int32_t y, COLOR_TYPE color) { \
 		if (x >= 0 && x < image.width && y >= 0 && y < image.height) { \
-			*(COLOR_TYPE*)(image.buffer->getUnsafeData() + image.startOffset + (x * sizeof(COLOR_TYPE)) + (y * image.stride)) = color; \
+			*(COLOR_TYPE*)(buffer_dangerous_getUnsafeData(image.buffer) + image.startOffset + (x * sizeof(COLOR_TYPE)) + (y * image.stride)) = color; \
 		} \
 	} \
 	void IMAGE_TYPE::writePixel_unsafe(IMAGE_TYPE &image, int32_t x, int32_t y, COLOR_TYPE color) { \
-		*(COLOR_TYPE*)(image.buffer->getUnsafeData() + image.startOffset + (x * sizeof(COLOR_TYPE)) + (y * image.stride)) = color; \
+		*(COLOR_TYPE*)(buffer_dangerous_getUnsafeData(image.buffer) + image.startOffset + (x * sizeof(COLOR_TYPE)) + (y * image.stride)) = color; \
 	} \
 	COLOR_TYPE IMAGE_TYPE::readPixel_clamp(const IMAGE_TYPE &image, int32_t x, int32_t y) { \
 		if (image.width > 0 && image.height > 0) { \
@@ -49,14 +49,14 @@ namespace dsr {
 			if (y < 0) { y = 0; } \
 			if (x >= image.width) { x = image.width - 1; } \
 			if (y >= image.height) { y = image.height - 1; } \
-			return *(COLOR_TYPE*)(image.buffer->getUnsafeData() + image.startOffset + (x * sizeof(COLOR_TYPE)) + (y * image.stride)); \
+			return *(COLOR_TYPE*)(buffer_dangerous_getUnsafeData(image.buffer) + image.startOffset + (x * sizeof(COLOR_TYPE)) + (y * image.stride)); \
 		} else { \
 			return COLOR_TYPE(); \
 		} \
 	} \
 	COLOR_TYPE IMAGE_TYPE::readPixel_unsafe(const IMAGE_TYPE &image, int32_t x, int32_t y) { \
 		assert(x >= 0 && x < image.width && y >= 0 && y < image.height); \
-		return *(COLOR_TYPE*)(image.buffer->getUnsafeData() + image.startOffset + (x * sizeof(COLOR_TYPE)) + (y * image.stride)); \
+		return *(COLOR_TYPE*)(buffer_dangerous_getUnsafeData(image.buffer) + image.startOffset + (x * sizeof(COLOR_TYPE)) + (y * image.stride)); \
 	}
 
 }

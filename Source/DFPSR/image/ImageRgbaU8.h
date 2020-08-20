@@ -48,7 +48,7 @@ struct TextureRgbaLayer {
 
 // Pointing to the parent image using raw pointers for fast rendering. Not not separate from the image!
 struct TextureRgba {
-	std::shared_ptr<Buffer> pyramidBuffer; // Storing the smaller mip levels
+	Buffer pyramidBuffer; // Storing the smaller mip levels
 	TextureRgbaLayer mips[MIP_BIN_COUNT]; // Pointing to all mip levels including the original image
 	// Can it be sampled as a texture
 	bool exists() const { return this->mips[0].exists(); }
@@ -64,7 +64,7 @@ public:
 	// Macro defined functions
 	IMAGE_DECLARATION(ImageRgbaU8Impl, 4, Color4xU8, uint8_t);
 	// Constructors
-	ImageRgbaU8Impl(int32_t newWidth, int32_t newHeight, int32_t newStride, std::shared_ptr<Buffer> buffer, intptr_t startOffset, PackOrder packOrder);
+	ImageRgbaU8Impl(int32_t newWidth, int32_t newHeight, int32_t newStride, Buffer buffer, intptr_t startOffset, PackOrder packOrder);
 	ImageRgbaU8Impl(int32_t newWidth, int32_t newHeight, int32_t alignment = 16);
 	// Native canvas constructor
 	ImageRgbaU8Impl(int32_t newWidth, int32_t newHeight, PackOrderIndex packOrderIndex);
@@ -96,4 +96,3 @@ public:
 }
 
 #endif
-

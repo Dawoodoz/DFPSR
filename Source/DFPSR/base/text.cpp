@@ -1,6 +1,6 @@
 // zlib open source license
 //
-// Copyright (c) 2017 to 2019 David Forsgren Piuva
+// Copyright (c) 2017 to 2020 David Forsgren Piuva
 // 
 // This software is provided 'as-is', without any express or implied
 // warranty. In no event will the authors be held liable for any damages
@@ -468,14 +468,14 @@ String dsr::string_loadFromMemory(const Buffer &fileContent) {
 	UTF32WriterFunction measurer = [&characterCount](DsrChar character) {
 		characterCount++;
 	};
-	feedStringFromFileBuffer(measurer, fileContent.getUnsafeData(), fileContent.size);
+	feedStringFromFileBuffer(measurer, buffer_dangerous_getUnsafeData(fileContent), buffer_getSize(fileContent));
 	// Pre-allocate the correct amount of memory based on the simulation
 	result.reserve(characterCount);
 	// Stream output to the result string
 	UTF32WriterFunction reciever = [&result](DsrChar character) {
 		result.appendChar(character);
 	};
-	feedStringFromFileBuffer(reciever, fileContent.getUnsafeData(), fileContent.size);
+	feedStringFromFileBuffer(reciever, buffer_dangerous_getUnsafeData(fileContent), buffer_getSize(fileContent));
 	return result;
 }
 
@@ -643,6 +643,7 @@ static void encodeText(const ByteWriterFunction &receiver, String content) {
 		} \
 	}
 
+// TODO: Encoding to a buffer first and sending it all at once will be faster on certain operating systems
 void dsr::string_save(const ReadableString& filename, const ReadableString& content, CharacterEncoding characterEncoding, LineEncoding lineEncoding) {
 	// TODO: Load files using Unicode filenames
 	TO_RAW_ASCII(asciiFilename, filename);
@@ -657,6 +658,23 @@ void dsr::string_save(const ReadableString& filename, const ReadableString& cont
 		throwError("Failed to save ", filename, "\n");
 	}
 }
+
+/*
+void dsr::string_saveToMemory(Buffer &target, const ReadableString& content,
+  CharacterEncoding characterEncoding = CharacterEncoding::BOM_UTF8,
+  LineEncoding lineEncoding = LineEncoding::CrLf) {
+	int64_t byteCount = 0;
+	ByteWriterFunction counter = [&fileStream](uint8_t value) {
+		byteCount++;
+	};
+	
+	ENCODE_TEXT(receiver, content, characterEncoding, lineEncoding);
+	ByteWriterFunction receiver = [&fileStream](uint8_t value) {
+		fileStream.write((const char*)&value, 1);
+	};
+
+}
+*/
 
 const char32_t* dsr::file_separator() {
 	#ifdef _WIN32
@@ -714,7 +732,7 @@ String::String(const std::string& source) { this->append(source); }
 String::String(const ReadableString& source) { this->append(source); }
 String::String(const String& source) { this->append(source); }
 
-String::String(std::shared_ptr<Buffer> buffer, DsrChar *content, int sectionLength)
+String::String(Buffer buffer, DsrChar *content, int sectionLength)
  : ReadableString(content, sectionLength), buffer(buffer), writeSection(content) {}
 
 int String::capacity() {
@@ -722,11 +740,11 @@ int String::capacity() {
 		return 0;
 	} else {
 		// Get the parent allocation
-		uint8_t* parentBuffer = this->buffer->getUnsafeData();
+		uint8_t* parentBuffer = buffer_dangerous_getUnsafeData(this->buffer);
 		// Get the offset from the parent
 		intptr_t offset = (uint8_t*)this->writeSection - parentBuffer;
 		// Subtract offset from the buffer size to get the remaining space
-		return (this->buffer->size - offset) / sizeof(DsrChar);
+		return (buffer_getSize(this->buffer) - offset) / sizeof(DsrChar);
 	}
 }
 
@@ -781,10 +799,10 @@ static int32_t getNewBufferSize(int32_t minimumSize) {
 }
 void String::reallocateBuffer(int32_t newLength, bool preserve) {
 	// Holding oldData alive while copying to the new buffer
-	std::shared_ptr<Buffer> oldBuffer = this->buffer;
+	Buffer oldBuffer = this->buffer;
 	const char32_t* oldData = this->readSection;
-	this->buffer = std::make_shared<Buffer>(getNewBufferSize(newLength * sizeof(DsrChar)));
-	this->readSection = this->writeSection = reinterpret_cast<char32_t*>(this->buffer->getUnsafeData());
+	this->buffer = buffer_create(getNewBufferSize(newLength * sizeof(DsrChar)));
+	this->readSection = this->writeSection = reinterpret_cast<char32_t*>(buffer_dangerous_getUnsafeData(this->buffer));
 	if (preserve && oldData) {
 		memcpy(this->writeSection, oldData, this->sectionLength * sizeof(DsrChar));
 	}

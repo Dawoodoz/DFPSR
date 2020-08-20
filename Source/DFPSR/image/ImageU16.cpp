@@ -27,9 +27,9 @@
 
 using namespace dsr;
 
-ImageU16Impl::ImageU16Impl(int32_t newWidth, int32_t newHeight, int32_t newStride, std::shared_ptr<Buffer> buffer, intptr_t startOffset) :
+ImageU16Impl::ImageU16Impl(int32_t newWidth, int32_t newHeight, int32_t newStride, Buffer buffer, intptr_t startOffset) :
   ImageImpl(newWidth, newHeight, newStride, sizeof(uint16_t), buffer, startOffset) {
-	assert(buffer->size - startOffset >= imageInternal::getUsedBytes(this));
+	assert(buffer_getSize(buffer) - startOffset >= imageInternal::getUsedBytes(this));
 }
 
 ImageU16Impl::ImageU16Impl(int32_t newWidth, int32_t newHeight, int32_t alignment) :

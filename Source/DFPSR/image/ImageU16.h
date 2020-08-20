@@ -35,7 +35,7 @@ public:
 	static const int32_t pixelSize = 2;
 	// Inherit constructors
 	using ImageImpl::ImageImpl;
-	ImageU16Impl(int32_t newWidth, int32_t newHeight, int32_t newStride, std::shared_ptr<Buffer> buffer, intptr_t startOffset);
+	ImageU16Impl(int32_t newWidth, int32_t newHeight, int32_t newStride, Buffer buffer, intptr_t startOffset);
 	ImageU16Impl(int32_t newWidth, int32_t newHeight, int32_t alignment = 16);
 	// Macro defined functions
 	IMAGE_DECLARATION(ImageU16Impl, 1, uint16_t, uint16_t);
@@ -44,4 +44,3 @@ public:
 }
 
 #endif
-

@@ -1,6 +1,6 @@
 // zlib open source license
 //
-// Copyright (c) 2017 to 2019 David Forsgren Piuva
+// Copyright (c) 2017 to 2020 David Forsgren Piuva
 // 
 // This software is provided 'as-is', without any express or implied
 // warranty. In no event will the authors be held liable for any damages
@@ -31,7 +31,7 @@
 #include <iostream>
 #include <sstream>
 
-#include "Buffer.h"
+#include "../api/bufferAPI.h"
 #include "../collection/List.h"
 
 namespace dsr {
@@ -117,11 +117,11 @@ public:
 class String : public ReadableString {
 protected:
 	// A reference counted pointer to the buffer, just to keep the allocation
-	std::shared_ptr<Buffer> buffer;
+	Buffer buffer;
 	// Same as readSection, but with write access
 	char32_t* writeSection = nullptr;
 	// Internal constructor
-	String(std::shared_ptr<Buffer> buffer, DsrChar *content, int sectionLength);
+	String(Buffer buffer, DsrChar *content, int sectionLength);
 public:
 	// The number of DsrChar characters that can be contained in the allocation before reaching the buffer's end
 	//   This doesn't imply that it's always okay to write to the remaining space, because the buffer may be shared
@@ -312,6 +312,12 @@ void string_save(const ReadableString& filename, const ReadableString& content,
   CharacterEncoding characterEncoding = CharacterEncoding::BOM_UTF8,
   LineEncoding lineEncoding = LineEncoding::CrLf
 );
+/*
+void string_saveToMemory(Buffer &target, const ReadableString& content,
+  CharacterEncoding characterEncoding = CharacterEncoding::BOM_UTF8,
+  LineEncoding lineEncoding = LineEncoding::CrLf
+);
+*/
 
 // Post-condition: Returns true iff strings a and b are exactly equal.
 bool string_match(const ReadableString& a, const ReadableString& b);

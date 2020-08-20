@@ -25,12 +25,12 @@
 
 using namespace dsr;
 
-ImageImpl::ImageImpl(int32_t width, int32_t height, int32_t stride, int32_t pixelSize, std::shared_ptr<Buffer> buffer, intptr_t startOffset) :
+ImageImpl::ImageImpl(int32_t width, int32_t height, int32_t stride, int32_t pixelSize, Buffer buffer, intptr_t startOffset) :
   width(width), height(height), stride(stride), pixelSize(pixelSize), buffer(buffer), startOffset(startOffset), isSubImage(true) {
 	this->validate();
 }
 
 ImageImpl::ImageImpl(int32_t width, int32_t height, int32_t stride, int32_t pixelSize) :
-  width(width), height(height), stride(stride), pixelSize(pixelSize), buffer(Buffer::create(stride * height)), startOffset(0), isSubImage(false) {
+  width(width), height(height), stride(stride), pixelSize(pixelSize), buffer(buffer_create(stride * height)), startOffset(0), isSubImage(false) {
 	this->validate();
 }

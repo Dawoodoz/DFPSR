@@ -45,19 +45,18 @@ inline int32_t getUsedBytes(const ImageImpl *image) { return image ? getUsedByte
 inline int32_t getPixelSize(const ImageImpl *image) { return image ? image->pixelSize : 0; }
 //inline int32_t getStartOffset(const ImageImpl &image) { return image.startOffset; }
 inline int32_t getStartOffset(const ImageImpl *image) { return image ? image->startOffset : 0; }
-inline std::shared_ptr<Buffer> getBuffer(const ImageImpl &image) { return image.buffer; }
-inline std::shared_ptr<Buffer> getBuffer(const ImageImpl *image) { return image ? getBuffer(*image) : std::shared_ptr<Buffer>(); }
+inline Buffer getBuffer(const ImageImpl &image) { return image.buffer; }
+inline Buffer getBuffer(const ImageImpl *image) { return image ? getBuffer(*image) : Buffer(); }
 inline IRect getBound(const ImageImpl &image) { return IRect(0, 0, image.width, image.height); }
 inline IRect getBound(const ImageImpl *image) { return image ? getBound(*image) : IRect(); }
 inline PackOrder getPackOrder(const ImageRgbaU8Impl *image) { return image ? image->packOrder : PackOrder(); }
-
 
 // Get data
 //   The pointer has access to the whole parent buffer,
 //   to allow aligning SIMD vectors outside of the used region.
 template <typename T>
 static inline const SafePointer<T> getSafeData(const ImageImpl &image, int rowIndex = 0) {
-	auto result = image.buffer->getSafeData<T>("Image buffer");
+	auto result = buffer_getSafeData<T>(image.buffer, "Image buffer");
 	result.increaseBytes(image.startOffset + image.stride * rowIndex);
 	return result;
 }
@@ -67,7 +66,7 @@ inline const SafePointer<T> getSafeData(const ImageImpl *image, int rowIndex = 0
 }
 template <typename T>
 static inline SafePointer<T> getSafeData(ImageImpl &image, int rowIndex = 0) {
-	auto result = image.buffer->getSafeData<T>("Image buffer");
+	auto result = buffer_getSafeData<T>(image.buffer, "Image buffer");
 	result.increaseBytes(image.startOffset + image.stride * rowIndex);
 	return result;
 }

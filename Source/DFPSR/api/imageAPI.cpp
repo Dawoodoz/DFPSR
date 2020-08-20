@@ -718,16 +718,16 @@ SafePointer<uint8_t> dsr::image_getSafePointer_channels(const ImageRgbaU8& image
 }
 
 void dsr::image_dangerous_replaceDestructor(ImageU8& image, const std::function<void(uint8_t *)>& newDestructor) {
-	if (image) { return image->buffer->replaceDestructor(newDestructor); }
+	if (image) { return buffer_replaceDestructor(image->buffer, newDestructor); }
 }
 void dsr::image_dangerous_replaceDestructor(ImageU16& image, const std::function<void(uint8_t *)>& newDestructor) {
-	if (image) { return image->buffer->replaceDestructor(newDestructor); }
+	if (image) { return buffer_replaceDestructor(image->buffer, newDestructor); }
 }
 void dsr::image_dangerous_replaceDestructor(ImageF32& image, const std::function<void(uint8_t *)>& newDestructor) {
-	if (image) { return image->buffer->replaceDestructor(newDestructor); }
+	if (image) { return buffer_replaceDestructor(image->buffer, newDestructor); }
 }
 void dsr::image_dangerous_replaceDestructor(ImageRgbaU8& image, const std::function<void(uint8_t *)>& newDestructor) {
-	if (image) { return image->buffer->replaceDestructor(newDestructor); }
+	if (image) { return buffer_replaceDestructor(image->buffer, newDestructor); }
 }
 
 uint8_t* dsr::image_dangerous_getData(const ImageU8& image) {

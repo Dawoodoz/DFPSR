@@ -21,6 +21,8 @@
 	#include "api/guiAPI.h" // Handling windows, interfaces and components
 	#include "api/mediaMachineAPI.h" // A machine for running image functions
 	#include "api/fontAPI.h" // Printing text to images
+	// File API
+	#include "api/bufferAPI.h" // Printing text to images
 	// Convenient API
 	#include "api/timeAPI.h" // Methods for time and delays
 	#include "api/configAPI.h" // Making it easy to load your application's settings from configuration files
@@ -29,4 +31,3 @@
 	#include "gui/VisualTheme.h" // Place in the gui API
 
 #endif
-
