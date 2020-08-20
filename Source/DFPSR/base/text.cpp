@@ -372,10 +372,10 @@ static void feedStringFromFileBuffer_UTF8(const UTF32WriterFunction &reciever, c
 					character = byteA & 0b00011111;
 					extraBytes = 1;
 				} else if (byteA < 0b11110000) { // Less than four leading ones
-					character = byteA & 0b00011111;
+					character = byteA & 0b00001111;
 					extraBytes = 2;
 				} else if (byteA < 0b11111000) { // Less than five leading ones
-					character = byteA & 0b00011111;
+					character = byteA & 0b00000111;
 					extraBytes = 3;
 				} else {
 					// Invalid UTF-8 format

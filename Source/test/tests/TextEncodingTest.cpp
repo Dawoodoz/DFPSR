@@ -42,6 +42,7 @@ Xin chào bạn của tôi
 ಹಲೋ ನನ್ನ ಸ್ನೇಹಿತನೇ
 Silav hevalê min
 اهلا صديقي
+𐐷
 )QUOTE";
 String expected_utf8 = unicodeContent + U"\nThis is UTF-8";
 String expected_utf16le = unicodeContent + U"\nThis is UTF-16 Little Endian";
