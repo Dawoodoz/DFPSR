@@ -333,9 +333,9 @@ static void doubleToString_arabic(String& target, double value) {
 	} \
 	TARGET[SOURCE.length()] = '\0';
 
-static inline void byteToStream(std::ostream &target, uint8_t value) {
-	target.write((const char*)&value, 1);
-}
+// A function definition for receiving a stream of bytes
+//   Instead of using std's messy inheritance
+using ByteWriterFunction = std::function<void(uint8_t value)>;
 
 // A function definition for receiving a stream of UTF-32 characters
 //   Instead of using std's messy inheritance
@@ -438,19 +438,19 @@ static void feedStringFromFileBuffer(const UTF32WriterFunction &reciever, const 
 	} else if (fileLength >= 2 && buffer[0] == 0xFF && buffer[1] == 0xFE) { // UTF-16 LE
 		feedStringFromFileBuffer_UTF16<true>(reciever, buffer + 2, fileLength - 2);
 	} else if (fileLength >= 4 && buffer[0] == 0x00 && buffer[1] == 0x00 && buffer[2] == 0xFE && buffer[3] == 0xFF) { // UTF-32 BE
-		//feedStringFromFileBuffer_UTF32BE(target, buffer + 4, fileLength - 4);
+		//feedStringFromFileBuffer_UTF32BE(receiver, buffer + 4, fileLength - 4);
 		throwError(U"UTF-32 BE format is not yet supported!\n");
 	} else if (fileLength >= 4 && buffer[0] == 0xFF && buffer[1] == 0xFE && buffer[2] == 0x00 && buffer[3] == 0x00) { // UTF-32 LE
-		//feedStringFromFileBuffer_UTF32BE(target, buffer + 4, fileLength - 4);
+		//feedStringFromFileBuffer_UTF32BE(receiver, buffer + 4, fileLength - 4);
 		throwError(U"UTF-32 LE format is not yet supported!\n");
 	} else if (fileLength >= 3 && buffer[0] == 0xF7 && buffer[1] == 0x64 && buffer[2] == 0x4C) { // UTF-1
-		//feedStringFromFileBuffer_UTF1(target, buffer + 3, fileLength - 3);
+		//feedStringFromFileBuffer_UTF1(receiver, buffer + 3, fileLength - 3);
 		throwError(U"UTF-1 format is not yet supported!\n");
 	} else if (fileLength >= 3 && buffer[0] == 0x0E && buffer[1] == 0xFE && buffer[2] == 0xFF) { // SCSU
-		//feedStringFromFileBuffer_SCSU(target, buffer + 3, fileLength - 3);
+		//feedStringFromFileBuffer_SCSU(receiver, buffer + 3, fileLength - 3);
 		throwError(U"SCSU format is not yet supported!\n");
 	} else if (fileLength >= 3 && buffer[0] == 0xFB && buffer[1] == 0xEE && buffer[2] == 0x28) { // BOCU
-		//feedStringFromFileBuffer_BOCU-1(target, buffer + 3, fileLength - 3);
+		//feedStringFromFileBuffer_BOCU-1(receiver, buffer + 3, fileLength - 3);
 		throwError(U"BOCU-1 format is not yet supported!\n");
 	} else if (fileLength >= 4 && buffer[0] == 0x2B && buffer[1] == 0x2F && buffer[2] == 0x76) { // UTF-7
 		// Ignoring fourth byte with the dialect of UTF-7 when just showing the error message
@@ -520,32 +520,32 @@ String dsr::string_load(const ReadableString& filename, bool mustExist) {
 #define AT_MOST_BITS(BIT_COUNT) if (character >= 1 << BIT_COUNT) { character = U'?'; }
 
 template <CharacterEncoding characterEncoding>
-static void encodeCharacterToStream(std::ostream &target, DsrChar character) {
+static void encodeCharacter(const ByteWriterFunction &receiver, DsrChar character) {
 	if (characterEncoding == CharacterEncoding::Raw_Latin1) {
 		// Replace any illegal characters with questionmarks
 		AT_MOST_BITS(8);
-		byteToStream(target, character);
+		receiver(character);
 	} else if (characterEncoding == CharacterEncoding::BOM_UTF8) {
 		// Replace any illegal characters with questionmarks
 		AT_MOST_BITS(21);
 		if (character < (1 << 7)) {
 			// 0xxxxxxx
-			byteToStream(target, character);
+			receiver(character);
 		} else if (character < (1 << 11)) {
 			// 110xxxxx 10xxxxxx
-			byteToStream(target, 0b11000000 | ((character & (0b11111 << 6)) >> 6));
-			byteToStream(target, 0b10000000 | (character & 0b111111));
+			receiver(0b11000000 | ((character & (0b11111 << 6)) >> 6));
+			receiver(0b10000000 | (character & 0b111111));
 		} else if (character < (1 << 16)) {
 			// 1110xxxx 10xxxxxx 10xxxxxx
-			byteToStream(target, 0b11100000 | ((character & (0b1111 << 12)) >> 12));
-			byteToStream(target, 0b10000000 | ((character & (0b111111 << 6)) >> 6));
-			byteToStream(target, 0b10000000 | (character & 0b111111));
+			receiver(0b11100000 | ((character & (0b1111 << 12)) >> 12));
+			receiver(0b10000000 | ((character & (0b111111 << 6)) >> 6));
+			receiver(0b10000000 | (character & 0b111111));
 		} else if (character < (1 << 21)) {
 			// 11110xxx 10xxxxxx 10xxxxxx 10xxxxxx
-			byteToStream(target, 0b11110000 | ((character & (0b111 << 18)) >> 18));
-			byteToStream(target, 0b10000000 | ((character & (0b111111 << 12)) >> 12));
-			byteToStream(target, 0b10000000 | ((character & (0b111111 << 6)) >> 6));
-			byteToStream(target, 0b10000000 | (character & 0b111111));
+			receiver(0b11110000 | ((character & (0b111 << 18)) >> 18));
+			receiver(0b10000000 | ((character & (0b111111 << 12)) >> 12));
+			receiver(0b10000000 | ((character & (0b111111 << 6)) >> 6));
+			receiver(0b10000000 | (character & 0b111111));
 		}
 	} else { // Assuming UTF-16
 		AT_MOST_BITS(20);
@@ -554,11 +554,11 @@ static void encodeCharacterToStream(std::ostream &target, DsrChar character) {
 			uint32_t higher8Bits = (character & 0b1111111100000000) >> 8;
 			uint32_t lower8Bits  =  character & 0b0000000011111111;
 			if (characterEncoding == CharacterEncoding::BOM_UTF16BE) {
-				byteToStream(target, higher8Bits);
-				byteToStream(target, lower8Bits);
+				receiver(higher8Bits);
+				receiver(lower8Bits);
 			} else { // Assuming UTF-16 LE
-				byteToStream(target, lower8Bits);
-				byteToStream(target, higher8Bits);
+				receiver(lower8Bits);
+				receiver(higher8Bits);
 			}
 		} else if (character >= 0x010000 && character <= 0x10FFFF) {
 			// 110110xxxxxxxxxx 110111xxxxxxxxxx
@@ -570,74 +570,88 @@ static void encodeCharacterToStream(std::ostream &target, DsrChar character) {
 			uint32_t byteC = (0b110111 << 2) | ((lower10Bits & (0b11 << 8)) >> 8);
 			uint32_t byteD = lower10Bits & 0b11111111;
 			if (characterEncoding == CharacterEncoding::BOM_UTF16BE) {
-				byteToStream(target, byteA);
-				byteToStream(target, byteB);
-				byteToStream(target, byteC);
-				byteToStream(target, byteD);
+				receiver(byteA);
+				receiver(byteB);
+				receiver(byteC);
+				receiver(byteD);
 			} else { // Assuming UTF-16 LE
-				byteToStream(target, byteB);
-				byteToStream(target, byteA);
-				byteToStream(target, byteD);
-				byteToStream(target, byteC);
+				receiver(byteB);
+				receiver(byteA);
+				receiver(byteD);
+				receiver(byteC);
 			}
 		}
 	}
 }
 
-// Template for writing a whole string to a file
+// Template for encoding a whole string
 template <CharacterEncoding characterEncoding, LineEncoding lineEncoding>
-static void writeCharacterToStream(std::ostream &target, String content) {
+static void encodeText(const ByteWriterFunction &receiver, String content) {
 	// Write byte order marks
 	if (characterEncoding == CharacterEncoding::BOM_UTF8) {
-		byteToStream(target, 0xEF);
-		byteToStream(target, 0xBB);
-		byteToStream(target, 0xBF);
+		receiver(0xEF);
+		receiver(0xBB);
+		receiver(0xBF);
 	} else if (characterEncoding == CharacterEncoding::BOM_UTF16BE) {
-		byteToStream(target, 0xFE);
-		byteToStream(target, 0xFF);
+		receiver(0xFE);
+		receiver(0xFF);
 	} else if (characterEncoding == CharacterEncoding::BOM_UTF16LE) {
-		byteToStream(target, 0xFF);
-		byteToStream(target, 0xFE);
+		receiver(0xFF);
+		receiver(0xFE);
 	}
 	// Write encoded content
 	for (int i = 0; i < string_length(content); i++) {
 		DsrChar character = content[i];
 		if (character == U'\n') {
 			if (lineEncoding == LineEncoding::CrLf) {
-				encodeCharacterToStream<characterEncoding>(target, U'\r');
-				encodeCharacterToStream<characterEncoding>(target, U'\n');
+				encodeCharacter<characterEncoding>(receiver, U'\r');
+				encodeCharacter<characterEncoding>(receiver, U'\n');
 			} else { // Assuming that lineEncoding == LineEncoding::Lf
-				encodeCharacterToStream<characterEncoding>(target, U'\n');
+				encodeCharacter<characterEncoding>(receiver, U'\n');
 			}
 		} else {
-			encodeCharacterToStream<characterEncoding>(target, character);
+			encodeCharacter<characterEncoding>(receiver, character);
 		}
 	}
 }
 
-// Macros for dynamcally selecting templates
-#define WRITE_TEXT_STRING(CHAR_ENCODING, LINE_ENCODING) \
-	writeCharacterToStream<CHAR_ENCODING, LINE_ENCODING>(fileStream, content);
-#define WRITE_TEXT_LINE_ENCODINGS(CHAR_ENCODING) \
-	if (lineEncoding == LineEncoding::CrLf) { \
-		WRITE_TEXT_STRING(CHAR_ENCODING, LineEncoding::CrLf); \
-	} else if (lineEncoding == LineEncoding::Lf) { \
-		WRITE_TEXT_STRING(CHAR_ENCODING, LineEncoding::Lf); \
+// Macro for converting run-time arguments into template arguments for encodeText
+#define ENCODE_TEXT(RECEIVER, CONTENT, CHAR_ENCODING, LINE_ENCODING) \
+	if (CHAR_ENCODING == CharacterEncoding::Raw_Latin1) { \
+		if (LINE_ENCODING == LineEncoding::CrLf) { \
+			encodeText<CharacterEncoding::Raw_Latin1, LineEncoding::CrLf>(RECEIVER, CONTENT); \
+		} else if (LINE_ENCODING == LineEncoding::Lf) { \
+			encodeText<CharacterEncoding::Raw_Latin1, LineEncoding::Lf>(RECEIVER, CONTENT); \
+		} \
+	} else if (CHAR_ENCODING == CharacterEncoding::BOM_UTF8) { \
+		if (LINE_ENCODING == LineEncoding::CrLf) { \
+			encodeText<CharacterEncoding::BOM_UTF8, LineEncoding::CrLf>(RECEIVER, CONTENT); \
+		} else if (LINE_ENCODING == LineEncoding::Lf) { \
+			encodeText<CharacterEncoding::BOM_UTF8, LineEncoding::Lf>(RECEIVER, CONTENT); \
+		} \
+	} else if (CHAR_ENCODING == CharacterEncoding::BOM_UTF16BE) { \
+		if (LINE_ENCODING == LineEncoding::CrLf) { \
+			encodeText<CharacterEncoding::BOM_UTF16BE, LineEncoding::CrLf>(RECEIVER, CONTENT); \
+		} else if (LINE_ENCODING == LineEncoding::Lf) { \
+			encodeText<CharacterEncoding::BOM_UTF16BE, LineEncoding::Lf>(RECEIVER, CONTENT); \
+		} \
+	} else if (CHAR_ENCODING == CharacterEncoding::BOM_UTF16LE) { \
+		if (LINE_ENCODING == LineEncoding::CrLf) { \
+			encodeText<CharacterEncoding::BOM_UTF16LE, LineEncoding::CrLf>(RECEIVER, CONTENT); \
+		} else if (LINE_ENCODING == LineEncoding::Lf) { \
+			encodeText<CharacterEncoding::BOM_UTF16LE, LineEncoding::Lf>(RECEIVER, CONTENT); \
+		} \
 	}
+
 void dsr::string_save(const ReadableString& filename, const ReadableString& content, CharacterEncoding characterEncoding, LineEncoding lineEncoding) {
 	// TODO: Load files using Unicode filenames
 	TO_RAW_ASCII(asciiFilename, filename);
 	std::ofstream fileStream(asciiFilename, std::ios_base::out | std::ios_base::binary);
+	ByteWriterFunction receiver = [&fileStream](uint8_t value) {
+		fileStream.write((const char*)&value, 1);
+	};
 	if (fileStream.is_open()) {
-		if (characterEncoding == CharacterEncoding::Raw_Latin1) {
-			WRITE_TEXT_LINE_ENCODINGS(CharacterEncoding::Raw_Latin1);
-		} else if (characterEncoding == CharacterEncoding::BOM_UTF8) {
-			WRITE_TEXT_LINE_ENCODINGS(CharacterEncoding::BOM_UTF8);
-		} else if (characterEncoding == CharacterEncoding::BOM_UTF16BE) {
-			WRITE_TEXT_LINE_ENCODINGS(CharacterEncoding::BOM_UTF16BE);
-		} else if (characterEncoding == CharacterEncoding::BOM_UTF16LE) {
-			WRITE_TEXT_LINE_ENCODINGS(CharacterEncoding::BOM_UTF16LE);
-		}
+		ENCODE_TEXT(receiver, content, characterEncoding, lineEncoding);
 		fileStream.close();
 	} else {
 		throwError("Failed to save ", filename, "\n");
