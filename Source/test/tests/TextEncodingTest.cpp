@@ -115,15 +115,17 @@ START_TEST(TextEncoding)
 		ASSERT_MATCH(fileUTF16BE, expected_utf16be);
 	}
 	{ // Saving and loading text to files using every combination of character and line encoding
-		String originalContent = U"Hello my friend\n你好我的朋友";
-		String latin1Content = U"Hello my friend\n??????";
+		String originalContent = U"Hello my friend\n你好我的朋友\n𐐷𤭢\n";
+		String latin1Expected = U"Hello my friend\n??????\n??\n";
 		String tempPath = folderPath + U"Temporary.txt";
 		for (int i = 0; i < 2; i++) {
 			LineEncoding lineEncoding = (i == 0) ? LineEncoding::CrLf : LineEncoding::Lf;
 
 			// Latin-1 should store up to 8 bits correctly, and write ? for complex characters
 			string_save(tempPath, originalContent, CharacterEncoding::Raw_Latin1, lineEncoding);
-			ASSERT_MATCH(string_load(tempPath, true), U"Hello my friend\n??????");
+			String latin1Loaded = string_load(tempPath, true);
+			//compareCharacterCodes(latin1Loaded, latin1Expected);
+			ASSERT_MATCH(latin1Loaded, latin1Expected);
 
 			// UFT-8 should store up to 21 bits correctly
 			string_save(tempPath, unicodeContent, CharacterEncoding::BOM_UTF8, lineEncoding);
