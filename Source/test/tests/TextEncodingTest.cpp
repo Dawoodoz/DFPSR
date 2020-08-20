@@ -48,9 +48,9 @@ String expected_utf8 = unicodeContent + U"\nThis is UTF-8";
 String expected_utf16le = unicodeContent + U"\nThis is UTF-16 Little Endian";
 String expected_utf16be = unicodeContent + U"\nThis is UTF-16 Big Endian";
 
-void printCharacterCode(uint32_t value) {
-	for (int i = 0; i < 32; i++) {
-		if (value & 0b10000000000000000000000000000000) {
+void printBinary(uint32_t value, int maxBits) {
+	for (int i = 0; i < maxBits; i++) {
+		if (value & (uint32_t)0b1 << (maxBits - 1)) {
 			printText(U"1");
 		} else {
 			printText(U"0");
@@ -59,35 +59,45 @@ void printCharacterCode(uint32_t value) {
 	}
 }
 
+void printBuffer(Buffer buffer) {
+	int length = buffer_getSize(buffer);
+	SafePointer<uint8_t> data = buffer_getSafeData<uint8_t>(buffer, "Generic buffer");
+	printText(U"Buffer of length ", length, U":\n");
+	for (int i = 0; i < length; i++) {
+		printBinary(data[i], 8);
+		printText(U" @", i, U"\n");
+	}
+}
+
 // Method for printing the character codes of a string for debugging
 void compareCharacterCodes(String textA, String textB) {
 	int lengthA = string_length(textA);
 	int lengthB = string_length(textB);
 	int minLength = lengthA < lengthB ? lengthA : lengthB;
-	printText("Character codes for strings of length ", lengthA, U" and ", lengthB, U":\n");
+	printText(U"Character codes for strings of length ", lengthA, U" and ", lengthB, U":\n");
 	for (int i = 0; i < minLength; i++) {
 		uint32_t codeA = (uint32_t)textA[i];
 		uint32_t codeB = (uint32_t)textB[i];
-		printCharacterCode(codeA);
+		printBinary(codeA, 32);
 		if (codeA == codeB) {
 			printText(U" == ");
 		} else {
 			printText(U" != ");
 		}
-		printCharacterCode(codeB);
+		printBinary(codeB, 32);
 		printText(U" (", textA[i], U") (", textB[i], U")\n");
 	}
 	if (lengthA > lengthB) {
 		for (int i = minLength; i < lengthA; i++) {
 			uint32_t codeA = (uint32_t)textA[i];
-			printCharacterCode(codeA);
+			printBinary(codeA, 32);
 			printText(U" (", textA[i], U")\n");
 		}
 	} else {
 		printText(U"                                    ");
 		for (int i = minLength; i < lengthB; i++) {
 			uint32_t codeB = (uint32_t)textB[i];
-			printCharacterCode(codeB);
+			printBinary(codeB, 32);
 			printText(U" (", textB[i], U")\n");
 		}
 	}
@@ -96,7 +106,108 @@ void compareCharacterCodes(String textA, String textB) {
 START_TEST(TextEncoding)
 	String folderPath = string_combine(U"test", file_separator(), U"tests", file_separator(), U"resources", file_separator());
 	{ // Text encodings stored in memory
-		// TODO: Test string_loadFromMemory using random character codes from the extended 0x10000..0x10FFFF range
+		// Run these tests for all line encodings
+		for (int l = 0; l <= 1; l++) {
+			LineEncoding lineEncoding = (l == 0) ? LineEncoding::CrLf : LineEncoding::Lf;
+			// \r is not saved to files for cross-platform compatibility
+			// \0 is not saved to files because files have a known size and don't need them
+			{ // Latin-1 up to U+FF excluding \r and \0
+				String originalLatin1;
+				string_reserve(originalLatin1, 0xFF);
+				for (DsrChar c = 0x1; c <= 0xFF; c++) {
+					if (c != U'\r') {
+						string_appendChar(originalLatin1, c);
+					}
+				}
+				Buffer encoded = string_saveToMemory(originalLatin1, CharacterEncoding::Raw_Latin1, lineEncoding);
+				String decodedLatin1 = string_loadFromMemory(encoded);
+				//compareCharacterCodes(originalLatin1, decodedLatin1);
+				ASSERT_MATCH(originalLatin1, decodedLatin1);
+			}
+			{ // UTF-8 up to U+10FFFF excluding \r and \0
+				String originalUTF8;
+				string_reserve(originalUTF8, 0x10FFFF);
+				for (DsrChar c = 0x1; c <= 0x10FFFF; c++) {
+					if (c != U'\r') {
+						string_appendChar(originalUTF8, c);
+					}
+				}
+				Buffer encoded = string_saveToMemory(originalUTF8, CharacterEncoding::BOM_UTF8, lineEncoding);
+				String decodedUTF8 = string_loadFromMemory(encoded);
+				ASSERT_MATCH(originalUTF8, decodedUTF8);
+			}
+			// Selected cases for UTF-16
+			for (int e = 0; e <= 1; e++) {
+				CharacterEncoding characterEncoding = (e == 0) ? CharacterEncoding::BOM_UTF16BE : CharacterEncoding::BOM_UTF16LE;
+				String originalUTF16;
+				// 20-bit test cases
+				string_appendChar(originalUTF16, 0b00000000000000000001);
+				string_appendChar(originalUTF16, 0b00000000000000000010);
+				string_appendChar(originalUTF16, 0b00000000000000000011);
+				string_appendChar(originalUTF16, 0b00000000000000000100);
+				string_appendChar(originalUTF16, 0b00000000000000000111);
+				string_appendChar(originalUTF16, 0b00000000000000001000);
+				string_appendChar(originalUTF16, 0b00000000000000001111);
+				string_appendChar(originalUTF16, 0b00000000000000010000);
+				string_appendChar(originalUTF16, 0b00000000000000011111);
+				string_appendChar(originalUTF16, 0b00000000000000100000);
+				string_appendChar(originalUTF16, 0b00000000000000111111);
+				string_appendChar(originalUTF16, 0b00000000000001000000);
+				string_appendChar(originalUTF16, 0b00000000000001111111);
+				string_appendChar(originalUTF16, 0b00000000000010000000);
+				string_appendChar(originalUTF16, 0b00000000000011111111);
+				string_appendChar(originalUTF16, 0b00000000000100000000);
+				string_appendChar(originalUTF16, 0b00000000000111111111);
+				string_appendChar(originalUTF16, 0b00000000001000000000);
+				string_appendChar(originalUTF16, 0b00000000001111111111);
+				string_appendChar(originalUTF16, 0b00000000010000000000);
+				string_appendChar(originalUTF16, 0b00000000011111111111);
+				string_appendChar(originalUTF16, 0b00000000100000000000);
+				string_appendChar(originalUTF16, 0b00000000111111111111);
+				string_appendChar(originalUTF16, 0b00000001000000000000);
+				string_appendChar(originalUTF16, 0b00000001111111111111);
+				string_appendChar(originalUTF16, 0b00000010000000000000);
+				string_appendChar(originalUTF16, 0b00000011111111111111);
+				string_appendChar(originalUTF16, 0b00000100000000000000);
+				string_appendChar(originalUTF16, 0b00000111111111111111);
+				string_appendChar(originalUTF16, 0b00001000000000000000);
+				string_appendChar(originalUTF16, 0b00001111111111111111);
+				string_appendChar(originalUTF16, 0b00010000000000000000);
+				string_appendChar(originalUTF16, 0b00011111111111111111);
+				string_appendChar(originalUTF16, 0b00100000000000000000);
+				string_appendChar(originalUTF16, 0b00111111111111111111);
+				string_appendChar(originalUTF16, 0b01000000000000000000);
+				string_appendChar(originalUTF16, 0b01111111111111111111);
+				string_appendChar(originalUTF16, 0b10000000000000000000);
+				string_appendChar(originalUTF16, 0b11111111111111111111);
+				// 21-bit test cases exploiting the high range offset
+				string_appendChar(originalUTF16, 0x100000); // Using the 21:st bit
+				string_appendChar(originalUTF16, 0x10FFFF); // Maximum range for UTF
+				Buffer encoded = string_saveToMemory(originalUTF16, characterEncoding, lineEncoding);
+				String decoded = string_loadFromMemory(encoded);
+				//printBuffer(encoded);
+				//compareCharacterCodes(originalUTF16, decoded);
+				ASSERT_MATCH(originalUTF16, decoded);
+			}
+			// All UTF-16 characters excluding \r and \0
+			for (int e = 0; e <= 1; e++) {
+				CharacterEncoding characterEncoding = (e == 0) ? CharacterEncoding::BOM_UTF16BE : CharacterEncoding::BOM_UTF16LE;
+				String original;
+				string_reserve(original, 0x10FFFF);
+				for (DsrChar c = 0x1; c <= 0xD7FF; c++) {
+					if (c != U'\r') {
+						string_appendChar(original, c);
+					}
+				}
+				// 0xD800 to 0xDFFF is reserved for 
+				for (DsrChar c = 0xE000; c <= 0x10FFFF; c++) {
+					string_appendChar(original, c);
+				}
+				Buffer encoded = string_saveToMemory(original, characterEncoding, lineEncoding);
+				String decoded = string_loadFromMemory(encoded);
+				ASSERT_MATCH(original, decoded);
+			}
+		}
 	}
 	{ // Loading strings of different encodings
 		String fileLatin1 = string_load(folderPath + U"Latin1.txt", true);
@@ -119,8 +230,8 @@ START_TEST(TextEncoding)
 		String originalContent = U"Hello my friend\n你好我的朋友\n𐐷𤭢\n";
 		String latin1Expected = U"Hello my friend\n??????\n??\n";
 		String tempPath = folderPath + U"Temporary.txt";
-		for (int i = 0; i < 2; i++) {
-			LineEncoding lineEncoding = (i == 0) ? LineEncoding::CrLf : LineEncoding::Lf;
+		for (int l = 0; l < 2; l++) {
+			LineEncoding lineEncoding = (l == 0) ? LineEncoding::CrLf : LineEncoding::Lf;
 
 			// Latin-1 should store up to 8 bits correctly, and write ? for complex characters
 			string_save(tempPath, originalContent, CharacterEncoding::Raw_Latin1, lineEncoding);

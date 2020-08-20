@@ -343,7 +343,7 @@ using UTF32WriterFunction = std::function<void(DsrChar character)>;
 
 // Filter out unwanted characters for improved portability
 static void feedCharacter(const UTF32WriterFunction &reciever, DsrChar character) {
-	if (character != U'\r') {
+	if (character != U'\0' && character != U'\r') {
 		reciever(character);
 	}
 }
@@ -352,30 +352,28 @@ static void feedCharacter(const UTF32WriterFunction &reciever, DsrChar character
 static void feedStringFromFileBuffer_Latin1(const UTF32WriterFunction &reciever, const uint8_t* buffer, int64_t fileLength) {
 	for (int64_t i = 0; i < fileLength; i++) {
 		DsrChar character = (DsrChar)(buffer[i]);
-		if (character != U'\r') {
-			feedCharacter(reciever, character);
-		}
+		feedCharacter(reciever, character);
 	}
 }
 // Appends the content of buffer as a BOM-free UTF-8 file into target
 static void feedStringFromFileBuffer_UTF8(const UTF32WriterFunction &reciever, const uint8_t* buffer, int64_t fileLength) {
 	for (int64_t i = 0; i < fileLength; i++) {
 		uint8_t byteA = buffer[i];
-		if (byteA < 0b10000000) {
+		if (byteA < (uint32_t)0b10000000) {
 			// Single byte (1xxxxxxx)
 			feedCharacter(reciever, (DsrChar)byteA);
 		} else {
 			uint32_t character = 0;
 			int extraBytes = 0;
-			if (byteA >= 0b11000000) { // At least two leading ones
-				if (byteA < 0b11100000) { // Less than three leading ones
-					character = byteA & 0b00011111;
+			if (byteA >= (uint32_t)0b11000000) { // At least two leading ones
+				if (byteA < (uint32_t)0b11100000) { // Less than three leading ones
+					character = byteA & (uint32_t)0b00011111;
 					extraBytes = 1;
-				} else if (byteA < 0b11110000) { // Less than four leading ones
-					character = byteA & 0b00001111;
+				} else if (byteA < (uint32_t)0b11110000) { // Less than four leading ones
+					character = byteA & (uint32_t)0b00001111;
 					extraBytes = 2;
-				} else if (byteA < 0b11111000) { // Less than five leading ones
-					character = byteA & 0b00000111;
+				} else if (byteA < (uint32_t)0b11111000) { // Less than five leading ones
+					character = byteA & (uint32_t)0b00000111;
 					extraBytes = 3;
 				} else {
 					// Invalid UTF-8 format
@@ -422,9 +420,9 @@ static void feedStringFromFileBuffer_UTF16(const UTF32WriterFunction &reciever, 
 			// The given range was reserved and therefore using 32 bits
 			i += 2;
 			uint16_t wordB = read16bits<LittleEndian>(buffer, i);
-			uint32_t higher10Bits = wordA & 0b1111111111;
-			uint32_t lower10Bits = wordB & 0b1111111111;
-			feedCharacter(reciever, (DsrChar)(((higher10Bits << 10) | lower10Bits) + 0x10000));
+			uint32_t higher10Bits = wordA & (uint32_t)0b1111111111;
+			uint32_t lower10Bits  = wordB & (uint32_t)0b1111111111;
+			feedCharacter(reciever, (DsrChar)(((higher10Bits << 10) | lower10Bits) + (uint32_t)0x10000));
 		}
 	}
 }
@@ -461,7 +459,7 @@ static void feedStringFromFileBuffer(const UTF32WriterFunction &reciever, const 
 	}
 }
 
-String dsr::string_loadFromMemory(const Buffer &fileContent) {
+String dsr::string_loadFromMemory(Buffer fileContent) {
 	String result;
 	// Measure the size of the result by scanning the content in advance
 	int64_t characterCount = 0;
@@ -517,42 +515,40 @@ String dsr::string_load(const ReadableString& filename, bool mustExist) {
 	}
 }
 
-#define AT_MOST_BITS(BIT_COUNT) if (character >= 1 << BIT_COUNT) { character = U'?'; }
-
 template <CharacterEncoding characterEncoding>
 static void encodeCharacter(const ByteWriterFunction &receiver, DsrChar character) {
 	if (characterEncoding == CharacterEncoding::Raw_Latin1) {
 		// Replace any illegal characters with questionmarks
-		AT_MOST_BITS(8);
+		if (character > 255) { character = U'?'; }
 		receiver(character);
 	} else if (characterEncoding == CharacterEncoding::BOM_UTF8) {
 		// Replace any illegal characters with questionmarks
-		AT_MOST_BITS(21);
+		if (character > 0x10FFFF) { character = U'?'; }
 		if (character < (1 << 7)) {
 			// 0xxxxxxx
 			receiver(character);
 		} else if (character < (1 << 11)) {
 			// 110xxxxx 10xxxxxx
-			receiver(0b11000000 | ((character & (0b11111 << 6)) >> 6));
-			receiver(0b10000000 | (character & 0b111111));
+			receiver((uint32_t)0b11000000 | ((character & ((uint32_t)0b11111 << 6)) >> 6));
+			receiver((uint32_t)0b10000000 |  (character &  (uint32_t)0b111111));
 		} else if (character < (1 << 16)) {
 			// 1110xxxx 10xxxxxx 10xxxxxx
-			receiver(0b11100000 | ((character & (0b1111 << 12)) >> 12));
-			receiver(0b10000000 | ((character & (0b111111 << 6)) >> 6));
-			receiver(0b10000000 | (character & 0b111111));
+			receiver((uint32_t)0b11100000 | ((character & ((uint32_t)0b1111 << 12)) >> 12));
+			receiver((uint32_t)0b10000000 | ((character & ((uint32_t)0b111111 << 6)) >> 6));
+			receiver((uint32_t)0b10000000 |  (character &  (uint32_t)0b111111));
 		} else if (character < (1 << 21)) {
 			// 11110xxx 10xxxxxx 10xxxxxx 10xxxxxx
-			receiver(0b11110000 | ((character & (0b111 << 18)) >> 18));
-			receiver(0b10000000 | ((character & (0b111111 << 12)) >> 12));
-			receiver(0b10000000 | ((character & (0b111111 << 6)) >> 6));
-			receiver(0b10000000 | (character & 0b111111));
+			receiver((uint32_t)0b11110000 | ((character & ((uint32_t)0b111 << 18)) >> 18));
+			receiver((uint32_t)0b10000000 | ((character & ((uint32_t)0b111111 << 12)) >> 12));
+			receiver((uint32_t)0b10000000 | ((character & ((uint32_t)0b111111 << 6)) >> 6));
+			receiver((uint32_t)0b10000000 |  (character &  (uint32_t)0b111111));
 		}
 	} else { // Assuming UTF-16
-		AT_MOST_BITS(20);
+		if (character > 0x10FFFF) { character = U'?'; }
 		if (character <= 0xD7FF || (character >= 0xE000 && character <= 0xFFFF)) {
 			// xxxxxxxx xxxxxxxx (Limited range)
-			uint32_t higher8Bits = (character & 0b1111111100000000) >> 8;
-			uint32_t lower8Bits  =  character & 0b0000000011111111;
+			uint32_t higher8Bits = (character & (uint32_t)0b1111111100000000) >> 8;
+			uint32_t lower8Bits  =  character & (uint32_t)0b0000000011111111;
 			if (characterEncoding == CharacterEncoding::BOM_UTF16BE) {
 				receiver(higher8Bits);
 				receiver(lower8Bits);
@@ -562,13 +558,11 @@ static void encodeCharacter(const ByteWriterFunction &receiver, DsrChar characte
 			}
 		} else if (character >= 0x010000 && character <= 0x10FFFF) {
 			// 110110xxxxxxxxxx 110111xxxxxxxxxx
-			uint32_t code = character - 0x10000;
-			uint32_t higher10Bits = (code & 0b11111111110000000000) >> 10;
-			uint32_t lower10Bits  =  code & 0b00000000001111111111;
-			uint32_t byteA = (0b110110 << 2) | ((higher10Bits & (0b11 << 8)) >> 8);
-			uint32_t byteB = higher10Bits & 0b11111111;
-			uint32_t byteC = (0b110111 << 2) | ((lower10Bits & (0b11 << 8)) >> 8);
-			uint32_t byteD = lower10Bits & 0b11111111;
+			uint32_t code = character - (uint32_t)0x10000;
+			uint32_t byteA = ((code & (uint32_t)0b11000000000000000000) >> 18) | (uint32_t)0b11011000;
+			uint32_t byteB =  (code & (uint32_t)0b00111111110000000000) >> 10;
+			uint32_t byteC = ((code & (uint32_t)0b00000000001100000000) >> 8)  | (uint32_t)0b11011100;
+			uint32_t byteD =   code & (uint32_t)0b00000000000011111111;
 			if (characterEncoding == CharacterEncoding::BOM_UTF16BE) {
 				receiver(byteA);
 				receiver(byteB);
@@ -659,22 +653,21 @@ void dsr::string_save(const ReadableString& filename, const ReadableString& cont
 	}
 }
 
-/*
-void dsr::string_saveToMemory(Buffer &target, const ReadableString& content,
-  CharacterEncoding characterEncoding = CharacterEncoding::BOM_UTF8,
-  LineEncoding lineEncoding = LineEncoding::CrLf) {
+Buffer dsr::string_saveToMemory(const ReadableString& content, CharacterEncoding characterEncoding, LineEncoding lineEncoding) {
 	int64_t byteCount = 0;
-	ByteWriterFunction counter = [&fileStream](uint8_t value) {
+	ByteWriterFunction counter = [&byteCount](uint8_t value) {
 		byteCount++;
 	};
-	
-	ENCODE_TEXT(receiver, content, characterEncoding, lineEncoding);
-	ByteWriterFunction receiver = [&fileStream](uint8_t value) {
-		fileStream.write((const char*)&value, 1);
+	ENCODE_TEXT(counter, content, characterEncoding, lineEncoding);
+	Buffer result = buffer_create(byteCount);
+	SafePointer<uint8_t> byteWriter = buffer_getSafeData<uint8_t>(result, "Buffer for string encoding");
+	ByteWriterFunction receiver = [&byteWriter](uint8_t value) {
+		*byteWriter = value;
+		byteWriter += 1;
 	};
-
+	ENCODE_TEXT(receiver, content, characterEncoding, lineEncoding);
+	return result;
 }
-*/
 
 const char32_t* dsr::file_separator() {
 	#ifdef _WIN32

@@ -42,8 +42,8 @@ using DsrChar = char32_t;
 enum class CharacterEncoding {
 	Raw_Latin1,  // U+00 to U+FF
 	BOM_UTF8,    // U+00000000 to U+0010FFFF
-	BOM_UTF16BE, // U+00000000 to U+0000D7FF, U+0000E000 to U+0000FFFF, U+00010000 to U+0010FFFF
-	BOM_UTF16LE  // U+00000000 to U+0000D7FF, U+0000E000 to U+0000FFFF, U+00010000 to U+0010FFFF
+	BOM_UTF16BE, // U+00000000 to U+0000D7FF, U+0000E000 to U+0010FFFF
+	BOM_UTF16LE  // U+00000000 to U+0000D7FF, U+0000E000 to U+0010FFFF
 };
 
 // Carriage-return is removed when loading text files to prevent getting double lines
@@ -301,7 +301,7 @@ double string_toDouble(const ReadableString& source);
 String string_load(const ReadableString& filename, bool mustExist = true);
 // A version loading the text from a binary representation of the file's content instead of the filename.
 //   Makes it easier to test character encoding and load arbitrary files from archives.
-String string_loadFromMemory(const Buffer &fileContent);
+String string_loadFromMemory(Buffer fileContent);
 
 // Side-effect: Saves content to filename using the selected character and line encodings.
 // Do not add carriage return characters yourself into strings, for these will be added automatically in the CrLf mode.
@@ -312,12 +312,11 @@ void string_save(const ReadableString& filename, const ReadableString& content,
   CharacterEncoding characterEncoding = CharacterEncoding::BOM_UTF8,
   LineEncoding lineEncoding = LineEncoding::CrLf
 );
-/*
-void string_saveToMemory(Buffer &target, const ReadableString& content,
+// A version encoding the text to a new buffer
+Buffer string_saveToMemory(const ReadableString& content,
   CharacterEncoding characterEncoding = CharacterEncoding::BOM_UTF8,
   LineEncoding lineEncoding = LineEncoding::CrLf
 );
-*/
 
 // Post-condition: Returns true iff strings a and b are exactly equal.
 bool string_match(const ReadableString& a, const ReadableString& b);
@@ -341,6 +340,16 @@ String string_mangleQuote(const ReadableString &rawText);
 // Pre-condition: mangledText must be enclosed in double quotes and special characters must use escape characters (tabs in quotes are okay though).
 // Post-condition: Returns mangledText with quotes removed and excape tokens interpreted.
 String string_unmangleQuote(const ReadableString& mangledText);
+
+// Ensures safely that at least minimumLength characters can he held in the buffer
+inline void string_reserve(String& target, int32_t minimumLength) {
+	target.reserve(minimumLength);
+}
+
+// Append/push one character (to avoid integer to string conversion)
+inline void string_appendChar(String& target, DsrChar value) {
+	target.appendChar(value);
+}
 
 // Append one element
 template<typename TYPE>
