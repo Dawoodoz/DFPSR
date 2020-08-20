@@ -289,16 +289,24 @@ int64_t string_toInteger(const ReadableString& source);
 // Post-condition: Returns the double precision floating-point representation of source.
 double string_toDouble(const ReadableString& source);
 
+// Loading will try to find a byte order mark and can handle UTF-8 and UTF-16.
+//   Failure to find a byte order mark will assume that the file's content is raw Latin-1,
+//   because automatic detection would cause random behaviour.
+// For portability, carriage return characters are removed,
+//   but will be generated again using the default CrLf line encoding of string_save.
 // Post-condition:
 //   Returns the content of the file referred to be filename.
 //   If mustExist is true, then failure to load will throw an exception.
 //   If mustExist is false, then failure to load will return an empty string.
 String string_load(const ReadableString& filename, bool mustExist = true);
-// A version loading the text from a binary representation of the file's content instead of the filename
+// A version loading the text from a binary representation of the file's content instead of the filename.
 //   Makes it easier to test character encoding and load arbitrary files from archives.
 String string_loadFromMemory(const Buffer &fileContent);
 
-// Side-effect: Saves content to filename.
+// Side-effect: Saves content to filename using the selected character and line encodings.
+// Do not add carriage return characters yourself into strings, for these will be added automatically in the CrLf mode.
+// The internal String type should only use UTF-32 with single line feeds for breaking lines.
+//   This makes text processing algorithms a lot cleaner when a character or line break is always one element.
 // UTF-8 with BOM is default by being both compact and capable of storing 21 bits of unicode
 void string_save(const ReadableString& filename, const ReadableString& content,
   CharacterEncoding characterEncoding = CharacterEncoding::BOM_UTF8,

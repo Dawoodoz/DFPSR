@@ -333,30 +333,37 @@ static void doubleToString_arabic(String& target, double value) {
 	} \
 	TARGET[SOURCE.length()] = '\0';
 
-// TODO: Give as a lambda with target captured, so that pre-allocation can measure the
-//       needed space exactly using a lambda that increases a character counter instead.
-// Interpreting a character's value and appends it to the string.
-static void feedCharacterFromFile(String &target, DsrChar character) {
+static inline void byteToStream(std::ostream &target, uint8_t value) {
+	target.write((const char*)&value, 1);
+}
+
+// A function definition for receiving a stream of UTF-32 characters
+//   Instead of using std's messy inheritance
+using UTF32WriterFunction = std::function<void(DsrChar character)>;
+
+// Filter out unwanted characters for improved portability
+static void feedCharacter(const UTF32WriterFunction &reciever, DsrChar character) {
 	if (character != U'\r') {
-		target.appendChar(character);
+		reciever(character);
 	}
 }
 
 // Appends the content of buffer as a BOM-free Latin-1 file into target
-static void AppendStringFromFileBuffer_Latin1(String &target, const uint8_t* buffer, int64_t fileLength) {
+static void feedStringFromFileBuffer_Latin1(const UTF32WriterFunction &reciever, const uint8_t* buffer, int64_t fileLength) {
 	for (int64_t i = 0; i < fileLength; i++) {
-		feedCharacterFromFile(target, (DsrChar)(buffer[i]));
+		DsrChar character = (DsrChar)(buffer[i]);
+		if (character != U'\r') {
+			feedCharacter(reciever, character);
+		}
 	}
 }
 // Appends the content of buffer as a BOM-free UTF-8 file into target
-static void AppendStringFromFileBuffer_UTF8(String &target, const uint8_t* buffer, int64_t fileLength) {
-	// We know that the result will be at most one character per given byte for UTF-8
-	target.reserve(string_length(target) + fileLength);
+static void feedStringFromFileBuffer_UTF8(const UTF32WriterFunction &reciever, const uint8_t* buffer, int64_t fileLength) {
 	for (int64_t i = 0; i < fileLength; i++) {
 		uint8_t byteA = buffer[i];
 		if (byteA < 0b10000000) {
 			// Single byte (1xxxxxxx)
-			feedCharacterFromFile(target, (DsrChar)byteA);
+			feedCharacter(reciever, (DsrChar)byteA);
 		} else {
 			uint32_t character = 0;
 			int extraBytes = 0;
@@ -383,7 +390,7 @@ static void AppendStringFromFileBuffer_UTF8(String &target, const uint8_t* buffe
 				character = (character << 6) | (nextByte & 0b00111111);
 				extraBytes--;
 			}
-			feedCharacterFromFile(target, (DsrChar)character);
+			feedCharacter(reciever, (DsrChar)character);
 		}
 	}
 }
@@ -401,9 +408,7 @@ uint16_t read16bits(const uint8_t* buffer, int startOffset) {
 
 // Appends the content of buffer as a BOM-free UTF-16 file into target
 template <bool LittleEndian>
-static void AppendStringFromFileBuffer_UTF16(String &target, const uint8_t* buffer, int64_t fileLength) {
-	// We know that the result will be at most one character per two given bytes for UTF-16
-	target.reserve(string_length(target) + (fileLength / 2));
+static void feedStringFromFileBuffer_UTF16(const UTF32WriterFunction &reciever, const uint8_t* buffer, int64_t fileLength) {
 	for (int64_t i = 0; i < fileLength; i += 2) {
 		// Read the first 16-bit word
 		uint16_t wordA = read16bits<LittleEndian>(buffer, i);
@@ -412,58 +417,70 @@ static void AppendStringFromFileBuffer_UTF16(String &target, const uint8_t* buff
 		//   we can just check if it's within the range reserved for 32-bit encoding
 		if (wordA <= 0xD7FF || wordA >= 0xE000) {
 			// Not in the reserved range, just a single 16-bit character
-			feedCharacterFromFile(target, (DsrChar)wordA);
+			feedCharacter(reciever, (DsrChar)wordA);
 		} else {
 			// The given range was reserved and therefore using 32 bits
 			i += 2;
 			uint16_t wordB = read16bits<LittleEndian>(buffer, i);
 			uint32_t higher10Bits = wordA & 0b1111111111;
 			uint32_t lower10Bits = wordB & 0b1111111111;
-			feedCharacterFromFile(target, (DsrChar)(((higher10Bits << 10) | lower10Bits) + 0x10000));
+			feedCharacter(reciever, (DsrChar)(((higher10Bits << 10) | lower10Bits) + 0x10000));
 		}
 	}
 }
 // Appends the content of buffer as a text file of unknown format into target
-static void AppendStringFromFileBuffer(String &target, const uint8_t* buffer, int64_t fileLength) {
+static void feedStringFromFileBuffer(const UTF32WriterFunction &reciever, const uint8_t* buffer, int64_t fileLength) {
 	// After removing the BOM bytes, the rest can be seen as a BOM-free text file with a known format
 	if (fileLength >= 3 && buffer[0] == 0xEF && buffer[1] == 0xBB && buffer[2] == 0xBF) { // UTF-8
-		AppendStringFromFileBuffer_UTF8(target, buffer + 3, fileLength - 3);
+		feedStringFromFileBuffer_UTF8(reciever, buffer + 3, fileLength - 3);
 	} else if (fileLength >= 2 && buffer[0] == 0xFE && buffer[1] == 0xFF) { // UTF-16 BE
-		AppendStringFromFileBuffer_UTF16<false>(target, buffer + 2, fileLength - 2);
+		feedStringFromFileBuffer_UTF16<false>(reciever, buffer + 2, fileLength - 2);
 	} else if (fileLength >= 2 && buffer[0] == 0xFF && buffer[1] == 0xFE) { // UTF-16 LE
-		AppendStringFromFileBuffer_UTF16<true>(target, buffer + 2, fileLength - 2);
+		feedStringFromFileBuffer_UTF16<true>(reciever, buffer + 2, fileLength - 2);
 	} else if (fileLength >= 4 && buffer[0] == 0x00 && buffer[1] == 0x00 && buffer[2] == 0xFE && buffer[3] == 0xFF) { // UTF-32 BE
-		//AppendStringFromFileBuffer_UTF32BE(target, buffer + 4, fileLength - 4);
+		//feedStringFromFileBuffer_UTF32BE(target, buffer + 4, fileLength - 4);
 		throwError(U"UTF-32 BE format is not yet supported!\n");
 	} else if (fileLength >= 4 && buffer[0] == 0xFF && buffer[1] == 0xFE && buffer[2] == 0x00 && buffer[3] == 0x00) { // UTF-32 LE
-		//AppendStringFromFileBuffer_UTF32BE(target, buffer + 4, fileLength - 4);
+		//feedStringFromFileBuffer_UTF32BE(target, buffer + 4, fileLength - 4);
 		throwError(U"UTF-32 LE format is not yet supported!\n");
 	} else if (fileLength >= 3 && buffer[0] == 0xF7 && buffer[1] == 0x64 && buffer[2] == 0x4C) { // UTF-1
-		//AppendStringFromFileBuffer_UTF1(target, buffer + 3, fileLength - 3);
+		//feedStringFromFileBuffer_UTF1(target, buffer + 3, fileLength - 3);
 		throwError(U"UTF-1 format is not yet supported!\n");
 	} else if (fileLength >= 3 && buffer[0] == 0x0E && buffer[1] == 0xFE && buffer[2] == 0xFF) { // SCSU
-		//AppendStringFromFileBuffer_SCSU(target, buffer + 3, fileLength - 3);
+		//feedStringFromFileBuffer_SCSU(target, buffer + 3, fileLength - 3);
 		throwError(U"SCSU format is not yet supported!\n");
 	} else if (fileLength >= 3 && buffer[0] == 0xFB && buffer[1] == 0xEE && buffer[2] == 0x28) { // BOCU
-		//AppendStringFromFileBuffer_BOCU-1(target, buffer + 3, fileLength - 3);
+		//feedStringFromFileBuffer_BOCU-1(target, buffer + 3, fileLength - 3);
 		throwError(U"BOCU-1 format is not yet supported!\n");
 	} else if (fileLength >= 4 && buffer[0] == 0x2B && buffer[1] == 0x2F && buffer[2] == 0x76) { // UTF-7
 		// Ignoring fourth byte with the dialect of UTF-7 when just showing the error message
 		throwError(U"UTF-7 format is not yet supported!\n");
 	} else {
 		// No BOM detected, assuming Latin-1 (because it directly corresponds to a unicode sub-set)
-		AppendStringFromFileBuffer_Latin1(target, buffer, fileLength);
+		feedStringFromFileBuffer_Latin1(reciever, buffer, fileLength);
 	}
 }
 
 String dsr::string_loadFromMemory(const Buffer &fileContent) {
 	String result;
-	AppendStringFromFileBuffer(result, fileContent.getUnsafeData(), fileContent.size);
+	// Measure the size of the result by scanning the content in advance
+	int64_t characterCount = 0;
+	UTF32WriterFunction measurer = [&characterCount](DsrChar character) {
+		characterCount++;
+	};
+	feedStringFromFileBuffer(measurer, fileContent.getUnsafeData(), fileContent.size);
+	// Pre-allocate the correct amount of memory based on the simulation
+	result.reserve(characterCount);
+	// Stream output to the result string
+	UTF32WriterFunction reciever = [&result](DsrChar character) {
+		result.appendChar(character);
+	};
+	feedStringFromFileBuffer(reciever, fileContent.getUnsafeData(), fileContent.size);
 	return result;
 }
 
 // Loads a text file of unknown format
-//   Removes carriage-return characters to make processing easy with only line-feed for breaking lines.
+//   Removes carriage-return characters to make processing easy with only line-feed for breaking lines
 String dsr::string_load(const ReadableString& filename, bool mustExist) {
 	// TODO: Load files using Unicode filenames when available
 	TO_RAW_ASCII(asciiFilename, filename);
@@ -476,7 +493,19 @@ String dsr::string_load(const ReadableString& filename, bool mustExist) {
 		fileStream.seekg (0, fileStream.beg);
 		uint8_t* buffer = (uint8_t*)malloc(fileLength);
 		fileStream.read((char*)buffer, fileLength);
-		AppendStringFromFileBuffer(result, buffer, fileLength);
+		// Measure the size of the result by scanning the content in advance
+		int64_t characterCount = 0;
+		UTF32WriterFunction measurer = [&characterCount](DsrChar character) {
+			characterCount++;
+		};
+		feedStringFromFileBuffer(measurer, buffer, fileLength);
+		// Pre-allocate the correct amount of memory based on the simulation
+		result.reserve(characterCount);
+		// Stream output to the result string
+		UTF32WriterFunction reciever = [&result](DsrChar character) {
+			result.appendChar(character);
+		};
+		feedStringFromFileBuffer(reciever, buffer, fileLength);
 		free(buffer);
 		return result;
 	} else {
@@ -486,11 +515,6 @@ String dsr::string_load(const ReadableString& filename, bool mustExist) {
 		// If the file cound not be found and opened, a null string is returned
 		return String();
 	}
-}
-
-static inline void byteToStream(std::ostream &target, int value) {
-	uint8_t byte = value;
-	target.write((char*)&byte, 1);
 }
 
 #define AT_MOST_BITS(BIT_COUNT) if (character >= 1 << BIT_COUNT) { character = U'?'; }
