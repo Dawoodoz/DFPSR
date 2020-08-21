@@ -902,21 +902,27 @@ void dsr::throwErrorMessage(const String& message) {
 	throw std::runtime_error(message.toStdString());
 }
 
-void dsr::string_split_inPlace(List<ReadableString> &target, const ReadableString& source, DsrChar separator, bool appendResult) {
-	if (!appendResult) {
-		target.clear();
-	}
+void dsr::string_split_callback(std::function<void(ReadableString)> action, const ReadableString& source, DsrChar separator) {
 	int sectionStart = 0;
 	for (int i = 0; i < source.length(); i++) {
 		DsrChar c = source[i];
 		if (c == separator) {
-			target.push(string_exclusiveRange(source, sectionStart, i));
+			action(string_exclusiveRange(source, sectionStart, i));
 			sectionStart = i + 1;
 		}
 	}
 	if (source.length() > sectionStart) {
-		target.push(string_exclusiveRange(source, sectionStart, source.length()));;
+		action(string_exclusiveRange(source, sectionStart, source.length()));;
 	}
+}
+
+void dsr::string_split_inPlace(List<ReadableString> &target, const ReadableString& source, DsrChar separator, bool appendResult) {
+	if (!appendResult) {
+		target.clear();
+	}
+	string_split_callback([&target](ReadableString section){
+		target.push(section);
+	}, source, separator);
 }
 
 List<ReadableString> dsr::string_split(const ReadableString& source, DsrChar separator) {

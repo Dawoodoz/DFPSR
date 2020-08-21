@@ -272,6 +272,19 @@ START_TEST(String)
 		ASSERT_MATCH(result[0], U" 1 ");
 		ASSERT_MATCH(result[1], U" 2 ");
 	}
+	{ // Callback splitting
+		String numbers = U"1, 3, 5, 7, 9";
+		List<int> result;
+		string_split_callback([&numbers, &result](ReadableString section) {
+			result.push(string_toInteger(section));
+		}, numbers, U',');
+		ASSERT_EQUAL(result.length(), 5);
+		ASSERT_EQUAL(result[0], 1);
+		ASSERT_EQUAL(result[1], 3);
+		ASSERT_EQUAL(result[2], 5);
+		ASSERT_EQUAL(result[3], 7);
+		ASSERT_EQUAL(result[4], 9);
+	}
 	// TODO: Test taking a part of a parent string with a start offset, leaving the parent scope,
 	//       and expanding with append while the buffer isn't shared but has an offset from buffer start.
 	// TODO: Assert that buffers are shared when they should, but prevents side-effects when one is being written to.

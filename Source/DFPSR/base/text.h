@@ -30,6 +30,7 @@
 // TODO: Try to hide in the implementation
 #include <iostream>
 #include <sstream>
+#include <functional>
 
 #include "../api/bufferAPI.h"
 #include "../collection/List.h"
@@ -253,6 +254,12 @@ List<ReadableString> string_split(const ReadableString& source, DsrChar separato
 //   If appendResult is false (default), any pre-existing elements in the target list will be cleared before writing the result.
 //   If appendResult is true, the result is appended to the existing target list.
 void string_split_inPlace(List<ReadableString> &target, const ReadableString& source, DsrChar separator, bool appendResult = false);
+// Split a string without needing a list to store the result.
+//   This allow filtering and processing before saving the results,
+//   but makes debugging more difficult and prevents pattern detection.
+// Side-effects:
+//   Calls action for each sub-string divided by separator in source.
+void string_split_callback(std::function<void(ReadableString)> action, const ReadableString& source, DsrChar separator);
 
 // Post-condition: Returns true iff c is a digit.
 //   Digit <- '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9'

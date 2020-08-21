@@ -6,8 +6,8 @@ CPP_VERSION=-std=c++14
 MODE=-DDEBUG
 O_LEVEL=-O2
 
-chmod +x ${ROOT_PATH}/tools/buildAndRun.sh;
-${ROOT_PATH}/tools/buildAndRun.sh "NONE" "NONE" "${ROOT_PATH}" "${TEMP_ROOT}" "NONE" "${MODE}" "${CPP_VERSION}" "${O_LEVEL}";
+chmod +x ${ROOT_PATH}/tools/build.sh;
+${ROOT_PATH}/tools/build.sh "NONE" "NONE" "${ROOT_PATH}" "${TEMP_ROOT}" "NONE" "${MODE}" "${CPP_VERSION}" "${O_LEVEL}";
 if [ $? -ne 0 ]
 then
 	exit 1
