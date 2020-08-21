@@ -81,4 +81,12 @@ void file_saveBuffer(const ReadableString& filename, Buffer buffer) {
 	}
 }
 
+const char32_t* file_separator() {
+	#if defined(WIN32) || defined(_WIN32)
+		return U"\\";
+	#else
+		return U"/";
+	#endif
+}
+
 }

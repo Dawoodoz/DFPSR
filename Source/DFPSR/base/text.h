@@ -418,15 +418,6 @@ void throwError(ARGS... args) {
 	throwErrorMessage(result);
 }
 
-
-// ---------------- Hard-coded portability for specific operating systems ----------------
-// TODO: Try to find a place for this outside of the library, similar to how window managers were implemented
-
-
-// Get a path separator for the target operating system.
-const char32_t* file_separator();
-
-
 }
 
 #endif

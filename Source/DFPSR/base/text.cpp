@@ -636,14 +636,6 @@ Buffer dsr::string_saveToMemory(const ReadableString& content, CharacterEncoding
 	return result;
 }
 
-const char32_t* dsr::file_separator() {
-	#ifdef _WIN32
-		return U"\\";
-	#else
-		return U"/";
-	#endif
-}
-
 int ReadableString::length() const {
 	return this->sectionLength;
 }

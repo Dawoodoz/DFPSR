@@ -40,6 +40,9 @@ namespace dsr {
 	// Side-effect: Saves buffer to filename as a binary file.
 	// Pre-condition: buffer exists
 	void file_saveBuffer(const ReadableString& filename, Buffer buffer);
+
+	// Get a path separator for the target operating system.
+	const char32_t* file_separator();
 }
 
 #endif
