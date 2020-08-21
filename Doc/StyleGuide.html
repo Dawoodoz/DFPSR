@@ -1,0 +1,45 @@
+﻿<!DOCTYPE html> <HTML lang=en> <HEAD> <STYLE>
+body { background-color: #EEFFEE; font-size: 16px; font-family: Arial;
+       color: #000000; margin: 0px;
+       padding-left: 0px; padding-right: 0px;
+       padding-top: 0px; padding-bottom: 0px; }
+H1 { padding-left: 10px; padding-top: 10px; padding-bottom: 10px; font-size: 26px; }
+H2 { padding-left: 10px; padding-top: 10px;  font-size: 20px; }
+blockquote {
+  color: #FFFFFF; background: #000000;
+  font-size: 20px; font-family: monospace;
+  padding-left: 5px; padding-right: 5px;
+  padding-top: 5px; padding-bottom: 5px;
+}
+P { padding-left: 10px; }
+IMG { padding-left: 0px; padding-right: 0px;
+       padding-top: 0px; padding-bottom: 0px; }
+
+A { font-size: 18px; font-family: Arial; color: #0000A0; text-decoration: none; }
+A:hover { color: #000070; background: #AAffAA; }
+A:active { color: #00A0A0; }
+.normal { font-size: 18px; color: #00A0A0; }
+.sub { font-size: 18px; color: #ffffdf; }
+
+</STYLE> </HEAD> <BODY>
+<IMG SRC="Images/Title.png" ALT="Images/Title.png">
+<P>
+<A href="Manual.html">Back to main page</A>
+</P><P>
+</P><H1> Code convention for David Forsgren Piuva's Software Renderer</H1><P>
+</P><P>
+To keep the style consistent, the style being used in the library is explained in this document.</P><IMG SRC="Images/Border.png"><P>
+1. Use common sense! If it looks wrong to human readers then it's wrong. Don't defeat the purpose of any rule by taking it too far.</P><IMG SRC="Images/Border.png"><P>
+2. Don't use iterators when there is any other way to accomplish the task. You can't write efficient algorithms without knowing the data structures.</P><IMG SRC="Images/Border.png"><P>
+3. Tabs for indentation then spaces for alignment. It's the best of both worlds by both having variable length tabs	and correct alignment that works between lines of the same indentation.</P><IMG SRC="Images/Border.png"><P>
+4. No dangling else, use explicit {} for safety. Otherwise someone might add an extra statement and get random crashes.</P><IMG SRC="Images/Border.png"><P>
+5. No hpp extensions, use h for all headers. Could be either way, but this library uses *.h for compact naming, so keep it consistent.</P><IMG SRC="Images/Border.png"><P>
+6. C-style casting for raw data manipulation and C++-style for high-level classes.When using assembly intrinsics and raw pointer manipulation to alter the state of bits,verbose high-level abstractions only make it harder to count CPU cycles in your head.Always use the tool that makes sense for the problem you're trying to solve.C++ style is for things that are abstracted on a higher level.C style is for when a byte is just a byte and you just want to manipulate it in a specific way.</P><IMG SRC="Images/Border.png"><P>
+7. Don't call member methods with "this" set to nullptr.This would be undefined behaviour and may randomly crash.Use global functions instead. They allow checking pointers for nullbecause they are explicit arguments declared by the programmer.</P><IMG SRC="Images/Border.png"><P>
+8. Avoid using STD/STL directly in SDK examples.Exposing types from the standard library should be done using an alias or wrapper in the dsr namespace.This allow replacing the standard library without breaking backward compatibility.The C++ standard libraries have broken backward compatibility before and it can happen again.</P><IMG SRC="Images/Border.png"><P>
+9. Don't abuse the auto keyword everywhere just to make it look more "modern".Explicit type safety is what makes compiled languages safer than scripting.</P><IMG SRC="Images/Border.png"><P>
+10. No new line for opening brackets.Makes the code more compact and decreases the risk of copy-paste errors.</P><IMG SRC="Images/Border.png"><P>
+11. Don't fix the style of someone else's code if you can easily read it.Especially if there's no style rule explicitly supporting the change.Otherwise style changes will defeat the purpose by introducing more version conflicts.</P><IMG SRC="Images/Border.png"><P>
+12. Don't change things that you don't know how to test.</P><IMG SRC="Images/Border.png"><P>
+</P>
+</BODY> </HTML>

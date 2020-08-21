@@ -1,0 +1,46 @@
+﻿<- Manual.html | Back to main page
+---
+Title: License terms for David Forsgren Piuva's Software Renderer
+
+The software renderer is using a combination of the ZLIB open source license (for David Piuva's code) and public domain (for other people's code).
+
+The ZLIB license essentially requires the copyright notice to remain in source code redistributions and that the origin is not missrepresented. This is just common sense made explicit for the sake of consumer protection, because lying about having written the library would be a scam against the buyers.
+
+Public domain essentially means owned by the people, to prevent code from being withdrawn. When a project has many contributors, the risk of having one of them withdrawing copy rights increases significantly. Public domain code don't have any copyright holder, so pulling back contributions is only possible if the code turns out to be illegal.
+---
+Title2: ZLIB Open source license (David Piuva's code)
+
+zlib open source license
+
+Copyright (c) David Forsgren Piuva
+
+This software is provided 'as-is', without any express or implied warranty. In no event will the authors be held liable for any damages arising from the use of this software.
+
+Permission is granted to anyone to use this software for any purpose, including commercial applications, and to alter it and redistribute it freely, subject to the following restrictions:
+
+1. The origin of this software must not be misrepresented; you must not claim that you wrote the original software. If you use this software in a product, an acknowledgment in the product documentation would be appreciated but is not required.
+
+2. Altered source versions must be plainly marked as such, and must not be misrepresented as being the original software.
+
+3. This notice may not be removed or altered from any source distribution.
+---
+Title2: Public domain (other people's code)
+
+The renderer has embedded the stb_image library using public domain terms (unlicense.org). While you could use stb_image under the more restrictive MIT license terms out of respect for its creators, it's essentially nullified by the more permissive public domain option.
+
+This is free and unencumbered software released into the public domain. Anyone is free to copy, modify, publish, use, compile, sell, or distribute this software, either in source code form or as a compiled binary, for any purpose, commercial or non-commercial, and by any means. In jurisdictions that recognize copyright laws, the author or authors of this software dedicate any and all copyright interest in the software to the public domain. We make this dedication for the benefit of the public at large and to the detriment of our heirs and successors. We intend this dedication to be an overt act of relinquishment in perpetuity of all present and future rights to this software under copyright law. THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+---
+<b>SDK media</b>
+
+You may use the media files in SDK examples for your own project. Just don't falsely claim to have made it, because that would be fraud.
+---
+Title2: License summary (for those who worry about getting sued)
+
+The stb_image library lets you choose between MIT and public domain, so the least restrictive option becomes public domain. When combined with the non-optional ZLIB license from the majority of the DFPSR library, the ZLIB terms are more restrictive than public domain. In conclusion, all you need to follow is the ZLIB terms for the library as a whole because public domain is compatible with all open source license terms.
+
+For releasing source code, you can only violate the terms as a whole if you alter a copyright notice or lie about who made what.
+
+For releasing binaries, you can only violate the terms as a whole if you lie about who made what. There are no requirements to credit anyone in released binaries, because stb_image lets you choose the public domain license.
+
+You are not forced to share modifications, because the library does not contain any GPL license. It is however in a company's best interest to share bug-fixes so that they don't have to be re-applied when pulling a new version.
+---

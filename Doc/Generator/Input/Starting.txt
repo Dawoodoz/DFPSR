@@ -1,0 +1,90 @@
+﻿<- Manual.html | Back to main page
+
+Title: Getting started
+---
+Title2: Working in Linux
+
+Place the library's root folder inside of a new folder. This gives room for the temporary object's folder, which will be created outside of the dfpsr folder when compiling.
+
+Image: Images/Warning.png | Warning
+A light-weight Linux distribution, might require you to install GNU's compiler toolchain <B>"gcc"</B> and X11 headers <B>"libx11-dev"</B>.
+
+Image: Images/Warning.png | Warning
+Big-endian support is only theoretical and has never actually been tested, because big-endian desktops were practically extinct when the library was created. If you happen to own such a rare museum item in working condition, sending the <B>DSR_BIG_ENDIAN</B> macro to compilation should activate the big-endian mode and shift the direction of bit shift meant to be equivalent with the address space.
+
+Title2: Build and run an example program:
+
+*
+Select an SDK example and open its folder in a terminal.
+
+*
+Give permission to execute the build script.
+
+Code: chmod +x build.sh
+
+*
+Run the build script.
+
+Code: ./build.sh
+Title2: If no example runs, try regression tests to diagnose:
+*
+Open the source folder in a terminal and run the test script:
+
+<blockquote>chmod +x test.sh</blockquote>
+
+<blockquote>./test.sh</blockquote>
+
+This will stop with a clearly visible error message if any of the tests fail.
+
+Title2: Create your own project
+
+*
+Copy one of the SDK examples to use as a template.
+
+*
+Change ROOT_PATH and TEMP_DIR in your build script to refer to the same locations from a new source path. If you don't use the build script, you can just delete it.
+
+*
+Update header include paths to the library from the new folder location.
+
+*
+Add your own external dependencies to LINKER_FLAGS within a quote with -l in front of each library name.
+
+Title2: Create a command line application
+
+If your application doesn't create any window, you can make it more portable by replacing "WINDOW_MANAGER=X11" with "WINDOW_MANAGER=NONE". This will compile with NoWindow.cpp instead of X11Window.cpp so that you cannot create a window.
+
+---
+Title2: Compiling a project on Microsoft Windows
+
+Create a project from existing code:
+
+*
+Download a mingw edition of CodeBlocks from their website. <A href="http://www.codeblocks.org/downloads/26#windows">www.codeblocks.org/downloads</A>
+
+*
+Start CodeBlocks with administrator rights and create a new Win32 project, just to get the correct libraries. You can then throw away the template main file.
+
+*
+If not starting as an administrator, certain parts of the file system may lack necessary permissions needed for creating executable binaries.
+
+*
+Select C++ 14 with G++ from the GCC toolchain, so that it will be compatible with the software renderer. Link with "-lm -pthread" to get standard C++ math and threading. This should be done for both debug and release.
+
+*
+Import all source files from <B>dfpsr/Source/DFPSR</B>.
+
+*
+Import all source files from <B>the project you want to build</B>.
+
+*
+Import <B>dfpsr/Source/windowManagers/Win32Window.cpp</B>.
+
+*
+Save your project, so that you can continue working on the project.
+
+*
+Build and run the project.
+
+This is not an ideal solution for development if you plan to have multiple projects depending on the same library. A better solution would be to compile the whole dfpsr folder into a static library, link to it in each of your projects and refer to includeFramework.h.
+---

@@ -1,0 +1,40 @@
+﻿<!DOCTYPE html> <HTML lang=en> <HEAD> <STYLE>
+body { background-color: #EEFFEE; font-size: 16px; font-family: Arial;
+       color: #000000; margin: 0px;
+       padding-left: 0px; padding-right: 0px;
+       padding-top: 0px; padding-bottom: 0px; }
+H1 { padding-left: 10px; padding-top: 10px; padding-bottom: 10px; font-size: 26px; }
+H2 { padding-left: 10px; padding-top: 10px;  font-size: 20px; }
+blockquote {
+  color: #FFFFFF; background: #000000;
+  font-size: 20px; font-family: monospace;
+  padding-left: 5px; padding-right: 5px;
+  padding-top: 5px; padding-bottom: 5px;
+}
+P { padding-left: 10px; }
+IMG { padding-left: 0px; padding-right: 0px;
+       padding-top: 0px; padding-bottom: 0px; }
+
+A { font-size: 18px; font-family: Arial; color: #0000A0; text-decoration: none; }
+A:hover { color: #000070; background: #AAffAA; }
+A:active { color: #00A0A0; }
+.normal { font-size: 18px; color: #00A0A0; }
+.sub { font-size: 18px; color: #ffffdf; }
+
+</STYLE> </HEAD> <BODY>
+<IMG SRC="Images/Title.png" ALT="Images/Title.png">
+<P>
+<A href="Manual.html">Back to main page</A>
+</P><P>
+</P><H1> Security information for David Forsgren Piuva's Software Renderer</H1><P></P><IMG SRC="Images/Border.png"><P>
+</P><H2> Purpose</H2><P>
+</P><P>
+The library is designed to stand the test of time when making software to be ported by future generations.Any attempts at security against hackers from a distant future with hundreds of years to study the source code and superior quantum processors to break your encryptions would be futile.</P><IMG SRC="Images/Border.png"><P>
+</P><H2> Design</H2><P>
+</P><P>
+Due to the flat design of the library (shallow call depth), applying browser grade security in every internal function would not be practical nor fast.Memory bound checks are removed in release builds for maximum performance.Your application should terminate if incorrect input caused an error to be thrown from the library, because resuming execution from a state which breaks the invariant means that correctness can no longer be guaranteed.</P><IMG SRC="Images/Border.png"><P>
+</P><H2> How to be "safe" (if such a thing can ever be acheived)</H2><P>
+</P><P>
+In order to be safe, you must either read all input from a reliable source (like a protected folder) or validate all input yourself before giving it to the library (no memory aliasing, extreme image dimensions, invalid file syntax...).Just preventing others from writing over binaries would not help, because the library does not have security against file corruption when loading media.Treat it like you would treat a fast low-level graphics API, don't give direct access to potential attackers.</P><IMG SRC="Images/Border.png"><P>
+</P>
+</BODY> </HTML>
