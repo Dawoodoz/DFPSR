@@ -4,7 +4,7 @@
 #ifndef DFPSR_INCLUDED_FRAMEWORK
 #define DFPSR_INCLUDED_FRAMEWORK
 
-	// Needed to use the APIs (exposed value types that will never change)
+	// Types needed to use the APIs
 	#include "math/includeMath.h"
 	#include "base/text.h"
 
@@ -22,7 +22,8 @@
 	#include "api/mediaMachineAPI.h" // A machine for running image functions
 	#include "api/fontAPI.h" // Printing text to images
 	// File API
-	#include "api/bufferAPI.h" // Printing text to images
+	#include "api/bufferAPI.h" // Storing binary data
+	#include "api/fileAPI.h" // Saving and loading binary files
 	// Convenient API
 	#include "api/timeAPI.h" // Methods for time and delays
 	#include "api/configAPI.h" // Making it easy to load your application's settings from configuration files

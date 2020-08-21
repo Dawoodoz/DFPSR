@@ -298,21 +298,22 @@ double string_toDouble(const ReadableString& source);
 //   Returns the content of the file referred to be filename.
 //   If mustExist is true, then failure to load will throw an exception.
 //   If mustExist is false, then failure to load will return an empty string.
+// If you want to handle files that are not found in a different way,
+//   it is easy to use buffer_load and string_loadFromMemory separatelly.
 String string_load(const ReadableString& filename, bool mustExist = true);
-// A version loading the text from a binary representation of the file's content instead of the filename.
-//   Makes it easier to test character encoding and load arbitrary files from archives.
+// Decode a text file from a buffer, which can be loaded using buffer_load.
 String string_loadFromMemory(Buffer fileContent);
 
 // Side-effect: Saves content to filename using the selected character and line encodings.
 // Do not add carriage return characters yourself into strings, for these will be added automatically in the CrLf mode.
 // The internal String type should only use UTF-32 with single line feeds for breaking lines.
 //   This makes text processing algorithms a lot cleaner when a character or line break is always one element.
-// UTF-8 with BOM is default by being both compact and capable of storing 21 bits of unicode
+// UTF-8 with BOM is default by being both compact and capable of storing 21 bits of unicode.
 void string_save(const ReadableString& filename, const ReadableString& content,
   CharacterEncoding characterEncoding = CharacterEncoding::BOM_UTF8,
   LineEncoding lineEncoding = LineEncoding::CrLf
 );
-// A version encoding the text to a new buffer
+// Encode the string and keep the raw buffer instead of saving it to a file.
 Buffer string_saveToMemory(const ReadableString& content,
   CharacterEncoding characterEncoding = CharacterEncoding::BOM_UTF8,
   LineEncoding lineEncoding = LineEncoding::CrLf

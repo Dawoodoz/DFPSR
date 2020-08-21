@@ -21,9 +21,11 @@
 //    3. This notice may not be removed or altered from any source
 //    distribution.
 
+#include <fstream>
 #include <cstdlib>
 #include "bufferAPI.h"
 #include "../math/scalar.h"
+#include "../base/text.h"
 
 namespace dsr {
 
@@ -89,33 +91,63 @@ BufferImpl::~BufferImpl() {
 // API
 
 Buffer buffer_clone(Buffer buffer) {
-	Buffer newBuffer = std::make_shared<BufferImpl>(buffer->size);
-	memcpy(newBuffer->data, buffer->data, buffer->size);
-	return newBuffer;
+	if (!buffer_exists(buffer)) {
+		return Buffer();
+	} else {
+		Buffer newBuffer = std::make_shared<BufferImpl>(buffer->size);
+		memcpy(newBuffer->data, buffer->data, buffer->size);
+		return newBuffer;
+	}
 }
 
 Buffer buffer_create(int64_t newSize) {
-	return std::make_shared<BufferImpl>(newSize);
+	if (newSize <= 0) {
+		throwError(U"buffer_create: Cannot create buffer of size ", newSize, U".\n");
+		return Buffer();
+	} else {
+		return std::make_shared<BufferImpl>(newSize);
+	}
 }
 
 Buffer buffer_create(int64_t newSize, uint8_t *newData) {
-	return std::make_shared<BufferImpl>(newSize, newData);
+	if (newSize <= 0) {
+		throwError(U"buffer_create: Cannot create buffer of size ", newSize, U" (with existing data).\n");
+		return Buffer();
+	} else {
+		return std::make_shared<BufferImpl>(newSize, newData);
+	}
 }
 
 void buffer_replaceDestructor(Buffer buffer, const std::function<void(uint8_t *)>& newDestructor) {
-	buffer->destructor = newDestructor;
+	if (!buffer_exists(buffer)) {
+		throwError(U"buffer_replaceDestructor: Cannot replace destructor for a buffer that don't exist.\n");
+	} else {
+		buffer->destructor = newDestructor;
+	}
 }
 
 int64_t buffer_getSize(Buffer buffer) {
-	return buffer->size;
+	if (!buffer_exists(buffer)) {
+		return 0;
+	} else {
+		return buffer->size;
+	}
 }
 
 uint8_t* buffer_dangerous_getUnsafeData(Buffer buffer) {
-	return buffer->data;
+	if (!buffer_exists(buffer)) {
+		return nullptr;
+	} else {
+		return buffer->data;
+	}
 }
 
 void buffer_setBytes(Buffer buffer, uint8_t value) {
-	memset(buffer->data, value, buffer->bufferSize);
+	if (!buffer_exists(buffer)) {
+		throwError(U"buffer_setBytes: Cannot set bytes for a buffer that don't exist.\n");
+	} else {
+		memset(buffer->data, value, buffer->bufferSize);
+	}
 }
 
 }

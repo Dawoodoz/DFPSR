@@ -21,11 +21,12 @@
 //    3. This notice may not be removed or altered from any source
 //    distribution.
 
-#include "text.h"
 #include <fstream>
 #include <streambuf>
 #include <cstring>
 #include <stdexcept>
+#include "text.h"
+#include "../api/fileAPI.h"
 
 using namespace dsr;
 
@@ -480,38 +481,11 @@ String dsr::string_loadFromMemory(Buffer fileContent) {
 // Loads a text file of unknown format
 //   Removes carriage-return characters to make processing easy with only line-feed for breaking lines
 String dsr::string_load(const ReadableString& filename, bool mustExist) {
-	// TODO: Load files using Unicode filenames when available
-	TO_RAW_ASCII(asciiFilename, filename);
-	std::ifstream fileStream(asciiFilename, std::ios_base::in | std::ios_base::binary);
-	if (fileStream.is_open()) {
-		String result;
-		// Get the file's length and allocate an array for the raw encoding
-		fileStream.seekg (0, fileStream.end);
-		int64_t fileLength = fileStream.tellg();
-		fileStream.seekg (0, fileStream.beg);
-		uint8_t* buffer = (uint8_t*)malloc(fileLength);
-		fileStream.read((char*)buffer, fileLength);
-		// Measure the size of the result by scanning the content in advance
-		int64_t characterCount = 0;
-		UTF32WriterFunction measurer = [&characterCount](DsrChar character) {
-			characterCount++;
-		};
-		feedStringFromFileBuffer(measurer, buffer, fileLength);
-		// Pre-allocate the correct amount of memory based on the simulation
-		result.reserve(characterCount);
-		// Stream output to the result string
-		UTF32WriterFunction reciever = [&result](DsrChar character) {
-			result.appendChar(character);
-		};
-		feedStringFromFileBuffer(reciever, buffer, fileLength);
-		free(buffer);
-		return result;
-	} else {
-		if (mustExist) {
-			throwError(U"The text file ", filename, U" could not be opened for reading.\n");
-		}
-		// If the file cound not be found and opened, a null string is returned
+	Buffer encoded = buffer_load(filename, mustExist);
+	if (!buffer_exists(encoded)) {
 		return String();
+	} else {
+		return string_loadFromMemory(encoded);
 	}
 }
 
@@ -637,19 +611,12 @@ static void encodeText(const ByteWriterFunction &receiver, String content) {
 		} \
 	}
 
-// TODO: Encoding to a buffer first and sending it all at once will be faster on certain operating systems
+// Encoding to a buffer before saving all at once as a binary file.
+//   This tells the operating system how big the file is in advance and prevent the worst case of stalling for minutes!
 void dsr::string_save(const ReadableString& filename, const ReadableString& content, CharacterEncoding characterEncoding, LineEncoding lineEncoding) {
-	// TODO: Load files using Unicode filenames
-	TO_RAW_ASCII(asciiFilename, filename);
-	std::ofstream fileStream(asciiFilename, std::ios_base::out | std::ios_base::binary);
-	ByteWriterFunction receiver = [&fileStream](uint8_t value) {
-		fileStream.write((const char*)&value, 1);
-	};
-	if (fileStream.is_open()) {
-		ENCODE_TEXT(receiver, content, characterEncoding, lineEncoding);
-		fileStream.close();
-	} else {
-		throwError("Failed to save ", filename, "\n");
+	Buffer buffer = string_saveToMemory(content, characterEncoding, lineEncoding);
+	if (buffer_exists(buffer)) {
+		buffer_save(filename, buffer);
 	}
 }
 
