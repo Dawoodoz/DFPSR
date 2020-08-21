@@ -481,7 +481,7 @@ String dsr::string_loadFromMemory(Buffer fileContent) {
 // Loads a text file of unknown format
 //   Removes carriage-return characters to make processing easy with only line-feed for breaking lines
 String dsr::string_load(const ReadableString& filename, bool mustExist) {
-	Buffer encoded = buffer_load(filename, mustExist);
+	Buffer encoded = file_loadBuffer(filename, mustExist);
 	if (!buffer_exists(encoded)) {
 		return String();
 	} else {
@@ -616,7 +616,7 @@ static void encodeText(const ByteWriterFunction &receiver, String content) {
 void dsr::string_save(const ReadableString& filename, const ReadableString& content, CharacterEncoding characterEncoding, LineEncoding lineEncoding) {
 	Buffer buffer = string_saveToMemory(content, characterEncoding, lineEncoding);
 	if (buffer_exists(buffer)) {
-		buffer_save(filename, buffer);
+		file_saveBuffer(filename, buffer);
 	}
 }
 

@@ -35,11 +35,11 @@ namespace dsr {
 	//   Returns the content of the file referred to be filename.
 	//   If mustExist is true, then failure to load will throw an exception.
 	//   If mustExist is false, then failure to load will return an empty handle (returning false for buffer_exists).
-	Buffer buffer_load(const ReadableString& filename, bool mustExist = true);
+	Buffer file_loadBuffer(const ReadableString& filename, bool mustExist = true);
 
 	// Side-effect: Saves buffer to filename as a binary file.
 	// Pre-condition: buffer exists
-	void buffer_save(const ReadableString& filename, Buffer buffer);
+	void file_saveBuffer(const ReadableString& filename, Buffer buffer);
 }
 
 #endif

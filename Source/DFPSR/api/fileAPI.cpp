@@ -44,7 +44,7 @@ static char toAscii(DsrChar c) {
 	} \
 	TARGET[SOURCE.length()] = '\0';
 
-Buffer buffer_load(const ReadableString& filename, bool mustExist) {
+Buffer file_loadBuffer(const ReadableString& filename, bool mustExist) {
 	// TODO: Load files using Unicode filenames when available
 	TO_RAW_ASCII(asciiFilename, filename);
 	std::ifstream fileStream(asciiFilename, std::ios_base::in | std::ios_base::binary);
@@ -58,14 +58,14 @@ Buffer buffer_load(const ReadableString& filename, bool mustExist) {
 		return buffer;
 	} else {
 		if (mustExist) {
-			throwError(U"The text file ", filename, U" could not be opened for reading.\n");
+			throwError(U"The file ", filename, U" could not be opened for reading.\n");
 		}
 		// If the file cound not be found and opened, an empty buffer is returned
 		return Buffer();
 	}
 }
 
-void buffer_save(const ReadableString& filename, Buffer buffer) {
+void file_saveBuffer(const ReadableString& filename, Buffer buffer) {
 	// TODO: Save files using Unicode filenames
 	if (!buffer_exists(buffer)) {
 		throwError(U"buffer_save: Cannot save a buffer that don't exist to a file.\n");
