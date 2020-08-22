@@ -82,9 +82,6 @@ public:
 	ReadableString(const DsrChar *content);
 	// Destructor
 	virtual ~ReadableString();
-IMPL_ACCESS:
-	// Internal constructor
-	ReadableString(const DsrChar *content, int64_t length);
 public:
 	// Converting to unknown character encoding using only the ascii character subset
 	// A bug in GCC linking forces these to be virtual

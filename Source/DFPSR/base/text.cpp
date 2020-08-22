@@ -650,11 +650,17 @@ DsrChar ReadableString::operator[] (int64_t index) const {
 ReadableString::ReadableString() {}
 ReadableString::~ReadableString() {}
 
-ReadableString::ReadableString(const DsrChar *content, int64_t length)
-: readSection(content), length(length) {}
-
 ReadableString::ReadableString(const DsrChar *content)
 : readSection(content), length(strlen_utf32(content)) {}
+
+// Not the fastest constructor, but won't bloat the public header
+// Hopefully most compilers know how to optimize this
+static ReadableString createSubString(const DsrChar *content, int64_t length) {
+	ReadableString result;
+	result.readSection = content;
+	result.length = length;
+	return result;
+}
 
 String::String() {}
 String::String(const char* source) { this->append(source); }
@@ -664,7 +670,7 @@ String::String(const ReadableString& source) { this->append(source); }
 String::String(const String& source) { this->append(source); }
 
 String::String(Buffer buffer, DsrChar *content, int64_t length)
- : ReadableString(content, length), buffer(buffer), writeSection(content) {}
+ : ReadableString(createSubString(content, length)), buffer(buffer), writeSection(content) {}
 
 int64_t String::capacity() {
 	if (this->buffer.get() == nullptr) {
@@ -973,7 +979,7 @@ ReadableString dsr::string_exclusiveRange(const ReadableString& source, int64_t 
 	if (inclusiveStart < 0) { inclusiveStart = 0; }
 	if (exclusiveEnd > source.length) { exclusiveEnd = source.length; }
 	// Return the overlapping interval
-	return ReadableString(&(source.readSection[inclusiveStart]), exclusiveEnd - inclusiveStart);
+	return createSubString(&(source.readSection[inclusiveStart]), exclusiveEnd - inclusiveStart);
 }
 
 ReadableString dsr::string_inclusiveRange(const ReadableString& source, int64_t inclusiveStart, int64_t inclusiveEnd) {
