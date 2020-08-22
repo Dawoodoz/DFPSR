@@ -138,9 +138,7 @@ std::shared_ptr<Persistent> dsr::createPersistentClass(const String &type, bool 
 std::shared_ptr<Persistent> dsr::createPersistentClassFromText(const ReadableString &text) {
 	std::shared_ptr<Persistent> rootObject, newObject;
 	List<std::shared_ptr<Persistent>> stack;
-	List<ReadableString> lines = string_split(text, U'\n');
-	for (int l = 0; l < lines.length(); l++) {
-		ReadableString line = lines[l];
+	string_split_callback([&rootObject, &newObject, &stack](ReadableString line) {
 		int equalityIndex = string_findFirst(line, '=');
 		if (equalityIndex > -1) {
 			// Assignment
@@ -176,7 +174,7 @@ std::shared_ptr<Persistent> dsr::createPersistentClassFromText(const ReadableStr
 				}
 			}
 		}
-	}
+	}, text, U'\n');
 	// Return the root component which is null on failure
 	return rootObject;
 }

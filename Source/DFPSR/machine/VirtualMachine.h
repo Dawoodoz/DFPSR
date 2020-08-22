@@ -328,12 +328,12 @@ struct VirtualMachine {
 	void addMachineWord(MachineOperation operation, const List<VMA>& args);
 	void addMachineWord(MachineOperation operation);
 	void addReturnInstruction();
-	void addCallInstructions(const List<ReadableString>& arguments);
+	void addCallInstructions(const List<String>& arguments);
 	void interpretCommand(const ReadableString& operation, const List<VMA>& resolvedArguments);
 	Variable* declareVariable_aux(const VMTypeDef& typeDef, int methodIndex, AccessType access, const ReadableString& name, bool initialize, const ReadableString& defaultValueText);
 	Variable* declareVariable(int methodIndex, AccessType access, const ReadableString& type, const ReadableString& name, bool initialize, const ReadableString& defaultValueText);
 	VMA VMAfromText(int methodIndex, const ReadableString& content);
-	void interpretMachineWord(const ReadableString& command, const List<ReadableString>& arguments);
+	void interpretMachineWord(const ReadableString& command, const List<String>& arguments);
 
 	// Run-time debug printing
 	#ifdef VIRTUAL_MACHINE_DEBUG_PRINT

@@ -42,17 +42,17 @@ ColorRgbI32 ColorRgbI32::mix(const ColorRgbI32& colorA, const ColorRgbI32& color
 	return (colorA * invWeight) + (colorB * weight);
 }
 ColorRgbI32::ColorRgbI32(const ReadableString &content) : red(0), green(0), blue(0) {
-	List<ReadableString> elements = string_split(content, U',');
-	int givenChannels = elements.length();
-	if (givenChannels >= 1) {
-		this-> red = string_toInteger(elements[0]);
-		if (givenChannels >= 2) {
-			this-> green = string_toInteger(elements[1]);
-			if (givenChannels >= 3) {
-				this-> blue = string_toInteger(elements[2]);
-			}
+	int givenChannels = 0;
+	string_split_callback([this, &givenChannels](ReadableString channelValue) {
+		if (givenChannels == 0) {
+			this->red = string_toInteger(channelValue);
+		} else if (givenChannels == 1) {
+			this->green = string_toInteger(channelValue);
+		} else if (givenChannels == 2) {
+			this->blue = string_toInteger(channelValue);
 		}
-	}
+		givenChannels++;
+	}, content, U',');
 }
 ColorRgbaI32 ColorRgbaI32::saturate() const {
 	int32_t red = this->red;
@@ -74,20 +74,19 @@ ColorRgbaI32 ColorRgbaI32::mix(const ColorRgbaI32& colorA, const ColorRgbaI32& c
 	return (colorA * invWeight) + (colorB * weight);
 }
 ColorRgbaI32::ColorRgbaI32(const ReadableString &content) : red(0), green(0), blue(0), alpha(255) {
-	List<ReadableString> elements = string_split(content, U',');
-	int givenChannels = elements.length();
-	if (givenChannels >= 1) {
-		this-> red = string_toInteger(elements[0]);
-		if (givenChannels >= 2) {
-			this-> green = string_toInteger(elements[1]);
-			if (givenChannels >= 3) {
-				this-> blue = string_toInteger(elements[2]);
-				if (givenChannels >= 4) {
-					this-> alpha = string_toInteger(elements[3]);
-				}
-			}
+	int givenChannels = 0;
+	string_split_callback([this, &givenChannels](ReadableString channelValue) {
+		if (givenChannels == 0) {
+			this->red = string_toInteger(channelValue);
+		} else if (givenChannels == 1) {
+			this->green = string_toInteger(channelValue);
+		} else if (givenChannels == 2) {
+			this->blue = string_toInteger(channelValue);
+		} else if (givenChannels == 3) {
+			this->alpha = string_toInteger(channelValue);
 		}
-	}
+		givenChannels++;
+	}, content, U',');
 }
 
 String& dsr::string_toStreamIndented(String& target, const ColorRgbI32& source, const ReadableString& indentation) {

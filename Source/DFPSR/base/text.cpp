@@ -867,12 +867,17 @@ void dsr::throwErrorMessage(const String& message) {
 	throw std::runtime_error(message.toStdString());
 }
 
-void dsr::string_split_callback(std::function<void(ReadableString)> action, const ReadableString& source, DsrChar separator) {
+void dsr::string_split_callback(std::function<void(ReadableString)> action, const ReadableString& source, DsrChar separator, bool removeWhiteSpace) {
 	int64_t sectionStart = 0;
 	for (int64_t i = 0; i < source.length; i++) {
 		DsrChar c = source[i];
 		if (c == separator) {
-			action(string_exclusiveRange(source, sectionStart, i));
+			ReadableString element = string_exclusiveRange(source, sectionStart, i);
+			if (removeWhiteSpace) {
+				action(string_removeOuterWhiteSpace(element));
+			} else {
+				action(element);
+			}
 			sectionStart = i + 1;
 		}
 	}
@@ -881,7 +886,20 @@ void dsr::string_split_callback(std::function<void(ReadableString)> action, cons
 	}
 }
 
-void dsr::string_split_inPlace(List<ReadableString> &target, const ReadableString& source, DsrChar separator, bool appendResult) {
+// TODO: Try to implement this using reference counting so that it doesn't have to allocate heap memory
+List<String> dsr::string_split_clone(const ReadableString& source, DsrChar separator, bool removeWhiteSpace) {
+	List<String> result;
+	string_split_callback([&result, removeWhiteSpace](ReadableString element) {
+		if (removeWhiteSpace) {
+			result.push(string_removeOuterWhiteSpace(element));
+		} else {
+			result.push(element);
+		}
+	}, source, separator);
+	return result;
+}
+
+void dsr::string_dangerous_split_inPlace(List<ReadableString> &target, const ReadableString& source, DsrChar separator, bool appendResult) {
 	if (!appendResult) {
 		target.clear();
 	}
@@ -890,9 +908,17 @@ void dsr::string_split_inPlace(List<ReadableString> &target, const ReadableStrin
 	}, source, separator);
 }
 
-List<ReadableString> dsr::string_split(const ReadableString& source, DsrChar separator) {
+List<ReadableString> dsr::string_dangerous_split(const ReadableString& source, DsrChar separator) {
 	List<ReadableString> result;
-	string_split_inPlace(result, source, separator);
+	string_dangerous_split_inPlace(result, source, separator);
+	return result;
+}
+
+int64_t dsr::string_splitCount(const ReadableString& source, DsrChar separator) {
+	int64_t result;
+	string_split_callback([&result](ReadableString element) {
+		result++;
+	}, source, separator);
 	return result;
 }
 

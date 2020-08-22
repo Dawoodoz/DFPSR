@@ -247,31 +247,19 @@ START_TEST(String)
 	ASSERT_EQUAL(string_toInteger(U"123"), 123);
 	ASSERT_EQUAL(string_toDouble(U"123"), 123.0);
 	ASSERT_EQUAL(string_toDouble(U"123.456"), 123.456);
-	{ // Splitting
-		List<ReadableString> result;
-		string_split_inPlace(result, U"a.b.c.d", U'.');
+	{ // Clone splitting
+		List<String> result;
+		result = string_split_clone(U"a . b . c . d", U'.', false);
 		ASSERT_EQUAL(result.length(), 4);
+		ASSERT_MATCH(result[0], U"a ");
+		ASSERT_MATCH(result[1], U" b ");
+		ASSERT_MATCH(result[2], U" c ");
+		ASSERT_MATCH(result[3], U" d");
+		result = string_split_clone(U"a . b .\tc", U'.', true);
+		ASSERT_EQUAL(result.length(), 3);
 		ASSERT_MATCH(result[0], U"a");
 		ASSERT_MATCH(result[1], U"b");
 		ASSERT_MATCH(result[2], U"c");
-		ASSERT_MATCH(result[3], U"d");
-		String content = U"One Two Three";
-		result = string_split(content, U' ');
-		ASSERT_EQUAL(result.length(), 3);
-		ASSERT_MATCH(result[0], U"One");
-		ASSERT_MATCH(result[1], U"Two");
-		ASSERT_MATCH(result[2], U"Three");
-		string_split_inPlace(result, U"Four.Five", U'.', true);
-		ASSERT_EQUAL(result.length(), 5);
-		ASSERT_MATCH(result[0], U"One");
-		ASSERT_MATCH(result[1], U"Two");
-		ASSERT_MATCH(result[2], U"Three");
-		ASSERT_MATCH(result[3], U"Four");
-		ASSERT_MATCH(result[4], U"Five");
-		string_split_inPlace(result, U" 1 | 2 ", U'|');
-		ASSERT_EQUAL(result.length(), 2);
-		ASSERT_MATCH(result[0], U" 1 ");
-		ASSERT_MATCH(result[1], U" 2 ");
 	}
 	{ // Callback splitting
 		String numbers = U"1, 3, 5, 7, 9";

@@ -24,16 +24,18 @@
 
 #include "../base/text.h"
 
-using namespace dsr;
+namespace dsr {
 
-void dsr::nonZeroLengthCheck(int64_t length, const char* property) {
+void nonZeroLengthCheck(int64_t length, const char* property) {
 	if (length <= 0) {
 		throwError(property, " may not be zero!\n");
 	}
 }
 
-void dsr::baseZeroBoundCheck(int64_t index, int64_t length, const char* property) {
+void baseZeroBoundCheck(int64_t index, int64_t length, const char* property) {
 	if (index < 0 || index >= length) {
 		throwError(property, " ", index, " is out of bound 0..", (length - 1), "!\n");
 	}
+}
+
 }

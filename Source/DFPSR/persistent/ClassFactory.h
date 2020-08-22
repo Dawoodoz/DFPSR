@@ -25,6 +25,7 @@
 #define DFPSR_PERSISTENT_CLASSFACTORY
 
 #include "../base/text.h"
+#include "../collection/List.h"
 #include <memory>
 
 namespace dsr {

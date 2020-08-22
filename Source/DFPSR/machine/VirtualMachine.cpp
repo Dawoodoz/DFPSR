@@ -35,13 +35,10 @@ VirtualMachine::VirtualMachine(const ReadableString& code, const std::shared_ptr
 		printText("Starting media machine.\n");
 	#endif
 	this->methods.pushConstruct(U"<init>", 0, this->machineTypeCount);
-	List<ReadableString> lines = string_split(code, U'\n');
 	#ifdef VIRTUAL_MACHINE_DEBUG_PRINT
 		printText("Reading assembly.\n");
 	#endif
-	List<ReadableString> arguments; // Re-using the buffer for in-place splitting
-	for (int l = 0; l < lines.length(); l++) {
-		ReadableString currentLine = lines[l];
+	string_split_callback([this](ReadableString currentLine) {
 		// If the line has a comment, then skip everything from #
 		int commentIndex = string_findFirst(currentLine, U'#');
 		if (commentIndex > -1) {
@@ -52,12 +49,12 @@ VirtualMachine::VirtualMachine(const ReadableString& code, const std::shared_ptr
 		if (colonIndex > -1) {
 			ReadableString command = string_removeOuterWhiteSpace(string_before(currentLine, colonIndex));
 			ReadableString argumentLine = string_after(currentLine, colonIndex);
-			string_split_inPlace(arguments, argumentLine, U',');
+			List<String> arguments = string_split_clone(argumentLine, U',', true);
 			this->interpretMachineWord(command, arguments);
 		} else if (string_length(currentLine) > 0) {
 			throwError("Unexpected line \"", currentLine, "\".\n");
 		}
-	}
+	}, code, U'\n');
 	// Calling "<init>" to execute global commands
 	#ifdef VIRTUAL_MACHINE_DEBUG_PRINT
 		printText("Initializing global machine state.\n");
@@ -226,7 +223,7 @@ VMA VirtualMachine::VMAfromText(int methodIndex, const ReadableString& content) 
 	}
 }
 
-static ReadableString getArg(const List<ReadableString>& arguments, int32_t index) {
+static ReadableString getArg(const List<String>& arguments, int32_t index) {
 	if (index < 0 || index >= arguments.length()) {
 		return U"";
 	} else {
@@ -253,7 +250,7 @@ void VirtualMachine::addReturnInstruction() {
 		}
 	});
 }
-void VirtualMachine::addCallInstructions(const List<ReadableString>& arguments) {
+void VirtualMachine::addCallInstructions(const List<String>& arguments) {
 	if (arguments.length() < 1) {
 		throwError("Cannot make a call without the name of a method!\n");
 	}
@@ -361,7 +358,7 @@ void VirtualMachine::addCallInstructions(const List<ReadableString>& arguments) 
 	}, outputArguments);
 }
 
-void VirtualMachine::interpretMachineWord(const ReadableString& command, const List<ReadableString>& arguments) {
+void VirtualMachine::interpretMachineWord(const ReadableString& command, const List<String>& arguments) {
 	#ifdef VIRTUAL_MACHINE_DEBUG_PRINT
 		printText("interpretMachineWord @", this->machineWords.length(), " ", command, "(");
 		for (int a = 0; a < arguments.length(); a++) {
