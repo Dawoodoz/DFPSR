@@ -67,7 +67,7 @@ std::ostream& Printable::toStreamIndented(std::ostream& out, const ReadableStrin
 	String result;
 	this->toStreamIndented(result, indentation);
 	for (int64_t i = 0; i < result.length; i++) {
-		out.put(toAscii(result.read(i)));
+		out.put(toAscii(result.readSection[i]));
 	}
 	return out;
 }
@@ -89,7 +89,7 @@ bool dsr::string_match(const ReadableString& a, const ReadableString& b) {
 		return false;
 	} else {
 		for (int64_t i = 0; i < a.length; i++) {
-			if (a.read(i) != b.read(i)) {
+			if (a.readSection[i] != b.readSection[i]) {
 				return false;
 			}
 		}
@@ -102,7 +102,7 @@ bool dsr::string_caseInsensitiveMatch(const ReadableString& a, const ReadableStr
 		return false;
 	} else {
 		for (int64_t i = 0; i < a.length; i++) {
-			if (towupper(a.read(i)) != towupper(b.read(i))) {
+			if (towupper(a.readSection[i]) != towupper(b.readSection[i])) {
 				return false;
 			}
 		}
@@ -112,7 +112,7 @@ bool dsr::string_caseInsensitiveMatch(const ReadableString& a, const ReadableStr
 
 std::ostream& ReadableString::toStream(std::ostream& out) const {
 	for (int64_t i = 0; i < this->length; i++) {
-		out.put(toAscii(this->read(i)));
+		out.put(toAscii(this->readSection[i]));
 	}
 	return out;
 }
@@ -657,15 +657,13 @@ bool ReadableString::checkBound(int64_t start, int64_t length, bool warning) con
 	}
 }
 
-DsrChar ReadableString::read(int64_t index) const {
+DsrChar ReadableString::operator[] (int64_t index) const {
 	if (index < 0 || index >= this->length) {
-		return '\0';
+		return U'\0';
 	} else {
 		return this->readSection[index];
 	}
 }
-
-DsrChar ReadableString::operator[] (int64_t index) const { return this->read(index); }
 
 ReadableString::ReadableString() {}
 ReadableString::~ReadableString() {}

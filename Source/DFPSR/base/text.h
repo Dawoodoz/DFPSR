@@ -64,9 +64,10 @@ IMPL_ACCESS:
 	// A local pointer to the sub-allocation
 	const char32_t* readSection = nullptr;
 	// The length of the current string in characters
+	//   Use the string_length getter to access
+	//   If you just want to reuse memory for a sub-string, then use string_inclusiveRange
 	int64_t length = 0;
 public:
-	DsrChar read(int64_t index) const;
 	// Returning the character by value prevents writing to memory that might be a constant literal or shared with other strings
 	DsrChar operator[] (int64_t index) const;
 public:
