@@ -4,7 +4,7 @@
 // These tests will fail if the source code document or stored files change their encoding of line breaks.
 
 String expected_latin1 =
-UR"QUOTE(Hello my friend
+R"QUOTE(Hello my friend
 Hej min vän
 Halló, vinur minn
 Hei ystäväni
