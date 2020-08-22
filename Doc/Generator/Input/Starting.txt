@@ -7,7 +7,7 @@ Title2: Working in Linux
 Place the library's root folder inside of a new folder. This gives room for the temporary object's folder, which will be created outside of the dfpsr folder when compiling.
 
 Image: Images/Warning.png | Warning
-A light-weight Linux distribution, might require you to install GNU's compiler toolchain <B>"gcc"</B> and X11 headers <B>"libx11-dev"</B>.
+A light-weight Linux distribution for laptops (such as Linux Mint) might require you to install GNU's compiler toolchain <B>"gcc"</B> and X11 headers <B>"libx11-dev"</B>.
 
 Image: Images/Warning.png | Warning
 Big-endian support is only theoretical and has never actually been tested, because big-endian desktops were practically extinct when the library was created. If you happen to own such a rare museum item in working condition, sending the <B>DSR_BIG_ENDIAN</B> macro to compilation should activate the big-endian mode and shift the direction of bit shift meant to be equivalent with the address space.
@@ -39,7 +39,10 @@ This will stop with a clearly visible error message if any of the tests fail.
 Title2: Create your own project
 
 *
-Copy one of the SDK examples to use as a template.
+Copy the folder of a template program.
+If you want a 3D application with animations, start from basic3D.
+If you want graphical user interface that only redrawn when something happens, start from basicGUI.
+If you want a command line interface application, start from basicCLI. Command line applications are more portable by using "WINDOW_MANAGER=NONE". This compiles the dummy wrapper NoWindow.cpp so that it can run on the pure operating system without any display server.
 
 *
 Change ROOT_PATH and TEMP_DIR in your build script to refer to the same locations from a new source path. If you don't use the build script, you can just delete it.
@@ -49,11 +52,6 @@ Update header include paths to the library from the new folder location.
 
 *
 Add your own external dependencies to LINKER_FLAGS within a quote with -l in front of each library name.
-
-Title2: Create a command line application
-
-If your application doesn't create any window, you can make it more portable by replacing "WINDOW_MANAGER=X11" with "WINDOW_MANAGER=NONE". This will compile with NoWindow.cpp instead of X11Window.cpp so that you cannot create a window.
-
 ---
 Title2: Compiling a project on Microsoft Windows
 
