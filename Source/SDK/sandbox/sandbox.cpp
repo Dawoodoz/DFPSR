@@ -413,9 +413,7 @@ void sandbox_main() {
 			font_printLine(colorBuffer, font_getDefault(), string_combine(U"max ms: ", 1000.0f * lastMaxFrameTime), writer, ColorRgbaI32(255, 255, 255, 255)); writer.y += 20;
 		}
 
-		startTime = time_getSeconds();
-			window_showCanvas(window);
-		debugText("Show canvas: ", (time_getSeconds() - startTime) * 1000.0, " ms\n");
+		window_showCanvas(window);
 
 		double newTime = time_getSeconds();
 		secondsPerFrame = newTime - frameStartTime;

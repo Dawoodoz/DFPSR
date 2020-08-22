@@ -426,9 +426,7 @@ int main(int argn, char **argv) {
 			printText("Show buffers: ", (time_getSeconds() - startTime) * 1000.0, " ms\n");
 		}
 
-		startTime = time_getSeconds();
 		window_showCanvas(window);
-		printText("Show canvas: ", (time_getSeconds() - startTime) * 1000.0, " ms\n\n");
 	}
 
 	printText("\nTerminating the application.\n");
