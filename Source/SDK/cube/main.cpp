@@ -10,7 +10,6 @@ static BasicResourcePool pool(mediaPath);
 // Global variables
 float distance = 4.0f;
 bool running = true;
-int detailLevel = 2;
 bool useOrthogonalCamera = false;
 bool useDepthBuffer = true;
 
@@ -60,9 +59,7 @@ int main(int argn, char **argv) {
 	window_setKeyboardEvent(window, [](const KeyboardEvent& event) {
 		if (event.keyboardEventType == KeyboardEventType::KeyDown) {
 			DsrKey key = event.dsrKey;
-			if (key >= DsrKey_F1 && key <= DsrKey_F3) {
-				detailLevel = key - DsrKey_F1;
-			} else if (key >= DsrKey_1 && key <= DsrKey_9) {
+			if (key >= DsrKey_1 && key <= DsrKey_9) {
 				window_setPixelScale(window, key - DsrKey_0);
 			} else if (key == DsrKey_F11) {
 				window_setFullScreen(window, !window_isFullScreen(window));
