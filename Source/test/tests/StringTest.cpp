@@ -73,9 +73,10 @@ START_TEST(String)
 		ASSERT_MATCH(dsr::string_exclusiveRange(efgh, 3, 4), U"h");
 		ASSERT_MATCH(dsr::string_combine(string_from(abcd, 2), string_before(efgh, 2)), U"cdef");
 		ASSERT_MATCH(dsr::string_exclusiveRange(abcd, 0, 0), U""); // No size returns nothing
-		ASSERT_MATCH(dsr::string_exclusiveRange(abcd, -1, -2), U""); // A negative size doesn't have to be inside
-		ASSERT_CRASH(dsr::string_inclusiveRange(abcd, -1, -1)); // Index below bound expected
-		ASSERT_CRASH(dsr::string_inclusiveRange(abcd, 4, 4)); // Index above bound expected
+		ASSERT_MATCH(dsr::string_exclusiveRange(abcd, -670214452, 2), U"ab"); // Reading out of bound is clamped
+		ASSERT_MATCH(dsr::string_exclusiveRange(abcd, 2, 985034841), U"cd"); // Reading out of bound is clamped
+		ASSERT_MATCH(dsr::string_exclusiveRange(abcd, 4, 764), U""); // Completely ous of bound returns nothing
+		ASSERT_MATCH(dsr::string_exclusiveRange(abcd, -631, 0), U""); // Completely ous of bound returns nothing
 	}
 	{ // Processing
 		dsr::String buffer = U"Garbage";

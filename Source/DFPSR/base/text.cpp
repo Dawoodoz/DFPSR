@@ -639,24 +639,6 @@ Buffer dsr::string_saveToMemory(const ReadableString& content, CharacterEncoding
 	return result;
 }
 
-bool ReadableString::checkBound(int64_t start, int64_t length, bool warning) const {
-	if (start < 0 || start + length > this->length) {
-		if (warning) {
-			String message;
-			string_append(message, U"\n");
-			string_append(message, U" _____________________ Sub-string bound exception! _____________________\n");
-			string_append(message, U"/\n");
-			string_append(message, U"|  Characters from ", start, U" to ", (start + length - 1), U" are out of bound!\n");
-			string_append(message, U"|  In source string of 0..", (this->length - 1), U".\n");
-			string_append(message, U"\\_______________________________________________________________________\n");
-			throwError(message);
-		}
-		return false;
-	} else {
-		return true;
-	}
-}
-
 DsrChar ReadableString::operator[] (int64_t index) const {
 	if (index < 0 || index >= this->length) {
 		return U'\0';
@@ -694,26 +676,6 @@ int64_t String::capacity() {
 		intptr_t offset = (uint8_t*)this->writeSection - parentBuffer;
 		// Subtract offset from the buffer size to get the remaining space
 		return (buffer_getSize(this->buffer) - offset) / sizeof(DsrChar);
-	}
-}
-
-ReadableString ReadableString::getRange(int64_t start, int64_t length) const {
-	if (length < 1) {
-		return ReadableString();
-	} else if (this->checkBound(start, length)) {
-		return ReadableString(&(this->readSection[start]), length);
-	} else {
-		return ReadableString();
-	}
-}
-
-ReadableString String::getRange(int64_t start, int64_t length) const {
-	if (length < 1) {
-		return ReadableString();
-	} else if (this->checkBound(start, length)) {
-		return String(this->buffer, &(this->writeSection[start]), length);
-	} else {
-		return ReadableString();
 	}
 }
 
@@ -1005,11 +967,17 @@ int64_t dsr::string_findLast(const ReadableString& source, DsrChar toFind) {
 }
 
 ReadableString dsr::string_exclusiveRange(const ReadableString& source, int64_t inclusiveStart, int64_t exclusiveEnd) {
-	return source.getRange(inclusiveStart, exclusiveEnd - inclusiveStart);
+	// Return empty string for each complete miss
+	if (inclusiveStart >= source.length || exclusiveEnd <= 0) { return ReadableString(); }
+	// Automatically clamping to valid range
+	if (inclusiveStart < 0) { inclusiveStart = 0; }
+	if (exclusiveEnd > source.length) { exclusiveEnd = source.length; }
+	// Return the overlapping interval
+	return ReadableString(&(source.readSection[inclusiveStart]), exclusiveEnd - inclusiveStart);
 }
 
 ReadableString dsr::string_inclusiveRange(const ReadableString& source, int64_t inclusiveStart, int64_t inclusiveEnd) {
-	return source.getRange(inclusiveStart, inclusiveEnd + 1 - inclusiveStart);
+	return string_exclusiveRange(source, inclusiveStart, inclusiveEnd + 1);
 }
 
 ReadableString dsr::string_before(const ReadableString& source, int64_t exclusiveEnd) {
