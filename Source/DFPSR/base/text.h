@@ -26,14 +26,18 @@
 
 #include <stdint.h>
 #include <string>
-
-// TODO: Try to hide in the implementation
 #include <iostream>
 #include <sstream>
 #include <functional>
-
 #include "../api/bufferAPI.h"
 #include "../collection/List.h"
+
+// Define DFPSR_INTERNAL_ACCESS before any include to get internal access to exposed types
+#ifdef DFPSR_INTERNAL_ACCESS
+	#define IMPL_ACCESS public
+#else
+	#define IMPL_ACCESS protected
+#endif
 
 namespace dsr {
 
@@ -56,16 +60,15 @@ enum class LineEncoding {
 };
 
 class ReadableString {
-protected:
+IMPL_ACCESS:
 	// A local pointer to the sub-allocation
 	const char32_t* readSection = nullptr;
 	// The length of the current string in characters
-	int sectionLength = 0;
+	int64_t length = 0;
 public:
-	int length() const;
-	DsrChar read(int index) const;
+	DsrChar read(int64_t index) const;
 	// Returning the character by value prevents writing to memory that might be a constant literal or shared with other strings
-	DsrChar operator[] (int index) const;
+	DsrChar operator[] (int64_t index) const;
 public:
 	// Empty string
 	ReadableString();
@@ -75,17 +78,17 @@ public:
 	// WARNING! May crash if content is freed, even if ReadableString is freed before
 	//          ReadableString may share its buffer with sub-strings of the same type
 	ReadableString(const DsrChar *content);
-protected:
+IMPL_ACCESS:
 	// Returns true iff the range is safely inside of the string
-	bool checkBound(int start, int length, bool warning = true) const;
+	bool checkBound(int64_t start, int64_t length, bool warning = true) const;
 	// Internal constructor
-	ReadableString(const DsrChar *content, int sectionLength);
+	ReadableString(const DsrChar *content, int64_t length);
 public:
 	// Create a string from an existing string
 	// When there's no reference counter, it's important that the memory remains allocated until the application terminates
 	// Just like when reading elements in a for loop, out-of-range only causes an exception if length > 0
 	//   Length lesser than 1 will always return an empty string
-	virtual ReadableString getRange(int start, int length) const;
+	virtual ReadableString getRange(int64_t start, int64_t length) const;
 	// Converting to unknown character encoding using only the ascii character subset
 	// A bug in GCC linking forces these to be virtual
 	virtual std::ostream& toStream(std::ostream& out) const;
@@ -116,27 +119,27 @@ public:
 //     Endianness is native
 //     No combined characters allowed, use precomposed instead, so that the strings can guarantee a fixed character size
 class String : public ReadableString {
-protected:
+IMPL_ACCESS:
 	// A reference counted pointer to the buffer, just to keep the allocation
 	Buffer buffer;
 	// Same as readSection, but with write access
 	char32_t* writeSection = nullptr;
 	// Internal constructor
-	String(Buffer buffer, DsrChar *content, int sectionLength);
+	String(Buffer buffer, DsrChar *content, int64_t length);
 public:
 	// The number of DsrChar characters that can be contained in the allocation before reaching the buffer's end
 	//   This doesn't imply that it's always okay to write to the remaining space, because the buffer may be shared
-	int capacity();
+	int64_t capacity();
 	// Create a string from the existing buffer without allocating any heap memory
-	ReadableString getRange(int start, int length) const override;
-private:
+	ReadableString getRange(int64_t start, int64_t length) const override;
+IMPL_ACCESS:
 	// Replaces the buffer with a new buffer holding at least newLength characters
 	// Guarantees that the new buffer is not shared by other strings, so that it may be written to freely
-	void reallocateBuffer(int32_t newLength, bool preserve);
+	void reallocateBuffer(int64_t newLength, bool preserve);
 	// Call before writing to the buffer
 	//   This hides that Strings share buffers when assigning by value or taking partial strings
 	void cloneIfShared();
-	void expand(int32_t newLength, bool affectUsedLength);
+	void expand(int64_t newLength, bool affectUsedLength);
 public:
 	// Constructors
 	String();
@@ -147,7 +150,7 @@ public:
 	String(const String& source);
 public:
 	// Ensures safely that at least minimumLength characters can he held in the buffer
-	void reserve(int32_t minimumLength);
+	void reserve(int64_t minimumLength);
 	// Extend the String using more text
 	void append(const char* source);
 	void append(const ReadableString& source);
@@ -157,7 +160,7 @@ public:
 	void appendChar(DsrChar source);
 public:
 	// Access
-	void write(int index, DsrChar value);
+	void write(int64_t index, DsrChar value);
 	void clear();
 };
 
@@ -209,37 +212,37 @@ std::ostream& string_toStream(std::ostream& target, const T& source) {
 
 // Post-condition: Returns the length of source.
 //   Example: string_length(U"ABC") == 3
-int string_length(const ReadableString& source);
+int64_t string_length(const ReadableString& source);
 // Post-condition: Returns the base-zero index of source's first occurence of toFind, starting from startIndex. Returns -1 if not found.
 //   Example: string_findFirst(U"ABCABCABC", U'A') == 0
 //   Example: string_findFirst(U"ABCABCABC", U'B') == 1
 //   Example: string_findFirst(U"ABCABCABC", U'C') == 2
 //   Example: string_findFirst(U"ABCABCABC", U'D') == -1
-int string_findFirst(const ReadableString& source, DsrChar toFind, int startIndex = 0);
+int64_t string_findFirst(const ReadableString& source, DsrChar toFind, int64_t startIndex = 0);
 // Post-condition: Returns the base-zero index of source's last occurence of toFind.  Returns -1 if not found.
 //   Example: string_findLast(U"ABCABCABC", U'A') == 6
 //   Example: string_findLast(U"ABCABCABC", U'B') == 7
 //   Example: string_findLast(U"ABCABCABC", U'C') == 8
 //   Example: string_findLast(U"ABCABCABC", U'D') == -1
-int string_findLast(const ReadableString& source, DsrChar toFind);
+int64_t string_findLast(const ReadableString& source, DsrChar toFind);
 // Post-condition: Returns a sub-string of source from before the character at inclusiveStart to before the character at exclusiveEnd
 //   Example: string_exclusiveRange(U"0123456789", 2, 4) == U"23"
-ReadableString string_exclusiveRange(const ReadableString& source, int inclusiveStart, int exclusiveEnd);
+ReadableString string_exclusiveRange(const ReadableString& source, int64_t inclusiveStart, int64_t exclusiveEnd);
 // Post-condition: Returns a sub-string of source from before the character at inclusiveStart to after the character at inclusiveEnd
 //   Example: string_inclusiveRange(U"0123456789", 2, 4) == U"234"
-ReadableString string_inclusiveRange(const ReadableString& source, int inclusiveStart, int inclusiveEnd);
+ReadableString string_inclusiveRange(const ReadableString& source, int64_t inclusiveStart, int64_t inclusiveEnd);
 // Post-condition: Returns a sub-string of source from the start to before the character at exclusiveEnd
 //   Example: string_before(U"0123456789", 5) == U"01234"
-ReadableString string_before(const ReadableString& source, int exclusiveEnd);
+ReadableString string_before(const ReadableString& source, int64_t exclusiveEnd);
 // Post-condition: Returns a sub-string of source from the start to after the character at inclusiveEnd
 //   Example: string_until(U"0123456789", 5) == U"012345"
-ReadableString string_until(const ReadableString& source, int inclusiveEnd);
+ReadableString string_until(const ReadableString& source, int64_t inclusiveEnd);
 // Post-condition: Returns a sub-string of source from before the character at inclusiveStart to the end
 //   Example: string_from(U"0123456789", 5) == U"56789"
-ReadableString string_from(const ReadableString& source, int inclusiveStart);
+ReadableString string_from(const ReadableString& source, int64_t inclusiveStart);
 // Post-condition: Returns a sub-string of source from after the character at exclusiveStart to the end
 //   Example: string_after(U"0123456789", 5) == U"6789"
-ReadableString string_after(const ReadableString& source, int exclusiveStart);
+ReadableString string_after(const ReadableString& source, int64_t exclusiveStart);
 
 // Post-condition:
 //   Returns a list of strings from source by splitting along separator.
@@ -350,7 +353,7 @@ String string_mangleQuote(const ReadableString &rawText);
 String string_unmangleQuote(const ReadableString& mangledText);
 
 // Ensures safely that at least minimumLength characters can he held in the buffer
-inline void string_reserve(String& target, int32_t minimumLength) {
+inline void string_reserve(String& target, int64_t minimumLength) {
 	target.reserve(minimumLength);
 }
 

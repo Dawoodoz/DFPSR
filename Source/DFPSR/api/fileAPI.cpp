@@ -38,11 +38,11 @@ static char toAscii(DsrChar c) {
 	}
 }
 #define TO_RAW_ASCII(TARGET, SOURCE) \
-	char TARGET[SOURCE.length() + 1]; \
-	for (int i = 0; i < SOURCE.length(); i++) { \
+	char TARGET[string_length(SOURCE) + 1]; \
+	for (int i = 0; i < string_length(SOURCE); i++) { \
 		TARGET[i] = toAscii(SOURCE[i]); \
 	} \
-	TARGET[SOURCE.length()] = '\0';
+	TARGET[string_length(SOURCE)] = '\0';
 
 Buffer file_loadBuffer(const ReadableString& filename, bool mustExist) {
 	// TODO: Load files using Unicode filenames when available

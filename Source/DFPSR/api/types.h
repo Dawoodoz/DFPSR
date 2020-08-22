@@ -31,6 +31,7 @@
 #include "../math/IRect.h"
 #include "../base/text.h"
 
+// Define DFPSR_INTERNAL_ACCESS before any include to get internal access to exposed types
 #ifdef DFPSR_INTERNAL_ACCESS
 	#define IMPL_ACCESS public
 #else

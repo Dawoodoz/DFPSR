@@ -21,6 +21,9 @@
 //    3. This notice may not be removed or altered from any source
 //    distribution.
 
+// Gets access to private members by making them public for the whole module
+#define DFPSR_INTERNAL_ACCESS
+
 #include <fstream>
 #include <streambuf>
 #include <cstring>
@@ -30,8 +33,8 @@
 
 using namespace dsr;
 
-static int strlen_utf32(const char32_t *content) {
-	int length = 0;
+static int64_t strlen_utf32(const char32_t *content) {
+	int64_t length = 0;
 	while (content[length] != 0) {
 		length++;
 	}
@@ -63,7 +66,7 @@ String Printable::toString() const {
 std::ostream& Printable::toStreamIndented(std::ostream& out, const ReadableString& indentation) const {
 	String result;
 	this->toStreamIndented(result, indentation);
-	for (int i = 0; i < result.length(); i++) {
+	for (int64_t i = 0; i < result.length; i++) {
 		out.put(toAscii(result.read(i)));
 	}
 	return out;
@@ -82,10 +85,10 @@ std::string Printable::toStdString() const {
 Printable::~Printable() {}
 
 bool dsr::string_match(const ReadableString& a, const ReadableString& b) {
-	if (a.length() != b.length()) {
+	if (a.length != b.length) {
 		return false;
 	} else {
-		for (int i = 0; i < a.length(); i++) {
+		for (int64_t i = 0; i < a.length; i++) {
 			if (a.read(i) != b.read(i)) {
 				return false;
 			}
@@ -95,10 +98,10 @@ bool dsr::string_match(const ReadableString& a, const ReadableString& b) {
 }
 
 bool dsr::string_caseInsensitiveMatch(const ReadableString& a, const ReadableString& b) {
-	if (a.length() != b.length()) {
+	if (a.length != b.length) {
 		return false;
 	} else {
-		for (int i = 0; i < a.length(); i++) {
+		for (int64_t i = 0; i < a.length; i++) {
 			if (towupper(a.read(i)) != towupper(b.read(i))) {
 				return false;
 			}
@@ -108,7 +111,7 @@ bool dsr::string_caseInsensitiveMatch(const ReadableString& a, const ReadableStr
 }
 
 std::ostream& ReadableString::toStream(std::ostream& out) const {
-	for (int i = 0; i < this->length(); i++) {
+	for (int64_t i = 0; i < this->length; i++) {
 		out.put(toAscii(this->read(i)));
 	}
 	return out;
@@ -122,8 +125,8 @@ std::string ReadableString::toStdString() const {
 
 String dsr::string_upperCase(const ReadableString &text) {
 	String result;
-	result.reserve(text.length());
-	for (int i = 0; i < text.length(); i++) {
+	result.reserve(text.length);
+	for (int64_t i = 0; i < text.length; i++) {
 		result.appendChar(towupper(text[i]));
 	}
 	return result;
@@ -131,8 +134,8 @@ String dsr::string_upperCase(const ReadableString &text) {
 
 String dsr::string_lowerCase(const ReadableString &text) {
 	String result;
-	result.reserve(text.length());
-	for (int i = 0; i < text.length(); i++) {
+	result.reserve(text.length);
+	for (int64_t i = 0; i < text.length; i++) {
 		result.appendChar(towlower(text[i]));
 	}
 	return result;
@@ -140,8 +143,8 @@ String dsr::string_lowerCase(const ReadableString &text) {
 
 String dsr::string_removeAllWhiteSpace(const ReadableString &text) {
 	String result;
-	result.reserve(text.length());
-	for (int i = 0; i < text.length(); i++) {
+	result.reserve(text.length);
+	for (int64_t i = 0; i < text.length; i++) {
 		DsrChar c = text[i];
 		if (!character_isWhiteSpace(c)) {
 			result.appendChar(c);
@@ -151,16 +154,16 @@ String dsr::string_removeAllWhiteSpace(const ReadableString &text) {
 }
 
 ReadableString dsr::string_removeOuterWhiteSpace(const ReadableString &text) {
-	int first = -1;
-	int last = -1;
-	for (int i = 0; i < text.length(); i++) {
+	int64_t first = -1;
+	int64_t last = -1;
+	for (int64_t i = 0; i < text.length; i++) {
 		DsrChar c = text[i];
 		if (!character_isWhiteSpace(c)) {
 			first = i;
 			break;
 		}
 	}
-	for (int i = text.length() - 1; i >= 0; i--) {
+	for (int64_t i = text.length - 1; i >= 0; i--) {
 		DsrChar c = text[i];
 		if (!character_isWhiteSpace(c)) {
 			last = i;
@@ -178,9 +181,9 @@ ReadableString dsr::string_removeOuterWhiteSpace(const ReadableString &text) {
 
 String dsr::string_mangleQuote(const ReadableString &rawText) {
 	String result;
-	result.reserve(rawText.length() + 2);
+	result.reserve(rawText.length + 2);
 	result.appendChar(U'\"'); // Begin quote
-	for (int i = 0; i < rawText.length(); i++) {
+	for (int64_t i = 0; i < rawText.length; i++) {
 		DsrChar c = rawText[i];
 		if (c == U'\"') { // Double quote
 			result.append(U"\\\"");
@@ -211,13 +214,13 @@ String dsr::string_mangleQuote(const ReadableString &rawText) {
 }
 
 String dsr::string_unmangleQuote(const ReadableString& mangledText) {
-	int firstQuote = string_findFirst(mangledText, '\"');
-	int lastQuote = string_findLast(mangledText, '\"');
+	int64_t firstQuote = string_findFirst(mangledText, '\"');
+	int64_t lastQuote = string_findLast(mangledText, '\"');
 	String result;
 	if (firstQuote == -1 || lastQuote == -1 || firstQuote == lastQuote) {
 		throwError(U"Cannot unmangle using string_unmangleQuote without beginning and ending with quote signs!\n", mangledText, "\n");
 	} else {
-		for (int i = firstQuote + 1; i < lastQuote; i++) {
+		for (int64_t i = firstQuote + 1; i < lastQuote; i++) {
 			DsrChar c = mangledText[i];
 			if (c == U'\\') { // Escape character
 				DsrChar c2 = mangledText[i + 1];
@@ -273,7 +276,7 @@ String dsr::string_unmangleQuote(const ReadableString& mangledText) {
 static void uintToString_arabic(String& target, uint64_t value) {
 	static const int bufferSize = 20;
 	DsrChar digits[bufferSize];
-	int usedSize = 0;
+	int64_t usedSize = 0;
 	if (value == 0) {
 		target.appendChar(U'0');
 	} else {
@@ -308,9 +311,9 @@ static void doubleToString_arabic(String& target, double value) {
 	buffer << std::fixed << value; // Generate using a fixed number of decimals
 	std::string result = buffer.str();
 	// Remove trailing zero decimal digits
-	int decimalCount = 0;
-	int lastValueIndex = -1;
-	for (int c = 0; c < (int)result.length(); c++) {
+	int64_t decimalCount = 0;
+	int64_t lastValueIndex = -1;
+	for (size_t c = 0; c < result.length(); c++) {
 		if (result[c] == '.') {
 			decimalCount++;
 		} else if (result[c] == ',') {
@@ -322,17 +325,17 @@ static void doubleToString_arabic(String& target, double value) {
 			lastValueIndex = c;
 		}
 	}
-	for (int c = 0; c <= lastValueIndex; c++) {
+	for (int64_t c = 0; c <= lastValueIndex; c++) {
 		target.appendChar(result[c]);
 	}
 }
 
 #define TO_RAW_ASCII(TARGET, SOURCE) \
-	char TARGET[SOURCE.length() + 1]; \
-	for (int i = 0; i < SOURCE.length(); i++) { \
+	char TARGET[SOURCE.length + 1]; \
+	for (int64_t i = 0; i < SOURCE.length; i++) { \
 		TARGET[i] = toAscii(SOURCE[i]); \
 	} \
-	TARGET[SOURCE.length()] = '\0';
+	TARGET[SOURCE.length] = '\0';
 
 // A function definition for receiving a stream of bytes
 //   Instead of using std's messy inheritance
@@ -395,7 +398,7 @@ static void feedStringFromFileBuffer_UTF8(const UTF32WriterFunction &reciever, c
 }
 
 template <bool LittleEndian>
-uint16_t read16bits(const uint8_t* buffer, int startOffset) {
+uint16_t read16bits(const uint8_t* buffer, int64_t startOffset) {
 	uint16_t byteA = buffer[startOffset];
 	uint16_t byteB = buffer[startOffset + 1];
 	if (LittleEndian) {
@@ -568,7 +571,7 @@ static void encodeText(const ByteWriterFunction &receiver, String content) {
 		receiver(0xFE);
 	}
 	// Write encoded content
-	for (int i = 0; i < string_length(content); i++) {
+	for (int64_t i = 0; i < string_length(content); i++) {
 		DsrChar character = content[i];
 		if (character == U'\n') {
 			if (lineEncoding == LineEncoding::CrLf) {
@@ -636,19 +639,15 @@ Buffer dsr::string_saveToMemory(const ReadableString& content, CharacterEncoding
 	return result;
 }
 
-int ReadableString::length() const {
-	return this->sectionLength;
-}
-
-bool ReadableString::checkBound(int start, int length, bool warning) const {
-	if (start < 0 || start + length > this->length()) {
+bool ReadableString::checkBound(int64_t start, int64_t length, bool warning) const {
+	if (start < 0 || start + length > this->length) {
 		if (warning) {
 			String message;
 			string_append(message, U"\n");
 			string_append(message, U" _____________________ Sub-string bound exception! _____________________\n");
 			string_append(message, U"/\n");
 			string_append(message, U"|  Characters from ", start, U" to ", (start + length - 1), U" are out of bound!\n");
-			string_append(message, U"|  In source string of 0..", (this->length() - 1), U".\n");
+			string_append(message, U"|  In source string of 0..", (this->length - 1), U".\n");
 			string_append(message, U"\\_______________________________________________________________________\n");
 			throwError(message);
 		}
@@ -658,24 +657,24 @@ bool ReadableString::checkBound(int start, int length, bool warning) const {
 	}
 }
 
-DsrChar ReadableString::read(int index) const {
-	if (index < 0 || index >= this->sectionLength) {
+DsrChar ReadableString::read(int64_t index) const {
+	if (index < 0 || index >= this->length) {
 		return '\0';
 	} else {
 		return this->readSection[index];
 	}
 }
 
-DsrChar ReadableString::operator[] (int index) const { return this->read(index); }
+DsrChar ReadableString::operator[] (int64_t index) const { return this->read(index); }
 
 ReadableString::ReadableString() {}
 ReadableString::~ReadableString() {}
 
-ReadableString::ReadableString(const DsrChar *content, int sectionLength)
-: readSection(content), sectionLength(sectionLength) {}
+ReadableString::ReadableString(const DsrChar *content, int64_t length)
+: readSection(content), length(length) {}
 
 ReadableString::ReadableString(const DsrChar *content)
-: readSection(content), sectionLength(strlen_utf32(content)) {}
+: readSection(content), length(strlen_utf32(content)) {}
 
 String::String() {}
 String::String(const char* source) { this->append(source); }
@@ -684,10 +683,10 @@ String::String(const std::string& source) { this->append(source); }
 String::String(const ReadableString& source) { this->append(source); }
 String::String(const String& source) { this->append(source); }
 
-String::String(Buffer buffer, DsrChar *content, int sectionLength)
- : ReadableString(content, sectionLength), buffer(buffer), writeSection(content) {}
+String::String(Buffer buffer, DsrChar *content, int64_t length)
+ : ReadableString(content, length), buffer(buffer), writeSection(content) {}
 
-int String::capacity() {
+int64_t String::capacity() {
 	if (this->buffer.get() == nullptr) {
 		return 0;
 	} else {
@@ -700,7 +699,7 @@ int String::capacity() {
 	}
 }
 
-ReadableString ReadableString::getRange(int start, int length) const {
+ReadableString ReadableString::getRange(int64_t start, int64_t length) const {
 	if (length < 1) {
 		return ReadableString();
 	} else if (this->checkBound(start, length)) {
@@ -710,7 +709,7 @@ ReadableString ReadableString::getRange(int start, int length) const {
 	}
 }
 
-ReadableString String::getRange(int start, int length) const {
+ReadableString String::getRange(int64_t start, int64_t length) const {
 	if (length < 1) {
 		return ReadableString();
 	} else if (this->checkBound(start, length)) {
@@ -749,14 +748,14 @@ static int32_t getNewBufferSize(int32_t minimumSize) {
 		return 2147483647;
 	}
 }
-void String::reallocateBuffer(int32_t newLength, bool preserve) {
+void String::reallocateBuffer(int64_t newLength, bool preserve) {
 	// Holding oldData alive while copying to the new buffer
 	Buffer oldBuffer = this->buffer;
 	const char32_t* oldData = this->readSection;
 	this->buffer = buffer_create(getNewBufferSize(newLength * sizeof(DsrChar)));
 	this->readSection = this->writeSection = reinterpret_cast<char32_t*>(buffer_dangerous_getUnsafeData(this->buffer));
 	if (preserve && oldData) {
-		memcpy(this->writeSection, oldData, this->sectionLength * sizeof(DsrChar));
+		memcpy(this->writeSection, oldData, this->length * sizeof(DsrChar));
 	}
 }
 
@@ -764,28 +763,28 @@ void String::reallocateBuffer(int32_t newLength, bool preserve) {
 //   This hides that Strings share buffers when assigning by value or taking partial strings
 void String::cloneIfShared() {
 	if (this->buffer.use_count() > 1) {
-		this->reallocateBuffer(this->sectionLength, true);
+		this->reallocateBuffer(this->length, true);
 	}
 }
 
-void String::expand(int32_t newLength, bool affectUsedLength) {
-	if (newLength > this->sectionLength) {
+void String::expand(int64_t newLength, bool affectUsedLength) {
+	if (newLength > this->length) {
 		if (newLength > this->capacity()) {
 			this->reallocateBuffer(newLength, true);
 		}
 	}
 	if (affectUsedLength) {
-		this->sectionLength = newLength;
+		this->length = newLength;
 	}
 }
 
-void String::reserve(int32_t minimumLength) {
+void String::reserve(int64_t minimumLength) {
 	this->expand(minimumLength, false);
 }
 
-void String::write(int index, DsrChar value) {
+void String::write(int64_t index, DsrChar value) {
 	this->cloneIfShared();
-	if (index < 0 || index >= this->sectionLength) {
+	if (index < 0 || index >= this->length) {
 		// TODO: Give a warning
 	} else {
 		this->writeSection[index] = value;
@@ -793,7 +792,7 @@ void String::write(int index, DsrChar value) {
 }
 
 void String::clear() {
-	this->sectionLength = 0;
+	this->length = 0;
 }
 
 // This macro has to be used because a static template wouldn't be able to inherit access to private methods from the target class.
@@ -810,7 +809,7 @@ void String::clear() {
 //     If it doesn't share the buffer
 //       * Then no risk of writing
 #define APPEND(TARGET, SOURCE, LENGTH, MASK) { \
-	int64_t oldLength = (TARGET)->length(); \
+	int64_t oldLength = (TARGET)->length; \
 	(TARGET)->expand(oldLength + (int64_t)(LENGTH), true); \
 	for (int64_t i = 0; i < (int64_t)(LENGTH); i++) { \
 		(TARGET)->write(oldLength + i, ((SOURCE)[i]) & MASK); \
@@ -819,9 +818,9 @@ void String::clear() {
 // TODO: See if ascii litterals can be checked for values above 127 in compile-time
 void String::append(const char* source) { APPEND(this, source, strlen(source), 0xFF); }
 // TODO: Use memcpy when appending input of the same format
-void String::append(const ReadableString& source) { APPEND(this, source, source.length(), 0xFFFFFFFF); }
+void String::append(const ReadableString& source) { APPEND(this, source, source.length, 0xFFFFFFFF); }
 void String::append(const char32_t* source) { APPEND(this, source, strlen_utf32(source), 0xFFFFFFFF); }
-void String::append(const std::string& source) { APPEND(this, source.c_str(), (int)source.size(), 0xFF); }
+void String::append(const std::string& source) { APPEND(this, source.c_str(), (int64_t)source.size(), 0xFF); }
 void String::appendChar(DsrChar source) { APPEND(this, &source, 1, 0xFFFFFFFF); }
 
 String& dsr::string_toStreamIndented(String& target, const Printable& source, const ReadableString& indentation) {
@@ -903,16 +902,16 @@ void dsr::throwErrorMessage(const String& message) {
 }
 
 void dsr::string_split_callback(std::function<void(ReadableString)> action, const ReadableString& source, DsrChar separator) {
-	int sectionStart = 0;
-	for (int i = 0; i < source.length(); i++) {
+	int64_t sectionStart = 0;
+	for (int64_t i = 0; i < source.length; i++) {
 		DsrChar c = source[i];
 		if (c == separator) {
 			action(string_exclusiveRange(source, sectionStart, i));
 			sectionStart = i + 1;
 		}
 	}
-	if (source.length() > sectionStart) {
-		action(string_exclusiveRange(source, sectionStart, source.length()));;
+	if (source.length > sectionStart) {
+		action(string_exclusiveRange(source, sectionStart, source.length));;
 	}
 }
 
@@ -936,7 +935,7 @@ int64_t dsr::string_toInteger(const ReadableString& source) {
 	bool negated;
 	result = 0;
 	negated = false;
-	for (int i = 0; i < source.length(); i++) {
+	for (int64_t i = 0; i < source.length; i++) {
 		DsrChar c = source[i];
 		if (c == '-' || c == '~') {
 			negated = !negated;
@@ -958,12 +957,12 @@ double dsr::string_toDouble(const ReadableString& source) {
 	double result;
 	bool negated;
 	bool reachedDecimal;
-	int digitDivider;
+	int64_t digitDivider;
 	result = 0.0;
 	negated = false;
 	reachedDecimal = false;
 	digitDivider = 1;
-	for (int i = 0; i < source.length(); i++) {
+	for (int64_t i = 0; i < source.length; i++) {
 		DsrChar c = source[i];
 		if (c == '-' || c == '~') {
 			negated = !negated;
@@ -985,12 +984,12 @@ double dsr::string_toDouble(const ReadableString& source) {
 	}
 }
 
-int dsr::string_length(const ReadableString& source) {
-	return source.length();
+int64_t dsr::string_length(const ReadableString& source) {
+	return source.length;
 }
 
-int dsr::string_findFirst(const ReadableString& source, DsrChar toFind, int startIndex) {
-	for (int i = startIndex; i < source.length(); i++) {
+int64_t dsr::string_findFirst(const ReadableString& source, DsrChar toFind, int64_t startIndex) {
+	for (int64_t i = startIndex; i < source.length; i++) {
 		if (source[i] == toFind) {
 			return i;
 		}
@@ -998,8 +997,8 @@ int dsr::string_findFirst(const ReadableString& source, DsrChar toFind, int star
 	return -1;
 }
 
-int dsr::string_findLast(const ReadableString& source, DsrChar toFind) {
-	for (int i = source.length() - 1; i >= 0; i--) {
+int64_t dsr::string_findLast(const ReadableString& source, DsrChar toFind) {
+	for (int64_t i = source.length - 1; i >= 0; i--) {
 		if (source[i] == toFind) {
 			return i;
 		}
@@ -1007,27 +1006,27 @@ int dsr::string_findLast(const ReadableString& source, DsrChar toFind) {
 	return -1;
 }
 
-ReadableString dsr::string_exclusiveRange(const ReadableString& source, int inclusiveStart, int exclusiveEnd) {
+ReadableString dsr::string_exclusiveRange(const ReadableString& source, int64_t inclusiveStart, int64_t exclusiveEnd) {
 	return source.getRange(inclusiveStart, exclusiveEnd - inclusiveStart);
 }
 
-ReadableString dsr::string_inclusiveRange(const ReadableString& source, int inclusiveStart, int inclusiveEnd) {
+ReadableString dsr::string_inclusiveRange(const ReadableString& source, int64_t inclusiveStart, int64_t inclusiveEnd) {
 	return source.getRange(inclusiveStart, inclusiveEnd + 1 - inclusiveStart);
 }
 
-ReadableString dsr::string_before(const ReadableString& source, int exclusiveEnd) {
+ReadableString dsr::string_before(const ReadableString& source, int64_t exclusiveEnd) {
 	return string_exclusiveRange(source, 0, exclusiveEnd);
 }
 
-ReadableString dsr::string_until(const ReadableString& source, int inclusiveEnd) {
+ReadableString dsr::string_until(const ReadableString& source, int64_t inclusiveEnd) {
 	return string_inclusiveRange(source, 0, inclusiveEnd);
 }
 
-ReadableString dsr::string_from(const ReadableString& source, int inclusiveStart) {
-	return string_exclusiveRange(source, inclusiveStart, source.length());
+ReadableString dsr::string_from(const ReadableString& source, int64_t inclusiveStart) {
+	return string_exclusiveRange(source, inclusiveStart, source.length);
 }
 
-ReadableString dsr::string_after(const ReadableString& source, int exclusiveStart) {
+ReadableString dsr::string_after(const ReadableString& source, int64_t exclusiveStart) {
 	return string_from(source, exclusiveStart + 1);
 }
 
@@ -1063,7 +1062,7 @@ bool dsr::character_isWhiteSpace(DsrChar c) {
 
 // The greedy approach works here, because there's no ambiguity
 bool dsr::string_isInteger(const ReadableString& source, bool allowWhiteSpace) {
-	int readIndex = 0;
+	int64_t readIndex = 0;
 	if (allowWhiteSpace) {
 		PATTERN_STAR(WhiteSpace);
 	}
@@ -1083,7 +1082,7 @@ bool dsr::string_isDouble(const ReadableString& source, bool allowWhiteSpace) {
 		// No decimal detected
 		return string_isInteger(source, allowWhiteSpace);
 	} else {
-		int readIndex = 0;
+		int64_t readIndex = 0;
 		if (allowWhiteSpace) {
 			PATTERN_STAR(WhiteSpace);
 		}
