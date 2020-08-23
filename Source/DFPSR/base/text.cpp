@@ -49,6 +49,68 @@ static char toAscii(DsrChar c) {
 	}
 }
 
+ReadableString::ReadableString() {}
+
+ReadableString::~ReadableString() {}
+
+ReadableString::ReadableString(const DsrChar *content)
+: readSection(content), length(strlen_utf32(content)) {}
+
+ReadableString::ReadableString(const String& source) {
+	this->readSection = source.readSection;
+	this->length = source.length;
+	this->buffer = source.buffer;
+}
+
+// Not the fastest constructor, but won't bloat the public header
+// Hopefully most compilers know how to optimize this
+static ReadableString createSubString(const DsrChar *content, int64_t length, const Buffer &buffer) {
+	ReadableString result;
+	result.readSection = content;
+	result.length = length;
+	result.buffer = buffer;
+	return result;
+}
+
+String::String() {}
+String::String(const char* source) { this->append(source); }
+String::String(const char32_t* source) { this->append(source); }
+String::String(const std::string& source) { this->append(source); }
+String::String(const String& source) {
+	// Share immutable buffer
+	this->readSection = source.readSection;
+	this->length = source.length;
+	this->buffer = source.buffer;
+	this->writeSection = source.writeSection;
+}
+String::String(const ReadableString& source) {
+	const String* sharedSource = dynamic_cast<const String*>(&source);
+	if (sharedSource != nullptr) {
+		// Share immutable buffer when assigning String referred to as ReadableString
+		// + Passing String as a ReadableString reference is okay
+		// - Assigning String to a ReadableString loses access to the buffer
+		//   by having to construct a read-only string pointing to the data
+		this->readSection = sharedSource->readSection;
+		this->length = sharedSource->length;
+		this->buffer = sharedSource->buffer;
+		this->writeSection = sharedSource->writeSection;
+	} else {
+		// No buffer to share, just appending the content
+		this->append(source);
+	}
+}
+
+String::String(Buffer buffer, DsrChar *content, int64_t length)
+ : ReadableString(createSubString(content, length, buffer)), writeSection(content) {}
+
+DsrChar ReadableString::operator[] (int64_t index) const {
+	if (index < 0 || index >= this->length) {
+		return U'\0';
+	} else {
+		return this->readSection[index];
+	}
+}
+
 String& Printable::toStream(String& target) const {
 	return this->toStreamIndented(target, U"");
 }
@@ -141,24 +203,30 @@ String dsr::string_lowerCase(const ReadableString &text) {
 	return result;
 }
 
-// Allow passing literals without allocating heap memory for the result
-ReadableString dsr::string_removeOuterWhiteSpace(const ReadableString &text) {
-	int64_t first = -1;
-	int64_t last = -1;
+static int64_t findFirstNonWhite(const ReadableString &text) {
 	for (int64_t i = 0; i < text.length; i++) {
 		DsrChar c = text[i];
 		if (!character_isWhiteSpace(c)) {
-			first = i;
-			break;
+			return i;
 		}
 	}
+	return -1;
+}
+
+static int64_t findLastNonWhite(const ReadableString &text) {
 	for (int64_t i = text.length - 1; i >= 0; i--) {
 		DsrChar c = text[i];
 		if (!character_isWhiteSpace(c)) {
-			last = i;
-			break;
+			return i;
 		}
 	}
+	return -1;
+}
+
+// Allow passing literals without allocating heap memory for the result
+ReadableString dsr::string_removeOuterWhiteSpace(const ReadableString &text) {
+	int64_t first = findFirstNonWhite(text);
+	int64_t last = findLastNonWhite(text);
 	if (first == -1) {
 		// Only white space
 		return ReadableString();
@@ -628,68 +696,6 @@ Buffer dsr::string_saveToMemory(const ReadableString& content, CharacterEncoding
 	return result;
 }
 
-DsrChar ReadableString::operator[] (int64_t index) const {
-	if (index < 0 || index >= this->length) {
-		return U'\0';
-	} else {
-		return this->readSection[index];
-	}
-}
-
-ReadableString::ReadableString() {}
-
-ReadableString::~ReadableString() {}
-
-ReadableString::ReadableString(const DsrChar *content)
-: readSection(content), length(strlen_utf32(content)) {}
-
-ReadableString::ReadableString(const String& source) {
-	this->readSection = source.readSection;
-	this->length = source.length;
-	this->buffer = source.buffer;
-}
-
-// Not the fastest constructor, but won't bloat the public header
-// Hopefully most compilers know how to optimize this
-static ReadableString createSubString(const DsrChar *content, int64_t length, const Buffer &buffer) {
-	ReadableString result;
-	result.readSection = content;
-	result.length = length;
-	result.buffer = buffer;
-	return result;
-}
-
-String::String() {}
-String::String(const char* source) { this->append(source); }
-String::String(const char32_t* source) { this->append(source); }
-String::String(const std::string& source) { this->append(source); }
-String::String(const String& source) {
-	// Share immutable buffer
-	this->readSection = source.readSection;
-	this->length = source.length;
-	this->buffer = source.buffer;
-	this->writeSection = source.writeSection;
-}
-String::String(const ReadableString& source) {
-	const String* sharedSource = dynamic_cast<const String*>(&source);
-	if (sharedSource != nullptr) {
-		// Share immutable buffer when assigning String referred to as ReadableString
-		// + Passing String as a ReadableString reference is okay
-		// - Assigning String to a ReadableString loses access to the buffer
-		//   by having to construct a read-only string pointing to the data
-		this->readSection = sharedSource->readSection;
-		this->length = sharedSource->length;
-		this->buffer = sharedSource->buffer;
-		this->writeSection = sharedSource->writeSection;
-	} else {
-		// No buffer to share, just appending the content
-		this->append(source);
-	}
-}
-
-String::String(Buffer buffer, DsrChar *content, int64_t length)
- : ReadableString(createSubString(content, length, buffer)), writeSection(content) {}
-
 int64_t String::capacity() {
 	if (this->buffer.get() == nullptr) {
 		return 0;
@@ -892,19 +898,92 @@ void dsr::string_split_callback(std::function<void(ReadableString)> action, cons
 		}
 	}
 	if (source.length > sectionStart) {
-		action(string_exclusiveRange(source, sectionStart, source.length));;
+		if (removeWhiteSpace) {
+			action(string_removeOuterWhiteSpace(string_exclusiveRange(source, sectionStart, source.length)));
+		} else {
+			action(string_exclusiveRange(source, sectionStart, source.length));
+		}
+	}
+}
+
+// Optimization for string_split
+// TODO: Clean up!
+static String createSubString_shared(const DsrChar *content, int64_t length, const Buffer &buffer, char32_t* writeSection) {
+	String result;
+	result.readSection = content;
+	result.length = length;
+	result.buffer = buffer;
+	result.writeSection = writeSection;
+	return result;
+}
+static String string_exclusiveRange_shared(const String& source, int64_t inclusiveStart, int64_t exclusiveEnd) {
+	// Return empty string for each complete miss
+	if (inclusiveStart >= source.length || exclusiveEnd <= 0) { return String(); }
+	// Automatically clamping to valid range
+	if (inclusiveStart < 0) { inclusiveStart = 0; }
+	if (exclusiveEnd > source.length) { exclusiveEnd = source.length; }
+	// Return the overlapping interval
+	return createSubString_shared(&(source.readSection[inclusiveStart]), exclusiveEnd - inclusiveStart, source.buffer, source.writeSection);
+}
+static String string_inclusiveRange_shared(const String& source, int64_t inclusiveStart, int64_t inclusiveEnd) {
+	return string_exclusiveRange_shared(source, inclusiveStart, inclusiveEnd + 1);
+}
+static String string_removeOuterWhiteSpace_shared(const String &text) {
+	int64_t first = findFirstNonWhite(text);
+	int64_t last = findLastNonWhite(text);
+	if (first == -1) {
+		// Only white space
+		return ReadableString();
+	} else {
+		// Subset
+		return string_inclusiveRange_shared(text, first, last);
+	}
+}
+static void string_split_callback_shared(std::function<void(String)> action, const String& source, DsrChar separator, bool removeWhiteSpace) {
+	int64_t sectionStart = 0;
+	for (int64_t i = 0; i < source.length; i++) {
+		DsrChar c = source[i];
+		if (c == separator) {
+			String element = string_exclusiveRange_shared(source, sectionStart, i);
+			if (removeWhiteSpace) {
+				action(string_removeOuterWhiteSpace_shared(element));
+			} else {
+				action(element);
+			}
+			sectionStart = i + 1;
+		}
+	}
+	if (source.length > sectionStart) {
+		if (removeWhiteSpace) {
+			action(string_removeOuterWhiteSpace_shared(string_exclusiveRange_shared(source, sectionStart, source.length)));
+		} else {
+			action(string_exclusiveRange_shared(source, sectionStart, source.length));
+		}
 	}
 }
 
 List<String> dsr::string_split(const ReadableString& source, DsrChar separator, bool removeWhiteSpace) {
 	List<String> result;
-	string_split_callback([&result, removeWhiteSpace](ReadableString element) {
-		if (removeWhiteSpace) {
-			result.push(string_removeOuterWhiteSpace(element));
-		} else {
-			result.push(element);
-		}
-	}, source, separator);
+	const String* sharedSource = dynamic_cast<const String*>(&source);
+	if (sharedSource != nullptr) {
+		// Source is allocated as String
+		string_split_callback_shared([&result, removeWhiteSpace](String element) {
+			if (removeWhiteSpace) {
+				result.push(string_removeOuterWhiteSpace_shared(element));
+			} else {
+				result.push(element);
+			}
+		}, source, separator, removeWhiteSpace);
+	} else {
+		// Source is allocated as ReadableString
+		string_split_callback([&result, removeWhiteSpace](ReadableString element) {
+			if (removeWhiteSpace) {
+				result.push(string_removeOuterWhiteSpace(element));
+			} else {
+				result.push(element);
+			}
+		}, source, separator, removeWhiteSpace);
+	}
 	return result;
 }
 

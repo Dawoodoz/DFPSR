@@ -257,21 +257,25 @@ START_TEST(String)
 	}
 	{ // String splitting by shared reference counted buffer
 		String source = U"a . b . c . d";
+		String source2 = U"a . b .\tc";
+		ASSERT_EQUAL(string_getBufferUseCount(source), 1);
+		ASSERT_EQUAL(string_getBufferUseCount(source2), 1);
 		List<String> result;
 		result = string_split(source, U'.', false);
-		ASSERT_EQUAL(string_getBufferUseCount(source), 1);
 		ASSERT_EQUAL(result.length(), 4);
 		ASSERT_MATCH(result[0], U"a ");
 		ASSERT_MATCH(result[1], U" b ");
 		ASSERT_MATCH(result[2], U" c ");
 		ASSERT_MATCH(result[3], U" d");
-		//ASSERT_EQUAL(string_getBufferUseCount(source), 5);
-		result = string_split(U"a . b .\tc", U'.', true);
+		ASSERT_EQUAL(string_getBufferUseCount(source), 5);
+		ASSERT_EQUAL(string_getBufferUseCount(source2), 1);
+		result = string_split(source2, U'.', true);
 		ASSERT_EQUAL(result.length(), 3);
 		ASSERT_MATCH(result[0], U"a");
 		ASSERT_MATCH(result[1], U"b");
 		ASSERT_MATCH(result[2], U"c");
-		//ASSERT_EQUAL(string_getBufferUseCount(source), 4);
+		ASSERT_EQUAL(string_getBufferUseCount(source), 1);
+		ASSERT_EQUAL(string_getBufferUseCount(source2), 4);
 	}
 	{ // Callback splitting
 		String numbers = U"1, 3, 5, 7, 9";
