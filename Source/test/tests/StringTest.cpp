@@ -181,10 +181,6 @@ START_TEST(String)
 	ASSERT_MATCH(dsr::string_lowerCase(U"abc1"), U"abc1");
 	ASSERT_MATCH(dsr::string_lowerCase(U"Abc12"), U"abc12");
 	ASSERT_MATCH(dsr::string_lowerCase(U"ABC123"), U"abc123");
-	// Complete white space removal
-	ASSERT_MATCH(dsr::string_removeAllWhiteSpace(U" "), U"");
-	ASSERT_MATCH(dsr::string_removeAllWhiteSpace(U" abc\n	"), U"abc");
-	ASSERT_MATCH(dsr::string_removeAllWhiteSpace(U" a \f sentence \r surrounded	\n by spa\vce	\t"), U"asentencesurroundedbyspace");
 	// White space removal by pointing to a section of the original input
 	ASSERT_MATCH(dsr::string_removeOuterWhiteSpace(U" "), U"");
 	ASSERT_MATCH(dsr::string_removeOuterWhiteSpace(U"  abc  "), U"abc");
