@@ -911,68 +911,24 @@ static String createSubString_shared(const DsrChar *content, int64_t length, con
 	result.writeSection = writeSection;
 	return result;
 }
-static String string_exclusiveRange_shared(const String& source, int64_t inclusiveStart, int64_t exclusiveEnd) {
-	// Return empty string for each complete miss
-	if (inclusiveStart >= source.length || exclusiveEnd <= 0) { return String(); }
-	// Automatically clamping to valid range
-	if (inclusiveStart < 0) { inclusiveStart = 0; }
-	if (exclusiveEnd > source.length) { exclusiveEnd = source.length; }
-	// Return the overlapping interval
-	return createSubString_shared(&(source.readSection[inclusiveStart]), exclusiveEnd - inclusiveStart, source.buffer, source.writeSection);
-}
-static String string_inclusiveRange_shared(const String& source, int64_t inclusiveStart, int64_t inclusiveEnd) {
-	return string_exclusiveRange_shared(source, inclusiveStart, inclusiveEnd + 1);
-}
-static String string_removeOuterWhiteSpace_shared(const String &text) {
-	int64_t first = findFirstNonWhite(text);
-	int64_t last = findLastNonWhite(text);
-	if (first == -1) {
-		// Only white space
-		return ReadableString();
-	} else {
-		// Subset
-		return string_inclusiveRange_shared(text, first, last);
-	}
-}
-static void string_split_callback_shared(std::function<void(String)> action, const String& source, DsrChar separator, bool removeWhiteSpace) {
-	int64_t sectionStart = 0;
-	for (int64_t i = 0; i < source.length; i++) {
-		DsrChar c = source[i];
-		if (c == separator) {
-			String element = string_exclusiveRange_shared(source, sectionStart, i);
-			if (removeWhiteSpace) {
-				action(string_removeOuterWhiteSpace_shared(element));
-			} else {
-				action(element);
-			}
-			sectionStart = i + 1;
-		}
-	}
-	if (source.length > sectionStart) {
-		if (removeWhiteSpace) {
-			action(string_removeOuterWhiteSpace_shared(string_exclusiveRange_shared(source, sectionStart, source.length)));
-		} else {
-			action(string_exclusiveRange_shared(source, sectionStart, source.length));
-		}
-	}
-}
-
 List<String> dsr::string_split(const ReadableString& source, DsrChar separator, bool removeWhiteSpace) {
 	List<String> result;
 	String commonBuffer;
-	const String* sharedSource = dynamic_cast<const String*>(&source);
-	if (sharedSource == nullptr) {
+	if (buffer_exists(source.buffer)) {
+		// Re-use the existing buffer
+		commonBuffer = createSubString_shared(source.readSection, source.length, source.buffer, const_cast<char32_t*>(source.readSection));
+	} else {
 		// Clone the whole input into one allocation to avoid fragmenting the heap with many small allocations
 		commonBuffer = source;
 	}
 	// Source is allocated as String
-	string_split_callback_shared([&result, removeWhiteSpace](String element) {
+	string_split_callback([&result, removeWhiteSpace](String element) {
 		if (removeWhiteSpace) {
-			result.push(string_removeOuterWhiteSpace_shared(element));
+			result.push(string_removeOuterWhiteSpace(element));
 		} else {
 			result.push(element);
 		}
-	}, source, separator, removeWhiteSpace);
+	}, commonBuffer, separator, removeWhiteSpace);
 	return result;
 }
 
