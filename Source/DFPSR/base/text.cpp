@@ -141,18 +141,6 @@ String dsr::string_lowerCase(const ReadableString &text) {
 	return result;
 }
 
-String dsr::string_removeAllWhiteSpace(const ReadableString &text) {
-	String result;
-	result.reserve(text.length);
-	for (int64_t i = 0; i < text.length; i++) {
-		DsrChar c = text[i];
-		if (!character_isWhiteSpace(c)) {
-			result.appendChar(c);
-		}
-	}
-	return result;
-}
-
 ReadableString dsr::string_removeOuterWhiteSpace(const ReadableString &text) {
 	int64_t first = -1;
 	int64_t last = -1;

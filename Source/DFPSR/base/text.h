@@ -353,10 +353,7 @@ String string_upperCase(const ReadableString &text);
 // Post-condition: Returns text converted to lower case.
 String string_lowerCase(const ReadableString &text);
 
-// Post-condition: Returns a clone of text without any white-space (space, tab, carriage-return, null terminator, et cetera).
-String string_removeAllWhiteSpace(const ReadableString &text);
 // Post-condition: Returns a sub-set of text without surrounding white-space (space, tab and carriage-return).
-// Unlike string_removeAllWhiteSpace, string_removeOuterWhiteSpace does not require allocating a new buffer.
 ReadableString string_removeOuterWhiteSpace(const ReadableString &text);
 
 // Post-condition: Returns rawText wrapped in a quote.
