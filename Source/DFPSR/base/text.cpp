@@ -902,7 +902,7 @@ void dsr::string_split_callback(std::function<void(ReadableString)> action, cons
 }
 
 // Optimization for string_split
-// TODO: Clean up!
+// TODO: Clean up all these functions by constructing String from ReadableString without cloning!
 static String createSubString_shared(const DsrChar *content, int64_t length, const Buffer &buffer, char32_t* writeSection) {
 	String result;
 	result.readSection = content;
@@ -973,21 +973,6 @@ List<String> dsr::string_split(const ReadableString& source, DsrChar separator, 
 			result.push(element);
 		}
 	}, source, separator, removeWhiteSpace);
-	return result;
-}
-
-void dsr::string_dangerous_split_inPlace(List<ReadableString> &target, const ReadableString& source, DsrChar separator, bool appendResult) {
-	if (!appendResult) {
-		target.clear();
-	}
-	string_split_callback([&target](ReadableString section){
-		target.push(section);
-	}, source, separator);
-}
-
-List<ReadableString> dsr::string_dangerous_split(const ReadableString& source, DsrChar separator) {
-	List<ReadableString> result;
-	string_dangerous_split_inPlace(result, source, separator);
 	return result;
 }
 

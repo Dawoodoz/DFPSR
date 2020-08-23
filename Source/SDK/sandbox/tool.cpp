@@ -387,7 +387,7 @@ static void loadPlyModel(ParserState& state, const ReadableString& content, bool
 	int startPointIndex = model_getNumberOfPoints(targetModel);
 	int targetPart = shadow ? 0 : state.part;
 	// Split lines
-	List<ReadableString> lines = string_dangerous_split(content, U'\n');
+	List<String> lines = string_split(content, U'\n', true);
 	List<PlyElement> elements;
 	bool readingContent = false; // True after passing end_header
 	int elementIndex = -1; // current member of elements
@@ -407,9 +407,7 @@ static void loadPlyModel(ParserState& state, const ReadableString& content, bool
 	}
 	for (int l = 0; l < lines.length(); l++) {
 		// Tokenize the current line
-		ReadableString currentLine = string_removeOuterWhiteSpace(lines[l]);
-		List<ReadableString> tokens;
-		string_dangerous_split_inPlace(tokens, currentLine, U' ');
+		List<String> tokens = string_split(lines[l], U' ');
 		if (tokens.length() > 0 && !string_caseInsensitiveMatch(tokens[0], U"COMMENT")) {
 			if (readingContent) {
 				// Parse geometry
@@ -691,7 +689,7 @@ static ImageRgbaU8 createDebugTexture() {
 }
 ImageRgbaU8 debugTexture = createDebugTexture();
 
-static void parse_shape(ParserState& state, List<ReadableString>& args, bool shadow) {
+static void parse_shape(ParserState& state, List<String>& args, bool shadow) {
 	if (state.part == -1) {
 		printText("    Cannot generate a ", args[0], " without a part.\n");
 	}
@@ -723,8 +721,7 @@ static void parse_shape(ParserState& state, List<ReadableString>& args, bool sha
 }
 
 static void parse_dsm(ParserState& state, const ReadableString& content) {
-	List<ReadableString> lines = string_dangerous_split(content, U'\n');
-	List<ReadableString> args; // Reusing the buffer for in-place splitting of arguments on each line
+	List<String> lines = string_split(content, U'\n');
 	for (int l = 0; l < lines.length(); l++) {
 		// Get the current line
 		ReadableString line = lines[l];
@@ -746,7 +743,7 @@ static void parse_dsm(ParserState& state, const ReadableString& content) {
 			} else if (colonIndex > -1) {
 				ReadableString command = string_removeOuterWhiteSpace(string_before(line, colonIndex));
 				ReadableString argContent = string_after(line, colonIndex);
-				string_dangerous_split_inPlace(args, argContent, U',');
+				List<String> args = string_split(argContent, U',');
 				for (int a = 0; a < args.length(); a++) {
 					args[a] = string_removeOuterWhiteSpace(args[a]);
 				}

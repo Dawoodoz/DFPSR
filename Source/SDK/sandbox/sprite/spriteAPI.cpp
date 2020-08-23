@@ -34,7 +34,7 @@ struct SpriteConfig {
 				} else if (string_caseInsensitiveMatch(key, U"MaxBound")) {
 					this->maxBound = parseFVector3D(value);
 				} else if (string_caseInsensitiveMatch(key, U"Points")) {
-					List<ReadableString> values = string_dangerous_split(value, U',');
+					List<String> values = string_split(value, U',');
 					if (values.length() % 3 != 0) {
 						throwError("Points contained ", values.length(), " values, which is not evenly divisible by three!");
 					} else {
@@ -45,7 +45,7 @@ struct SpriteConfig {
 						}
 					}
 				} else if (string_caseInsensitiveMatch(key, U"TriangleIndices")) {
-					List<ReadableString> values = string_dangerous_split(value, U',');
+					List<String> values = string_split(value, U',');
 					if (values.length() % 3 != 0) {
 						throwError("TriangleIndices contained ", values.length(), " values, which is not evenly divisible by three!");
 					} else {
