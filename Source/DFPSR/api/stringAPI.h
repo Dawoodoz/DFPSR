@@ -21,8 +21,8 @@
 //    3. This notice may not be removed or altered from any source
 //    distribution.
 
-#ifndef DFPSR_BASE_TEXT
-#define DFPSR_BASE_TEXT
+#ifndef DFPSR_API_STRING
+#define DFPSR_API_STRING
 
 #include <stdint.h>
 #include <string>

@@ -27,7 +27,7 @@
 #include <stdint.h>
 #include <cassert>
 #include <math.h>
-#include "../base/text.h"
+#include "../api/stringAPI.h"
 
 // Since using templates for vector operands may include unwanted function
 // definitions that does not make any sense and will crash when called,

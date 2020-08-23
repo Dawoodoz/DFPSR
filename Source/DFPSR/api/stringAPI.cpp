@@ -28,7 +28,7 @@
 #include <streambuf>
 #include <cstring>
 #include <stdexcept>
-#include "text.h"
+#include "stringAPI.h"
 #include "../api/fileAPI.h"
 
 using namespace dsr;

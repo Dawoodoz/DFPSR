@@ -23,9 +23,8 @@
 
 #include <fstream>
 #include <cstdlib>
+#include "fileAPI.h"
 #include "bufferAPI.h"
-#include "../math/scalar.h"
-#include "../base/text.h"
 
 namespace dsr {
 

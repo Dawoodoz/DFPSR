@@ -26,7 +26,7 @@
 
 #include "../image/ImageRgbaU8.h"
 #include "../collection/List.h"
-#include "../base/text.h"
+#include "../api/stringAPI.h"
 
 namespace dsr {
 

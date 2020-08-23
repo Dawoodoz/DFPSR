@@ -28,7 +28,7 @@
 #include "../api/types.h"
 #include "../base/simd.h"
 #include "../base/endian.h"
-#include "../base/text.h"
+#include "../api/stringAPI.h"
 
 namespace dsr {
 

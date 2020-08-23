@@ -28,7 +28,7 @@
 #include <memory>
 #include "../gui/VisualComponent.h"
 #include "../gui/BackendWindow.h"
-#include "../base/text.h"
+#include "../api/stringAPI.h"
 #include "../api/types.h"
 
 // The DSR window is responsible for connecting visual interfaces with the backend window.

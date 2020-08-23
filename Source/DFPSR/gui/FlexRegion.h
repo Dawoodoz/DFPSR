@@ -27,7 +27,7 @@
 #include <stdint.h>
 #include "../math/IVector.h"
 #include "../math/IRect.h"
-#include "../base/text.h"
+#include "../api/stringAPI.h"
 #include "../persistent/ClassFactory.h"
 
 namespace dsr {

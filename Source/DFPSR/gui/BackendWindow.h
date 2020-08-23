@@ -29,7 +29,7 @@
 #include "InputEvent.h"
 #include "../image/ImageRgbaU8.h"
 #include "../api/imageAPI.h"
-#include "../base/text.h"
+#include "../api/stringAPI.h"
 #include "../collection/List.h"
 
 namespace dsr {

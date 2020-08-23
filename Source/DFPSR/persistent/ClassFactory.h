@@ -24,7 +24,7 @@
 #ifndef DFPSR_PERSISTENT_CLASSFACTORY
 #define DFPSR_PERSISTENT_CLASSFACTORY
 
-#include "../base/text.h"
+#include "../api/stringAPI.h"
 #include "../collection/List.h"
 #include <memory>
 

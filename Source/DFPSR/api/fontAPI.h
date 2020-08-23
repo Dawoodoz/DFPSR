@@ -25,7 +25,7 @@
 #define DFPSR_API_FONT
 
 #include "types.h"
-#include "../base/text.h"
+#include "../api/stringAPI.h"
 
 namespace dsr {
 	// Get a handle to the default font

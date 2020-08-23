@@ -25,7 +25,7 @@
 #define DFPSR_IMAGE_COLOR
 
 #include <stdint.h>
-#include "../base/text.h"
+#include "../api/stringAPI.h"
 
 namespace dsr {
 

@@ -29,7 +29,7 @@
 #include <memory>
 #include "../image/Color.h"
 #include "../math/IRect.h"
-#include "../base/text.h"
+#include "stringAPI.h"
 
 // Define DFPSR_INTERNAL_ACCESS before any include to get internal access to exposed types
 #ifdef DFPSR_INTERNAL_ACCESS

@@ -24,7 +24,7 @@
 #ifndef DFPSR_API_CONFIG
 #define DFPSR_API_CONFIG
 
-#include "../base/text.h"
+#include "stringAPI.h"
 #include <functional>
 
 namespace dsr {

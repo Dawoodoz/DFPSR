@@ -27,7 +27,7 @@
 #include <stdint.h>
 #include "../../api/types.h"
 #include "../../collection/List.h"
-#include "../../base/text.h"
+#include "../../api/stringAPI.h"
 #include "../shader/Shader.h"
 #include "../Camera.h"
 #include "../ResourcePool.h"

@@ -22,7 +22,7 @@
 //    distribution.
 
 #include "SafePointer.h"
-#include "text.h"
+#include "../api/stringAPI.h"
 
 using namespace dsr;
 

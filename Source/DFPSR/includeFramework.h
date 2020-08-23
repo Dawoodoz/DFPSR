@@ -6,7 +6,7 @@
 
 	// Types needed to use the APIs
 	#include "math/includeMath.h"
-	#include "base/text.h"
+	#include "api/stringAPI.h"
 
 	// Additional functionality for convenience (not to be used in any API)
 	#include "collection/includeCollection.h" // Safer and easier to use than std collections

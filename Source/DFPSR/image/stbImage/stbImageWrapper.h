@@ -3,7 +3,7 @@
 #define DFPSR_API_IMAGE_STB_WRAPPER
 
 #include "../../api/imageAPI.h"
-#include "../../base/text.h"
+#include "../../api/stringAPI.h"
 
 namespace dsr {
 

@@ -25,7 +25,7 @@
 #ifndef DFPSR_FIXED_POINT
 #define DFPSR_FIXED_POINT
 
-#include "../base/text.h"
+#include "../api/stringAPI.h"
 
 namespace dsr {
 

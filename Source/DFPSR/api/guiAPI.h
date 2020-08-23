@@ -26,7 +26,7 @@
 #define DFPSR_API_GUI
 
 #include "types.h"
-#include "../base/text.h"
+#include "../api/stringAPI.h"
 #include "../gui/InputEvent.h"
 
 // createBackendWindow should be implemented outside of the core framework

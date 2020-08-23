@@ -24,7 +24,7 @@
 #ifndef DFPSR_API_FILE
 #define DFPSR_API_FILE
 
-#include "../base/text.h"
+#include "../api/stringAPI.h"
 #include "bufferAPI.h"
 
 // A module for file access that exists to prevent cyclic dependencies between strings and buffers.
