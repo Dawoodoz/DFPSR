@@ -964,26 +964,20 @@ static void string_split_callback_shared(std::function<void(String)> action, con
 
 List<String> dsr::string_split(const ReadableString& source, DsrChar separator, bool removeWhiteSpace) {
 	List<String> result;
+	String commonBuffer;
 	const String* sharedSource = dynamic_cast<const String*>(&source);
-	if (sharedSource != nullptr) {
-		// Source is allocated as String
-		string_split_callback_shared([&result, removeWhiteSpace](String element) {
-			if (removeWhiteSpace) {
-				result.push(string_removeOuterWhiteSpace_shared(element));
-			} else {
-				result.push(element);
-			}
-		}, source, separator, removeWhiteSpace);
-	} else {
-		// Source is allocated as ReadableString
-		string_split_callback([&result, removeWhiteSpace](ReadableString element) {
-			if (removeWhiteSpace) {
-				result.push(string_removeOuterWhiteSpace(element));
-			} else {
-				result.push(element);
-			}
-		}, source, separator, removeWhiteSpace);
+	if (sharedSource == nullptr) {
+		// Clone the whole input into one allocation to avoid fragmenting the heap with many small allocations
+		commonBuffer = source;
 	}
+	// Source is allocated as String
+	string_split_callback_shared([&result, removeWhiteSpace](String element) {
+		if (removeWhiteSpace) {
+			result.push(string_removeOuterWhiteSpace_shared(element));
+		} else {
+			result.push(element);
+		}
+	}, source, separator, removeWhiteSpace);
 	return result;
 }
 
