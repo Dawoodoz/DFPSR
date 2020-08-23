@@ -16,6 +16,10 @@ chmod +x ${ROOT_PATH}/tools/build.sh
 
 # Compile and link
 ${ROOT_PATH}/tools/build.sh $1 $2 $3 $4 $5 $6 $7 $8 $9
+if [ $? -ne 0 ]
+then
+	exit 1
+fi
 
 echo "Starting application at ${TARGET_FILE}"
 ${TARGET_FILE}
