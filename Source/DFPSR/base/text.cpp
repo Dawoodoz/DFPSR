@@ -33,6 +33,11 @@
 
 using namespace dsr;
 
+static void atomic_append(String &target, const char* source);
+static void atomic_append(String &target, const ReadableString& source);
+static void atomic_append(String &target, const char32_t* source);
+static void atomic_append(String &target, const std::string& source);
+
 static int64_t strlen_utf32(const char32_t *content) {
 	int64_t length = 0;
 	while (content[length] != 0) {
@@ -82,9 +87,9 @@ static String createSubString_shared(const DsrChar *content, int64_t length, con
 }
 
 String::String() {}
-String::String(const char* source) { this->append(source); }
-String::String(const char32_t* source) { this->append(source); }
-String::String(const std::string& source) { this->append(source); }
+String::String(const char* source) { atomic_append(*this, source); }
+String::String(const char32_t* source) { atomic_append(*this, source); }
+String::String(const std::string& source) { atomic_append(*this, source); }
 String::String(const String& source) {
 	// Share immutable buffer
 	this->readSection = source.readSection;
@@ -100,7 +105,7 @@ String::String(const ReadableString& source) {
 		this->writeSection = const_cast<char32_t*>(source.readSection); // Still safe because of immutability
 	} else {
 		// No buffer to share, just appending the content
-		this->append(source);
+		atomic_append(*this, source);
 	}
 }
 
@@ -190,7 +195,7 @@ String dsr::string_upperCase(const ReadableString &text) {
 	String result;
 	string_reserve(result, text.length);
 	for (int64_t i = 0; i < text.length; i++) {
-		result.appendChar(towupper(text[i]));
+		string_appendChar(result, towupper(text[i]));
 	}
 	return result;
 }
@@ -199,7 +204,7 @@ String dsr::string_lowerCase(const ReadableString &text) {
 	String result;
 	string_reserve(result, text.length);
 	for (int64_t i = 0; i < text.length; i++) {
-		result.appendChar(towlower(text[i]));
+		string_appendChar(result, towlower(text[i]));
 	}
 	return result;
 }
@@ -240,34 +245,34 @@ ReadableString dsr::string_removeOuterWhiteSpace(const ReadableString &text) {
 String dsr::string_mangleQuote(const ReadableString &rawText) {
 	String result;
 	string_reserve(result, rawText.length + 2);
-	result.appendChar(U'\"'); // Begin quote
+	string_appendChar(result, U'\"'); // Begin quote
 	for (int64_t i = 0; i < rawText.length; i++) {
 		DsrChar c = rawText[i];
 		if (c == U'\"') { // Double quote
-			result.append(U"\\\"");
+			string_append(result, U"\\\"");
 		} else if (c == U'\\') { // Backslash
-			result.append(U"\\\\");
+			string_append(result, U"\\\\");
 		} else if (c == U'\a') { // Audible bell
-			result.append(U"\\a");
+			string_append(result, U"\\a");
 		} else if (c == U'\b') { // Backspace
-			result.append(U"\\b");
+			string_append(result, U"\\b");
 		} else if (c == U'\f') { // Form feed
-			result.append(U"\\f");
+			string_append(result, U"\\f");
 		} else if (c == U'\n') { // Line feed
-			result.append(U"\\n");
+			string_append(result, U"\\n");
 		} else if (c == U'\r') { // Carriage return
-			result.append(U"\\r");
+			string_append(result, U"\\r");
 		} else if (c == U'\t') { // Horizontal tab
-			result.append(U"\\t");
+			string_append(result, U"\\t");
 		} else if (c == U'\v') { // Vertical tab
-			result.append(U"\\v");
+			string_append(result, U"\\v");
 		} else if (c == U'\0') { // Null terminator
-			result.append(U"\\0");
+			string_append(result, U"\\0");
 		} else {
-			result.appendChar(c);
+			string_appendChar(result, c);
 		}
 	}
-	result.appendChar(U'\"'); // End quote
+	string_appendChar(result, U'\"'); // End quote
 	return result;
 }
 
@@ -283,25 +288,25 @@ String dsr::string_unmangleQuote(const ReadableString& mangledText) {
 			if (c == U'\\') { // Escape character
 				DsrChar c2 = mangledText[i + 1];
 				if (c2 == U'\"') { // Double quote
-					result.appendChar(U'\"');
+					string_appendChar(result, U'\"');
 				} else if (c2 == U'\\') { // Back slash
-					result.appendChar(U'\\');
+					string_appendChar(result, U'\\');
 				} else if (c2 == U'a') { // Audible bell
-					result.appendChar(U'\a');
+					string_appendChar(result, U'\a');
 				} else if (c2 == U'b') { // Backspace
-					result.appendChar(U'\b');
+					string_appendChar(result, U'\b');
 				} else if (c2 == U'f') { // Form feed
-					result.appendChar(U'\f');
+					string_appendChar(result, U'\f');
 				} else if (c2 == U'n') { // Line feed
-					result.appendChar(U'\n');
+					string_appendChar(result, U'\n');
 				} else if (c2 == U'r') { // Carriage return
-					result.appendChar(U'\r');
+					string_appendChar(result, U'\r');
 				} else if (c2 == U't') { // Horizontal tab
-					result.appendChar(U'\t');
+					string_appendChar(result, U'\t');
 				} else if (c2 == U'v') { // Vertical tab
-					result.appendChar(U'\v');
+					string_appendChar(result, U'\v');
 				} else if (c2 == U'0') { // Null terminator
-					result.appendChar(U'\0');
+					string_appendChar(result, U'\0');
 				}
 				i++; // Consume both characters
 			} else {
@@ -323,7 +328,7 @@ String dsr::string_unmangleQuote(const ReadableString& mangledText) {
 				} else if (c == U'\0') { // Null terminator
 					 throwError(U"Unmangled null terminator detected in string_unmangleQuote!\n", mangledText, "\n");
 				} else {
-					result.appendChar(c);
+					string_appendChar(result, c);
 				}
 			}
 		}
@@ -336,7 +341,7 @@ static void uintToString_arabic(String& target, uint64_t value) {
 	DsrChar digits[bufferSize];
 	int64_t usedSize = 0;
 	if (value == 0) {
-		target.appendChar(U'0');
+		string_appendChar(target, U'0');
 	} else {
 		while (usedSize < bufferSize) {
 			DsrChar digit = U'0' + (value % 10u);
@@ -349,7 +354,7 @@ static void uintToString_arabic(String& target, uint64_t value) {
 		}
 		while (usedSize > 0) {
 			usedSize--;
-			target.appendChar(digits[usedSize]);
+			string_appendChar(target, digits[usedSize]);
 		}
 	}
 }
@@ -358,7 +363,7 @@ static void intToString_arabic(String& target, int64_t value) {
 	if (value >= 0) {
 		uintToString_arabic(target, (uint64_t)value);
 	} else {
-		target.appendChar(U'-');
+		string_appendChar(target, U'-');
 		uintToString_arabic(target, (uint64_t)(-value));
 	}
 }
@@ -384,7 +389,7 @@ static void doubleToString_arabic(String& target, double value) {
 		}
 	}
 	for (int64_t c = 0; c <= lastValueIndex; c++) {
-		target.appendChar(result[c]);
+		string_appendChar(target, result[c]);
 	}
 }
 
@@ -533,7 +538,7 @@ String dsr::string_loadFromMemory(Buffer fileContent) {
 	string_reserve(result, characterCount);
 	// Stream output to the result string
 	UTF32WriterFunction reciever = [&result](DsrChar character) {
-		result.appendChar(character);
+		string_appendChar(result, character);
 	};
 	feedStringFromFileBuffer(reciever, buffer_dangerous_getUnsafeData(fileContent), buffer_getSize(fileContent));
 	return result;
@@ -772,9 +777,9 @@ static void expand(String &target, int64_t newLength, bool affectUsedLength) {
 		if (newLength > getCapacity(target)) {
 			reallocateBuffer(target, newLength, true);
 		}
-	}
-	if (affectUsedLength) {
-		target.length = newLength;
+		if (affectUsedLength) {
+			target.length = newLength;
+		}
 	}
 }
 
@@ -803,83 +808,84 @@ void dsr::string_reserve(String& target, int64_t minimumLength) {
 	} \
 }
 // TODO: See if ascii litterals can be checked for values above 127 in compile-time
-void String::append(const char* source) { APPEND(*this, source, strlen(source), 0xFF); }
+static void atomic_append(String &target, const char* source) { APPEND(target, source, strlen(source), 0xFF); }
 // TODO: Use memcpy when appending input of the same format
-void String::append(const ReadableString& source) { APPEND(*this, source, source.length, 0xFFFFFFFF); }
-void String::append(const char32_t* source) { APPEND(*this, source, strlen_utf32(source), 0xFFFFFFFF); }
-void String::append(const std::string& source) { APPEND(*this, source.c_str(), (int64_t)source.size(), 0xFF); }
-void String::appendChar(DsrChar source) { APPEND(*this, &source, 1, 0xFFFFFFFF); }
+static void atomic_append(String &target, const ReadableString& source) { APPEND(target, source, source.length, 0xFFFFFFFF); }
+static void atomic_append(String &target, const char32_t* source) { APPEND(target, source, strlen_utf32(source), 0xFFFFFFFF); }
+static void atomic_append(String &target, const std::string& source) { APPEND(target, source.c_str(), (int64_t)source.size(), 0xFF); }
+
+void dsr::string_appendChar(String& target, DsrChar value) { APPEND(target, &value, 1, 0xFFFFFFFF); }
 
 String& dsr::string_toStreamIndented(String& target, const Printable& source, const ReadableString& indentation) {
 	return source.toStreamIndented(target, indentation);
 }
 String& dsr::string_toStreamIndented(String& target, const char* value, const ReadableString& indentation) {
-	target.append(indentation);
-	target.append(value);
+	atomic_append(target, indentation);
+	atomic_append(target, value);
 	return target;
 }
 String& dsr::string_toStreamIndented(String& target, const ReadableString& value, const ReadableString& indentation) {
-	target.append(indentation);
-	target.append(value);
+	atomic_append(target, indentation);
+	atomic_append(target, value);
 	return target;
 }
 String& dsr::string_toStreamIndented(String& target, const char32_t* value, const ReadableString& indentation) {
-	target.append(indentation);
-	target.append(value);
+	atomic_append(target, indentation);
+	atomic_append(target, value);
 	return target;
 }
 String& dsr::string_toStreamIndented(String& target, const std::string& value, const ReadableString& indentation) {
-	target.append(indentation);
-	target.append(value);
+	atomic_append(target, indentation);
+	atomic_append(target, value);
 	return target;
 }
 String& dsr::string_toStreamIndented(String& target, const float& value, const ReadableString& indentation) {
-	target.append(indentation);
+	atomic_append(target, indentation);
 	doubleToString_arabic(target, (double)value);
 	return target;
 }
 String& dsr::string_toStreamIndented(String& target, const double& value, const ReadableString& indentation) {
-	target.append(indentation);
+	atomic_append(target, indentation);
 	doubleToString_arabic(target, value);
 	return target;
 }
 String& dsr::string_toStreamIndented(String& target, const int64_t& value, const ReadableString& indentation) {
-	target.append(indentation);
+	atomic_append(target, indentation);
 	intToString_arabic(target, value);
 	return target;
 }
 String& dsr::string_toStreamIndented(String& target, const uint64_t& value, const ReadableString& indentation) {
-	target.append(indentation);
+	atomic_append(target, indentation);
 	uintToString_arabic(target, value);
 	return target;
 }
 String& dsr::string_toStreamIndented(String& target, const int32_t& value, const ReadableString& indentation) {
-	target.append(indentation);
+	atomic_append(target, indentation);
 	intToString_arabic(target, (int64_t)value);
 	return target;
 }
 String& dsr::string_toStreamIndented(String& target, const uint32_t& value, const ReadableString& indentation) {
-	target.append(indentation);
+	atomic_append(target, indentation);
 	uintToString_arabic(target, (uint64_t)value);
 	return target;
 }
 String& dsr::string_toStreamIndented(String& target, const int16_t& value, const ReadableString& indentation) {
-	target.append(indentation);
+	atomic_append(target, indentation);
 	intToString_arabic(target, (int64_t)value);
 	return target;
 }
 String& dsr::string_toStreamIndented(String& target, const uint16_t& value, const ReadableString& indentation) {
-	target.append(indentation);
+	atomic_append(target, indentation);
 	uintToString_arabic(target, (uint64_t)value);
 	return target;
 }
 String& dsr::string_toStreamIndented(String& target, const int8_t& value, const ReadableString& indentation) {
-	target.append(indentation);
+	atomic_append(target, indentation);
 	intToString_arabic(target, (int64_t)value);
 	return target;
 }
 String& dsr::string_toStreamIndented(String& target, const uint8_t& value, const ReadableString& indentation) {
-	target.append(indentation);
+	atomic_append(target, indentation);
 	uintToString_arabic(target, (uint64_t)value);
 	return target;
 }

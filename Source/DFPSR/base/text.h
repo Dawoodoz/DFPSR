@@ -123,14 +123,6 @@ public:
 	String(const std::string& source);
 	String(const ReadableString& source);
 	String(const String& source);
-public:
-	// Extend the String using more text
-	void append(const char* source);
-	void append(const ReadableString& source);
-	void append(const char32_t* source);
-	void append(const std::string& source);
-	// Extend the String using another character
-	void appendChar(DsrChar source);
 };
 
 // Define this overload for non-virtual source types that cannot inherit from Printable
@@ -330,9 +322,7 @@ int64_t string_getBufferUseCount(const ReadableString& text);
 void string_reserve(String& target, int64_t minimumLength);
 
 // Append/push one character (to avoid integer to string conversion)
-inline void string_appendChar(String& target, DsrChar value) {
-	target.appendChar(value);
-}
+void string_appendChar(String& target, DsrChar value);
 
 // Append one element
 template<typename TYPE>

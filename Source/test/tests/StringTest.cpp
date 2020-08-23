@@ -6,11 +6,11 @@
 //       Use "" operand as only constructor?
 void fooInPlace(dsr::String& target, const dsr::ReadableString& a, const dsr::ReadableString& b) {
 	string_clear(target);
-	target.append(U"Foo(");
-	target.append(a);
-	target.appendChar(U',');
-	target.append(b);
-	target.appendChar(U')');
+	string_append(target, U"Foo(");
+	string_append(target, a);
+	string_appendChar(target, U',');
+	string_append(target, b);
+	string_appendChar(target, U')');
 }
 
 dsr::String foo(const dsr::ReadableString& a, const dsr::ReadableString& b) {
@@ -81,8 +81,8 @@ START_TEST(String)
 	{ // Processing
 		dsr::String buffer = U"Garbage";
 		ASSERT_MATCH(buffer, U"Garbage");
-		buffer = foo(U"Ball", U"åäöÅÄÖ"); // Crash!
-		ASSERT_MATCH(buffer, U"Foo(Ball,åäöÅÄÖ)"); // Failed
+		buffer = foo(U"Ball", U"åäöÅÄÖ");
+		ASSERT_MATCH(buffer, U"Foo(Ball,åäöÅÄÖ)");
 		fooInPlace(buffer, U"Å", U"ф");
 		ASSERT_MATCH(buffer, U"Foo(Å,ф)");
 	}

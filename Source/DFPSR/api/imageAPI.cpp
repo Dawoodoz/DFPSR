@@ -472,17 +472,17 @@ String dsr::image_toAscii(const ImageU8& image, const String& alphabet) {
 		alphabetMap[rawValue] = alphabet[charIndex];
 		output += scale;
 	}
-	result.appendChar(U'<');
+	string_appendChar(result, U'<');
 	for (int charIndex = 0; charIndex < alphabetSize; charIndex++) {
-		result.appendChar(alphabet[charIndex]);
+		string_appendChar(result, alphabet[charIndex]);
 	}
-	result.append(U">\n");
+	string_append(result, U">\n");
 	for (int y = 0; y < height; y++) {
-		result.appendChar(U'<');
+		string_appendChar(result, U'<');
 		for (int x = 0; x < width; x++) {
-			result.appendChar(alphabetMap[image_readPixel_clamp(image, x, y)]);
+			string_appendChar(result, alphabetMap[image_readPixel_clamp(image, x, y)]);
 		}
-		result.append(U">\n");
+		string_append(result, U">\n");
 	}
 	return result;
 }
