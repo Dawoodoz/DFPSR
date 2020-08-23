@@ -1088,3 +1088,6 @@ bool dsr::string_isDouble(const ReadableString& source, bool allowWhiteSpace) {
 	}
 }
 
+int64_t dsr::string_getBufferUseCount(const String& text) {
+	return text.buffer.use_count();
+}

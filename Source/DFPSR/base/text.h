@@ -363,6 +363,9 @@ String string_mangleQuote(const ReadableString &rawText);
 // Post-condition: Returns mangledText with quotes removed and excape tokens interpreted.
 String string_unmangleQuote(const ReadableString& mangledText);
 
+// Post-condition: Returns the number of strings using the same buffer, including itself.
+int64_t string_getBufferUseCount(const String& text);
+
 // Ensures safely that at least minimumLength characters can he held in the buffer
 inline void string_reserve(String& target, int64_t minimumLength) {
 	target.reserve(minimumLength);
