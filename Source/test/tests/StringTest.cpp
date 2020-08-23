@@ -277,6 +277,21 @@ START_TEST(String)
 		ASSERT_EQUAL(string_getBufferUseCount(source), 1);
 		ASSERT_EQUAL(string_getBufferUseCount(source2), 4);
 	}
+	{ // Using buffer remembered in ReadableString to reuse memory for splitting
+		String original = U" a . b . c . d ";
+		ReadableString borrowsTheBuffer = string_after(original, 3);
+		ASSERT_MATCH(borrowsTheBuffer, U" b . c . d ");
+		List<String> result = string_split(borrowsTheBuffer, U'.', true);
+		ASSERT_EQUAL(result.length(), 3);
+		ASSERT_MATCH(result[0], U"b");
+		ASSERT_MATCH(result[1], U"c");
+		ASSERT_MATCH(result[2], U"d");
+		ASSERT_EQUAL(string_getBufferUseCount(original), 5);
+		ASSERT_EQUAL(string_getBufferUseCount(borrowsTheBuffer), 5);
+		ASSERT_EQUAL(string_getBufferUseCount(result[0]), 5);
+		ASSERT_EQUAL(string_getBufferUseCount(result[1]), 5);
+		ASSERT_EQUAL(string_getBufferUseCount(result[2]), 5);
+	}
 	{ // Automatically allocating a shared buffer for many elements
 		List<String> result = string_split(U" a . b . c . d ", U'.', true);
 		ASSERT_MATCH(result[0], U"a");

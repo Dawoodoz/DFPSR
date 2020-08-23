@@ -84,16 +84,11 @@ String::String(const String& source) {
 	this->writeSection = source.writeSection;
 }
 String::String(const ReadableString& source) {
-	const String* sharedSource = dynamic_cast<const String*>(&source);
-	if (sharedSource != nullptr) {
-		// Share immutable buffer when assigning String referred to as ReadableString
-		// + Passing String as a ReadableString reference is okay
-		// - Assigning String to a ReadableString loses access to the buffer
-		//   by having to construct a read-only string pointing to the data
-		this->readSection = sharedSource->readSection;
-		this->length = sharedSource->length;
-		this->buffer = sharedSource->buffer;
-		this->writeSection = sharedSource->writeSection;
+	if (buffer_exists(source.buffer)) {
+		this->readSection = source.readSection;
+		this->length = source.length;
+		this->buffer = source.buffer;
+		this->writeSection = const_cast<char32_t*>(source.readSection); // Still safe because of immutability
 	} else {
 		// No buffer to share, just appending the content
 		this->append(source);
