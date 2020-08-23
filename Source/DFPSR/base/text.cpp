@@ -72,6 +72,15 @@ static ReadableString createSubString(const DsrChar *content, int64_t length, co
 	return result;
 }
 
+static String createSubString_shared(const DsrChar *content, int64_t length, const Buffer &buffer, char32_t* writeSection) {
+	String result;
+	result.readSection = content;
+	result.length = length;
+	result.buffer = buffer;
+	result.writeSection = writeSection;
+	return result;
+}
+
 String::String() {}
 String::String(const char* source) { this->append(source); }
 String::String(const char32_t* source) { this->append(source); }
@@ -94,9 +103,6 @@ String::String(const ReadableString& source) {
 		this->append(source);
 	}
 }
-
-String::String(Buffer buffer, DsrChar *content, int64_t length)
- : ReadableString(createSubString(content, length, buffer)), writeSection(content) {}
 
 DsrChar ReadableString::operator[] (int64_t index) const {
 	if (index < 0 || index >= this->length) {
@@ -182,7 +188,7 @@ std::string ReadableString::toStdString() const {
 
 String dsr::string_upperCase(const ReadableString &text) {
 	String result;
-	result.reserve(text.length);
+	string_reserve(result, text.length);
 	for (int64_t i = 0; i < text.length; i++) {
 		result.appendChar(towupper(text[i]));
 	}
@@ -191,7 +197,7 @@ String dsr::string_upperCase(const ReadableString &text) {
 
 String dsr::string_lowerCase(const ReadableString &text) {
 	String result;
-	result.reserve(text.length);
+	string_reserve(result, text.length);
 	for (int64_t i = 0; i < text.length; i++) {
 		result.appendChar(towlower(text[i]));
 	}
@@ -233,7 +239,7 @@ ReadableString dsr::string_removeOuterWhiteSpace(const ReadableString &text) {
 
 String dsr::string_mangleQuote(const ReadableString &rawText) {
 	String result;
-	result.reserve(rawText.length + 2);
+	string_reserve(result, rawText.length + 2);
 	result.appendChar(U'\"'); // Begin quote
 	for (int64_t i = 0; i < rawText.length; i++) {
 		DsrChar c = rawText[i];
@@ -524,7 +530,7 @@ String dsr::string_loadFromMemory(Buffer fileContent) {
 	};
 	feedStringFromFileBuffer(measurer, buffer_dangerous_getUnsafeData(fileContent), buffer_getSize(fileContent));
 	// Pre-allocate the correct amount of memory based on the simulation
-	result.reserve(characterCount);
+	string_reserve(result, characterCount);
 	// Stream output to the result string
 	UTF32WriterFunction reciever = [&result](DsrChar character) {
 		result.appendChar(character);
@@ -691,20 +697,7 @@ Buffer dsr::string_saveToMemory(const ReadableString& content, CharacterEncoding
 	return result;
 }
 
-int64_t String::capacity() {
-	if (this->buffer.get() == nullptr) {
-		return 0;
-	} else {
-		// Get the parent allocation
-		uint8_t* parentBuffer = buffer_dangerous_getUnsafeData(this->buffer);
-		// Get the offset from the parent
-		intptr_t offset = (uint8_t*)this->writeSection - parentBuffer;
-		// Subtract offset from the buffer size to get the remaining space
-		return (buffer_getSize(this->buffer) - offset) / sizeof(DsrChar);
-	}
-}
-
-static int32_t getNewBufferSize(int32_t minimumSize) {
+static int64_t getNewBufferSize(int64_t minimumSize) {
 	if (minimumSize <= 128) {
 		return 128;
 	} else if (minimumSize <= 512) {
@@ -730,46 +723,63 @@ static int32_t getNewBufferSize(int32_t minimumSize) {
 	} else if (minimumSize <= 536870912) {
 		return 536870912;
 	} else {
-		return 2147483647;
+		return minimumSize;
 	}
 }
-void String::reallocateBuffer(int64_t newLength, bool preserve) {
+// Replaces the buffer with a new buffer holding at least newLength characters
+// Guarantees that the new buffer is not shared by other strings, so that it may be written to freely
+static void reallocateBuffer(String &target, int64_t newLength, bool preserve) {
 	// Holding oldData alive while copying to the new buffer
-	Buffer oldBuffer = this->buffer;
-	const char32_t* oldData = this->readSection;
-	this->buffer = buffer_create(getNewBufferSize(newLength * sizeof(DsrChar)));
-	this->readSection = this->writeSection = reinterpret_cast<char32_t*>(buffer_dangerous_getUnsafeData(this->buffer));
+	Buffer oldBuffer = target.buffer;
+	const char32_t* oldData = target.readSection;
+	target.buffer = buffer_create(getNewBufferSize(newLength * sizeof(DsrChar)));
+	target.readSection = target.writeSection = reinterpret_cast<char32_t*>(buffer_dangerous_getUnsafeData(target.buffer));
 	if (preserve && oldData) {
-		memcpy(this->writeSection, oldData, this->length * sizeof(DsrChar));
+		memcpy(target.writeSection, oldData, target.length * sizeof(DsrChar));
 	}
 }
-
 // Call before writing to the buffer
 //   This hides that Strings share buffers when assigning by value or taking partial strings
-void String::cloneIfShared() {
-	if (this->buffer.use_count() > 1) {
-		this->reallocateBuffer(this->length, true);
+static void cloneIfShared(String &target) {
+	if (target.buffer.use_count() > 1) {
+		reallocateBuffer(target, target.length, true);
 	}
 }
 
 void dsr::string_clear(String& target) {
-	target.cloneIfShared();
+	cloneIfShared(target);
 	target.length = 0;
 }
 
-void String::expand(int64_t newLength, bool affectUsedLength) {
-	if (newLength > this->length) {
-		if (newLength > this->capacity()) {
-			this->reallocateBuffer(newLength, true);
-		}
-	}
-	if (affectUsedLength) {
-		this->length = newLength;
+// The number of DsrChar characters that can be contained in the allocation before reaching the buffer's end
+//   This doesn't imply that it's always okay to write to the remaining space, because the buffer may be shared
+static int64_t getCapacity(const ReadableString &source) {
+	if (buffer_exists(source.buffer)) {
+		// Get the allocation
+		uint8_t* data = buffer_dangerous_getUnsafeData(source.buffer);
+		uint8_t* start = (uint8_t*)(source.readSection);
+		// Get the offset from the parent
+		intptr_t offset = start - data;
+		// Subtract offset from the buffer size to get the remaining space
+		return (buffer_getSize(source.buffer) - offset) / sizeof(DsrChar);
+	} else {
+		return 0;
 	}
 }
 
-void String::reserve(int64_t minimumLength) {
-	this->expand(minimumLength, false);
+static void expand(String &target, int64_t newLength, bool affectUsedLength) {
+	if (newLength > target.length) {
+		if (newLength > getCapacity(target)) {
+			reallocateBuffer(target, newLength, true);
+		}
+	}
+	if (affectUsedLength) {
+		target.length = newLength;
+	}
+}
+
+void dsr::string_reserve(String& target, int64_t minimumLength) {
+	expand(target, minimumLength, false);
 }
 
 // This macro has to be used because a static template wouldn't be able to inherit access to private methods from the target class.
@@ -786,19 +796,19 @@ void String::reserve(int64_t minimumLength) {
 //     If it doesn't share the buffer
 //       * Then no risk of writing
 #define APPEND(TARGET, SOURCE, LENGTH, MASK) { \
-	int64_t oldLength = (TARGET)->length; \
-	(TARGET)->expand(oldLength + (int64_t)(LENGTH), true); \
+	int64_t oldLength = (TARGET).length; \
+	expand((TARGET), oldLength + (int64_t)(LENGTH), true); \
 	for (int64_t i = 0; i < (int64_t)(LENGTH); i++) { \
-		(TARGET)->writeSection[oldLength + i] = ((SOURCE)[i]) & MASK; \
+		(TARGET).writeSection[oldLength + i] = ((SOURCE)[i]) & MASK; \
 	} \
 }
 // TODO: See if ascii litterals can be checked for values above 127 in compile-time
-void String::append(const char* source) { APPEND(this, source, strlen(source), 0xFF); }
+void String::append(const char* source) { APPEND(*this, source, strlen(source), 0xFF); }
 // TODO: Use memcpy when appending input of the same format
-void String::append(const ReadableString& source) { APPEND(this, source, source.length, 0xFFFFFFFF); }
-void String::append(const char32_t* source) { APPEND(this, source, strlen_utf32(source), 0xFFFFFFFF); }
-void String::append(const std::string& source) { APPEND(this, source.c_str(), (int64_t)source.size(), 0xFF); }
-void String::appendChar(DsrChar source) { APPEND(this, &source, 1, 0xFFFFFFFF); }
+void String::append(const ReadableString& source) { APPEND(*this, source, source.length, 0xFFFFFFFF); }
+void String::append(const char32_t* source) { APPEND(*this, source, strlen_utf32(source), 0xFFFFFFFF); }
+void String::append(const std::string& source) { APPEND(*this, source.c_str(), (int64_t)source.size(), 0xFF); }
+void String::appendChar(DsrChar source) { APPEND(*this, &source, 1, 0xFFFFFFFF); }
 
 String& dsr::string_toStreamIndented(String& target, const Printable& source, const ReadableString& indentation) {
 	return source.toStreamIndented(target, indentation);
@@ -901,16 +911,6 @@ void dsr::string_split_callback(std::function<void(ReadableString)> action, cons
 	}
 }
 
-// Optimization for string_split
-// TODO: Clean up all these functions by constructing String from ReadableString without cloning!
-static String createSubString_shared(const DsrChar *content, int64_t length, const Buffer &buffer, char32_t* writeSection) {
-	String result;
-	result.readSection = content;
-	result.length = length;
-	result.buffer = buffer;
-	result.writeSection = writeSection;
-	return result;
-}
 List<String> dsr::string_split(const ReadableString& source, DsrChar separator, bool removeWhiteSpace) {
 	List<String> result;
 	String commonBuffer;

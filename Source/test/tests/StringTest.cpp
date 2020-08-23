@@ -15,7 +15,7 @@ void fooInPlace(dsr::String& target, const dsr::ReadableString& a, const dsr::Re
 
 dsr::String foo(const dsr::ReadableString& a, const dsr::ReadableString& b) {
 	dsr::String result;
-	result.reserve(string_length(a) + string_length(b) + 6);
+	string_reserve(result, string_length(a) + string_length(b) + 6);
 	fooInPlace(result, a, b);
 	return result;
 }

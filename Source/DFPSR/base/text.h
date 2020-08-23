@@ -64,18 +64,12 @@ class String;
 // Replacing String with a ReadableString reference for input arguments can make passing of U"" literals faster.
 //   Unlike String, it cannot be constructed from a "" literal,
 //   because it's not allowed to create a new allocation for the UTF-32 conversion.
-// Only use by reference for input arguments or to hold temporary results!
-//   A ReadableString created as a sub-string from String will stop working once the parent String is freed.
 class ReadableString {
 IMPL_ACCESS:
 	// A reference counted pointer to the buffer to allow passing strings around without having to clone the buffer each time
 	// ReadableString only uses it for reference counting but String use it for reallocating
 	Buffer buffer;
-	// A local pointer to the sub-allocation
 	const char32_t* readSection = nullptr;
-	// The length of the current string in characters
-	//   Use the string_length getter to access
-	//   If you just want to reuse memory for a sub-string, then use string_inclusiveRange
 	int64_t length = 0;
 public:
 	// Returning the character by value prevents writing to memory that might be a constant literal or shared with other strings
@@ -84,10 +78,8 @@ public:
 	// Empty string U""
 	ReadableString();
 	// Implicit casting from U"text"
-	//   Do not use ReadableString for heap allocated allocations that might be freed during the string's life!
-	//   String can handle dynamic memory and should be used in that case.
 	ReadableString(const DsrChar *content);
-	// Create from String while keeping check of reference counting
+	// Create from String by sharing the buffer
 	ReadableString(const String& source);
 	// Destructor
 	virtual ~ReadableString();
@@ -123,19 +115,6 @@ class String : public ReadableString {
 IMPL_ACCESS:
 	// Same as readSection, but with write access for appending more text
 	char32_t* writeSection = nullptr;
-	// TODO: Move into the implementation
-	// Internal constructor
-	String(Buffer buffer, DsrChar *content, int64_t length);
-	// The number of DsrChar characters that can be contained in the allocation before reaching the buffer's end
-	//   This doesn't imply that it's always okay to write to the remaining space, because the buffer may be shared
-	int64_t capacity();
-	// Replaces the buffer with a new buffer holding at least newLength characters
-	// Guarantees that the new buffer is not shared by other strings, so that it may be written to freely
-	void reallocateBuffer(int64_t newLength, bool preserve);
-	// Call before writing to the buffer
-	//   This hides that Strings share buffers when assigning by value or taking partial strings
-	void cloneIfShared();
-	void expand(int64_t newLength, bool affectUsedLength);
 public:
 	// Constructors
 	String();
@@ -145,8 +124,6 @@ public:
 	String(const ReadableString& source);
 	String(const String& source);
 public:
-	// Ensures safely that at least minimumLength characters can he held in the buffer
-	void reserve(int64_t minimumLength);
 	// Extend the String using more text
 	void append(const char* source);
 	void append(const ReadableString& source);
@@ -350,9 +327,7 @@ String string_unmangleQuote(const ReadableString& mangledText);
 int64_t string_getBufferUseCount(const ReadableString& text);
 
 // Ensures safely that at least minimumLength characters can he held in the buffer
-inline void string_reserve(String& target, int64_t minimumLength) {
-	target.reserve(minimumLength);
-}
+void string_reserve(String& target, int64_t minimumLength);
 
 // Append/push one character (to avoid integer to string conversion)
 inline void string_appendChar(String& target, DsrChar value) {

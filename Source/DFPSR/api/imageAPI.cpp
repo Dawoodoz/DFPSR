@@ -462,7 +462,7 @@ String dsr::image_toAscii(const ImageU8& image, const String& alphabet) {
 	int alphabetSize = string_length(alphabet);
 	int width = image_getWidth(image);
 	int height = image_getHeight(image);
-	result.reserve(((width + 4) * height) + alphabetSize + 5);
+	string_reserve(result, ((width + 4) * height) + alphabetSize + 5);
 	double scale = (double)(alphabetSize - 1) / 255.0;
 	double output = 0.49;
 	for (int rawValue = 0; rawValue < 256; rawValue++) {
