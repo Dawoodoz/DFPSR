@@ -49,7 +49,7 @@ VirtualMachine::VirtualMachine(const ReadableString& code, const std::shared_ptr
 		if (colonIndex > -1) {
 			ReadableString command = string_removeOuterWhiteSpace(string_before(currentLine, colonIndex));
 			ReadableString argumentLine = string_after(currentLine, colonIndex);
-			List<String> arguments = string_split_clone(argumentLine, U',', true);
+			List<String> arguments = string_split(argumentLine, U',', true);
 			this->interpretMachineWord(command, arguments);
 		} else if (string_length(currentLine) > 0) {
 			throwError("Unexpected line \"", currentLine, "\".\n");

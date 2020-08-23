@@ -26,11 +26,11 @@
 using namespace dsr;
 
 void dsr::config_parse_ini(const ReadableString& content, ConfigIniCallback receiverLambda) {
-	List<ReadableString> lines = string_dangerous_split(content, U'\n');
+	List<String> lines = string_split(content, U'\n');
 	String block = U"";
 	for (int l = 0; l < lines.length(); l++) {
 		// Get the current line
-		ReadableString command = lines[l];
+		String command = lines[l];
 		// Skip comments
 		int commentIndex = string_findFirst(command, U';');
 		if (commentIndex > -1) {
@@ -39,8 +39,8 @@ void dsr::config_parse_ini(const ReadableString& content, ConfigIniCallback rece
 		// Find assignments
 		int assignmentIndex = string_findFirst(command, U'=');
 		if (assignmentIndex > -1) {
-			ReadableString key = string_removeOuterWhiteSpace(string_before(command, assignmentIndex));
-			ReadableString value = string_removeOuterWhiteSpace(string_after(command, assignmentIndex));
+			String key = string_removeOuterWhiteSpace(string_before(command, assignmentIndex));
+			String value = string_removeOuterWhiteSpace(string_after(command, assignmentIndex));
 			receiverLambda(block, key, value);
 		} else {
 			int blockStartIndex = string_findFirst(command, U'[');

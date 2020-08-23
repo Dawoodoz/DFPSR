@@ -141,6 +141,7 @@ String dsr::string_lowerCase(const ReadableString &text) {
 	return result;
 }
 
+// Allow passing literals without allocating heap memory for the result
 ReadableString dsr::string_removeOuterWhiteSpace(const ReadableString &text) {
 	int64_t first = -1;
 	int64_t last = -1;
@@ -636,17 +637,25 @@ DsrChar ReadableString::operator[] (int64_t index) const {
 }
 
 ReadableString::ReadableString() {}
+
 ReadableString::~ReadableString() {}
 
 ReadableString::ReadableString(const DsrChar *content)
 : readSection(content), length(strlen_utf32(content)) {}
 
+ReadableString::ReadableString(const String& source) {
+	this->readSection = source.readSection;
+	this->length = source.length;
+	this->buffer = source.buffer;
+}
+
 // Not the fastest constructor, but won't bloat the public header
 // Hopefully most compilers know how to optimize this
-static ReadableString createSubString(const DsrChar *content, int64_t length) {
+static ReadableString createSubString(const DsrChar *content, int64_t length, const Buffer &buffer) {
 	ReadableString result;
 	result.readSection = content;
 	result.length = length;
+	result.buffer = buffer;
 	return result;
 }
 
@@ -654,11 +663,32 @@ String::String() {}
 String::String(const char* source) { this->append(source); }
 String::String(const char32_t* source) { this->append(source); }
 String::String(const std::string& source) { this->append(source); }
-String::String(const ReadableString& source) { this->append(source); }
-String::String(const String& source) { this->append(source); }
+String::String(const String& source) {
+	// Share immutable buffer
+	this->readSection = source.readSection;
+	this->length = source.length;
+	this->buffer = source.buffer;
+	this->writeSection = source.writeSection;
+}
+String::String(const ReadableString& source) {
+	const String* sharedSource = dynamic_cast<const String*>(&source);
+	if (sharedSource != nullptr) {
+		// Share immutable buffer when assigning String referred to as ReadableString
+		// + Passing String as a ReadableString reference is okay
+		// - Assigning String to a ReadableString loses access to the buffer
+		//   by having to construct a read-only string pointing to the data
+		this->readSection = sharedSource->readSection;
+		this->length = sharedSource->length;
+		this->buffer = sharedSource->buffer;
+		this->writeSection = sharedSource->writeSection;
+	} else {
+		// No buffer to share, just appending the content
+		this->append(source);
+	}
+}
 
 String::String(Buffer buffer, DsrChar *content, int64_t length)
- : ReadableString(createSubString(content, length)), buffer(buffer), writeSection(content) {}
+ : ReadableString(createSubString(content, length, buffer)), writeSection(content) {}
 
 int64_t String::capacity() {
 	if (this->buffer.get() == nullptr) {
@@ -741,19 +771,6 @@ void String::reserve(int64_t minimumLength) {
 	this->expand(minimumLength, false);
 }
 
-void String::write(int64_t index, DsrChar value) {
-	this->cloneIfShared();
-	if (index < 0 || index >= this->length) {
-		// TODO: Give a warning
-	} else {
-		this->writeSection[index] = value;
-	}
-}
-
-void String::clear() {
-	this->length = 0;
-}
-
 // This macro has to be used because a static template wouldn't be able to inherit access to private methods from the target class.
 //   Better to use a macro without type safety in the implementation than to expose yet another template in a global header.
 // Proof that appending to one string doesn't affect another:
@@ -771,7 +788,7 @@ void String::clear() {
 	int64_t oldLength = (TARGET)->length; \
 	(TARGET)->expand(oldLength + (int64_t)(LENGTH), true); \
 	for (int64_t i = 0; i < (int64_t)(LENGTH); i++) { \
-		(TARGET)->write(oldLength + i, ((SOURCE)[i]) & MASK); \
+		(TARGET)->writeSection[oldLength + i] = ((SOURCE)[i]) & MASK; \
 	} \
 }
 // TODO: See if ascii litterals can be checked for values above 127 in compile-time
@@ -879,8 +896,7 @@ void dsr::string_split_callback(std::function<void(ReadableString)> action, cons
 	}
 }
 
-// TODO: Try to implement this using reference counting so that it doesn't have to allocate heap memory
-List<String> dsr::string_split_clone(const ReadableString& source, DsrChar separator, bool removeWhiteSpace) {
+List<String> dsr::string_split(const ReadableString& source, DsrChar separator, bool removeWhiteSpace) {
 	List<String> result;
 	string_split_callback([&result, removeWhiteSpace](ReadableString element) {
 		if (removeWhiteSpace) {
@@ -998,7 +1014,7 @@ ReadableString dsr::string_exclusiveRange(const ReadableString& source, int64_t 
 	if (inclusiveStart < 0) { inclusiveStart = 0; }
 	if (exclusiveEnd > source.length) { exclusiveEnd = source.length; }
 	// Return the overlapping interval
-	return createSubString(&(source.readSection[inclusiveStart]), exclusiveEnd - inclusiveStart);
+	return createSubString(&(source.readSection[inclusiveStart]), exclusiveEnd - inclusiveStart, source.buffer);
 }
 
 ReadableString dsr::string_inclusiveRange(const ReadableString& source, int64_t inclusiveStart, int64_t inclusiveEnd) {
@@ -1093,6 +1109,6 @@ bool dsr::string_isDouble(const ReadableString& source, bool allowWhiteSpace) {
 	}
 }
 
-int64_t dsr::string_getBufferUseCount(const String& text) {
+int64_t dsr::string_getBufferUseCount(const ReadableString& text) {
 	return text.buffer.use_count();
 }

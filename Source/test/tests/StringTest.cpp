@@ -5,7 +5,7 @@
 //       Cover everything using a single dsr::String type?
 //       Use "" operand as only constructor?
 void fooInPlace(dsr::String& target, const dsr::ReadableString& a, const dsr::ReadableString& b) {
-	target.clear();
+	string_clear(target);
 	target.append(U"Foo(");
 	target.append(a);
 	target.appendChar(U',');
@@ -209,13 +209,14 @@ START_TEST(String)
 	ASSERT_MATCH(dsr::string_unmangleQuote(dsr::string_mangleQuote(U"c\"d")), U"c\"d");
 	// Mangle things
 	dsr::String randomText;
+	string_reserve(randomText, 100);
 	for (int i = 1; i < 100; i++) {
 		// Randomize previous characters
 		for (int j = 1; j < i - 1; j++) {
-			randomText.write(j, (DsrChar)((i * 21 + j * 49 + 136) % 1024));
+			string_appendChar(randomText, (DsrChar)((i * 21 + j * 49 + 136) % 1024));
 		}
 		// Add a new random character
-		randomText.appendChar((i * 21 + 136) % 256);
+		string_appendChar(randomText, (i * 21 + 136) % 256);
 		ASSERT_MATCH(dsr::string_unmangleQuote(dsr::string_mangleQuote(randomText)), randomText);
 	}
 	// Number serialization
@@ -243,19 +244,34 @@ START_TEST(String)
 	ASSERT_EQUAL(string_toInteger(U"123"), 123);
 	ASSERT_EQUAL(string_toDouble(U"123"), 123.0);
 	ASSERT_EQUAL(string_toDouble(U"123.456"), 123.456);
-	{ // Clone splitting
+	{ // Assigning strings using reference counting
+		String a = U"Some text";
+		ASSERT_EQUAL(string_getBufferUseCount(a), 1);
+		String b = a;
+		ASSERT_EQUAL(string_getBufferUseCount(a), 2);
+		ASSERT_EQUAL(string_getBufferUseCount(b), 2);
+		String c = b;
+		ASSERT_EQUAL(string_getBufferUseCount(a), 3);
+		ASSERT_EQUAL(string_getBufferUseCount(b), 3);
+		ASSERT_EQUAL(string_getBufferUseCount(c), 3);
+	}
+	{ // String splitting by shared reference counted buffer
+		String source = U"a . b . c . d";
 		List<String> result;
-		result = string_split_clone(U"a . b . c . d", U'.', false);
+		result = string_split(source, U'.', false);
+		ASSERT_EQUAL(string_getBufferUseCount(source), 1);
 		ASSERT_EQUAL(result.length(), 4);
 		ASSERT_MATCH(result[0], U"a ");
 		ASSERT_MATCH(result[1], U" b ");
 		ASSERT_MATCH(result[2], U" c ");
 		ASSERT_MATCH(result[3], U" d");
-		result = string_split_clone(U"a . b .\tc", U'.', true);
+		//ASSERT_EQUAL(string_getBufferUseCount(source), 5);
+		result = string_split(U"a . b .\tc", U'.', true);
 		ASSERT_EQUAL(result.length(), 3);
 		ASSERT_MATCH(result[0], U"a");
 		ASSERT_MATCH(result[1], U"b");
 		ASSERT_MATCH(result[2], U"c");
+		//ASSERT_EQUAL(string_getBufferUseCount(source), 4);
 	}
 	{ // Callback splitting
 		String numbers = U"1, 3, 5, 7, 9";
@@ -272,5 +288,6 @@ START_TEST(String)
 	}
 	// TODO: Test taking a part of a parent string with a start offset, leaving the parent scope,
 	//       and expanding with append while the buffer isn't shared but has an offset from buffer start.
+	// TODO: Test sharing the same buffer between strings, then clear and append more text without overwriting other strings.
 	// TODO: Assert that buffers are shared when they should, but prevents side-effects when one is being written to.
 END_TEST
