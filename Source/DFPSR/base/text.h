@@ -201,6 +201,10 @@ std::ostream& string_toStream(std::ostream& target, const T& source) {
 // ---------------- Procedural API ----------------
 
 
+// Sets the target string's length to zero.
+// Because this opens up to appending new text where sub-string may already share the buffer,
+//   this operation will reallocate the buffer if shared with other strings.
+void string_clear(String& target);
 // Post-condition: Returns the length of source.
 //   Example: string_length(U"ABC") == 3
 int64_t string_length(const ReadableString& source);

@@ -721,6 +721,11 @@ void String::cloneIfShared() {
 	}
 }
 
+void dsr::string_clear(String& target) {
+	target.cloneIfShared();
+	target.length = 0;
+}
+
 void String::expand(int64_t newLength, bool affectUsedLength) {
 	if (newLength > this->length) {
 		if (newLength > this->capacity()) {
