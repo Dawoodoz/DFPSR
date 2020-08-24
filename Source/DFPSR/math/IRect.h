@@ -60,6 +60,14 @@ public:
 		int32_t bottomSide = std::min(a.bottom(), b.bottom());
 		return IRect(leftSide, topSide, rightSide - leftSide, bottomSide - topSide);
 	}
+	// Returns a bounding box of the union
+	static IRect merge(const IRect &a, const IRect &b) {
+		int32_t leftSide = std::min(a.left(), b.left());
+		int32_t topSide = std::min(a.top(), b.top());
+		int32_t rightSide = std::max(a.right(), b.right());
+		int32_t bottomSide = std::max(a.bottom(), b.bottom());
+		return IRect(leftSide, topSide, rightSide - leftSide, bottomSide - topSide);
+	}
 	// Returns true iff the rectangles have an overlapping area
 	// Equivalent to hasArea(a * b)
 	static bool overlaps(const IRect& a, const IRect& b) {
@@ -85,6 +93,9 @@ public:
 // Move without resizing
 inline IRect operator+(const IRect &old, const IVector2D &offset) {
 	return IRect(old.left() + offset.x, old.top() + offset.y, old.width(), old.height());
+}
+inline IRect operator-(const IRect &old, const IVector2D &offset) {
+	return IRect(old.left() - offset.x, old.top() - offset.y, old.width(), old.height());
 }
 
 // Scale everything around origin

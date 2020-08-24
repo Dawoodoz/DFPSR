@@ -1,7 +1,11 @@
 
 #include "spriteAPI.h"
 #include "Octree.h"
+#include "DirtyRectangles.h"
 #include "../../../DFPSR/render/ITriangle2D.h"
+
+// Comment out a flag to disable an optimization when debugging
+#define DIRTY_RECTANGLE_OPTIMIZATION
 
 namespace dsr {
 
@@ -207,7 +211,8 @@ static int getSpriteFrameIndex(const Sprite& sprite, OrthoView view) {
 	return types[sprite.typeIndex].getFrameIndex(view.worldDirection + sprite.direction);
 }
 
-void drawSprite(const Sprite& sprite, const OrthoView& ortho, const IVector2D& worldCenter, ImageF32 targetHeight, ImageRgbaU8 targetColor, ImageRgbaU8 targetNormal) {
+// Returns a 2D bounding box of affected target pixels
+IRect drawSprite(const Sprite& sprite, const OrthoView& ortho, const IVector2D& worldCenter, ImageF32 targetHeight, ImageRgbaU8 targetColor, ImageRgbaU8 targetNormal) {
 	int frameIndex = getSpriteFrameIndex(sprite, ortho);
 	const SpriteFrame* frame = &types[sprite.typeIndex].frames[frameIndex];
 	IVector2D screenSpace = ortho.miniTilePositionToScreenPixel(sprite.location, worldCenter) - frame->centerPoint;
@@ -225,6 +230,7 @@ void drawSprite(const Sprite& sprite, const OrthoView& ortho, const IVector2D& w
 			draw_higher(targetHeight, frame->heightImage, screenSpace.x, screenSpace.y, heightOffset);
 		}
 	}
+	return IRect(screenSpace.x, screenSpace.y, image_getWidth(frame->colorImage), image_getHeight(frame->colorImage));
 }
 
 // The camera transform for each direction
@@ -324,6 +330,7 @@ public:
 	}
 };
 
+// BlockState keeps track of when the background itself needs to update from static objects being created or destroyed
 enum class BlockState {
 	Unused,
 	Ready,
@@ -419,7 +426,7 @@ public:
 		this->draw(sprites, ortho);
 		this->state = BlockState::Ready;
 	}
-	void draw(OrderedImageRgbaU8& diffuseTarget, OrderedImageRgbaU8& normalTarget, AlignedImageF32& heightTarget, const IRect& seenRegion) const {
+	void draw(ImageRgbaU8& diffuseTarget, ImageRgbaU8& normalTarget, ImageF32& heightTarget, const IRect& seenRegion) const {
 		if (this->state != BlockState::Unused) {
 			int left = this->worldRegion.left() - seenRegion.left();
 			int top = this->worldRegion.top() - seenRegion.top();
@@ -459,6 +466,8 @@ public:
 	// Passive background
 	// TODO: How can split-screen use multiple cameras without duplicate blocks or deleting the other camera's blocks by distance?
 	List<BackgroundBlock> backgroundBlocks;
+	// These dirty rectangles keep track of when the background has to be redrawn to the screen after having drawn a dynamic sprite, moved the camera or changed static geometry
+	DirtyRectangles dirtyBackground;
 private:
 	// Reused buffers
 	int shadowResolution;
@@ -544,15 +553,34 @@ public:
 		assert(image_getWidth(diffuseTarget) == seenRegion.width() && image_getHeight(diffuseTarget) == seenRegion.height());
 		assert(image_getWidth(normalTarget) == seenRegion.width() && image_getHeight(normalTarget) == seenRegion.height());
 		assert(image_getWidth(heightTarget) == seenRegion.width() && image_getHeight(heightTarget) == seenRegion.height());
+		this->dirtyBackground.setTargetResolution(seenRegion.width(), seenRegion.height());
 		// Draw passive sprites to blocks
 		this->updateBlocks(seenRegion);
-		// Draw blocks to the targets
+
+		// Draw background blocks to the target images
 		for (int b = 0; b < this->backgroundBlocks.length(); b++) {
-			this->backgroundBlocks[b].draw(diffuseTarget, normalTarget, heightTarget, seenRegion);
+			#ifdef DIRTY_RECTANGLE_OPTIMIZATION
+				// Optimized version
+				for (int64_t r = 0; r < this->dirtyBackground.getRectangleCount(); r++) {
+					IRect screenClip = this->dirtyBackground.getRectangle(r);
+					IRect worldClip = screenClip + seenRegion.upperLeft();
+					ImageRgbaU8 clippedDiffuseTarget = image_getSubImage(diffuseTarget, screenClip);
+					ImageRgbaU8 clippedNormalTarget = image_getSubImage(normalTarget, screenClip);
+					ImageF32 clippedHeightTarget = image_getSubImage(heightTarget, screenClip);
+					this->backgroundBlocks[b].draw(clippedDiffuseTarget, clippedNormalTarget, clippedHeightTarget, worldClip);
+				}
+			#else
+				// Reference implementation
+				this->backgroundBlocks[b].draw(diffuseTarget, normalTarget, heightTarget, seenRegion);
+			#endif
 		}
+
+		// Reset dirty rectangles so that active sprites may record changes
+		this->dirtyBackground.noneDirty();
 		// Draw active sprites to the targets
 		for (int s = 0; s < this->temporarySprites.length(); s++) {
-			drawSprite(this->temporarySprites[s], this->ortho.view[this->cameraIndex], -seenRegion.upperLeft(), heightTarget, diffuseTarget, normalTarget);
+			IRect drawnRegion = drawSprite(this->temporarySprites[s], this->ortho.view[this->cameraIndex], -seenRegion.upperLeft(), heightTarget, diffuseTarget, normalTarget);
+			this->dirtyBackground.makeRegionDirty(drawnRegion);
 		}
 	}
 public:
@@ -567,6 +595,8 @@ public:
 				this->invalidateBlockAt(x, y);
 			}
 		}
+		// Redrawing the whole background to the screen is very cheap using memcpy, so no need to optimize this rare event
+		this->dirtyBackground.allDirty();
 	}
 	IVector2D findWorldCenter(const AlignedImageRgbaU8& colorTarget) const {
 		return IVector2D(image_getWidth(colorTarget) / 2, image_getHeight(colorTarget) / 2) - this->ortho.miniTileOffsetToScreenPixel(this->cameraLocation, this->cameraIndex);
@@ -696,7 +726,10 @@ IVector3D spriteWorld_findGroundAtPixel(SpriteWorld& world, const AlignedImageRg
 
 void spriteWorld_moveCameraInPixels(SpriteWorld& world, const IVector2D& pixelOffset) {
 	MUST_EXIST(world, spriteWorld_moveCameraInPixels);
-	world->cameraLocation = world->cameraLocation + world->ortho.pixelToMiniOffset(pixelOffset, world->cameraIndex);
+	if (pixelOffset.x != 0 && pixelOffset.y != 0) {
+		world->cameraLocation = world->cameraLocation + world->ortho.pixelToMiniOffset(pixelOffset, world->cameraIndex);
+		world->dirtyBackground.allDirty();
+	}
 }
 
 AlignedImageRgbaU8 spriteWorld_getDiffuseBuffer(SpriteWorld& world) {
@@ -726,7 +759,10 @@ int spriteWorld_getCameraDirectionIndex(SpriteWorld& world) {
 
 void spriteWorld_setCameraDirectionIndex(SpriteWorld& world, int index) {
 	MUST_EXIST(world, spriteWorld_setCameraDirectionIndex);
-	world->cameraIndex = index;
+	if (index != world->cameraIndex) {
+		world->cameraIndex = index;
+		world->dirtyBackground.allDirty();
+	}
 }
 
 static FVector3D normalFromPoints(const FVector3D& A, const FVector3D& B, const FVector3D& C) {
