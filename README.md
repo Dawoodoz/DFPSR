@@ -6,9 +6,9 @@ The official website:
 
 ## What your games might look like using isometric CPU rendering
 
-![Screenshot of the sandbox example running on a hexacore Intel Core I5 9600K.](Sandbox.png "Sandbox example")
+![Screenshot of the sandbox example running on a hexacore Intel Core I5 9600K.](Sandbox.jpg "Sandbox example")
 
-Real-time dynamic light with depth-based casted shadows and normal mapping at 295 frames per second in 800x600 pixels running on the CPU. Higher resolutions would break the retro style and actually look worse, but there's lots of time left for game logic and additional effects. By pre-rendering 3D models to diffuse, normal and height images, reading the data is much more cache efficient on modern CPUs than using a free perspective. This also allow having more triangles than pixels on the screen and doing passive updates of static geometry. Low-detailed 3D models are used to cast dynamic shadows.
+Real-time dynamic light with depth-based casted shadows and normal mapping at 453 frames per second in 800x600 pixels running on the CPU. Higher resolutions would break the retro style and actually look worse, but there's lots of time left for game logic and additional effects. By pre-rendering 3D models to diffuse, normal and height images, reading the data is much more cache efficient on modern CPUs than using a free perspective. This also allow having more triangles than pixels on the screen and doing passive updates of static geometry. Low-detailed 3D models are used to cast dynamic shadows.
 
 ## Why use a software renderer when GPUs are so fast?
 * **Minimal dependency** for minimal support cost. No customer will ever tell you that some shader wouldn't compile on a GPU driver you never even heard of. It's all pure math on the CPU sending calls directly to the system.
