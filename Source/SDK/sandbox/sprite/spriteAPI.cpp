@@ -726,7 +726,7 @@ IVector3D spriteWorld_findGroundAtPixel(SpriteWorld& world, const AlignedImageRg
 
 void spriteWorld_moveCameraInPixels(SpriteWorld& world, const IVector2D& pixelOffset) {
 	MUST_EXIST(world, spriteWorld_moveCameraInPixels);
-	if (pixelOffset.x != 0 && pixelOffset.y != 0) {
+	if (pixelOffset.x != 0 || pixelOffset.y != 0) {
 		world->cameraLocation = world->cameraLocation + world->ortho.pixelToMiniOffset(pixelOffset, world->cameraIndex);
 		world->dirtyBackground.allDirty();
 	}
