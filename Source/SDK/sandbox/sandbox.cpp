@@ -8,6 +8,8 @@
 
 /*
 BUGS:
+	* Certain key press events are ignored by the system after reaching a higher frame-rate.
+		It is an existing bug that wasn't revealed or is it the system being unresponsive?
 	* The mouse move is repeated automatically when changing pixel scale, but the same doesn't work for when the window itself moved.
 		How can a new mouse-move event be triggered from the current location when toggling full-screen so that the window itself moves?
 	* Tiles placed at different heights do not have synchronized rounding between each other.
