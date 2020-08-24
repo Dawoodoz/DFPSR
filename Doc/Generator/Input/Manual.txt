@@ -6,6 +6,9 @@ Title2: Using the library
 
 *
 <- Starting.html | Getting started
+
+*
+<- Strings.html | Basic text operations
 ---
 Title2: Modifying the library
 

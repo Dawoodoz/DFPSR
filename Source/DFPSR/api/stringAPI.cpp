@@ -773,6 +773,7 @@ static int64_t getCapacity(const ReadableString &source) {
 }
 
 static void expand(String &target, int64_t newLength, bool affectUsedLength) {
+	cloneIfShared(target);
 	if (newLength > target.length) {
 		if (newLength > getCapacity(target)) {
 			reallocateBuffer(target, newLength, true);

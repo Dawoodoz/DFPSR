@@ -30,79 +30,107 @@ A:active { color: #00A0A0; }
 </P><H2> Working in Linux</H2><P>
 </P><P>
 Place the library's root folder inside of a new folder. This gives room for the temporary object's folder, which will be created outside of the dfpsr folder when compiling.
+
 </P><P>
 <IMG SRC="Images/Warning.png" ALT="Warning">
 A light-weight Linux distribution for laptops (such as Linux Mint) might require you to install GNU's compiler toolchain <B>"gcc"</B> and X11 headers <B>"libx11-dev"</B>.
+
 </P><P>
 <IMG SRC="Images/Warning.png" ALT="Warning">
 Big-endian support is only theoretical and has never actually been tested, because big-endian desktops were practically extinct when the library was created. If you happen to own such a rare museum item in working condition, sending the <B>DSR_BIG_ENDIAN</B> macro to compilation should activate the big-endian mode and shift the direction of bit shift meant to be equivalent with the address space.
+
 </P><P>
 </P><H2> Build and run an example program:</H2><P>
 </P><P>
 <IMG SRC="Images/SmallDot.png">
 Select an SDK example and open its folder in a terminal.
+
 </P><P>
 <IMG SRC="Images/SmallDot.png">
 Give permission to execute the build script.
+
 </P><P>
 <blockquote> chmod +x build.sh</blockquote>
 </P><P>
 <IMG SRC="Images/SmallDot.png">
 Run the build script.
+
 </P><P>
 <blockquote> ./build.sh</blockquote></P><H2> If no example runs, try regression tests to diagnose:</H2><P><IMG SRC="Images/SmallDot.png">
 Open the source folder in a terminal and run the test script:
+
 </P><P>
 <blockquote>chmod +x test.sh</blockquote>
+
 </P><P>
 <blockquote>./test.sh</blockquote>
+
 </P><P>
 This will stop with a clearly visible error message if any of the tests fail.
+
 </P><P>
 </P><H2> Create your own project</H2><P>
 </P><P>
 <IMG SRC="Images/SmallDot.png">
-Copy the folder of a template program.If you want a 3D application with animations, start from basic3D.If you want graphical user interface that only redrawn when something happens, start from basicGUI.If you want a command line interface application, start from basicCLI. Command line applications are more portable by using "WINDOW_MANAGER=NONE". This compiles the dummy wrapper NoWindow.cpp so that it can run on the pure operating system without any display server.
+Copy the folder of a template program.
+If you want a 3D application with animations, start from basic3D.
+If you want graphical user interface that only redrawn when something happens, start from basicGUI.
+If you want a command line interface application, start from basicCLI. Command line applications are more portable by using "WINDOW_MANAGER=NONE". This compiles the dummy wrapper NoWindow.cpp so that it can run on the pure operating system without any display server.
+
 </P><P>
 <IMG SRC="Images/SmallDot.png">
 Change ROOT_PATH and TEMP_DIR in your build script to refer to the same locations from a new source path. If you don't use the build script, you can just delete it.
+
 </P><P>
 <IMG SRC="Images/SmallDot.png">
 Update header include paths to the library from the new folder location.
+
 </P><P>
 <IMG SRC="Images/SmallDot.png">
-Add your own external dependencies to LINKER_FLAGS within a quote with -l in front of each library name.</P><IMG SRC="Images/Border.png"><P>
+Add your own external dependencies to LINKER_FLAGS within a quote with -l in front of each library name.
+</P><IMG SRC="Images/Border.png"><P>
 </P><H2> Compiling a project on Microsoft Windows</H2><P>
 </P><P>
 Create a project from existing code:
+
 </P><P>
 <IMG SRC="Images/SmallDot.png">
 Download a mingw edition of CodeBlocks from their website. <A href="http://www.codeblocks.org/downloads/26#windows">www.codeblocks.org/downloads</A>
+
 </P><P>
 <IMG SRC="Images/SmallDot.png">
 Start CodeBlocks with administrator rights and create a new Win32 project, just to get the correct libraries. You can then throw away the template main file.
+
 </P><P>
 <IMG SRC="Images/SmallDot.png">
 If not starting as an administrator, certain parts of the file system may lack necessary permissions needed for creating executable binaries.
+
 </P><P>
 <IMG SRC="Images/SmallDot.png">
 Select C++ 14 with G++ from the GCC toolchain, so that it will be compatible with the software renderer. Link with "-lm -pthread" to get standard C++ math and threading. This should be done for both debug and release.
+
 </P><P>
 <IMG SRC="Images/SmallDot.png">
 Import all source files from <B>dfpsr/Source/DFPSR</B>.
+
 </P><P>
 <IMG SRC="Images/SmallDot.png">
 Import all source files from <B>the project you want to build</B>.
+
 </P><P>
 <IMG SRC="Images/SmallDot.png">
 Import <B>dfpsr/Source/windowManagers/Win32Window.cpp</B>.
+
 </P><P>
 <IMG SRC="Images/SmallDot.png">
 Save your project, so that you can continue working on the project.
+
 </P><P>
 <IMG SRC="Images/SmallDot.png">
 Build and run the project.
+
 </P><P>
-This is not an ideal solution for development if you plan to have multiple projects depending on the same library. A better solution would be to compile the whole dfpsr folder into a static library, link to it in each of your projects and refer to includeFramework.h.</P><IMG SRC="Images/Border.png"><P>
+This is not an ideal solution for development if you plan to have multiple projects depending on the same library. A better solution would be to compile the whole dfpsr folder into a static library, link to it in each of your projects and refer to includeFramework.h.
+</P><IMG SRC="Images/Border.png"><P>
 </P>
 </BODY> </HTML>

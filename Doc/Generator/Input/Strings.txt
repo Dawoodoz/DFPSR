@@ -1,0 +1,57 @@
+﻿<- Manual.html | Back to main page
+
+Title: Basic text operations
+The string API can be found in Source/DFPSR/api/stringAPI.h, where you can read the specific documentation for each method.
+The methods allow easily loading and parsing files using a single page of code without the risk of corrupting memory.
+Element access it read-only even for writable strings, so you're supposed to create strings by clearing and appending.
+This could probably be done with a single string type, but it's easier to reason about using one that heap allocates (String) and one that's lighter (ReadableString).
+---
+Title2: Encoding
+Both dsr::String and dsr::ReadableString are encoded in the UTF-32 format
+ using only line-feed for line-breaks.
+This takes more memory but guarantees that each character is one element
+ which makes algorithms a lot easier to implement when you cannot get corrupted
+ characters or line-breaks by mistake.
+---
+Title2: string_load
+Loading text from a file using string_load supports UTF-8 and UTF-16.
+If no byte order mark is detected, the content is loaded as raw Latin-1
+ by treating each byte in the file as U+00 to U+FF.
+Loading a string from a file using string_load removes carriage-return (U'\r' or 13)
+ and null terminators (U'\0' or 0).
+---
+Title2: string_save
+Saving text to a file using string_save lets you select the encodings for
+ characters and line-breaks.
+By default, text is stored as UTF-8 (only takes more space when needed)
+ with a byte order mark (so that other programs know that it's UTF-8)
+ and CR-LF line-breaks (so that it can be read on all major desktop systems).
+
+---
+Title2: dsr::String
+String is the dynamic text container based on reference counting and immutability.
+It guarantees that a head allocated buffer exists when length > 0.
+Assigning a String to another will make a shallow copy and increase the buffer's reference count.
+Appending more text to or clearing a String sharing its buffers with others will clone the buffer to prevent it from overwriting other strings.
+Splitting a String will use reference counting to refer to the same allocation.
+Splitting a literal will first create a new heap allocation and then refer to it from all new elements.
+---
+Title2: dsr::ReadableString
+ReadableString is used instead of String as an input argument so that U"" literals can be given without creating a new allocation.
+Accidentally giving a regular "" literal (not UTF-32) will be stopped instead of automatically converted.
+If you want to accept giving "" and automatically allocate a buffer for the UTF-32 conversion, then just use String.
+See the String as a value and ReadableString as a constant reference.
+---
+Title2: dsr::Printable
+Inheriting from Printable and defining toStreamIndented allow printing your type using printText (prints to standard output), debugText (only prints in debug mode) and throwError (calls std::runtime_error).
+
+For non-virtual types, you can define string_toStreamIndented with an overload to keep the type simple.
+
+Each of these printing methods allow passing multiple arguments separated by commas.
+To print to a new String, give a number of arguments to string_combine.
+If you want to keep the existing content and add more text at the end, use string_append.
+If appending a character, you probably don't want to print its numerical value, so call string_appendChar for each character being added.
+
+Unlike the << operation, toStreamIndented can take an indentation argument which makes it faster and easier to serialize types into files.
+Just let each line begin with the given indentation and then add your own, which can be given to the child components' indentation arguments recursively.
+---

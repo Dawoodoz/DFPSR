@@ -15,18 +15,17 @@ bool string_beginsWith(const ReadableString &a, const ReadableString &b) {
 void processContent(String &target, String content) {
 	string_split_callback([&target](ReadableString section) {
 		//printText(U"Processing: ", section, U"\n");
-		ReadableString dense = string_removeOuterWhiteSpace(section);
-		if (string_length(dense) == 0) {
+		if (string_length(section) == 0) {
 			//printText(U"    Break\n");
 			string_append(target, U"\n</P><P>\n");
-		} else if (string_match(dense, U"*")) {
+		} else if (string_match(section, U"*")) {
 			//printText(U"    Dot\n");
 			string_append(target, U"<IMG SRC=\"Images/SmallDot.png\">\n");
-		} else if (string_match(dense, U"---")) {
+		} else if (string_match(section, U"---")) {
 			//printText(U"    Border\n");
 			string_append(target, U"</P><IMG SRC=\"Images/Border.png\"><P>\n");
-		} else if (string_beginsWith(dense, U"<-")) {
-			ReadableString arguments = string_from(dense, 2);
+		} else if (string_beginsWith(section, U"<-")) {
+			ReadableString arguments = string_from(section, 2);
 			int splitIndex = string_findFirst(arguments, U'|');
 			if (splitIndex > -1) {
 				ReadableString link = string_removeOuterWhiteSpace(string_before(arguments, splitIndex));
@@ -37,8 +36,8 @@ void processContent(String &target, String content) {
 				//printText(U"    Link to ", arguments, U"\n");
 				string_append(target, U"<A href=\"", arguments, "\">", arguments, "</A>");
 			}
-		} else if (string_beginsWith(dense, U"Image:")) {
-			ReadableString arguments = string_from(dense, 6);
+		} else if (string_beginsWith(section, U"Image:")) {
+			ReadableString arguments = string_from(section, 6);
 			int splitIndex = string_findFirst(arguments, U'|');
 			if (splitIndex > -1) {
 				ReadableString image = string_removeOuterWhiteSpace(string_before(arguments, splitIndex));
@@ -49,25 +48,24 @@ void processContent(String &target, String content) {
 				//printText(U"    Image at ", arguments, U"\n");
 				string_append(target, U"<IMG SRC=\"", arguments, "\" ALT=\"\">\n");
 			}
-		} else if (string_beginsWith(dense, U"Title:")) {
-			ReadableString title = string_from(dense, 6);
+		} else if (string_beginsWith(section, U"Title:")) {
+			ReadableString title = string_from(section, 6);
 			//printText(U"    Title: ", title, U"\n");
 			string_append(target, U"</P><H1>", title, U"</H1><P>");
-		} else if (string_beginsWith(dense, U"Title2:")) {
-			ReadableString title = string_from(dense, 7);
+		} else if (string_beginsWith(section, U"Title2:")) {
+			ReadableString title = string_from(section, 7);
 			//printText(U"    Title2: ", title, U"\n");
 			string_append(target, U"</P><H2>", title, U"</H2><P>");
-		} else if (string_beginsWith(dense, U"Title3:")) {
-			ReadableString title = string_from(dense, 7);
+		} else if (string_beginsWith(section, U"Title3:")) {
+			ReadableString title = string_from(section, 7);
 			//printText(U"    Title3: ", title, U"\n");
 			string_append(target, U"</P><H3>", title, U"</H3><P>");
-		} else if (string_beginsWith(dense, U"Code:")) {
-			ReadableString code = string_from(dense, 5);
+		} else if (string_beginsWith(section, U"Code:")) {
+			ReadableString code = string_from(section, 5);
 			//printText(U"    Code: ", code, U"\n");
 			string_append(target, U"<blockquote>", code, U"</blockquote>");
 		} else {
-			//printText(U"    Text: ", dense, U"\n");
-			string_append(target, dense);
+			string_append(target, section, U"\n");
 		}
 	}, content, U'\n');
 }
