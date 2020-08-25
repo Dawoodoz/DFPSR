@@ -1,35 +1,36 @@
 ﻿<!DOCTYPE html> <HTML lang=en> <HEAD> <STYLE>
-body { background-color: #EEFFEE; font-size: 16px; font-family: Arial;
-       color: #000000; margin: 0px;
-       padding-left: 0px; padding-right: 0px;
-       padding-top: 0px; padding-bottom: 0px; }
-H1 { padding-left: 10px; padding-top: 10px; padding-bottom: 10px; font-size: 26px; }
-H2 { padding-left: 10px; padding-top: 10px;  font-size: 20px; }
+body { background-color: #EEFFEE;  font-size: 1.0rem; font-family: Arial; max-width: 50rem;
+      color: #000000; margin: 0px;
+      padding-left:  0px; padding-right:  0px; padding-top:  0px; padding-bottom:  0px; }
+H1 {  padding-left: 10px; padding-right:  0px; padding-top: 10px; padding-bottom: 10px; font-size: 1.4rem; }
+H2 {  padding-left: 10px; padding-right:  0px; padding-top: 10px; padding-bottom:  0px; font-size: 1.2rem; }
 blockquote {
   color: #FFFFFF; background: #000000;
-  font-size: 20px; font-family: monospace;
+  font-size: 1.2rem; font-family: monospace;
   padding-left: 5px; padding-right: 5px;
   padding-top: 5px; padding-bottom: 5px;
 }
-P { padding-left: 10px; }
-IMG { padding-left: 0px; padding-right: 0px;
-       padding-top: 0px; padding-bottom: 0px; }
-
-A { font-size: 18px; font-family: Arial; color: #0000A0; text-decoration: none; }
-A:hover { color: #000070; background: #AAffAA; }
-A:active { color: #00A0A0; }
-.normal { font-size: 18px; color: #00A0A0; }
-.sub { font-size: 18px; color: #ffffdf; }
+P {   padding-left: 20px; padding-right:  0px; padding-top:  0px; padding-bottom:  0px; }
+IMG { padding-left:  0px; padding-right:  0px; padding-top:  2px; padding-bottom:  0px;
+      max-width: 100%; }
+A { display: inline; border-radius: 4px;
+    font-size: 1.0rem; font-family: Arial; color: #000044; text-decoration: none;
+    padding-left: 4px; padding-right: 4px; padding-top: 4px; padding-bottom: 4px; }
+A:hover { color: #FFFF00; background: #000044; }
+A:active { color: #FFFFFF; background: #444444; }
 
 </STYLE> </HEAD> <BODY>
 <IMG SRC="Images/Title.png" ALT="Images/Title.png">
 <P>
 <A href="Manual.html">Back to main page</A>
 </P><P>
-</P><H1> Images</H1><P>All image types are passed using reference counted handles so that they are automatically cleaned up when the last handle is freed.
-This does add a little allocation overhead compared to having them as value types, but generating mip-map pyramids require a unique identity to prevent aliasing.
-If a method doesn't allow the image handle to be null, it will give you a run-time warning about it in debug mode.
-You won't have to worry about if the image is a value, reference, raw pointer, shared pointer or unique, because it's always the same type of handle.
+</P><H1> Images</H1><P>All images are passed using reference counted handles so that they are automatically cleaned up when the last handle is freed.
+Only having one way to pass images hidden behind a referebce counted handle type removes the burden of remembering
+if you passed it as a value, reference, pointer, shared pointer or unique pointer.
+There's just one way to pass images, using the safe handles.
+By using global methods for all image operations, accidentally calling a method on a null objects
+can be caught safely instead of triggering undefined behaviour with random crashes.
+Always passing by reference for convenience however costs a little bit more to allocate, so don't create and destroy sub-images all the time.
 </P><IMG SRC="Images/Border.png"><P>
 </P><H2> ImageU8</H2><P>The most basic image format used for 8-bit gray-scale images using 0 for black and 255 for white.
 Can be displayed by drawing it using draw_copy onto a color image for automatic conversion.

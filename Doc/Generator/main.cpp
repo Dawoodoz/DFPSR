@@ -16,7 +16,7 @@ void processContent(String &target, String content) {
 	string_split_callback([&target](ReadableString section) {
 		//printText(U"Processing: ", section, U"\n");
 		if (string_length(section) == 0) {
-			//printText(U"    Break\n");
+			//printText(U"    Break\n");+
 			string_append(target, U"\n</P><P>\n");
 		} else if (string_match(section, U"*")) {
 			//printText(U"    Dot\n");
@@ -61,6 +61,7 @@ void processContent(String &target, String content) {
 			//printText(U"    Title3: ", title, U"\n");
 			string_append(target, U"</P><H3>", title, U"</H3><P>");
 		} else if (string_beginsWith(section, U"Code:")) {
+            // TODO: Find a clean syntax for multi-line quotes in <PRE><BLOCKQUOTE>...</PRE></BLOCKQUOTE>
 			ReadableString code = string_from(section, 5);
 			//printText(U"    Code: ", code, U"\n");
 			string_append(target, U"<blockquote>", code, U"</blockquote>");

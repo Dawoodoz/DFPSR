@@ -1,22 +1,20 @@
-body { background-color: #EEFFEE; font-size: 16px; font-family: Arial;
-       color: #000000; margin: 0px;
-       padding-left: 0px; padding-right: 0px;
-       padding-top: 0px; padding-bottom: 0px; }
-H1 { padding-left: 10px; padding-top: 10px; padding-bottom: 10px; font-size: 26px; }
-H2 { padding-left: 10px; padding-top: 10px;  font-size: 20px; }
+body { background-color: #EEFFEE;  font-size: 1.0rem; font-family: Arial; max-width: 50rem;
+      color: #000000; margin: 0px;
+      padding-left:  0px; padding-right:  0px; padding-top:  0px; padding-bottom:  0px; }
+H1 {  padding-left: 10px; padding-right:  0px; padding-top: 10px; padding-bottom: 10px; font-size: 1.4rem; }
+H2 {  padding-left: 10px; padding-right:  0px; padding-top: 10px; padding-bottom:  0px; font-size: 1.2rem; }
 blockquote {
   color: #FFFFFF; background: #000000;
-  font-size: 20px; font-family: monospace;
+  font-size: 1.2rem; font-family: monospace;
   padding-left: 5px; padding-right: 5px;
   padding-top: 5px; padding-bottom: 5px;
 }
-P { padding-left: 10px; }
-IMG { padding-left: 0px; padding-right: 0px;
-       padding-top: 0px; padding-bottom: 0px; }
-
-A { font-size: 18px; font-family: Arial; color: #0000A0; text-decoration: none; }
-A:hover { color: #000070; background: #AAffAA; }
-A:active { color: #00A0A0; }
-.normal { font-size: 18px; color: #00A0A0; }
-.sub { font-size: 18px; color: #ffffdf; }
+P {   padding-left: 20px; padding-right:  0px; padding-top:  0px; padding-bottom:  0px; }
+IMG { padding-left:  0px; padding-right:  0px; padding-top:  2px; padding-bottom:  0px;
+      max-width: 100%; }
+A { display: inline; border-radius: 4px;
+    font-size: 1.0rem; font-family: Arial; color: #000044; text-decoration: none;
+    padding-left: 4px; padding-right: 4px; padding-top: 4px; padding-bottom: 4px; }
+A:hover { color: #FFFF00; background: #000044; }
+A:active { color: #FFFFFF; background: #444444; }
 

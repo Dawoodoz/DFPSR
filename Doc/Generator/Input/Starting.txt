@@ -20,19 +20,18 @@ Select an SDK example and open its folder in a terminal.
 *
 Give permission to execute the build script.
 
-Code: chmod +x build.sh
+<PRE><BLOCKQUOTE>chmod +x build.sh</BLOCKQUOTE></PRE>
 
 *
 Run the build script.
 
-Code: ./build.sh
+<PRE><BLOCKQUOTE>./build.sh</BLOCKQUOTE></PRE>
 Title2: If no example runs, try regression tests to diagnose:
 *
 Open the source folder in a terminal and run the test script:
 
-<blockquote>chmod +x test.sh</blockquote>
-
-<blockquote>./test.sh</blockquote>
+<PRE><BLOCKQUOTE>chmod +x test.sh
+./test.sh</blockquote></BLOCKQUOTE></PRE>
 
 This will stop with a clearly visible error message if any of the tests fail.
 
