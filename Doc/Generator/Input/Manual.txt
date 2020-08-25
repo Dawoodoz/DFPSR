@@ -1,14 +1,18 @@
 ﻿Title: David Piuva's software renderer
 
 When you just want to code in your own pace without worrying about API deprecation.
----
-Title2: Using the library
 
 *
 <- Starting.html | Getting started
+---
+Title2: APIs
 
 *
-<- Strings.html | Basic text operations
+<- Strings.html | String API
+
+*
+<- Images.html | Image API
+
 ---
 Title2: Modifying the library
 
