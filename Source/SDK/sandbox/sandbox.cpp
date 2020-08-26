@@ -156,6 +156,7 @@ static const float cameraSpeed = 1.0f;
 // World
 static SpriteWorld world;
 bool ambientLight = true;
+bool showTestModel = false;
 
 void sandbox_main() {
 	// Create the world
@@ -202,6 +203,8 @@ void sandbox_main() {
 				ambientLight = !ambientLight;
 			} else if (key == DsrKey_T) {
 				tileAlign = !tileAlign;
+			} else if (key == DsrKey_Y) {
+				showTestModel = !showTestModel;
 			} else if (key == DsrKey_F) {
 				showOverlays = !showOverlays;
 			} else if (key == DsrKey_K) {
@@ -383,21 +386,16 @@ void sandbox_main() {
 		spriteWorld_addTemporarySprite(world, brush);
 
 		// Test freely rotated models
-		/*Transform3D testLocation = Transform3D(
-		  FVector3D(0.0f, sin(timer) * 0.1f, 0.0f),
-		  FMatrix3x3(
-		    FVector3D(1.0f, 0.0f, 0.0f),
-		    FVector3D(0.0f, 1.0f, 0.0f),
-		    FVector3D(0.0f, 0.0f, 1.0f))
-		);*/
-		Transform3D testLocation = Transform3D(
-		  FVector3D(0.0f, sin(timer) * 0.1f, 0.0f),
-		  FMatrix3x3(
-		    FVector3D(cos(timer), 0.0f, sin(timer)),
-		    FVector3D(0.0f, 1.0f, 0.0f),
-		    FVector3D(-sin(timer), 0.0f, cos(timer)))
-		);
-		spriteWorld_addTemporaryModel(world, ModelInstance(barrelVisible, barrelShadow, testLocation));
+		if (showTestModel) {
+			Transform3D testLocation = Transform3D(
+			  FVector3D(0.0f, sin(timer) * 0.1f, 0.0f),
+			  FMatrix3x3(
+				FVector3D(cos(timer), 0.0f, sin(timer)),
+				FVector3D(0.0f, 1.0f, 0.0f),
+				FVector3D(-sin(timer), 0.0f, cos(timer)))
+			);
+			spriteWorld_addTemporaryModel(world, ModelInstance(barrelVisible, barrelShadow, testLocation));
+		}
 
 		// Draw the world
 		spriteWorld_draw(world, colorBuffer);
