@@ -2,12 +2,15 @@
 #include "spriteAPI.h"
 #include "Octree.h"
 #include "DirtyRectangles.h"
+#include "importer.h"
 #include "../../../DFPSR/render/ITriangle2D.h"
 
 // Comment out a flag to disable an optimization when debugging
 #define DIRTY_RECTANGLE_OPTIMIZATION
 
 namespace dsr {
+	
+static IRect renderModel(Model model, OrthoView view, ImageF32 depthBuffer, ImageRgbaU8 diffuseTarget, ImageRgbaU8 normalTarget, FVector2D worldOrigin, Transform3D modelToWorldSpace);
 
 struct SpriteConfig {
 	int centerX, centerY; // The sprite's origin in pixels relative to the upper left corner
@@ -212,25 +215,18 @@ static int getSpriteFrameIndex(const Sprite& sprite, OrthoView view) {
 }
 
 // Returns a 2D bounding box of affected target pixels
-IRect drawSprite(const Sprite& sprite, const OrthoView& ortho, const IVector2D& worldCenter, ImageF32 targetHeight, ImageRgbaU8 targetColor, ImageRgbaU8 targetNormal) {
+static IRect drawSprite(const Sprite& sprite, const OrthoView& ortho, const IVector2D& worldCenter, ImageF32 targetHeight, ImageRgbaU8 targetColor, ImageRgbaU8 targetNormal) {
 	int frameIndex = getSpriteFrameIndex(sprite, ortho);
 	const SpriteFrame* frame = &types[sprite.typeIndex].frames[frameIndex];
 	IVector2D screenSpace = ortho.miniTilePositionToScreenPixel(sprite.location, worldCenter) - frame->centerPoint;
 	float heightOffset = sprite.location.y * ortho_tilesPerMiniUnit;
-	if (image_exists(targetColor)) {
-		if (image_exists(targetNormal)) {
-			draw_higher(targetHeight, frame->heightImage, targetColor, frame->colorImage, targetNormal, frame->normalImage, screenSpace.x, screenSpace.y, heightOffset);
-		} else {
-			draw_higher(targetHeight, frame->heightImage, targetColor, frame->colorImage, screenSpace.x, screenSpace.y, heightOffset);
-		}
-	} else {
-		if (image_exists(targetNormal)) {
-			draw_higher(targetHeight, frame->heightImage, targetNormal, frame->normalImage, screenSpace.x, screenSpace.y, heightOffset);
-		} else {
-			draw_higher(targetHeight, frame->heightImage, screenSpace.x, screenSpace.y, heightOffset);
-		}
-	}
+	draw_higher(targetHeight, frame->heightImage, targetColor, frame->colorImage, targetNormal, frame->normalImage, screenSpace.x, screenSpace.y, heightOffset);
 	return IRect(screenSpace.x, screenSpace.y, image_getWidth(frame->colorImage), image_getHeight(frame->colorImage));
+}
+
+static IRect drawModel(const ModelInstance& instance, const OrthoView& ortho, const IVector2D& worldCenter, ImageF32 targetHeight, ImageRgbaU8 targetColor, ImageRgbaU8 targetNormal) {
+	// TODO: Get the model's bounding box to get a faster camera culling before letting renderModel do the more precise test using transformed geometry data
+	return renderModel(instance.visibleModel, ortho, targetHeight, targetColor, targetNormal, FVector2D(worldCenter.x, worldCenter.y), instance.location);
 }
 
 // The camera transform for each direction
@@ -281,6 +277,18 @@ public:
 	PointLight(FVector3D position, float radius, float intensity, ColorRgbI32 color, bool shadowCasting)
 	: position(position), radius(radius), intensity(intensity), color(color), shadowCasting(shadowCasting) {}
 public:
+	void renderModelShadow(CubeMapF32& shadowTarget, const ModelInstance& instance, const FMatrix3x3& normalToWorld) const {
+		Model model = instance.shadowModel;
+		if (model_exists(model)) {
+			// Place the model relative to the light source's position, to make rendering in light-space easier
+			Transform3D modelToWorldTransform = instance.location;
+			modelToWorldTransform.position = modelToWorldTransform.position - this->position;
+			for (int s = 0; s < 6; s++) {
+				Camera camera = Camera::createPerspective(Transform3D(FVector3D(), ShadowCubeMapSides[s] * normalToWorld), shadowTarget.resolution, shadowTarget.resolution);
+				model_renderDepth(model, modelToWorldTransform, shadowTarget.cubeMapViews[s], camera);
+			}
+		}
+	}
 	void renderSpriteShadow(CubeMapF32& shadowTarget, const Sprite& sprite, const FMatrix3x3& normalToWorld) const {
 		if (sprite.shadowCasting) {
 			Model model = types[sprite.typeIndex].shadowModel;
@@ -453,6 +461,7 @@ public:
 	Octree<Sprite> passiveSprites;
 	// Temporary things are deleted when spriteWorld_clearTemporary is called
 	List<Sprite> temporarySprites;
+	List<ModelInstance> temporaryModels;
 	List<PointLight> temporaryPointLights;
 	List<DirectedLight> temporaryDirectedLights;
 	// View
@@ -582,6 +591,10 @@ public:
 			IRect drawnRegion = drawSprite(this->temporarySprites[s], this->ortho.view[this->cameraIndex], -seenRegion.upperLeft(), heightTarget, diffuseTarget, normalTarget);
 			this->dirtyBackground.makeRegionDirty(drawnRegion);
 		}
+		for (int s = 0; s < this->temporaryModels.length(); s++) {
+			IRect drawnRegion = drawModel(this->temporaryModels[s], this->ortho.view[this->cameraIndex], -seenRegion.upperLeft(), heightTarget, diffuseTarget, normalTarget);
+			this->dirtyBackground.makeRegionDirty(drawnRegion);
+		}
 	}
 public:
 	void updatePassiveRegion(const IRect& modifiedRegion) {
@@ -641,9 +654,15 @@ public:
 			if (currentLight->shadowCasting) {
 				startTime = time_getSeconds();
 				this->temporaryShadowMap.clear();
+				// Shadows from background sprites
 				currentLight->renderSpriteShadows(this->temporaryShadowMap, this->passiveSprites, ortho.view[this->cameraIndex].normalToWorldSpace);
+				// Shadows from temporary sprites
 				for (int s = 0; s < this->temporarySprites.length(); s++) {
 					currentLight->renderSpriteShadow(this->temporaryShadowMap, this->temporarySprites[s], ortho.view[this->cameraIndex].normalToWorldSpace);
+				}
+				// Shadows from temporary models
+				for (int s = 0; s < this->temporaryModels.length(); s++) {
+					currentLight->renderModelShadow(this->temporaryShadowMap, this->temporaryModels[s], ortho.view[this->cameraIndex].normalToWorldSpace);
 				}
 				debugText("Cast point-light shadows: ", (time_getSeconds() - startTime) * 1000.0, " ms\n");
 			}
@@ -697,6 +716,12 @@ void spriteWorld_addTemporarySprite(SpriteWorld& world, const Sprite& sprite) {
 	world->temporarySprites.push(sprite);
 }
 
+void spriteWorld_addTemporaryModel(SpriteWorld& world, const ModelInstance& instance) {
+	MUST_EXIST(world, spriteWorld_addTemporaryModel);
+	// Add the temporary model
+	world->temporaryModels.push(instance);
+}
+
 void spriteWorld_createTemporary_pointLight(SpriteWorld& world, const FVector3D position, float radius, float intensity, ColorRgbI32 color, bool shadowCasting) {
 	MUST_EXIST(world, spriteWorld_createTemporary_pointLight);
 	world->temporaryPointLights.pushConstruct(position, radius, intensity, color, shadowCasting);
@@ -710,6 +735,7 @@ void spriteWorld_createTemporary_directedLight(SpriteWorld& world, const FVector
 void spriteWorld_clearTemporary(SpriteWorld& world) {
 	MUST_EXIST(world, spriteWorld_clearTemporary);
 	world->temporarySprites.clear();
+	world->temporaryModels.clear();
 	world->temporaryPointLights.clear();
 	world->temporaryDirectedLights.clear();
 }
@@ -765,58 +791,6 @@ void spriteWorld_setCameraDirectionIndex(SpriteWorld& world, int index) {
 	}
 }
 
-static FVector3D normalFromPoints(const FVector3D& A, const FVector3D& B, const FVector3D& C) {
-    return normalize(crossProduct(B - A, C - A));
-}
-
-static FVector3D getAverageNormal(const Model& model, int part, int poly) {
-	int vertexCount = model_getPolygonVertexCount(model, part, poly);
-	FVector3D normalSum;
-	for (int t = 0; t < vertexCount - 2; t++) {
-		normalSum = normalSum + normalFromPoints(
-		  model_getVertexPosition(model, part, poly, 0),
-		  model_getVertexPosition(model, part, poly, t + 1),
-		  model_getVertexPosition(model, part, poly, t + 2)
-		);
-	}
-	return normalize(normalSum);
-}
-
-// TODO: Create a compact model format for dense vertex models where positions are stored as 16.16 fixed precision aligned with vertex data to avoid random access
-// TODO: Create a triangle rasterizer optimized for many small triangles by just adding edge offsets, normals and colors.
-// TODO: Allow creating freely rotated and scaled 3D models as a part of the passively drawn background.
-// TODO: Allow creating freely rotated and scaled 3D models as dynamic items of a slightly lower detail level.
-
-// Side-effects: Packing normals into texture coordinates of model
-static void computeObjectSpaceNormals(Model model) {
-	int pointCount = model_getNumberOfPoints(model);
-	Array<FVector3D> normalPoints(pointCount, FVector3D());
-	// Calculate smooth normals in object-space, by adding each polygon's normal to each child vertex
-	for (int part = 0; part < model_getNumberOfParts(model); part++) {
-		for (int poly = 0; poly < model_getNumberOfPolygons(model, part); poly++) {
-			FVector3D polygonNormal = getAverageNormal(model, part, poly);
-			for (int vert = 0; vert < model_getPolygonVertexCount(model, part, poly); vert++) {
-				int point = model_getVertexPointIndex(model, part, poly, vert);
-				normalPoints[point] = normalPoints[point] + polygonNormal;
-			}
-		}
-	}
-	// Normalize the result per vertex, to avoid having unbalanced weights when normalizing per pixel
-	for (int point = 0; point < pointCount; point++) {
-		normalPoints[point] = normalize(normalPoints[point]);
-	}
-	// Store the resulting normals packed as texture coordinates
-	for (int part = 0; part < model_getNumberOfParts(model); part++) {
-		for (int poly = 0; poly < model_getNumberOfPolygons(model, part); poly++) {
-			for (int vert = 0; vert < model_getPolygonVertexCount(model, part, poly); vert++) {
-				int point = model_getVertexPointIndex(model, part, poly, vert);
-				FVector3D vertexNormal = normalPoints[point];
-				model_setTexCoord(model, part, poly, vert, FVector4D(vertexNormal.x, vertexNormal.y, vertexNormal.z, 0.0f));
-			}
-		}
-	}
-}
-
 // Only because normals are stored as texture coordinates
 static FVector3D unpackNormals(FVector4D packedNormals) {
 	return FVector3D(packedNormals.x, packedNormals.y, packedNormals.z);
@@ -825,24 +799,38 @@ static FVector3D unpackNormals(FVector4D packedNormals) {
 // Pre-conditions:
 //   * All images must exist and have the same dimensions
 //   * All triangles in model must be contained within the image bounds after being projected using view
+// Post-condition:
+//   Returns the dirty pixel bound based on projected positions
 // worldOrigin is the perceived world's origin in target pixel coordinates
 // modelToWorldSpace is used to place the model freely in the world
-static void renderModel(Model model, OrthoView view, ImageF32 depthBuffer, ImageRgbaU8 diffuseTarget, ImageRgbaU8 normalTarget, FVector2D worldOrigin, Transform3D modelToWorldSpace) {
+static IRect renderModel(Model model, OrthoView view, ImageF32 depthBuffer, ImageRgbaU8 diffuseTarget, ImageRgbaU8 normalTarget, FVector2D worldOrigin, Transform3D modelToWorldSpace) {
 	int pointCount = model_getNumberOfPoints(model);
 	IRect clipBound = image_getBound(depthBuffer);
 
 	Array<FVector3D> projectedPoints(pointCount, FVector3D()); // pixel X, pixel Y, mini-tile height
 
 	// Combine transforms
-	FMatrix3x3 normalToWorldSpace = modelToWorldSpace.transform * view.normalToWorldSpace;
 	// TODO: Combine objectToWorldSpace with worldOrigin to get screen space directly
 	Transform3D objectToWorldSpace = modelToWorldSpace * Transform3D(FVector3D(), view.worldSpaceToScreenDepth);
 
-	// Transform positions
+	// Transform positions and return the dirty box
+	IRect dirtyBox = IRect(clipBound.width(), clipBound.height(), -clipBound.width(), -clipBound.height());
 	for (int point = 0; point < pointCount; point++) {
 		FVector3D projected = objectToWorldSpace.transformPoint(model_getPoint(model, point));
-		projectedPoints[point] = FVector3D(projected.x + worldOrigin.x, projected.y + worldOrigin.y, projected.z);
+		FVector3D screenProjection = FVector3D(projected.x + worldOrigin.x, projected.y + worldOrigin.y, projected.z);
+		projectedPoints[point] = screenProjection;
+		// Expand the dirty bound
+		dirtyBox = IRect::merge(dirtyBox, IRect((int)(screenProjection.x), (int)(screenProjection.y), 1, 1));
 	}
+
+	// Skip early if the culling test fails
+	if (!(IRect::cut(clipBound, dirtyBox).hasArea())) {
+		// Nothing drawn, no dirty rectangle
+		return IRect();
+	}
+	
+	// Combine normal transforms
+	FMatrix3x3 normalToWorldSpace = view.normalToWorldSpace;
 
 	// Render polygons as triangle fans
 	for (int part = 0; part < model_getNumberOfParts(model); part++) {
@@ -851,7 +839,10 @@ static void renderModel(Model model, OrthoView view, ImageF32 depthBuffer, Image
 			int vertA = 0;
 			FVector4D vertexColorA = model_getVertexColor(model, part, poly, vertA) * 255.0f;
 			int indexA = model_getVertexPointIndex(model, part, poly, vertA);
-			FVector3D normalA = normalToWorldSpace.transformTransposed(unpackNormals(model_getTexCoord(model, part, poly, vertA)));
+			
+			// TODO: Merge transforms into normalToWorldSpace in advance
+			FVector3D normalA = normalToWorldSpace.transformTransposed(modelToWorldSpace.transform.transform(unpackNormals(model_getTexCoord(model, part, poly, vertA))));
+			
 			FVector3D pointA = projectedPoints[indexA];
 			LVector2D subPixelA = LVector2D(safeRoundInt64(pointA.x * constants::unitsPerPixel), safeRoundInt64(pointA.y * constants::unitsPerPixel));
 			for (int vertB = 1; vertB < vertexCount - 1; vertB++) {
@@ -860,8 +851,11 @@ static void renderModel(Model model, OrthoView view, ImageF32 depthBuffer, Image
 				int indexC = model_getVertexPointIndex(model, part, poly, vertC);
 				FVector4D vertexColorB = model_getVertexColor(model, part, poly, vertB) * 255.0f;
 				FVector4D vertexColorC = model_getVertexColor(model, part, poly, vertC) * 255.0f;
-				FVector3D normalB = normalToWorldSpace.transformTransposed(unpackNormals(model_getTexCoord(model, part, poly, vertB)));
-				FVector3D normalC = normalToWorldSpace.transformTransposed(unpackNormals(model_getTexCoord(model, part, poly, vertC)));
+				
+				// TODO: Merge transforms into normalToWorldSpace in advance
+				FVector3D normalB = normalToWorldSpace.transformTransposed(modelToWorldSpace.transform.transform(unpackNormals(model_getTexCoord(model, part, poly, vertB))));
+				FVector3D normalC = normalToWorldSpace.transformTransposed(modelToWorldSpace.transform.transform(unpackNormals(model_getTexCoord(model, part, poly, vertC))));
+				
 				FVector3D pointB = projectedPoints[indexB];
 				FVector3D pointC = projectedPoints[indexC];
 				LVector2D subPixelB = LVector2D(safeRoundInt64(pointB.x * constants::unitsPerPixel), safeRoundInt64(pointB.y * constants::unitsPerPixel));
@@ -891,6 +885,7 @@ static void renderModel(Model model, OrthoView view, ImageF32 depthBuffer, Image
 			}
 		}
 	}
+	return dirtyBox;
 }
 
 void sprite_generateFromModel(ImageRgbaU8& targetAtlas, String& targetConfigText, const Model& visibleModel, const Model& shadowModel, const OrthoSystem& ortho, const String& targetPath, int cameraAngles) {
@@ -946,7 +941,7 @@ void sprite_generateFromModel(ImageRgbaU8& targetAtlas, String& targetConfigText
 		for (int a = 0; a < cameraAngles; a++) {
 			image_fill(depthBuffer, -1000000000.0f);
 			image_fill(colorImage[a], ColorRgbaI32(0, 0, 0, 0));
-			computeObjectSpaceNormals(visibleModel);
+			importer_generateNormalsIntoTextureCoordinates(visibleModel);
 			FVector2D origin = FVector2D((float)width * 0.5f, (float)height * 0.5f);
 			renderModel(visibleModel, ortho.view[a], depthBuffer, colorImage[a], normalImage[a], origin, Transform3D());
 			// Convert height into an 8 bit channel for saving

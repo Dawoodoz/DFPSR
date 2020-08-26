@@ -34,6 +34,21 @@ public:
 	: typeIndex(typeIndex), direction(direction), location(location), shadowCasting(shadowCasting) {}
 };
 
+// A 3D model that can be rotated freely
+//   To be rendered during game-play to allow free rotation
+struct ModelInstance {
+public:
+	Model visibleModel;
+	Model shadowModel;
+	Transform3D location; // 3D tile coordinates with translation and 3-axis rotation allowed
+public:
+	// The shadowCasting property is replaced by multiple constructors
+	ModelInstance(const Model& visibleModel, const Model& shadowModel, const Transform3D& location)
+	: visibleModel(visibleModel), shadowModel(shadowModel), location(location) {}
+	ModelInstance(const Model& visibleModel, const Transform3D& location)
+	: visibleModel(visibleModel), shadowModel(Model()), location(location) {}
+};
+
 class SpriteWorldImpl;
 using SpriteWorld = std::shared_ptr<SpriteWorldImpl>;
 
@@ -44,6 +59,7 @@ int sprite_getTypeCount();
 SpriteWorld spriteWorld_create(OrthoSystem ortho, int shadowResolution);
 void spriteWorld_addBackgroundSprite(SpriteWorld& world, const Sprite& sprite);
 void spriteWorld_addTemporarySprite(SpriteWorld& world, const Sprite& sprite);
+void spriteWorld_addTemporaryModel(SpriteWorld& world, const ModelInstance& instance);
 
 // Create a point light that only exists until the next call to spriteWorld_clearTemporary.
 //   position is in tile unit world-space.

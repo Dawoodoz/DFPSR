@@ -115,6 +115,7 @@ LATER:
 
 #include "../../DFPSR/includeFramework.h"
 #include "sprite/spriteAPI.h"
+#include "sprite/importer.h"
 #include "../../DFPSR/image/PackOrder.h"
 #include <assert.h>
 #include <limits>
@@ -123,6 +124,7 @@ using namespace dsr;
 
 static const String mediaPath = string_combine(U"media", file_separator());
 static const String imagePath = string_combine(mediaPath, U"images", file_separator());
+static const String modelPath = string_combine(mediaPath, U"models", file_separator());
 
 // Variables
 static bool running = true;
@@ -313,7 +315,13 @@ void sandbox_main() {
 	float profileFrameRate = 0.0f;
 	double maxFrameTime = 0.0, lastMaxFrameTime = 0.0; // Peak per second
 
+	// Load models
+	Model barrelVisible = importer_loadModel(modelPath + U"Barrel.ply", true, Transform3D());
+	importer_generateNormalsIntoTextureCoordinates(barrelVisible);
+	Model barrelShadow = importer_loadModel(modelPath + U"Barrel_Shadow.ply", true, Transform3D());
+
 	while(running) {
+		double timer = time_getSeconds();
 		double startTime;
 
 		// Execute actions
@@ -373,6 +381,23 @@ void sandbox_main() {
 
 		// Show the brush
 		spriteWorld_addTemporarySprite(world, brush);
+
+		// Test freely rotated models
+		/*Transform3D testLocation = Transform3D(
+		  FVector3D(0.0f, sin(timer) * 0.1f, 0.0f),
+		  FMatrix3x3(
+		    FVector3D(1.0f, 0.0f, 0.0f),
+		    FVector3D(0.0f, 1.0f, 0.0f),
+		    FVector3D(0.0f, 0.0f, 1.0f))
+		);*/
+		Transform3D testLocation = Transform3D(
+		  FVector3D(0.0f, sin(timer) * 0.1f, 0.0f),
+		  FMatrix3x3(
+		    FVector3D(cos(timer), 0.0f, sin(timer)),
+		    FVector3D(0.0f, 1.0f, 0.0f),
+		    FVector3D(-sin(timer), 0.0f, cos(timer)))
+		);
+		spriteWorld_addTemporaryModel(world, ModelInstance(barrelVisible, barrelShadow, testLocation));
 
 		// Draw the world
 		spriteWorld_draw(world, colorBuffer);
