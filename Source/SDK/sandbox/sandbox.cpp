@@ -8,8 +8,6 @@
 
 /*
 BUGS:
-	* Certain key press events are ignored by the system after reaching a higher frame-rate.
-		It is an existing bug that wasn't revealed or is it the system being unresponsive?
 	* The mouse move is repeated automatically when changing pixel scale, but the same doesn't work for when the window itself moved.
 		How can a new mouse-move event be triggered from the current location when toggling full-screen so that the window itself moves?
 	* Tiles placed at different heights do not have synchronized rounding between each other.
@@ -30,11 +28,6 @@ BUGS:
 		* There's no way to close the gaps on height fields without using black pixels to create zero offset at the ends.
 			This creates open holes when not using zero clipping.
 			An optional triangle patch can be added along the open sides. (all for planes and excluding sides for cylinders)
-
-POSSIBLY SOLVED BUGS:
-	* The fence shadows showed that shadow rendering were not rotated correctly.
-		Create a test sprite with less symmetry to show if anything is rotated or mirrored wrong with new shape transforms.
-		Try to define the coordinate systems for light in a way that makes more sense.
 
 VISUALS:
 	* Make a directed light source that casts light and shadows from a fixed direction but can fade like a point light.

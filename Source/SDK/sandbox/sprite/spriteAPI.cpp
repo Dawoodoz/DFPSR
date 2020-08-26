@@ -782,41 +782,66 @@ static FVector3D getAverageNormal(const Model& model, int part, int poly) {
 	return normalize(normalSum);
 }
 
-// Pre-conditions:
-//   * All images must exist and have the same dimensions
-//   * All triangles in model must be contained within the image bounds after being projected using view
-// TODO: Render directly with a location to a 16-bit depth buffer for background 3D models and brush preview
-static void sprite_render(Model model, OrthoView view, ImageF32 depthBuffer, ImageRgbaU8 diffuseTarget, ImageRgbaU8 normalTarget) {
-	int pointCount = model_getNumberOfPoints(model);
-	IRect clipBound = image_getBound(depthBuffer);
-	FVector2D projectionOffset = FVector2D((float)clipBound.width() * 0.5f, (float)clipBound.height() * 0.5f);
-	// TODO: Allow having length 0 for Arrays and Fields by preventing all access to elements in special cases
-	Array<FVector3D> projectedPoints(pointCount, FVector3D()); // pixel X, pixel Y, mini-tile height
-	Array<FVector3D> normalPoints(pointCount, FVector3D()); // normal X, Y, Z
-	// TODO: Store an array of normals for each point, sum normal vectors for each included polygon and normalize the result
-	//       Interpolate and normalize again for each pixel
-	for (int point = 0; point < pointCount; point++) {
-		FVector3D projected = view.worldSpaceToScreenDepth.transform(model_getPoint(model, point));
-		projectedPoints[point] = FVector3D(projected.x + projectionOffset.x, projected.y + projectionOffset.y, projected.z);
-	}
+// TODO: Create a compact model format for dense vertex models where positions are stored as 16.16 fixed precision aligned with vertex data to avoid random access
+// TODO: Create a triangle rasterizer optimized for many small triangles by just adding edge offsets, normals and colors.
+// TODO: Allow creating freely rotated and scaled 3D models as a part of the passively drawn background.
+// TODO: Allow creating freely rotated and scaled 3D models as dynamic items of a slightly lower detail level.
 
-	// Calculate rounded normals in light-space.
-	// TODO: Pre-generate normals in world space before transforming into light space.
-	FMatrix3x3 normalToWorldSpace = view.normalToWorldSpace;
+// Side-effects: Packing normals into texture coordinates of model
+static void computeObjectSpaceNormals(Model model) {
+	int pointCount = model_getNumberOfPoints(model);
+	Array<FVector3D> normalPoints(pointCount, FVector3D());
+	// Calculate smooth normals in object-space, by adding each polygon's normal to each child vertex
 	for (int part = 0; part < model_getNumberOfParts(model); part++) {
 		for (int poly = 0; poly < model_getNumberOfPolygons(model, part); poly++) {
-			// Transform the normal into a coordinate system aligned with the camera.
-			//       Otherwise the rotation cannot be used for individual rotation to have a corner for each wall.
-			FVector3D worldNormal = getAverageNormal(model, part, poly);
-			FVector3D localNormal = normalToWorldSpace.transformTransposed(worldNormal);
+			FVector3D polygonNormal = getAverageNormal(model, part, poly);
 			for (int vert = 0; vert < model_getPolygonVertexCount(model, part, poly); vert++) {
 				int point = model_getVertexPointIndex(model, part, poly, vert);
-				normalPoints[point] = normalPoints[point] + localNormal;
+				normalPoints[point] = normalPoints[point] + polygonNormal;
 			}
 		}
 	}
+	// Normalize the result per vertex, to avoid having unbalanced weights when normalizing per pixel
 	for (int point = 0; point < pointCount; point++) {
 		normalPoints[point] = normalize(normalPoints[point]);
+	}
+	// Store the resulting normals packed as texture coordinates
+	for (int part = 0; part < model_getNumberOfParts(model); part++) {
+		for (int poly = 0; poly < model_getNumberOfPolygons(model, part); poly++) {
+			for (int vert = 0; vert < model_getPolygonVertexCount(model, part, poly); vert++) {
+				int point = model_getVertexPointIndex(model, part, poly, vert);
+				FVector3D vertexNormal = normalPoints[point];
+				model_setTexCoord(model, part, poly, vert, FVector4D(vertexNormal.x, vertexNormal.y, vertexNormal.z, 0.0f));
+			}
+		}
+	}
+}
+
+// Only because normals are stored as texture coordinates
+static FVector3D unpackNormals(FVector4D packedNormals) {
+	return FVector3D(packedNormals.x, packedNormals.y, packedNormals.z);
+}
+
+// Pre-conditions:
+//   * All images must exist and have the same dimensions
+//   * All triangles in model must be contained within the image bounds after being projected using view
+// worldOrigin is the perceived world's origin in target pixel coordinates
+// modelToWorldSpace is used to place the model freely in the world
+static void renderModel(Model model, OrthoView view, ImageF32 depthBuffer, ImageRgbaU8 diffuseTarget, ImageRgbaU8 normalTarget, FVector2D worldOrigin, Transform3D modelToWorldSpace) {
+	int pointCount = model_getNumberOfPoints(model);
+	IRect clipBound = image_getBound(depthBuffer);
+
+	Array<FVector3D> projectedPoints(pointCount, FVector3D()); // pixel X, pixel Y, mini-tile height
+
+	// Combine transforms
+	FMatrix3x3 normalToWorldSpace = modelToWorldSpace.transform * view.normalToWorldSpace;
+	// TODO: Combine objectToWorldSpace with worldOrigin to get screen space directly
+	Transform3D objectToWorldSpace = modelToWorldSpace * Transform3D(FVector3D(), view.worldSpaceToScreenDepth);
+
+	// Transform positions
+	for (int point = 0; point < pointCount; point++) {
+		FVector3D projected = objectToWorldSpace.transformPoint(model_getPoint(model, point));
+		projectedPoints[point] = FVector3D(projected.x + worldOrigin.x, projected.y + worldOrigin.y, projected.z);
 	}
 
 	// Render polygons as triangle fans
@@ -826,7 +851,7 @@ static void sprite_render(Model model, OrthoView view, ImageF32 depthBuffer, Ima
 			int vertA = 0;
 			FVector4D vertexColorA = model_getVertexColor(model, part, poly, vertA) * 255.0f;
 			int indexA = model_getVertexPointIndex(model, part, poly, vertA);
-			FVector3D normalA = normalPoints[indexA];
+			FVector3D normalA = normalToWorldSpace.transformTransposed(unpackNormals(model_getTexCoord(model, part, poly, vertA)));
 			FVector3D pointA = projectedPoints[indexA];
 			LVector2D subPixelA = LVector2D(safeRoundInt64(pointA.x * constants::unitsPerPixel), safeRoundInt64(pointA.y * constants::unitsPerPixel));
 			for (int vertB = 1; vertB < vertexCount - 1; vertB++) {
@@ -835,8 +860,8 @@ static void sprite_render(Model model, OrthoView view, ImageF32 depthBuffer, Ima
 				int indexC = model_getVertexPointIndex(model, part, poly, vertC);
 				FVector4D vertexColorB = model_getVertexColor(model, part, poly, vertB) * 255.0f;
 				FVector4D vertexColorC = model_getVertexColor(model, part, poly, vertC) * 255.0f;
-				FVector3D normalB = normalPoints[indexB];
-				FVector3D normalC = normalPoints[indexC];
+				FVector3D normalB = normalToWorldSpace.transformTransposed(unpackNormals(model_getTexCoord(model, part, poly, vertB)));
+				FVector3D normalC = normalToWorldSpace.transformTransposed(unpackNormals(model_getTexCoord(model, part, poly, vertC)));
 				FVector3D pointB = projectedPoints[indexB];
 				FVector3D pointC = projectedPoints[indexC];
 				LVector2D subPixelB = LVector2D(safeRoundInt64(pointB.x * constants::unitsPerPixel), safeRoundInt64(pointB.y * constants::unitsPerPixel));
@@ -844,7 +869,6 @@ static void sprite_render(Model model, OrthoView view, ImageF32 depthBuffer, Ima
 				IRect triangleBound = IRect::cut(clipBound, getTriangleBound(subPixelA, subPixelB, subPixelC));
 				int rowCount = triangleBound.height();
 				if (rowCount > 0) {
-					// TODO: Fix the excess pixel bugs
 					RowInterval rows[rowCount];
 					rasterizeTriangle(subPixelA, subPixelB, subPixelC, rows, triangleBound);
 					for (int y = triangleBound.top(); y < triangleBound.bottom(); y++) {
@@ -922,7 +946,9 @@ void sprite_generateFromModel(ImageRgbaU8& targetAtlas, String& targetConfigText
 		for (int a = 0; a < cameraAngles; a++) {
 			image_fill(depthBuffer, -1000000000.0f);
 			image_fill(colorImage[a], ColorRgbaI32(0, 0, 0, 0));
-			sprite_render(visibleModel, ortho.view[a], depthBuffer, colorImage[a], normalImage[a]);
+			computeObjectSpaceNormals(visibleModel);
+			FVector2D origin = FVector2D((float)width * 0.5f, (float)height * 0.5f);
+			renderModel(visibleModel, ortho.view[a], depthBuffer, colorImage[a], normalImage[a], origin, Transform3D());
 			// Convert height into an 8 bit channel for saving
 			for (int y = 0; y < height; y++) {
 				for (int x = 0; x < width; x++) {
