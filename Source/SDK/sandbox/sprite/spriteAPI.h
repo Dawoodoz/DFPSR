@@ -21,8 +21,8 @@ inline FVector3D parseFVector3D(const ReadableString& content) {
 	}
 }
 
-// The sprite instance itself has a game-specific index to the sprite type
-// The caller should also have some kind of control over containing and rendering the items
+// A 2D image with depth and normal images for deferred light
+//   To be rendered into images in advance for maximum detail level
 struct Sprite {
 public:
 	int typeIndex;

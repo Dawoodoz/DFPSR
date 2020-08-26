@@ -676,8 +676,7 @@ SpriteWorld spriteWorld_create(OrthoSystem ortho, int shadowResolution) {
 
 void spriteWorld_addBackgroundSprite(SpriteWorld& world, const Sprite& sprite) {
 	MUST_EXIST(world, spriteWorld_addBackgroundSprite);
-	// TODO: Validate type index before looking up the bounding box, for easy debugging
-	// TODO: Replace sprite.location with a separate position argument, possibly constructing in place using the API
+	if (sprite.typeIndex < 0 || sprite.typeIndex >= types.length()) { throwError(U"Sprite type index ", sprite.typeIndex, " is out of bound!\n"); }
 	// Add the passive sprite to the octree
 	IVector3D origin = sprite.location;
 	IVector3D minBound = origin + types[sprite.typeIndex].minBoundMini;
@@ -693,6 +692,7 @@ void spriteWorld_addBackgroundSprite(SpriteWorld& world, const Sprite& sprite) {
 
 void spriteWorld_addTemporarySprite(SpriteWorld& world, const Sprite& sprite) {
 	MUST_EXIST(world, spriteWorld_addTemporarySprite);
+	if (sprite.typeIndex < 0 || sprite.typeIndex >= types.length()) { throwError(U"Sprite type index ", sprite.typeIndex, " is out of bound!\n"); }
 	// Add the temporary sprite
 	world->temporarySprites.push(sprite);
 }
