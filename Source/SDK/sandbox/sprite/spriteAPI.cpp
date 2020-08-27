@@ -823,6 +823,26 @@ static IRect boundingBoxToRectangle(const FVector3D& minBound, const FVector3D& 
 	return result;
 }
 
+static IRect getBackCulledTriangleBound(LVector2D a, LVector2D b, LVector2D c) {
+	if (((c.x - a.x) * (b.y - a.y)) + ((c.y - a.y) * (a.x - b.x)) >= 0) {
+		// Back facing
+		return IRect();
+	} else {
+		// Front facing
+		int32_t rX1 = (a.x + constants::unitsPerHalfPixel) / constants::unitsPerPixel;
+		int32_t rY1 = (a.y + constants::unitsPerHalfPixel) / constants::unitsPerPixel;
+		int32_t rX2 = (b.x + constants::unitsPerHalfPixel) / constants::unitsPerPixel;
+		int32_t rY2 = (b.y + constants::unitsPerHalfPixel) / constants::unitsPerPixel;
+		int32_t rX3 = (c.x + constants::unitsPerHalfPixel) / constants::unitsPerPixel;
+		int32_t rY3 = (c.y + constants::unitsPerHalfPixel) / constants::unitsPerPixel;
+		int leftBound = std::min(std::min(rX1, rX2), rX3) - 1;
+		int topBound = std::min(std::min(rY1, rY2), rY3) - 1;
+		int rightBound = std::max(std::max(rX1, rX2), rX3) + 1;
+		int bottomBound = std::max(std::max(rY1, rY2), rY3) + 1;
+		return IRect(leftBound, topBound, rightBound - leftBound, bottomBound - topBound);
+	}
+}
+
 // Pre-conditions:
 //   * All images must exist and have the same dimensions
 //   * All triangles in model must be contained within the image bounds after being projected using view
@@ -891,7 +911,7 @@ static IRect renderModel(Model model, OrthoView view, ImageF32 depthBuffer, Imag
 				FVector3D pointC = projectedPoints[indexC];
 				LVector2D subPixelB = LVector2D(safeRoundInt64(pointB.x * constants::unitsPerPixel), safeRoundInt64(pointB.y * constants::unitsPerPixel));
 				LVector2D subPixelC = LVector2D(safeRoundInt64(pointC.x * constants::unitsPerPixel), safeRoundInt64(pointC.y * constants::unitsPerPixel));
-				IRect triangleBound = IRect::cut(clipBound, getTriangleBound(subPixelA, subPixelB, subPixelC));
+				IRect triangleBound = IRect::cut(clipBound, getBackCulledTriangleBound(subPixelA, subPixelB, subPixelC));
 				int rowCount = triangleBound.height();
 				if (rowCount > 0) {
 					RowInterval rows[rowCount];
@@ -910,10 +930,10 @@ static IRect renderModel(Model model, OrthoView view, ImageF32 depthBuffer, Imag
 						SafePointer<uint32_t> normalPixel = normalRow + left;
 						SafePointer<float> heightPixel = heightRow + left;
 						for (int x = left; x < right; x++) {
+							// TODO: This custom rendering pipeline was never designed to be clipped against edges, so the vertex weights are out of bound when vertices are on the left side of the target image.
 							FVector3D weight = getAffineWeight(FVector3Dto2D(pointA), FVector3Dto2D(pointB), FVector3Dto2D(pointC), FVector2D(x + 0.5f, y + 0.5f));
 							float height = interpolateUsingAffineWeight(pointA.z, pointB.z, pointC.z, weight);
 							if (height > *heightPixel) {
-								// TODO: Interpolate the values directly using integer addition and bit shifting
 								FVector4D vertexColor = interpolateUsingAffineWeight(vertexColorA, vertexColorB, vertexColorC, weight);
 								FVector3D normal = (normalize(interpolateUsingAffineWeight(normalA, normalB, normalC, weight)) + 1.0f) * 127.5f;
 								// Write data directly without saturation (Do not use colors outside of the visible range!)
