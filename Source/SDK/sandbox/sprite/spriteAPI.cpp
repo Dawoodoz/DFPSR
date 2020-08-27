@@ -815,14 +815,12 @@ static IRect renderModel(Model model, OrthoView view, ImageF32 depthBuffer, Imag
 	Array<FVector3D> projectedPoints(pointCount, FVector3D()); // pixel X, pixel Y, mini-tile height
 
 	// Combine transforms
-	// TODO: Combine objectToWorldSpace with worldOrigin to get screen space directly
-	Transform3D objectToWorldSpace = modelToWorldSpace * Transform3D(FVector3D(), view.worldSpaceToScreenDepth);
+	Transform3D objectToWorldSpace = modelToWorldSpace * Transform3D(FVector3D(worldOrigin.x, worldOrigin.y, 0.0f), view.worldSpaceToScreenDepth);
 
 	// Transform positions and return the dirty box
 	IRect dirtyBox = IRect(clipBound.width(), clipBound.height(), -clipBound.width(), -clipBound.height());
 	for (int point = 0; point < pointCount; point++) {
-		FVector3D projected = objectToWorldSpace.transformPoint(model_getPoint(model, point));
-		FVector3D screenProjection = FVector3D(projected.x + worldOrigin.x, projected.y + worldOrigin.y, projected.z);
+		FVector3D screenProjection = objectToWorldSpace.transformPoint(model_getPoint(model, point));
 		projectedPoints[point] = screenProjection;
 		// Expand the dirty bound
 		dirtyBox = IRect::merge(dirtyBox, IRect((int)(screenProjection.x), (int)(screenProjection.y), 1, 1));
