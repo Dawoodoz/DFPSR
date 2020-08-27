@@ -4,6 +4,7 @@
 #include "DirtyRectangles.h"
 #include "importer.h"
 #include "../../../DFPSR/render/ITriangle2D.h"
+#include "../../../DFPSR/base/endian.h"
 
 // Comment out a flag to disable an optimization when debugging
 #define DIRTY_RECTANGLE_OPTIMIZATION
@@ -225,7 +226,6 @@ static IRect drawSprite(const Sprite& sprite, const OrthoView& ortho, const IVec
 }
 
 static IRect drawModel(const ModelInstance& instance, const OrthoView& ortho, const IVector2D& worldCenter, ImageF32 targetHeight, ImageRgbaU8 targetColor, ImageRgbaU8 targetNormal) {
-	// TODO: Get the model's bounding box to get a faster camera culling before letting renderModel do the more precise test using transformed geometry data
 	return renderModel(instance.visibleModel, ortho, targetHeight, targetColor, targetNormal, FVector2D(worldCenter.x, worldCenter.y), instance.location);
 }
 
@@ -893,21 +893,38 @@ static IRect renderModel(Model model, OrthoView view, ImageF32 depthBuffer, Imag
 				if (rowCount > 0) {
 					RowInterval rows[rowCount];
 					rasterizeTriangle(subPixelA, subPixelB, subPixelC, rows, triangleBound);
+					int diffusePixelStride = image_getStride(diffuseTarget) / sizeof(uint32_t);
+					int normalPixelStride = image_getStride(normalTarget) / sizeof(uint32_t);
+					int heightPixelStride = image_getStride(depthBuffer) / sizeof(uint32_t);
+					SafePointer<uint32_t> diffuseRow = image_getSafePointer(diffuseTarget, triangleBound.top());
+					SafePointer<uint32_t> normalRow = image_getSafePointer(normalTarget, triangleBound.top());
+					SafePointer<float> heightRow = image_getSafePointer(depthBuffer, triangleBound.top());
 					for (int y = triangleBound.top(); y < triangleBound.bottom(); y++) {
 						int rowIndex = y - triangleBound.top();
 						int left = rows[rowIndex].left;
 						int right = rows[rowIndex].right;
+						SafePointer<uint32_t> diffusePixel = diffuseRow + left;
+						SafePointer<uint32_t> normalPixel = normalRow + left;
+						SafePointer<float> heightPixel = heightRow + left;
 						for (int x = left; x < right; x++) {
 							FVector3D weight = getAffineWeight(FVector2D(pointA.x, pointA.y), FVector2D(pointB.x, pointB.y), FVector2D(pointC.x, pointC.y), FVector2D(x + 0.5f, y + 0.5f));
 							float height = interpolateUsingAffineWeight(pointA.z, pointB.z, pointC.z, weight);
-							if (height > image_readPixel_clamp(depthBuffer, x, y)) {
+							if (height > *heightPixel) {
+								// TODO: Interpolate the values directly using integer addition and bit shifting
 								FVector4D vertexColor = interpolateUsingAffineWeight(vertexColorA, vertexColorB, vertexColorC, weight);
 								FVector3D normal = (normalize(interpolateUsingAffineWeight(normalA, normalB, normalC, weight)) + 1.0f) * 127.5f;
-								image_writePixel(depthBuffer, x, y, height);
-								image_writePixel(diffuseTarget, x, y, ColorRgbaI32(vertexColor.x, vertexColor.y, vertexColor.z, 255));
-								image_writePixel(normalTarget, x, y, ColorRgbaI32(normal.x, normal.y, normal.z, 255));
+								// Write data directly without saturation (Do not use colors outside of the visible range!)
+								*heightPixel = height;
+								*diffusePixel = ((uint32_t)vertexColor.x) | ENDIAN_POS_ADDR(((uint32_t)vertexColor.y), 8) | ENDIAN_POS_ADDR(((uint32_t)vertexColor.z), 16) | ENDIAN_POS_ADDR(255, 24);
+								*normalPixel = ((uint32_t)normal.x) | ENDIAN_POS_ADDR(((uint32_t)normal.y), 8) | ENDIAN_POS_ADDR(((uint32_t)normal.z), 16) | ENDIAN_POS_ADDR(255, 24);
 							}
+							diffusePixel += 1;
+							normalPixel += 1;
+							heightPixel += 1;
 						}
+						diffuseRow += diffusePixelStride;
+						normalRow += normalPixelStride;
+						heightRow += heightPixelStride;
 					}
 				}
 			}
