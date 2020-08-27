@@ -791,9 +791,12 @@ void spriteWorld_setCameraDirectionIndex(SpriteWorld& world, int index) {
 	}
 }
 
-// Only because normals are stored as texture coordinates
-static FVector3D unpackNormals(FVector4D packedNormals) {
-	return FVector3D(packedNormals.x, packedNormals.y, packedNormals.z);
+static FVector3D FVector4Dto3D(FVector4D v) {
+	return FVector3D(v.x, v.y, v.z);
+}
+
+static FVector2D FVector3Dto2D(FVector3D v) {
+	return FVector2D(v.x, v.y);
 }
 
 // Get the pixel bound from a projected vertex point in floating pixel coordinates
@@ -873,7 +876,7 @@ static IRect renderModel(Model model, OrthoView view, ImageF32 depthBuffer, Imag
 			int vertA = 0;
 			FVector4D vertexColorA = model_getVertexColor(model, part, poly, vertA) * 255.0f;
 			int indexA = model_getVertexPointIndex(model, part, poly, vertA);
-			FVector3D normalA = modelToNormalSpace.transform(unpackNormals(model_getTexCoord(model, part, poly, vertA)));
+			FVector3D normalA = modelToNormalSpace.transform(FVector4Dto3D(model_getTexCoord(model, part, poly, vertA)));
 			FVector3D pointA = projectedPoints[indexA];
 			LVector2D subPixelA = LVector2D(safeRoundInt64(pointA.x * constants::unitsPerPixel), safeRoundInt64(pointA.y * constants::unitsPerPixel));
 			for (int vertB = 1; vertB < vertexCount - 1; vertB++) {
@@ -882,8 +885,8 @@ static IRect renderModel(Model model, OrthoView view, ImageF32 depthBuffer, Imag
 				int indexC = model_getVertexPointIndex(model, part, poly, vertC);
 				FVector4D vertexColorB = model_getVertexColor(model, part, poly, vertB) * 255.0f;
 				FVector4D vertexColorC = model_getVertexColor(model, part, poly, vertC) * 255.0f;
-				FVector3D normalB = modelToNormalSpace.transform(unpackNormals(model_getTexCoord(model, part, poly, vertB)));
-				FVector3D normalC = modelToNormalSpace.transform(unpackNormals(model_getTexCoord(model, part, poly, vertC)));
+				FVector3D normalB = modelToNormalSpace.transform(FVector4Dto3D(model_getTexCoord(model, part, poly, vertB)));
+				FVector3D normalC = modelToNormalSpace.transform(FVector4Dto3D(model_getTexCoord(model, part, poly, vertC)));
 				FVector3D pointB = projectedPoints[indexB];
 				FVector3D pointC = projectedPoints[indexC];
 				LVector2D subPixelB = LVector2D(safeRoundInt64(pointB.x * constants::unitsPerPixel), safeRoundInt64(pointB.y * constants::unitsPerPixel));
@@ -907,7 +910,7 @@ static IRect renderModel(Model model, OrthoView view, ImageF32 depthBuffer, Imag
 						SafePointer<uint32_t> normalPixel = normalRow + left;
 						SafePointer<float> heightPixel = heightRow + left;
 						for (int x = left; x < right; x++) {
-							FVector3D weight = getAffineWeight(FVector2D(pointA.x, pointA.y), FVector2D(pointB.x, pointB.y), FVector2D(pointC.x, pointC.y), FVector2D(x + 0.5f, y + 0.5f));
+							FVector3D weight = getAffineWeight(FVector3Dto2D(pointA), FVector3Dto2D(pointB), FVector3Dto2D(pointC), FVector2D(x + 0.5f, y + 0.5f));
 							float height = interpolateUsingAffineWeight(pointA.z, pointB.z, pointC.z, weight);
 							if (height > *heightPixel) {
 								// TODO: Interpolate the values directly using integer addition and bit shifting
