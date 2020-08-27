@@ -796,6 +796,30 @@ static FVector3D unpackNormals(FVector4D packedNormals) {
 	return FVector3D(packedNormals.x, packedNormals.y, packedNormals.z);
 }
 
+// Get the pixel bound from a projected vertex point in floating pixel coordinates
+static IRect boundFromVertex(const FVector3D& screenProjection) {
+	return IRect((int)(screenProjection.x), (int)(screenProjection.y), 1, 1);
+}
+
+// Returns true iff the box might be seen using a pessimistic test
+static IRect boundingBoxToRectangle(const FVector3D& minBound, const FVector3D& maxBound, const Transform3D& objectToScreenSpace) {
+	FVector3D points[8] = {
+	  FVector3D(minBound.x, minBound.y, minBound.z),
+	  FVector3D(maxBound.x, minBound.y, minBound.z),
+	  FVector3D(minBound.x, maxBound.y, minBound.z),
+	  FVector3D(maxBound.x, maxBound.y, minBound.z),
+	  FVector3D(minBound.x, minBound.y, maxBound.z),
+	  FVector3D(maxBound.x, minBound.y, maxBound.z),
+	  FVector3D(minBound.x, maxBound.y, maxBound.z),
+	  FVector3D(maxBound.x, maxBound.y, maxBound.z)
+	};
+	IRect result = boundFromVertex(objectToScreenSpace.transformPoint(points[0]));
+	for (int p = 1; p < 8; p++) {
+		result = IRect::merge(result, boundFromVertex(objectToScreenSpace.transformPoint(points[p])));
+	}
+	return result;
+}
+
 // Pre-conditions:
 //   * All images must exist and have the same dimensions
 //   * All triangles in model must be contained within the image bounds after being projected using view
@@ -804,26 +828,33 @@ static FVector3D unpackNormals(FVector4D packedNormals) {
 // worldOrigin is the perceived world's origin in target pixel coordinates
 // modelToWorldSpace is used to place the model freely in the world
 static IRect renderModel(Model model, OrthoView view, ImageF32 depthBuffer, ImageRgbaU8 diffuseTarget, ImageRgbaU8 normalTarget, FVector2D worldOrigin, Transform3D modelToWorldSpace) {
+	// Combine position transforms
+	Transform3D objectToScreenSpace = modelToWorldSpace * Transform3D(FVector3D(worldOrigin.x, worldOrigin.y, 0.0f), view.worldSpaceToScreenDepth);
+
 	// Get the model's 3D bound
 	FVector3D minBound, maxBound;
 	model_getBoundingBox(model, minBound, maxBound);
-	// TODO: Quick culling test based on the 3D bounding box using only 8 points.
-
-	int pointCount = model_getNumberOfPoints(model);
+	IRect pessimisticBound = boundingBoxToRectangle(minBound, maxBound, objectToScreenSpace);
+	// Get the target image bound
 	IRect clipBound = image_getBound(depthBuffer);
+	// Fast culling test
+	if (!IRect::overlaps(pessimisticBound, clipBound)) {
+		// Nothing drawn, no dirty rectangle
+		return IRect();
+	}
 
+	// TODO: Reuse memory in a thread-safe way
+	// Allocate memory for projected positions
+	int pointCount = model_getNumberOfPoints(model);
 	Array<FVector3D> projectedPoints(pointCount, FVector3D()); // pixel X, pixel Y, mini-tile height
-
-	// Combine transforms
-	Transform3D objectToWorldSpace = modelToWorldSpace * Transform3D(FVector3D(worldOrigin.x, worldOrigin.y, 0.0f), view.worldSpaceToScreenDepth);
 
 	// Transform positions and return the dirty box
 	IRect dirtyBox = IRect(clipBound.width(), clipBound.height(), -clipBound.width(), -clipBound.height());
 	for (int point = 0; point < pointCount; point++) {
-		FVector3D screenProjection = objectToWorldSpace.transformPoint(model_getPoint(model, point));
+		FVector3D screenProjection = objectToScreenSpace.transformPoint(model_getPoint(model, point));
 		projectedPoints[point] = screenProjection;
 		// Expand the dirty bound
-		dirtyBox = IRect::merge(dirtyBox, IRect((int)(screenProjection.x), (int)(screenProjection.y), 1, 1));
+		dirtyBox = IRect::merge(dirtyBox, boundFromVertex(screenProjection));
 	}
 
 	// Skip early if the more precise culling test fails
@@ -831,7 +862,7 @@ static IRect renderModel(Model model, OrthoView view, ImageF32 depthBuffer, Imag
 		// Nothing drawn, no dirty rectangle
 		return IRect();
 	}
-	
+
 	// Combine normal transforms
 	FMatrix3x3 normalToWorldSpace = view.normalToWorldSpace;
 
