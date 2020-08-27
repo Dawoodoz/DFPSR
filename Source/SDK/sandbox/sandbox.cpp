@@ -320,8 +320,10 @@ void sandbox_main() {
 
 	// Load models
 	Model barrelVisible = importer_loadModel(modelPath + U"Barrel.ply", true, Transform3D());
-	importer_generateNormalsIntoTextureCoordinates(barrelVisible);
 	Model barrelShadow = importer_loadModel(modelPath + U"Barrel_Shadow.ply", true, Transform3D());
+	//Model barrelVisible = importer_loadModel(modelPath + U"Character_Mage.ply", true, Transform3D());
+	//Model barrelShadow = importer_loadModel(modelPath + U"Character_Mage_Shadow.ply", true, Transform3D());
+	importer_generateNormalsIntoTextureCoordinates(barrelVisible);
 
 	while(running) {
 		double timer = time_getSeconds();
@@ -387,12 +389,13 @@ void sandbox_main() {
 
 		// Test freely rotated models
 		if (showTestModel) {
+			float scale = 1.0f;
 			Transform3D testLocation = Transform3D(
 			  FVector3D(0.0f, sin(timer) * 0.1f, 0.0f),
 			  FMatrix3x3(
-				FVector3D(cos(timer), 0.0f, sin(timer)),
-				FVector3D(0.0f, 1.0f, 0.0f),
-				FVector3D(-sin(timer), 0.0f, cos(timer)))
+				FVector3D(cos(timer) * scale, 0.0f, sin(timer) * scale),
+				FVector3D(0.0f, scale, 0.0f),
+				FVector3D(-sin(timer) * scale, 0.0f, cos(timer) * scale))
 			);
 			spriteWorld_addTemporaryModel(world, ModelInstance(barrelVisible, barrelShadow, testLocation));
 		}
