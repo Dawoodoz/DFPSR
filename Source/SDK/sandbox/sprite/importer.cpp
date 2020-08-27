@@ -309,11 +309,6 @@ static FVector3D getAverageNormal(const Model& model, int part, int poly) {
 	return normalize(normalSum);
 }
 
-// TODO: Create a compact model format for dense vertex models where positions are stored as 16.16 fixed precision aligned with vertex data to avoid random access
-// TODO: Create a triangle rasterizer optimized for many small triangles by just adding edge offsets, normals and colors.
-// TODO: Allow creating freely rotated and scaled 3D models as a part of the passively drawn background.
-// TODO: Allow creating freely rotated and scaled 3D models as dynamic items of a slightly lower detail level.
-
 void importer_generateNormalsIntoTextureCoordinates(Model model) {
 	int pointCount = model_getNumberOfPoints(model);
 	Array<FVector3D> normalPoints(pointCount, FVector3D());

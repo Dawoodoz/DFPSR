@@ -52,13 +52,17 @@ public:
 	IVector2D lowerRight() const { return IVector2D(this->l + this->w, this->t + this->h); }
 	bool hasArea() const { return this->w > 0 && this->h > 0; }
 	IRect expanded(int units) const { return IRect(this->l - units, this->t - units, this->w + units * 2, this->h + units * 2); }
-	// Returns the intersection between a and b or a rectangle that has no area if overlaps(a, b) is false
+	// Returns the intersection between a and b or a rectangle that has no width nor height if overlaps(a, b) is false
 	static IRect cut(const IRect &a, const IRect &b) {
-		int32_t leftSide = std::max(a.left(), b.left());
-		int32_t topSide = std::max(a.top(), b.top());
-		int32_t rightSide = std::min(a.right(), b.right());
-		int32_t bottomSide = std::min(a.bottom(), b.bottom());
-		return IRect(leftSide, topSide, rightSide - leftSide, bottomSide - topSide);
+		if (overlaps(a, b)) {
+			int32_t leftSide = std::max(a.left(), b.left());
+			int32_t topSide = std::max(a.top(), b.top());
+			int32_t rightSide = std::min(a.right(), b.right());
+			int32_t bottomSide = std::min(a.bottom(), b.bottom());
+			return IRect(leftSide, topSide, rightSide - leftSide, bottomSide - topSide);
+		} else {
+			return IRect();
+		}
 	}
 	// Returns a bounding box of the union
 	static IRect merge(const IRect &a, const IRect &b) {
