@@ -106,6 +106,20 @@ inline FMatrix3x3 inverse(const FMatrix3x3& m) {
 	return inverseUsingInvDet(m, 1.0f / determinant(m));
 }
 
+inline FMatrix3x3 transpose(const FMatrix3x3& m) {
+	FMatrix3x3 result;
+    result.xAxis.x = m.xAxis.x;
+    result.xAxis.y = m.yAxis.x;
+    result.xAxis.z = m.zAxis.x;
+    result.yAxis.x = m.xAxis.y;
+    result.yAxis.y = m.yAxis.y;
+    result.yAxis.z = m.zAxis.y;
+    result.zAxis.x = m.xAxis.z;
+    result.zAxis.y = m.yAxis.z;
+    result.zAxis.z = m.zAxis.z;
+	return result;
+}
+
 }
 
 #endif

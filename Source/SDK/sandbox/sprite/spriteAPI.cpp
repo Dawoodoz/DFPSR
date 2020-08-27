@@ -864,7 +864,7 @@ static IRect renderModel(Model model, OrthoView view, ImageF32 depthBuffer, Imag
 	}
 
 	// Combine normal transforms
-	FMatrix3x3 normalToWorldSpace = view.normalToWorldSpace;
+	FMatrix3x3 modelToNormalSpace = modelToWorldSpace.transform * transpose(view.normalToWorldSpace);
 
 	// Render polygons as triangle fans
 	for (int part = 0; part < model_getNumberOfParts(model); part++) {
@@ -873,10 +873,7 @@ static IRect renderModel(Model model, OrthoView view, ImageF32 depthBuffer, Imag
 			int vertA = 0;
 			FVector4D vertexColorA = model_getVertexColor(model, part, poly, vertA) * 255.0f;
 			int indexA = model_getVertexPointIndex(model, part, poly, vertA);
-			
-			// TODO: Merge transforms into normalToWorldSpace in advance
-			FVector3D normalA = normalToWorldSpace.transformTransposed(modelToWorldSpace.transform.transform(unpackNormals(model_getTexCoord(model, part, poly, vertA))));
-			
+			FVector3D normalA = modelToNormalSpace.transform(unpackNormals(model_getTexCoord(model, part, poly, vertA)));
 			FVector3D pointA = projectedPoints[indexA];
 			LVector2D subPixelA = LVector2D(safeRoundInt64(pointA.x * constants::unitsPerPixel), safeRoundInt64(pointA.y * constants::unitsPerPixel));
 			for (int vertB = 1; vertB < vertexCount - 1; vertB++) {
@@ -885,11 +882,8 @@ static IRect renderModel(Model model, OrthoView view, ImageF32 depthBuffer, Imag
 				int indexC = model_getVertexPointIndex(model, part, poly, vertC);
 				FVector4D vertexColorB = model_getVertexColor(model, part, poly, vertB) * 255.0f;
 				FVector4D vertexColorC = model_getVertexColor(model, part, poly, vertC) * 255.0f;
-				
-				// TODO: Merge transforms into normalToWorldSpace in advance
-				FVector3D normalB = normalToWorldSpace.transformTransposed(modelToWorldSpace.transform.transform(unpackNormals(model_getTexCoord(model, part, poly, vertB))));
-				FVector3D normalC = normalToWorldSpace.transformTransposed(modelToWorldSpace.transform.transform(unpackNormals(model_getTexCoord(model, part, poly, vertC))));
-				
+				FVector3D normalB = modelToNormalSpace.transform(unpackNormals(model_getTexCoord(model, part, poly, vertB)));
+				FVector3D normalC = modelToNormalSpace.transform(unpackNormals(model_getTexCoord(model, part, poly, vertC)));
 				FVector3D pointB = projectedPoints[indexB];
 				FVector3D pointC = projectedPoints[indexC];
 				LVector2D subPixelB = LVector2D(safeRoundInt64(pointB.x * constants::unitsPerPixel), safeRoundInt64(pointB.y * constants::unitsPerPixel));
