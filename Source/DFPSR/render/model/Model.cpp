@@ -292,12 +292,12 @@ int ModelImpl::getNumberOfPoints() const {
 	return this->positionBuffer.length();
 }
 void ModelImpl::expandBound(const FVector3D& point) {
-	if (this->minBound.x < point.x) { this->minBound.x = point.x; }
-	if (this->minBound.y < point.y) { this->minBound.y = point.y; }
-	if (this->minBound.z < point.z) { this->minBound.z = point.z; }
-	if (this->maxBound.x > point.x) { this->maxBound.x = point.x; }
-	if (this->maxBound.y > point.y) { this->maxBound.y = point.y; }
-	if (this->maxBound.z > point.z) { this->maxBound.z = point.z; }
+	if (this->minBound.x > point.x) { this->minBound.x = point.x; }
+	if (this->minBound.y > point.y) { this->minBound.y = point.y; }
+	if (this->minBound.z > point.z) { this->minBound.z = point.z; }
+	if (this->maxBound.x < point.x) { this->maxBound.x = point.x; }
+	if (this->maxBound.y < point.y) { this->maxBound.y = point.y; }
+	if (this->maxBound.z < point.z) { this->maxBound.z = point.z; }
 }
 int ModelImpl::findPoint(const FVector3D &position, float threshold) const {
 	float bestDistance = threshold;

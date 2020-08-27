@@ -805,8 +805,8 @@ static FVector3D unpackNormals(FVector4D packedNormals) {
 // modelToWorldSpace is used to place the model freely in the world
 static IRect renderModel(Model model, OrthoView view, ImageF32 depthBuffer, ImageRgbaU8 diffuseTarget, ImageRgbaU8 normalTarget, FVector2D worldOrigin, Transform3D modelToWorldSpace) {
 	// Get the model's 3D bound
-	//FVector3D minBound, maxBound;
-	//model_getBoundingBox(model, minBound, maxBound);
+	FVector3D minBound, maxBound;
+	model_getBoundingBox(model, minBound, maxBound);
 	// TODO: Quick culling test based on the 3D bounding box using only 8 points.
 
 	int pointCount = model_getNumberOfPoints(model);
@@ -904,17 +904,8 @@ void sprite_generateFromModel(ImageRgbaU8& targetAtlas, String& targetConfigText
 		return;
 	} else {
 		// Measure the bounding cylinder for determining the uncropped image size
-		FVector3D minBound = FVector3D(std::numeric_limits<float>::max());
-		FVector3D maxBound = FVector3D(-std::numeric_limits<float>::max());
-		for (int p = 0; p < model_getNumberOfPoints(visibleModel); p++) {
-			FVector3D point = model_getPoint(visibleModel, p);
-			if (point.x < minBound.x) { minBound.x = point.x; }
-			if (point.y < minBound.y) { minBound.y = point.y; }
-			if (point.z < minBound.z) { minBound.z = point.z; }
-			if (point.x > maxBound.x) { maxBound.x = point.x; }
-			if (point.y > maxBound.y) { maxBound.y = point.y; }
-			if (point.z > maxBound.z) { maxBound.z = point.z; }
-		}
+		FVector3D minBound, maxBound;
+		model_getBoundingBox(visibleModel, minBound, maxBound);
 		// Check if generating a bound failed
 		if (minBound.x > maxBound.x) {
 			printText("  There's nothing visible in the model, because the 3D bounding box had no points to be created from!\n");
