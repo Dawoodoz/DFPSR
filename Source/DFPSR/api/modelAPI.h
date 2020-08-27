@@ -125,6 +125,9 @@ namespace dsr {
 	//   If multiple existing points are within the same distance,
 	//   then the point with the lowest index is preferred, just like in model_findPoint.
 	int model_addPointIfNeeded(Model& model, const FVector3D &position, float threshold);
+	// Get the bounding box, which expands automatically when adding or moving points in the model.
+	// Side-effect: Writes model's bounding box to minimum and maximum by reference.
+	void model_getBoundingBox(const Model& model, FVector3D& minimum, FVector3D& maximum);
 
 	// Get the vertex position's index, which refers to a shared point in the model.
 	// Pre-condition: model must refer to an existing model.

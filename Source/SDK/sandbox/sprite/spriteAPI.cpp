@@ -804,6 +804,11 @@ static FVector3D unpackNormals(FVector4D packedNormals) {
 // worldOrigin is the perceived world's origin in target pixel coordinates
 // modelToWorldSpace is used to place the model freely in the world
 static IRect renderModel(Model model, OrthoView view, ImageF32 depthBuffer, ImageRgbaU8 diffuseTarget, ImageRgbaU8 normalTarget, FVector2D worldOrigin, Transform3D modelToWorldSpace) {
+	// Get the model's 3D bound
+	//FVector3D minBound, maxBound;
+	//model_getBoundingBox(model, minBound, maxBound);
+	// TODO: Quick culling test based on the 3D bounding box using only 8 points.
+
 	int pointCount = model_getNumberOfPoints(model);
 	IRect clipBound = image_getBound(depthBuffer);
 
@@ -823,7 +828,7 @@ static IRect renderModel(Model model, OrthoView view, ImageF32 depthBuffer, Imag
 		dirtyBox = IRect::merge(dirtyBox, IRect((int)(screenProjection.x), (int)(screenProjection.y), 1, 1));
 	}
 
-	// Skip early if the culling test fails
+	// Skip early if the more precise culling test fails
 	if (!(IRect::cut(clipBound, dirtyBox).hasArea())) {
 		// Nothing drawn, no dirty rectangle
 		return IRect();

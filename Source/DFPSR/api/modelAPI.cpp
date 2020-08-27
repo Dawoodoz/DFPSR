@@ -203,6 +203,12 @@ void model_renderDepth(const Model& model, const Transform3D &modelToWorldTransf
 	}
 }
 
+void model_getBoundingBox(const Model& model, FVector3D& minimum, FVector3D& maximum) {
+	MUST_EXIST(model,model_getBoundingBox);
+	minimum = model->minBound;
+	maximum = model->maxBound;
+}
+
 // Context for rendering multiple models at the same time for improved speed
 class RendererImpl {
 private:
