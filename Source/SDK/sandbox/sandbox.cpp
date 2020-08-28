@@ -156,7 +156,7 @@ static const float cameraSpeed = 1.0f;
 // World
 static SpriteWorld world;
 bool ambientLight = true;
-bool showTestModel = false;
+int testModelCount = 0;
 
 void sandbox_main() {
 	// Create the world
@@ -204,7 +204,7 @@ void sandbox_main() {
 			} else if (key == DsrKey_T) {
 				tileAlign = !tileAlign;
 			} else if (key == DsrKey_Y) {
-				showTestModel = !showTestModel;
+				testModelCount = (testModelCount + 1) % 11;
 			} else if (key == DsrKey_F) {
 				showOverlays = !showOverlays;
 			} else if (key == DsrKey_K) {
@@ -388,11 +388,11 @@ void sandbox_main() {
 		spriteWorld_addTemporarySprite(world, brush);
 
 		// Test freely rotated models
-		if (showTestModel) {
+		for(int t = 0; t < testModelCount; t++) {
 			float scale = 1.0f;
 			Transform3D testLocation = Transform3D(
-			  FVector3D(cos(timer * 0.36f) * 1.6f, sin(timer) * 0.2f + 0.3f, sin(timer * 0.58f) * 1.6f),
-			  FMatrix3x3::makeAxisSystem(FVector3D(cos(timer), 0.0f, sin(timer)), FVector3D(cos(timer * 2.53f), 1.0f, sin(timer * 3.26f))) * scale
+			  FVector3D(cos((timer + t * 25.64f) * 0.36f) * 1.6f, sin(timer) * 0.2f + 0.3f, sin((timer + t * 42.54f) * 0.58f) * 1.6f),
+			  FMatrix3x3::makeAxisSystem(FVector3D(cos(timer), 0.0f, sin(timer)), FVector3D(cos((timer + t * 17.63f) * 2.13f), 1.0f, sin((timer + t * 64.25f) * 3.26f))) * scale
 			);
 			spriteWorld_addTemporaryModel(world, ModelInstance(barrelVisible, barrelShadow, testLocation));
 		}
