@@ -899,7 +899,7 @@ static IRect renderModel(Model model, OrthoView view, ImageF32 depthBuffer, Imag
 		for (int poly = 0; poly < model_getNumberOfPolygons(model, part); poly++) {
 			int vertexCount = model_getPolygonVertexCount(model, part, poly);
 			int vertA = 0;
-			FVector4D vertexColorA = model_getVertexColor(model, part, poly, vertA) * 255.0f;
+			FVector3D vertexColorA = FVector4Dto3D(model_getVertexColor(model, part, poly, vertA)) * 255.0f;
 			int indexA = model_getVertexPointIndex(model, part, poly, vertA);
 			FVector3D normalA = modelToNormalSpace.transform(FVector4Dto3D(model_getTexCoord(model, part, poly, vertA)));
 			FVector3D pointA = projectedPoints[indexA];
@@ -908,8 +908,8 @@ static IRect renderModel(Model model, OrthoView view, ImageF32 depthBuffer, Imag
 				int vertC = vertB + 1;
 				int indexB = model_getVertexPointIndex(model, part, poly, vertB);
 				int indexC = model_getVertexPointIndex(model, part, poly, vertC);
-				FVector4D vertexColorB = model_getVertexColor(model, part, poly, vertB) * 255.0f;
-				FVector4D vertexColorC = model_getVertexColor(model, part, poly, vertC) * 255.0f;
+				FVector3D vertexColorB = FVector4Dto3D(model_getVertexColor(model, part, poly, vertB)) * 255.0f;
+				FVector3D vertexColorC = FVector4Dto3D(model_getVertexColor(model, part, poly, vertC)) * 255.0f;
 				FVector3D normalB = modelToNormalSpace.transform(FVector4Dto3D(model_getTexCoord(model, part, poly, vertB)));
 				FVector3D normalC = modelToNormalSpace.transform(FVector4Dto3D(model_getTexCoord(model, part, poly, vertC)));
 				FVector3D pointB = projectedPoints[indexB];
@@ -936,7 +936,7 @@ static IRect renderModel(Model model, OrthoView view, ImageF32 depthBuffer, Imag
 							FVector3D weight = getAffineWeight(FVector3Dto2D(pointA), FVector3Dto2D(pointB), FVector3Dto2D(pointC), FVector2D(x + 0.5f, y + 0.5f));
 							float height = interpolateUsingAffineWeight(pointA.z, pointB.z, pointC.z, weight);
 							if (height > *heightPixel) {
-								FVector4D vertexColor = interpolateUsingAffineWeight(vertexColorA, vertexColorB, vertexColorC, weight);
+								FVector3D vertexColor = interpolateUsingAffineWeight(vertexColorA, vertexColorB, vertexColorC, weight);
 								FVector3D normal = (normalize(interpolateUsingAffineWeight(normalA, normalB, normalC, weight)) + 1.0f) * 127.5f;
 								// Write data directly without saturation (Do not use colors outside of the visible range!)
 								*heightPixel = height;
