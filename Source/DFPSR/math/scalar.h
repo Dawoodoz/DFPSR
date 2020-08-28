@@ -24,6 +24,8 @@
 #ifndef DFPSR_MATH_SCALAR
 #define DFPSR_MATH_SCALAR
 
+#include <cmath>
+
 namespace dsr {
 
 // Preconditions:
@@ -107,14 +109,12 @@ inline bool isUniformByteU16(uint16_t value) {
 	return (value & 0x00FF) == ((value & 0xFF00) >> 8);
 }
 
+// A special rounding used for triangle rasterization
 inline int64_t safeRoundInt64(float value) {
-	// Only keep values within resonable bounds that will not overflow from a few multiplications
-	if (value > -1048576.0f && value < 1048576.0f) {
-		return (int64_t)value;
-	} else {
-		// Infinity or NaN
-		return 0;
-	}
+	int64_t result = floor(value);
+	if (value <= -1048576.0f || value >= 1048576.0f) { result = 0; }
+	if (value < 0.0f) { result--; }
+	return result;
 }
 
 }
