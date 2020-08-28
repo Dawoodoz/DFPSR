@@ -860,6 +860,7 @@ static void clampTriangleWeight(FVector3D& weight) {
 
 // Pre-conditions:
 //   * All images must exist and have the same dimensions
+//   * diffuseTarget and normalTarget must have RGBA pack order
 //   * All triangles in model must be contained within the image bounds after being projected using view
 // Post-condition:
 //   Returns the dirty pixel bound based on projected positions
