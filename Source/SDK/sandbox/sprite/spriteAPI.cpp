@@ -889,6 +889,11 @@ static IRect renderModel(Model model, OrthoView view, ImageF32 depthBuffer, Imag
 	// Combine normal transforms
 	FMatrix3x3 modelToNormalSpace = modelToWorldSpace.transform * transpose(view.normalToWorldSpace);
 
+	// Get image properties
+	int diffusePixelStride = image_getStride(diffuseTarget) / sizeof(uint32_t);
+	int normalPixelStride = image_getStride(normalTarget) / sizeof(uint32_t);
+	int heightPixelStride = image_getStride(depthBuffer) / sizeof(uint32_t);
+
 	// Render polygons as triangle fans
 	for (int part = 0; part < model_getNumberOfParts(model); part++) {
 		for (int poly = 0; poly < model_getNumberOfPolygons(model, part); poly++) {
@@ -916,9 +921,6 @@ static IRect renderModel(Model model, OrthoView view, ImageF32 depthBuffer, Imag
 				if (rowCount > 0) {
 					RowInterval rows[rowCount];
 					rasterizeTriangle(subPixelA, subPixelB, subPixelC, rows, triangleBound);
-					int diffusePixelStride = image_getStride(diffuseTarget) / sizeof(uint32_t);
-					int normalPixelStride = image_getStride(normalTarget) / sizeof(uint32_t);
-					int heightPixelStride = image_getStride(depthBuffer) / sizeof(uint32_t);
 					SafePointer<uint32_t> diffuseRow = image_getSafePointer(diffuseTarget, triangleBound.top());
 					SafePointer<uint32_t> normalRow = image_getSafePointer(normalTarget, triangleBound.top());
 					SafePointer<float> heightRow = image_getSafePointer(depthBuffer, triangleBound.top());
