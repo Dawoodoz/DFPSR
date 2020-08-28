@@ -891,9 +891,14 @@ static IRect renderModel(Model model, OrthoView view, ImageF32 depthBuffer, Imag
 	FMatrix3x3 modelToNormalSpace = modelToWorldSpace.transform * transpose(view.normalToWorldSpace);
 
 	// Get image properties
-	int diffusePixelStride = image_getStride(diffuseTarget) / sizeof(uint32_t);
-	int normalPixelStride = image_getStride(normalTarget) / sizeof(uint32_t);
-	int heightPixelStride = image_getStride(depthBuffer) / sizeof(uint32_t);
+	int diffuseStride = image_getStride(diffuseTarget);
+	int normalStride = image_getStride(normalTarget);
+	int heightStride = image_getStride(depthBuffer);
+
+	// Call getters in advance to avoid call overhead in the loops
+	SafePointer<uint32_t> diffuseData = image_getSafePointer(diffuseTarget);
+	SafePointer<uint32_t> normalData = image_getSafePointer(normalTarget);
+	SafePointer<float> heightData = image_getSafePointer(depthBuffer);
 
 	// Render polygons as triangle fans
 	for (int part = 0; part < model_getNumberOfParts(model); part++) {
@@ -919,10 +924,13 @@ static IRect renderModel(Model model, OrthoView view, ImageF32 depthBuffer, Imag
 				LVector2D subPixelC = LVector2D(safeRoundInt64(pointC.x * constants::unitsPerPixel), safeRoundInt64(pointC.y * constants::unitsPerPixel));
 				IRect triangleBound = IRect::cut(clipBound, getBackCulledTriangleBound(subPixelA, subPixelB, subPixelC));
 				if (triangleBound.hasArea()) {
-					//rasterizeTriangle(subPixelA, subPixelB, subPixelC, rows, triangleBound);
-					SafePointer<uint32_t> diffuseRow = image_getSafePointer(diffuseTarget, triangleBound.top());
-					SafePointer<uint32_t> normalRow = image_getSafePointer(normalTarget, triangleBound.top());
-					SafePointer<float> heightRow = image_getSafePointer(depthBuffer, triangleBound.top());
+					// Find the first row
+					SafePointer<uint32_t> diffuseRow = diffuseData;
+					diffuseRow.increaseBytes(diffuseStride * triangleBound.top());
+					SafePointer<uint32_t> normalRow = normalData;
+					normalRow.increaseBytes(normalStride * triangleBound.top());
+					SafePointer<float> heightRow = heightData;
+					heightRow.increaseBytes(heightStride * triangleBound.top());
 					// Pre-compute matrix inverse for vertex weights
 					FVector2D cornerA = FVector3Dto2D(pointA);
 					FVector2D cornerB = FVector3Dto2D(pointB);
@@ -952,9 +960,9 @@ static IRect renderModel(Model model, OrthoView view, ImageF32 depthBuffer, Imag
 							normalPixel += 1;
 							heightPixel += 1;
 						}
-						diffuseRow += diffusePixelStride;
-						normalRow += normalPixelStride;
-						heightRow += heightPixelStride;
+						diffuseRow.increaseBytes(diffuseStride);
+						normalRow.increaseBytes(normalStride);
+						heightRow.increaseBytes(heightStride);
 					}
 				}
 			}
