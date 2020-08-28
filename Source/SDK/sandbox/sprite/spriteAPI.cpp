@@ -843,6 +843,21 @@ static IRect getBackCulledTriangleBound(LVector2D a, LVector2D b, LVector2D c) {
 	}
 }
 
+// Due to precision loss, vertex weights may be out of bound
+// For many tiny triangles, this may become obvious unless clamped to the triangle's bound
+static void clampTriangleWeight(FVector3D& weight) {
+	// Saturate vertex weights individually
+	if (weight.x < 0.0f) { weight.x = 0.0f; }
+	if (weight.x > 1.0f) { weight.x = 1.0f; }
+	if (weight.y < 0.0f) { weight.y = 0.0f; }
+	if (weight.y > 1.0f) { weight.y = 1.0f; }
+	if (weight.z < 0.0f) { weight.z = 0.0f; }
+	if (weight.z > 1.0f) { weight.z = 1.0f; }
+	// Normalize
+	float reciprocalWeightSum = 1.0f / (weight.x + weight.y + weight.z);
+	weight = weight * reciprocalWeightSum;
+}
+
 // Pre-conditions:
 //   * All images must exist and have the same dimensions
 //   * All triangles in model must be contained within the image bounds after being projected using view
@@ -932,8 +947,10 @@ static IRect renderModel(Model model, OrthoView view, ImageF32 depthBuffer, Imag
 						SafePointer<uint32_t> normalPixel = normalRow + left;
 						SafePointer<float> heightPixel = heightRow + left;
 						for (int x = left; x < right; x++) {
-							// TODO: This custom rendering pipeline was never designed to be clipped against edges, so the vertex weights are out of bound when vertices are on the left side of the target image.
+							// TODO: Do the inverse matrix computation once per triangle
 							FVector3D weight = getAffineWeight(FVector3Dto2D(pointA), FVector3Dto2D(pointB), FVector3Dto2D(pointC), FVector2D(x + 0.5f, y + 0.5f));
+							// Clamping vertex weights solves the problem with sub-pixel integer precision, but pixel column zero still has poor precision
+							clampTriangleWeight(weight);
 							float height = interpolateUsingAffineWeight(pointA.z, pointB.z, pointC.z, weight);
 							if (height > *heightPixel) {
 								FVector3D vertexColor = interpolateUsingAffineWeight(vertexColorA, vertexColorB, vertexColorC, weight);
