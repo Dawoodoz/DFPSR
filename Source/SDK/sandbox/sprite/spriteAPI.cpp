@@ -843,21 +843,6 @@ static IRect getBackCulledTriangleBound(LVector2D a, LVector2D b, LVector2D c) {
 	}
 }
 
-// Due to precision loss, vertex weights may be out of bound
-// For many tiny triangles, this may become obvious unless clamped to the triangle's bound
-static void clampTriangleWeight(FVector3D& weight) {
-	// Saturate vertex weights individually
-	if (weight.x < 0.0f) { weight.x = 0.0f; }
-	if (weight.x > 1.0f) { weight.x = 1.0f; }
-	if (weight.y < 0.0f) { weight.y = 0.0f; }
-	if (weight.y > 1.0f) { weight.y = 1.0f; }
-	if (weight.z < 0.0f) { weight.z = 0.0f; }
-	if (weight.z > 1.0f) { weight.z = 1.0f; }
-	// Normalize
-	float reciprocalWeightSum = 1.0f / (weight.x + weight.y + weight.z);
-	weight = weight * reciprocalWeightSum;
-}
-
 // Pre-conditions:
 //   * All images must exist and have the same dimensions
 //   * diffuseTarget and normalTarget must have RGBA pack order
@@ -933,33 +918,35 @@ static IRect renderModel(Model model, OrthoView view, ImageF32 depthBuffer, Imag
 				LVector2D subPixelB = LVector2D(safeRoundInt64(pointB.x * constants::unitsPerPixel), safeRoundInt64(pointB.y * constants::unitsPerPixel));
 				LVector2D subPixelC = LVector2D(safeRoundInt64(pointC.x * constants::unitsPerPixel), safeRoundInt64(pointC.y * constants::unitsPerPixel));
 				IRect triangleBound = IRect::cut(clipBound, getBackCulledTriangleBound(subPixelA, subPixelB, subPixelC));
-				int rowCount = triangleBound.height();
-				if (rowCount > 0) {
-					RowInterval rows[rowCount];
-					rasterizeTriangle(subPixelA, subPixelB, subPixelC, rows, triangleBound);
+				if (triangleBound.hasArea()) {
+					//rasterizeTriangle(subPixelA, subPixelB, subPixelC, rows, triangleBound);
 					SafePointer<uint32_t> diffuseRow = image_getSafePointer(diffuseTarget, triangleBound.top());
 					SafePointer<uint32_t> normalRow = image_getSafePointer(normalTarget, triangleBound.top());
 					SafePointer<float> heightRow = image_getSafePointer(depthBuffer, triangleBound.top());
+					// Pre-compute matrix inverse for vertex weights
+					FVector2D cornerA = FVector3Dto2D(pointA);
+					FVector2D cornerB = FVector3Dto2D(pointB);
+					FVector2D cornerC = FVector3Dto2D(pointC);
+					FMatrix2x2 offsetToWeight = inverse(FMatrix2x2(cornerB - cornerA, cornerC - cornerA));
+					// Iterate over the triangle's bounding box
 					for (int y = triangleBound.top(); y < triangleBound.bottom(); y++) {
-						int rowIndex = y - triangleBound.top();
-						int left = rows[rowIndex].left;
-						int right = rows[rowIndex].right;
-						SafePointer<uint32_t> diffusePixel = diffuseRow + left;
-						SafePointer<uint32_t> normalPixel = normalRow + left;
-						SafePointer<float> heightPixel = heightRow + left;
-						for (int x = left; x < right; x++) {
-							// TODO: Do the inverse matrix computation once per triangle
-							FVector3D weight = getAffineWeight(FVector3Dto2D(pointA), FVector3Dto2D(pointB), FVector3Dto2D(pointC), FVector2D(x + 0.5f, y + 0.5f));
-							// Clamping vertex weights solves the problem with sub-pixel integer precision, but pixel column zero still has poor precision
-							clampTriangleWeight(weight);
-							float height = interpolateUsingAffineWeight(pointA.z, pointB.z, pointC.z, weight);
-							if (height > *heightPixel) {
-								FVector3D vertexColor = interpolateUsingAffineWeight(vertexColorA, vertexColorB, vertexColorC, weight);
-								FVector3D normal = (normalize(interpolateUsingAffineWeight(normalA, normalB, normalC, weight)) + 1.0f) * 127.5f;
-								// Write data directly without saturation (Do not use colors outside of the visible range!)
-								*heightPixel = height;
-								*diffusePixel = ((uint32_t)vertexColor.x) | ENDIAN_POS_ADDR(((uint32_t)vertexColor.y), 8) | ENDIAN_POS_ADDR(((uint32_t)vertexColor.z), 16) | ENDIAN_POS_ADDR(255, 24);
-								*normalPixel = ((uint32_t)normal.x) | ENDIAN_POS_ADDR(((uint32_t)normal.y), 8) | ENDIAN_POS_ADDR(((uint32_t)normal.z), 16) | ENDIAN_POS_ADDR(255, 24);
+						SafePointer<uint32_t> diffusePixel = diffuseRow + triangleBound.left();
+						SafePointer<uint32_t> normalPixel = normalRow + triangleBound.left();
+						SafePointer<float> heightPixel = heightRow + triangleBound.left();
+						for (int x = triangleBound.left(); x < triangleBound.right(); x++) {
+							FVector2D weightBC = offsetToWeight.transform(FVector2D(x + 0.5f, y + 0.5f) - cornerA);
+							FVector3D weight = FVector3D(1.0f - (weightBC.x + weightBC.y), weightBC.x, weightBC.y);
+							// Check if the pixel is inside the triangle
+							if (weight.x >= 0.0f && weight.y >= 0.0f && weight.z >= 0.0f ) {
+								float height = interpolateUsingAffineWeight(pointA.z, pointB.z, pointC.z, weight);
+								if (height > *heightPixel) {
+									FVector3D vertexColor = interpolateUsingAffineWeight(vertexColorA, vertexColorB, vertexColorC, weight);
+									FVector3D normal = (normalize(interpolateUsingAffineWeight(normalA, normalB, normalC, weight)) + 1.0f) * 127.5f;
+									// Write data directly without saturation (Do not use colors outside of the visible range!)
+									*heightPixel = height;
+									*diffusePixel = ((uint32_t)vertexColor.x) | ENDIAN_POS_ADDR(((uint32_t)vertexColor.y), 8) | ENDIAN_POS_ADDR(((uint32_t)vertexColor.z), 16) | ENDIAN_POS_ADDR(255, 24);
+									*normalPixel = ((uint32_t)normal.x) | ENDIAN_POS_ADDR(((uint32_t)normal.y), 8) | ENDIAN_POS_ADDR(((uint32_t)normal.z), 16) | ENDIAN_POS_ADDR(255, 24);
+								}
 							}
 							diffusePixel += 1;
 							normalPixel += 1;
