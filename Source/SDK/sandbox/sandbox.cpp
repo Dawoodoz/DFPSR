@@ -391,11 +391,8 @@ void sandbox_main() {
 		if (showTestModel) {
 			float scale = 1.0f;
 			Transform3D testLocation = Transform3D(
-			  FVector3D(0.0f, sin(timer) * 0.1f, 0.0f),
-			  FMatrix3x3(
-				FVector3D(cos(timer) * scale, 0.0f, sin(timer) * scale),
-				FVector3D(0.0f, scale, 0.0f),
-				FVector3D(-sin(timer) * scale, 0.0f, cos(timer) * scale))
+			  FVector3D(cos(timer * 0.36f) * 1.6f, sin(timer) * 0.2f + 0.3f, sin(timer * 0.58f) * 1.6f),
+			  FMatrix3x3::makeAxisSystem(FVector3D(cos(timer), 0.0f, sin(timer)), FVector3D(cos(timer * 2.53f), 1.0f, sin(timer * 3.26f))) * scale
 			);
 			spriteWorld_addTemporaryModel(world, ModelInstance(barrelVisible, barrelShadow, testLocation));
 		}
