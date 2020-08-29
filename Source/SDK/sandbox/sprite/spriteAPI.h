@@ -34,18 +34,22 @@ public:
 	: typeIndex(typeIndex), direction(direction), location(location), shadowCasting(shadowCasting) {}
 };
 
+struct DenseModelImpl;
+using DenseModel = std::shared_ptr<struct DenseModelImpl>;
+DenseModel DenseModel_create(const Model& original);
+
 // A 3D model that can be rotated freely
 //   To be rendered during game-play to allow free rotation
 struct ModelInstance {
 public:
-	Model visibleModel;
+	DenseModel visibleModel;
 	Model shadowModel;
 	Transform3D location; // 3D tile coordinates with translation and 3-axis rotation allowed
 public:
 	// The shadowCasting property is replaced by multiple constructors
-	ModelInstance(const Model& visibleModel, const Model& shadowModel, const Transform3D& location)
+	ModelInstance(const DenseModel& visibleModel, const Model& shadowModel, const Transform3D& location)
 	: visibleModel(visibleModel), shadowModel(shadowModel), location(location) {}
-	ModelInstance(const Model& visibleModel, const Transform3D& location)
+	ModelInstance(const DenseModel& visibleModel, const Transform3D& location)
 	: visibleModel(visibleModel), shadowModel(Model()), location(location) {}
 };
 

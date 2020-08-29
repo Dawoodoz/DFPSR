@@ -319,11 +319,10 @@ void sandbox_main() {
 	double maxFrameTime = 0.0, lastMaxFrameTime = 0.0; // Peak per second
 
 	// Load models
-	Model barrelVisible = importer_loadModel(modelPath + U"Barrel_LowDetail.ply", true, Transform3D());
+	DenseModel barrelVisible = DenseModel_create(importer_loadModel(modelPath + U"Barrel_LowDetail.ply", true, Transform3D()));
 	Model barrelShadow = importer_loadModel(modelPath + U"Barrel_Shadow.ply", true, Transform3D());
-	//Model barrelVisible = importer_loadModel(modelPath + U"Character_Mage.ply", true, Transform3D());
+	//DenseModel barrelVisible = DenseModel_create(importer_loadModel(modelPath + U"Character_Mage.ply", true, Transform3D()));
 	//Model barrelShadow = importer_loadModel(modelPath + U"Character_Mage_Shadow.ply", true, Transform3D());
-	importer_generateNormalsIntoTextureCoordinates(barrelVisible);
 
 	while(running) {
 		double timer = time_getSeconds();

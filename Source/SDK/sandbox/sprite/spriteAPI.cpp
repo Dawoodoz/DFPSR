@@ -12,7 +12,10 @@
 namespace dsr {
 
 template <bool HIGH_QUALITY>
-static IRect renderModel(Model model, OrthoView view, ImageF32 depthBuffer, ImageRgbaU8 diffuseTarget, ImageRgbaU8 normalTarget, FVector2D worldOrigin, Transform3D modelToWorldSpace);
+static IRect renderModel(const Model& model, OrthoView view, ImageF32 depthBuffer, ImageRgbaU8 diffuseTarget, ImageRgbaU8 normalTarget, const FVector2D& worldOrigin, const Transform3D& modelToWorldSpace);
+
+template <bool HIGH_QUALITY>
+static IRect renderDenseModel(const DenseModel& model, OrthoView view, ImageF32 depthBuffer, ImageRgbaU8 diffuseTarget, ImageRgbaU8 normalTarget, const FVector2D& worldOrigin, const Transform3D& modelToWorldSpace);
 
 struct SpriteConfig {
 	int centerX, centerY; // The sprite's origin in pixels relative to the upper left corner
@@ -227,7 +230,7 @@ static IRect drawSprite(const Sprite& sprite, const OrthoView& ortho, const IVec
 }
 
 static IRect drawModel(const ModelInstance& instance, const OrthoView& ortho, const IVector2D& worldCenter, ImageF32 targetHeight, ImageRgbaU8 targetColor, ImageRgbaU8 targetNormal) {
-	return renderModel<false>(instance.visibleModel, ortho, targetHeight, targetColor, targetNormal, FVector2D(worldCenter.x, worldCenter.y), instance.location);
+	return renderDenseModel<false>(instance.visibleModel, ortho, targetHeight, targetColor, targetNormal, FVector2D(worldCenter.x, worldCenter.y), instance.location);
 }
 
 // The camera transform for each direction
@@ -838,6 +841,108 @@ static IRect getBackCulledTriangleBound(const FVector3D& a, const FVector3D& b, 
 	}
 }
 
+static FVector3D normalFromPoints(const FVector3D& A, const FVector3D& B, const FVector3D& C) {
+    return normalize(crossProduct(B - A, C - A));
+}
+
+static FVector3D getAverageNormal(const Model& model, int part, int poly) {
+	int vertexCount = model_getPolygonVertexCount(model, part, poly);
+	FVector3D normalSum;
+	for (int t = 0; t < vertexCount - 2; t++) {
+		normalSum = normalSum + normalFromPoints(
+		  model_getVertexPosition(model, part, poly, 0),
+		  model_getVertexPosition(model, part, poly, t + 1),
+		  model_getVertexPosition(model, part, poly, t + 2)
+		);
+	}
+	return normalize(normalSum);
+}
+
+struct DenseTriangle {
+public:
+	FVector3D colorA, colorB, colorC, posA, posB, posC, normalA, normalB, normalC;
+public:
+	DenseTriangle() {}
+	DenseTriangle(
+	  const FVector3D& colorA, const FVector3D& colorB, const FVector3D& colorC,
+	  const FVector3D& posA, const FVector3D& posB, const FVector3D& posC,
+	  const FVector3D& normalA, const FVector3D& normalB, const FVector3D& normalC)
+	  : colorA(colorA), colorB(colorB), colorC(colorC),
+	    posA(posA), posB(posB), posC(posC),
+	    normalA(normalA), normalB(normalB), normalC(normalC) {}
+};
+// The raw format for dense models using vertex colors instead of textures
+// Due to the high number of triangles, indexing positions would cause a lot of cache misses
+struct DenseModelImpl {
+public:
+	Array<DenseTriangle> triangles;
+	FVector3D minBound, maxBound;
+public:
+	// Optimize an existing model
+	DenseModelImpl(const Model& original);
+};
+
+DenseModel DenseModel_create(const Model& original) {
+	return std::make_shared<DenseModelImpl>(original);
+}
+
+static int getTriangleCount(const Model& original) {
+	int triangleCount = 0;
+	for (int part = 0; part < model_getNumberOfParts(original); part++) {
+		for (int poly = 0; poly < model_getNumberOfPolygons(original, part); poly++) {
+			int vertexCount = model_getPolygonVertexCount(original, part, poly);
+			triangleCount += vertexCount - 2;
+		}
+	}
+	return triangleCount;
+}
+
+DenseModelImpl::DenseModelImpl(const Model& original)
+: triangles(getTriangleCount(original), DenseTriangle()) {
+	// Get the bounding box
+	model_getBoundingBox(original, this->minBound, this->maxBound);
+	// Generate normals
+	int pointCount = model_getNumberOfPoints(original);
+	Array<FVector3D> normalPoints(pointCount, FVector3D());
+	// Calculate smooth normals in object-space, by adding each polygon's normal to each child vertex
+	for (int part = 0; part < model_getNumberOfParts(original); part++) {
+		for (int poly = 0; poly < model_getNumberOfPolygons(original, part); poly++) {
+			FVector3D polygonNormal = getAverageNormal(original, part, poly);
+			for (int vert = 0; vert < model_getPolygonVertexCount(original, part, poly); vert++) {
+				int point = model_getVertexPointIndex(original, part, poly, vert);
+				normalPoints[point] = normalPoints[point] + polygonNormal;
+			}
+		}
+	}
+	// Normalize the result per vertex, to avoid having unbalanced weights when normalizing per pixel
+	for (int point = 0; point < pointCount; point++) {
+		normalPoints[point] = normalize(normalPoints[point]);
+	}
+	// Generate a simpler triangle structure
+	int triangleIndex = 0;
+	for (int part = 0; part < model_getNumberOfParts(original); part++) {
+		for (int poly = 0; poly < model_getNumberOfPolygons(original, part); poly++) {
+			int vertexCount = model_getPolygonVertexCount(original, part, poly);
+			int vertA = 0;
+			int indexA = model_getVertexPointIndex(original, part, poly, vertA);
+			for (int vertB = 1; vertB < vertexCount - 1; vertB++) {
+				int vertC = vertB + 1;
+				int indexB = model_getVertexPointIndex(original, part, poly, vertB);
+				int indexC = model_getVertexPointIndex(original, part, poly, vertC);
+				triangles[triangleIndex] =
+				  DenseTriangle(
+					FVector4Dto3D(model_getVertexColor(original, part, poly, vertA)) * 255.0f,
+					FVector4Dto3D(model_getVertexColor(original, part, poly, vertB)) * 255.0f,
+					FVector4Dto3D(model_getVertexColor(original, part, poly, vertC)) * 255.0f,
+					model_getPoint(original, indexA), model_getPoint(original, indexB), model_getPoint(original, indexC),
+					normalPoints[indexA], normalPoints[indexB], normalPoints[indexC]
+				  );
+				triangleIndex++;
+			}
+		}
+	}
+}
+
 // Pre-conditions:
 //   * All images must exist and have the same dimensions
 //   * diffuseTarget and normalTarget must have RGBA pack order
@@ -847,14 +952,11 @@ static IRect getBackCulledTriangleBound(const FVector3D& a, const FVector3D& b, 
 // worldOrigin is the perceived world's origin in target pixel coordinates
 // modelToWorldSpace is used to place the model freely in the world
 template <bool HIGH_QUALITY>
-static IRect renderModel(Model model, OrthoView view, ImageF32 depthBuffer, ImageRgbaU8 diffuseTarget, ImageRgbaU8 normalTarget, FVector2D worldOrigin, Transform3D modelToWorldSpace) {
+static IRect renderDenseModel(const DenseModel& model, OrthoView view, ImageF32 depthBuffer, ImageRgbaU8 diffuseTarget, ImageRgbaU8 normalTarget, const FVector2D& worldOrigin, const Transform3D& modelToWorldSpace) {
 	// Combine position transforms
 	Transform3D objectToScreenSpace = modelToWorldSpace * Transform3D(FVector3D(worldOrigin.x, worldOrigin.y, 0.0f), view.worldSpaceToScreenDepth);
-
-	// Get the model's 3D bound
-	FVector3D minBound, maxBound;
-	model_getBoundingBox(model, minBound, maxBound);
-	IRect pessimisticBound = boundingBoxToRectangle(minBound, maxBound, objectToScreenSpace);
+	// Create a pessimistic 2D bound from the 3D bounding box
+	IRect pessimisticBound = boundingBoxToRectangle(model->minBound, model->maxBound, objectToScreenSpace);
 	// Get the target image bound
 	IRect clipBound = image_getBound(depthBuffer);
 	// Fast culling test
@@ -862,111 +964,77 @@ static IRect renderModel(Model model, OrthoView view, ImageF32 depthBuffer, Imag
 		// Nothing drawn, no dirty rectangle
 		return IRect();
 	}
-
-	// TODO: Reuse memory in a thread-safe way
-	// Allocate memory for projected positions
-	int pointCount = model_getNumberOfPoints(model);
-	Array<FVector3D> projectedPoints(pointCount, FVector3D()); // pixel X, pixel Y, mini-tile height
-
-	// Transform positions and return the dirty box
-	IRect dirtyBox = IRect(clipBound.width(), clipBound.height(), -clipBound.width(), -clipBound.height());
-	for (int point = 0; point < pointCount; point++) {
-		FVector3D screenProjection = objectToScreenSpace.transformPoint(model_getPoint(model, point));
-		projectedPoints[point] = screenProjection;
-		// Expand the dirty bound
-		dirtyBox = IRect::merge(dirtyBox, boundFromVertex(screenProjection));
-	}
-
-	// Skip early if the more precise culling test fails
-	if (!(IRect::cut(clipBound, dirtyBox).hasArea())) {
-		// Nothing drawn, no dirty rectangle
-		return IRect();
-	}
-
 	// Combine normal transforms
 	FMatrix3x3 modelToNormalSpace = modelToWorldSpace.transform * transpose(view.normalToWorldSpace);
-
 	// Get image properties
 	int diffuseStride = image_getStride(diffuseTarget);
 	int normalStride = image_getStride(normalTarget);
 	int heightStride = image_getStride(depthBuffer);
-
 	// Call getters in advance to avoid call overhead in the loops
 	SafePointer<uint32_t> diffuseData = image_getSafePointer(diffuseTarget);
 	SafePointer<uint32_t> normalData = image_getSafePointer(normalTarget);
 	SafePointer<float> heightData = image_getSafePointer(depthBuffer);
-
-	// Render polygons as triangle fans
-	for (int part = 0; part < model_getNumberOfParts(model); part++) {
-		for (int poly = 0; poly < model_getNumberOfPolygons(model, part); poly++) {
-			int vertexCount = model_getPolygonVertexCount(model, part, poly);
-			int vertA = 0;
-			FVector3D vertexColorA = FVector4Dto3D(model_getVertexColor(model, part, poly, vertA)) * 255.0f;
-			int indexA = model_getVertexPointIndex(model, part, poly, vertA);
-			FVector3D normalA = modelToNormalSpace.transform(FVector4Dto3D(model_getTexCoord(model, part, poly, vertA)));
-			FVector3D pointA = projectedPoints[indexA];
-			for (int vertB = 1; vertB < vertexCount - 1; vertB++) {
-				int vertC = vertB + 1;
-				int indexB = model_getVertexPointIndex(model, part, poly, vertB);
-				int indexC = model_getVertexPointIndex(model, part, poly, vertC);
-				FVector3D vertexColorB = FVector4Dto3D(model_getVertexColor(model, part, poly, vertB)) * 255.0f;
-				FVector3D vertexColorC = FVector4Dto3D(model_getVertexColor(model, part, poly, vertC)) * 255.0f;
-				FVector3D normalB = modelToNormalSpace.transform(FVector4Dto3D(model_getTexCoord(model, part, poly, vertB)));
-				FVector3D normalC = modelToNormalSpace.transform(FVector4Dto3D(model_getTexCoord(model, part, poly, vertC)));
-				FVector3D pointB = projectedPoints[indexB];
-				FVector3D pointC = projectedPoints[indexC];
-				IRect triangleBound = IRect::cut(clipBound, getBackCulledTriangleBound(pointA, pointB, pointC));
-				if (triangleBound.hasArea()) {
-					// Find the first row
-					SafePointer<uint32_t> diffuseRow = diffuseData;
-					diffuseRow.increaseBytes(diffuseStride * triangleBound.top());
-					SafePointer<uint32_t> normalRow = normalData;
-					normalRow.increaseBytes(normalStride * triangleBound.top());
-					SafePointer<float> heightRow = heightData;
-					heightRow.increaseBytes(heightStride * triangleBound.top());
-					// Pre-compute matrix inverse for vertex weights
-					FVector2D cornerA = FVector3Dto2D(pointA);
-					FVector2D cornerB = FVector3Dto2D(pointB);
-					FVector2D cornerC = FVector3Dto2D(pointC);
-					FMatrix2x2 offsetToWeight = inverse(FMatrix2x2(cornerB - cornerA, cornerC - cornerA));
-					// Iterate over the triangle's bounding box
-					for (int y = triangleBound.top(); y < triangleBound.bottom(); y++) {
-						SafePointer<uint32_t> diffusePixel = diffuseRow + triangleBound.left();
-						SafePointer<uint32_t> normalPixel = normalRow + triangleBound.left();
-						SafePointer<float> heightPixel = heightRow + triangleBound.left();
-						for (int x = triangleBound.left(); x < triangleBound.right(); x++) {
-							FVector2D weightBC = offsetToWeight.transform(FVector2D(x + 0.5f, y + 0.5f) - cornerA);
-							FVector3D weight = FVector3D(1.0f - (weightBC.x + weightBC.y), weightBC.x, weightBC.y);
-							// Check if the pixel is inside the triangle
-							if (weight.x >= 0.0f && weight.y >= 0.0f && weight.z >= 0.0f ) {
-								float height = interpolateUsingAffineWeight(pointA.z, pointB.z, pointC.z, weight);
-								if (height > *heightPixel) {
-									FVector3D vertexColor = interpolateUsingAffineWeight(vertexColorA, vertexColorB, vertexColorC, weight);
-									*heightPixel = height;
-									// Write data directly without saturation (Do not use colors outside of the visible range!)
-									*diffusePixel = ((uint32_t)vertexColor.x) | ENDIAN_POS_ADDR(((uint32_t)vertexColor.y), 8) | ENDIAN_POS_ADDR(((uint32_t)vertexColor.z), 16) | ENDIAN_POS_ADDR(255, 24);
-									if (HIGH_QUALITY) {
-										FVector3D normal = (normalize(interpolateUsingAffineWeight(normalA, normalB, normalC, weight)) + 1.0f) * 127.5f;
-										*normalPixel = ((uint32_t)normal.x) | ENDIAN_POS_ADDR(((uint32_t)normal.y), 8) | ENDIAN_POS_ADDR(((uint32_t)normal.z), 16) | ENDIAN_POS_ADDR(255, 24);
-									} else {
-										FVector3D normal = (interpolateUsingAffineWeight(normalA, normalB, normalC, weight) + 1.0f) * 127.5f;
-										*normalPixel = ((uint32_t)normal.x) | ENDIAN_POS_ADDR(((uint32_t)normal.y), 8) | ENDIAN_POS_ADDR(((uint32_t)normal.z), 16) | ENDIAN_POS_ADDR(255, 24);
-									}
-								}
+	// Render triangles
+	for (int tri = 0; tri < model->triangles.length(); tri++) {
+		DenseTriangle triangle =  model->triangles[tri];
+		// Transform positions
+		FVector3D projectedA = objectToScreenSpace.transformPoint(triangle.posA);
+		FVector3D projectedB = objectToScreenSpace.transformPoint(triangle.posB);
+		FVector3D projectedC = objectToScreenSpace.transformPoint(triangle.posC);
+		IRect triangleBound = IRect::cut(clipBound, getBackCulledTriangleBound(projectedA, projectedB, projectedC));
+		if (triangleBound.hasArea()) {
+			// Find the first row
+			SafePointer<uint32_t> diffuseRow = diffuseData;
+			diffuseRow.increaseBytes(diffuseStride * triangleBound.top());
+			SafePointer<uint32_t> normalRow = normalData;
+			normalRow.increaseBytes(normalStride * triangleBound.top());
+			SafePointer<float> heightRow = heightData;
+			heightRow.increaseBytes(heightStride * triangleBound.top());
+			// Pre-compute matrix inverse for vertex weights
+			FVector2D cornerA = FVector3Dto2D(projectedA);
+			FVector2D cornerB = FVector3Dto2D(projectedB);
+			FVector2D cornerC = FVector3Dto2D(projectedC);
+			FMatrix2x2 offsetToWeight = inverse(FMatrix2x2(cornerB - cornerA, cornerC - cornerA));
+			// Transform normals
+			FVector3D normalA = modelToNormalSpace.transform(triangle.normalA);
+			FVector3D normalB = modelToNormalSpace.transform(triangle.normalB);
+			FVector3D normalC = modelToNormalSpace.transform(triangle.normalC);
+			// Iterate over the triangle's bounding box
+			for (int y = triangleBound.top(); y < triangleBound.bottom(); y++) {
+				SafePointer<uint32_t> diffusePixel = diffuseRow + triangleBound.left();
+				SafePointer<uint32_t> normalPixel = normalRow + triangleBound.left();
+				SafePointer<float> heightPixel = heightRow + triangleBound.left();
+				for (int x = triangleBound.left(); x < triangleBound.right(); x++) {
+					FVector2D weightBC = offsetToWeight.transform(FVector2D(x + 0.5f, y + 0.5f) - cornerA);
+					FVector3D weight = FVector3D(1.0f - (weightBC.x + weightBC.y), weightBC.x, weightBC.y);
+					// Check if the pixel is inside the triangle
+					if (weight.x >= 0.0f && weight.y >= 0.0f && weight.z >= 0.0f ) {
+						float height = interpolateUsingAffineWeight(projectedA.z, projectedB.z, projectedC.z, weight);
+						if (height > *heightPixel) {
+							FVector3D vertexColor = interpolateUsingAffineWeight(triangle.colorA, triangle.colorB, triangle.colorC, weight);
+							*heightPixel = height;
+							// Write data directly without saturation (Do not use colors outside of the visible range!)
+							*diffusePixel = ((uint32_t)vertexColor.x) | ENDIAN_POS_ADDR(((uint32_t)vertexColor.y), 8) | ENDIAN_POS_ADDR(((uint32_t)vertexColor.z), 16) | ENDIAN_POS_ADDR(255, 24);
+							if (HIGH_QUALITY) {
+								FVector3D normal = (normalize(interpolateUsingAffineWeight(normalA, normalB, normalC, weight)) + 1.0f) * 127.5f;
+								*normalPixel = ((uint32_t)normal.x) | ENDIAN_POS_ADDR(((uint32_t)normal.y), 8) | ENDIAN_POS_ADDR(((uint32_t)normal.z), 16) | ENDIAN_POS_ADDR(255, 24);
+							} else {
+								FVector3D normal = (interpolateUsingAffineWeight(normalA, normalB, normalC, weight) + 1.0f) * 127.5f;
+								*normalPixel = ((uint32_t)normal.x) | ENDIAN_POS_ADDR(((uint32_t)normal.y), 8) | ENDIAN_POS_ADDR(((uint32_t)normal.z), 16) | ENDIAN_POS_ADDR(255, 24);
 							}
-							diffusePixel += 1;
-							normalPixel += 1;
-							heightPixel += 1;
 						}
-						diffuseRow.increaseBytes(diffuseStride);
-						normalRow.increaseBytes(normalStride);
-						heightRow.increaseBytes(heightStride);
 					}
+					diffusePixel += 1;
+					normalPixel += 1;
+					heightPixel += 1;
 				}
+				diffuseRow.increaseBytes(diffuseStride);
+				normalRow.increaseBytes(normalStride);
+				heightRow.increaseBytes(heightStride);
 			}
 		}
 	}
-	return dirtyBox;
+	return pessimisticBound;
 }
 
 void sprite_generateFromModel(ImageRgbaU8& targetAtlas, String& targetConfigText, const Model& visibleModel, const Model& shadowModel, const OrthoSystem& ortho, const String& targetPath, int cameraAngles) {
@@ -1008,14 +1076,15 @@ void sprite_generateFromModel(ImageRgbaU8& targetAtlas, String& targetConfigText
 			heightImage[a] = image_create_RgbaU8(width, height);
 			normalImage[a] = image_create_RgbaU8(width, height);
 		}
+		// Generate the optimized model structure with normals
+		DenseModel denseModel = DenseModel_create(visibleModel);
 		// Render the model to multiple render targets at once
 		float heightScale = 255.0f / (maxBound.y - minBound.y);
 		for (int a = 0; a < cameraAngles; a++) {
 			image_fill(depthBuffer, -1000000000.0f);
 			image_fill(colorImage[a], ColorRgbaI32(0, 0, 0, 0));
-			importer_generateNormalsIntoTextureCoordinates(visibleModel);
 			FVector2D origin = FVector2D((float)width * 0.5f, (float)height * 0.5f);
-			renderModel<true>(visibleModel, ortho.view[a], depthBuffer, colorImage[a], normalImage[a], origin, Transform3D());
+			renderDenseModel<true>(denseModel, ortho.view[a], depthBuffer, colorImage[a], normalImage[a], origin, Transform3D());
 			// Convert height into an 8 bit channel for saving
 			for (int y = 0; y < height; y++) {
 				for (int x = 0; x < width; x++) {
