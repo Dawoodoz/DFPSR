@@ -824,22 +824,16 @@ static IRect boundingBoxToRectangle(const FVector3D& minBound, const FVector3D& 
 	return result;
 }
 
-static IRect getBackCulledTriangleBound(LVector2D a, LVector2D b, LVector2D c) {
-	if (((c.x - a.x) * (b.y - a.y)) + ((c.y - a.y) * (a.x - b.x)) >= 0) {
+static IRect getBackCulledTriangleBound(const FVector3D& a, const FVector3D& b, const FVector3D& c) {
+	if (((c.x - a.x) * (b.y - a.y)) + ((c.y - a.y) * (a.x - b.x)) >= 0.0f) {
 		// Back facing
 		return IRect();
 	} else {
 		// Front facing
-		int32_t rX1 = (a.x + constants::unitsPerHalfPixel) / constants::unitsPerPixel;
-		int32_t rY1 = (a.y + constants::unitsPerHalfPixel) / constants::unitsPerPixel;
-		int32_t rX2 = (b.x + constants::unitsPerHalfPixel) / constants::unitsPerPixel;
-		int32_t rY2 = (b.y + constants::unitsPerHalfPixel) / constants::unitsPerPixel;
-		int32_t rX3 = (c.x + constants::unitsPerHalfPixel) / constants::unitsPerPixel;
-		int32_t rY3 = (c.y + constants::unitsPerHalfPixel) / constants::unitsPerPixel;
-		int leftBound = std::min(std::min(rX1, rX2), rX3) - 1;
-		int topBound = std::min(std::min(rY1, rY2), rY3) - 1;
-		int rightBound = std::max(std::max(rX1, rX2), rX3) + 1;
-		int bottomBound = std::max(std::max(rY1, rY2), rY3) + 1;
+		int leftBound = (int)std::min(std::min(a.x, b.x), c.x);
+		int topBound = (int)std::min(std::min(a.y, b.y), c.y);
+		int rightBound = (int)(std::max(std::max(a.x, b.x), c.x)) + 1;
+		int bottomBound = (int)(std::max(std::max(a.y, b.y), c.y)) + 1;
 		return IRect(leftBound, topBound, rightBound - leftBound, bottomBound - topBound);
 	}
 }
@@ -911,7 +905,6 @@ static IRect renderModel(Model model, OrthoView view, ImageF32 depthBuffer, Imag
 			int indexA = model_getVertexPointIndex(model, part, poly, vertA);
 			FVector3D normalA = modelToNormalSpace.transform(FVector4Dto3D(model_getTexCoord(model, part, poly, vertA)));
 			FVector3D pointA = projectedPoints[indexA];
-			LVector2D subPixelA = LVector2D(safeRoundInt64(pointA.x * constants::unitsPerPixel), safeRoundInt64(pointA.y * constants::unitsPerPixel));
 			for (int vertB = 1; vertB < vertexCount - 1; vertB++) {
 				int vertC = vertB + 1;
 				int indexB = model_getVertexPointIndex(model, part, poly, vertB);
@@ -922,9 +915,7 @@ static IRect renderModel(Model model, OrthoView view, ImageF32 depthBuffer, Imag
 				FVector3D normalC = modelToNormalSpace.transform(FVector4Dto3D(model_getTexCoord(model, part, poly, vertC)));
 				FVector3D pointB = projectedPoints[indexB];
 				FVector3D pointC = projectedPoints[indexC];
-				LVector2D subPixelB = LVector2D(safeRoundInt64(pointB.x * constants::unitsPerPixel), safeRoundInt64(pointB.y * constants::unitsPerPixel));
-				LVector2D subPixelC = LVector2D(safeRoundInt64(pointC.x * constants::unitsPerPixel), safeRoundInt64(pointC.y * constants::unitsPerPixel));
-				IRect triangleBound = IRect::cut(clipBound, getBackCulledTriangleBound(subPixelA, subPixelB, subPixelC));
+				IRect triangleBound = IRect::cut(clipBound, getBackCulledTriangleBound(pointA, pointB, pointC));
 				if (triangleBound.hasArea()) {
 					// Find the first row
 					SafePointer<uint32_t> diffuseRow = diffuseData;
