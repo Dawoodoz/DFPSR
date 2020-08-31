@@ -5,7 +5,7 @@ Begin : Panel
 		Name = "toolPanel"
 		Left = +0
 		Top = +0
-		Right = 10%+100
+		Right = 8%+100
 		Bottom = 100%
 		Solid = 1
 		Color = 100,150,100

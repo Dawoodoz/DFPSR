@@ -369,10 +369,9 @@ void sandbox_main() {
 
 	while(running) {
 		double timer = time_getSeconds();
-		double startTime = 0.0;
 
-		// Always render the image when profiling
-		updateImage = overlayMode != OverlayMode_Tools;
+		// Always render the image when profiling or moving the camera
+		updateImage = overlayMode != OverlayMode_Tools || cameraMovement.x != 0 || cameraMovement.y != 0;
 
 		// Execute actions
 		if (window_executeEvents(window)) {
@@ -478,9 +477,7 @@ void sandbox_main() {
 			}
 
 			// Overlays
-			startTime = time_getSeconds();
-				window_drawComponents(window);
-			debugText("Draw GUI: ", (time_getSeconds() - startTime) * 1000.0, " ms\n");
+			window_drawComponents(window);
 			// Profiling mode
 			if (overlayMode == OverlayMode_Profiling) {
 				IVector2D writer = IVector2D(10, 10);
@@ -490,26 +487,25 @@ void sandbox_main() {
 			}
 
 			window_showCanvas(window);
-
-			double newTime = time_getSeconds();
-			secondsPerFrame = newTime - frameStartTime;
-			frameStartTime = newTime;
-			debugText("Total frame: ", secondsPerFrame * 1000.0, " ms\n\n");
-
-			// Profiling
-			if (secondsPerFrame > maxFrameTime) { maxFrameTime = secondsPerFrame; }
-			profileFrameCount++;
-			if (newTime > profileStartTime + 1.0) {
-				double duration = newTime - profileStartTime;
-				profileFrameRate = (double)profileFrameCount / duration;
-				profileStartTime = newTime;
-				profileFrameCount = 0;
-				lastMaxFrameTime = maxFrameTime;
-				maxFrameTime = 0.0;
-			}
 		} else {
 			// If updateImage is false then just delay a bit while waiting for input
 			time_sleepSeconds(0.01);
+		}
+
+		double newTime = time_getSeconds();
+		secondsPerFrame = newTime - frameStartTime;
+		frameStartTime = newTime;
+
+		// Profiling
+		if (secondsPerFrame > maxFrameTime) { maxFrameTime = secondsPerFrame; }
+		profileFrameCount++;
+		if (newTime > profileStartTime + 1.0) {
+			double duration = newTime - profileStartTime;
+			profileFrameRate = (double)profileFrameCount / duration;
+			profileStartTime = newTime;
+			profileFrameCount = 0;
+			lastMaxFrameTime = maxFrameTime;
+			maxFrameTime = 0.0;
 		}
 	}
 }
