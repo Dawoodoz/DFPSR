@@ -313,6 +313,9 @@ IRect ListBox::getKnobLocation() {
 	int64_t maxScroll = itemCount - visibleRange; // 0..maxScroll
 	// Dimensions
 	int64_t knobHeight = (erodedBar.height() * visibleRange) / itemCount;
+	if (knobHeight < erodedBar.width()) {
+		knobHeight = erodedBar.width();
+	}
 	// Visual range for center
 	int64_t scrollStart = erodedBar.top() + knobHeight / 2;
 	int64_t scrollDistance = erodedBar.height() - knobHeight;
