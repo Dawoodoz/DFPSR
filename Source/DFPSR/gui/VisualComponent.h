@@ -51,11 +51,11 @@ protected:
 	FlexRegion region;
 	PersistentString name;
 	PersistentInteger index;
-	PersistentBoolean hidden = PersistentBoolean(false);
+	PersistentBoolean visible = PersistentBoolean(true);
 	void declareAttributes(StructureDefinition &target) const override {
 		target.declareAttribute(U"Name");
 		target.declareAttribute(U"Index");
-		target.declareAttribute(U"Hidden");
+		target.declareAttribute(U"Visible");
 		target.declareAttribute(U"Left");
 		target.declareAttribute(U"Top");
 		target.declareAttribute(U"Right");
@@ -67,8 +67,8 @@ public:
 			return &(this->name);
 		} else if (string_caseInsensitiveMatch(name, U"Index")) {
 			return &(this->index);
-		} else if (string_caseInsensitiveMatch(name, U"Hidden")) {
-			return &(this->hidden);
+		} else if (string_caseInsensitiveMatch(name, U"Visible")) {
+			return &(this->visible);
 		} else if (string_caseInsensitiveMatch(name, U"Left")) {
 			return &(this->region.sides[0]);
 		} else if (string_caseInsensitiveMatch(name, U"Top")) {
@@ -101,8 +101,8 @@ public:
 	IVector2D getSize() const;
 	void setRegion(const FlexRegion &newRegion);
 	FlexRegion getRegion() const;
-	void setHidden(bool hidden);
-	bool getHidden() const;
+	void setVisible(bool visible);
+	bool getVisible() const;
 	void setName(const String& newName);
 	String getName() const;
 	void setIndex(int index);

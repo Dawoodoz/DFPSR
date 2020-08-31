@@ -206,7 +206,7 @@ ReturnCode dsr::component_setProperty(const Component& component, const Readable
 	Persistent* target = component->findAttribute(propertyName);
 	if (target == nullptr) {
 		if (mustAssign) {
-			throwError("component_setProperty_string: ", propertyName, " in ", component->getClassName(), " could not be found.\n");
+			throwError("component_setProperty: ", propertyName, " in ", component->getClassName(), " could not be found.\n");
 		}
 		return ReturnCode::KeyNotFound;
 	} else {
@@ -215,7 +215,7 @@ ReturnCode dsr::component_setProperty(const Component& component, const Readable
 			return ReturnCode::Good;
 		} else {
 			if (mustAssign) {
-				throwError("component_setProperty_string: The input ", value, " could not be assigned to property ", propertyName, " because of incorrect format.\n");
+				throwError("component_setProperty: The input ", value, " could not be assigned to property ", propertyName, " because of incorrect format.\n");
 			}
 			return ReturnCode::ParsingFailure;
 		}
@@ -226,7 +226,7 @@ String dsr::component_getProperty(const Component& component, const ReadableStri
 	Persistent* target = component->findAttribute(propertyName);
 	if (target == nullptr) {
 		if (mustExist) {
-			throwError("component_getProperty_string: ", propertyName, " in ", component->getClassName(), " could not be found.\n");
+			throwError("component_getProperty: ", propertyName, " in ", component->getClassName(), " could not be found.\n");
 		}
 		return U"";
 	} else {
@@ -234,7 +234,7 @@ String dsr::component_getProperty(const Component& component, const ReadableStri
 	}
 }
 ReturnCode dsr::component_setProperty_string(const Component& component, const ReadableString& propertyName, const ReadableString& value, bool mustAssign) {
-	MUST_EXIST(component, component_setProperty);
+	MUST_EXIST(component, component_setProperty_string);
 	Persistent* target = component->findAttribute(propertyName);
 	PersistentString* stringTarget = dynamic_cast<PersistentString*>(target);
 	if (target == nullptr) {
@@ -253,7 +253,7 @@ ReturnCode dsr::component_setProperty_string(const Component& component, const R
 	}
 }
 String dsr::component_getProperty_string(const Component& component, const ReadableString& propertyName, bool mustExist) {
-	MUST_EXIST(component, component_getProperty);
+	MUST_EXIST(component, component_getProperty_string);
 	Persistent* target = component->findAttribute(propertyName);
 	PersistentString* stringTarget = dynamic_cast<PersistentString*>(target);
 	if (target == nullptr) {
@@ -268,6 +268,54 @@ String dsr::component_getProperty_string(const Component& component, const Reada
 		return U"";
 	} else {
 		return stringTarget->value;
+	}
+}
+ReturnCode dsr::component_setProperty_integer(const Component& component, const ReadableString& propertyName, int64_t value, bool mustAssign) {
+	MUST_EXIST(component, component_setProperty_integer);
+	Persistent* target = component->findAttribute(propertyName);
+	if (target == nullptr) {
+		if (mustAssign) {
+			throwError("component_setProperty_integer: ", propertyName, " in ", component->getClassName(), " could not be found.\n");
+		}
+		return ReturnCode::KeyNotFound;
+	} else {
+		PersistentInteger* integerTarget = dynamic_cast<PersistentInteger*>(target);
+		PersistentBoolean* booleanTarget = dynamic_cast<PersistentBoolean*>(target);
+		if (integerTarget != nullptr) {
+			integerTarget->value = value;
+			return ReturnCode::Good;
+		} else if (booleanTarget != nullptr) {
+			booleanTarget->value = value ? 1 : 0;
+			return ReturnCode::Good;
+		} else {
+			if (mustAssign) {
+				throwError("component_setProperty_integer: ", propertyName, " in ", component->getClassName(), " was a ", target->getClassName(), " instead of an integer or boolean.\n");
+			}
+			return ReturnCode::KeyNotFound;
+		}
+	}
+}
+int64_t dsr::component_getProperty_integer(const Component& component, const ReadableString& propertyName, bool mustExist, int64_t defaultValue) {
+	MUST_EXIST(component, component_getProperty_integer);
+	Persistent* target = component->findAttribute(propertyName);
+	if (target == nullptr) {
+		if (mustExist) {
+			throwError("component_getProperty_integer: ", propertyName, " in ", component->getClassName(), " could not be found.\n");
+		}
+		return defaultValue;
+	} else {
+		PersistentInteger* integerTarget = dynamic_cast<PersistentInteger*>(target);
+		PersistentBoolean* booleanTarget = dynamic_cast<PersistentBoolean*>(target);
+		if (integerTarget != nullptr) {
+			return integerTarget->value;
+		} else if (booleanTarget != nullptr) {
+			return booleanTarget->value;
+		} else {
+			if (mustExist) {
+				throwError("component_getProperty_integer: ", propertyName, " in ", component->getClassName(), " was a ", target->getClassName(), " instead of an integer or boolean.\n");
+			}
+			return defaultValue;
+		}
 	}
 }
 

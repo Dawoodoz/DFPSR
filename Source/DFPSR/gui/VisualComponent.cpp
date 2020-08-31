@@ -58,12 +58,12 @@ FlexRegion VisualComponent::getRegion() const {
 	return this->region;
 }
 
-void VisualComponent::setHidden(bool hidden) {
-	this->hidden.value = hidden;
+void VisualComponent::setVisible(bool visible) {
+	this->visible.value = visible;
 }
 
-bool VisualComponent::getHidden() const {
-	return this->hidden.value;
+bool VisualComponent::getVisible() const {
+	return this->visible.value;
 }
 
 void VisualComponent::setName(const String& newName) {
@@ -104,7 +104,7 @@ void VisualComponent::updateLocationEvent(const IRect& oldLocation, const IRect&
 
 // Offset may become non-zero when the origin is outside of targetImage from being clipped outside of the parent region
 void VisualComponent::draw(ImageRgbaU8& targetImage, const IVector2D& offset) {
-	if (!this->getHidden()) {
+	if (this->getVisible()) {
 		IRect containerBound = this->getLocation() + offset;
 		this->drawSelf(targetImage, containerBound);
 		// Draw each child component
@@ -247,7 +247,7 @@ std::shared_ptr<VisualComponent> VisualComponent::getDirectChild(const IVector2D
 	for (int i = this->getChildCount() - 1; i >= 0; i--) {
 		std::shared_ptr<VisualComponent> currentChild = this->children[i];
 		// Check if the point is inside the child component
-		if ((!currentChild->getHidden() || includeInvisible) && currentChild->pointIsInside(pixelPosition)) {
+		if ((currentChild->getVisible() || includeInvisible) && currentChild->pointIsInside(pixelPosition)) {
 			return currentChild;
 		}
 	}
@@ -261,7 +261,7 @@ std::shared_ptr<VisualComponent> VisualComponent::getTopChild(const IVector2D& p
 	for (int i = this->getChildCount() - 1; i >= 0; i--) {
 		std::shared_ptr<VisualComponent> currentChild = this->children[i];
 		// Check if the point is inside the child component
-		if ((!currentChild->getHidden() || includeInvisible) && currentChild->pointIsInside(pixelPosition)) {
+		if ((currentChild->getVisible() || includeInvisible) && currentChild->pointIsInside(pixelPosition)) {
 			// Check if a component inside the child component is even higher up
 			std::shared_ptr<VisualComponent> subChild = currentChild->getTopChild(pixelPosition - this->getLocation().upperLeft(), includeInvisible);
 			if (subChild.get() != nullptr) {
@@ -287,7 +287,7 @@ void VisualComponent::sendMouseEvent(const MouseEvent& event) {
 	if (this->holdCount > 0) {
 		// If we're grabbing a component, keep sending events to it
 		childComponent = this->dragComponent;
-	} else if (!this->getHidden() && this->pointIsInside(event.position)) {
+	} else if (this->getVisible() && this->pointIsInside(event.position)) {
 		// If we're not grabbing a component, see if we can send the action to another component
 		childComponent = this->getDirectChild(localEvent.position, false);
 	}
