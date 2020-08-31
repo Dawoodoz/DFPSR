@@ -61,7 +61,6 @@ static const int textBorderTop = 4;
 static const int scrollWidth = 16; // The width of the scroll bar
 static const int scrollEndHeight = 14; // The height of upper and lower scroll buttons
 static const int border = 1; // Scroll-bar edge thickness
-static const int knobErosion = border; // Scroll-bar knob erosion
 
 void ListBox::generateGraphics() {
 	int width = this->location.width();
@@ -70,7 +69,8 @@ void ListBox::generateGraphics() {
 	if (height < 1) { height = 1; }
 	if (!this->hasImages) {
 		this->completeAssets();
-	 	this->scalableImage_listBox(width, height, this->color.value.red, this->color.value.green, this->color.value.blue)(this->image);
+		ColorRgbI32 color = this->color.value;
+	 	this->scalableImage_listBox(width, height, color.red, color.green, color.blue)(this->image);
 		int verticalStep = font_getSize(this->font);
 		int left = textBorderLeft;
 		int top = textBorderTop;
@@ -90,21 +90,27 @@ void ListBox::generateGraphics() {
 			top += verticalStep;
 		}
 		if (this->hasVerticalScroll) {
-			ColorRgbaI32 buttonColor = ColorRgbaI32(this->color.value, 255);
-			ColorRgbaI32 barColor = ColorRgbaI32(this->color.value.red / 2, this->color.value.green / 2, this->color.value.blue / 2, 255);
+			ColorRgbaI32 buttonColor = ColorRgbaI32(color, 255);
+			ColorRgbaI32 barColor = ColorRgbaI32(color.red / 2, color.green / 2, color.blue / 2, 255);
 			ColorRgbaI32 borderColor = ColorRgbaI32(0, 0, 0, 255);
 			IRect whole = IRect(this->location.width() - scrollWidth, 0, scrollWidth, this->location.height());
 			IRect upper = IRect(whole.left(), whole.top(), whole.width(), scrollEndHeight);
 			IRect middle = IRect(whole.left() + border, whole.top() + scrollEndHeight + border, whole.width() - border * 2, whole.height() - (border + scrollEndHeight) * 2);
 			IRect lower = IRect(whole.left(), whole.bottom() - scrollEndHeight, whole.width(), scrollEndHeight);
 			IRect knob = this->getKnobLocation();
+			// Only redraw the knob image if its dimensions changed
+			if (!image_exists(this->scrollKnob_normal)
+			  || image_getWidth(this->scrollKnob_normal) != knob.width()
+			  || image_getHeight(this->scrollKnob_normal) != knob.height()) {
+				this->scalableImage_scrollKnob(knob.width(), knob.height(), false, color.red, color.green, color.blue)(this->scrollKnob_normal);
+			}
 			// Scroll-bar
 			draw_rectangle(this->image, whole, borderColor);
 			draw_rectangle(this->image, upper, buttonColor);
 			draw_rectangle(this->image, middle, barColor);
 			draw_rectangle(this->image, lower, buttonColor);
-			draw_rectangle(this->image, knob, buttonColor);
 			draw_copy(this->image, (this->pressScrollUp) ? this->scrollButtonTop_pressed : this->scrollButtonTop_normal, upper.left(), upper.top());
+			draw_alphaFilter(this->image, this->scrollKnob_normal, knob.left(), knob.top());
 			draw_copy(this->image, (this->pressScrollDown && this->inside) ? this->scrollButtonBottom_pressed : this->scrollButtonBottom_normal, lower.left(), lower.top());
 		}
 		this->hasImages = true;
@@ -217,6 +223,7 @@ void ListBox::receiveKeyboardEvent(const KeyboardEvent& event) {
 void ListBox::loadTheme(VisualTheme theme) {
 	this->scalableImage_listBox = theme_getScalableImage(theme, U"ListBox");
 	this->scalableImage_scrollButton = theme_getScalableImage(theme, U"ScrollButton");
+	this->scalableImage_scrollKnob = theme_getScalableImage(theme, U"ScrollKnob");
 	// Generate fixed size buttons for the scroll buttons (because their size is currently given by constants)
 	ColorRgbI32 color = this->color.value;
 	this->scalableImage_scrollButton(scrollWidth, scrollEndHeight, false, color.red, color.green, color.blue)(this->scrollButtonTop_normal);
@@ -306,21 +313,21 @@ IRect ListBox::getScrollBarLocation_excludingButtons() {
 IRect ListBox::getKnobLocation() {
 	// Eroded scroll-bar excluding buttons
 	// The final knob is a sub-set of this region corresponding to the visibility
-	IRect erodedBar = this->getScrollBarLocation_excludingButtons().expanded(-knobErosion);
+	IRect scrollBarRegion = this->getScrollBarLocation_excludingButtons();
 	// Item ranges
 	int64_t visibleRange = this->getVisibleScrollRange(); // 0..visibleRange-1
 	int64_t itemCount = this->list.value.length(); // 0..itemCount-1
 	int64_t maxScroll = itemCount - visibleRange; // 0..maxScroll
 	// Dimensions
-	int64_t knobHeight = (erodedBar.height() * visibleRange) / itemCount;
-	if (knobHeight < erodedBar.width()) {
-		knobHeight = erodedBar.width();
+	int64_t knobHeight = (scrollBarRegion.height() * visibleRange) / itemCount;
+	if (knobHeight < scrollBarRegion.width()) {
+		knobHeight = scrollBarRegion.width();
 	}
 	// Visual range for center
-	int64_t scrollStart = erodedBar.top() + knobHeight / 2;
-	int64_t scrollDistance = erodedBar.height() - knobHeight;
+	int64_t scrollStart = scrollBarRegion.top() + knobHeight / 2;
+	int64_t scrollDistance = scrollBarRegion.height() - knobHeight;
 	int64_t knobCenterY = scrollStart + ((this->firstVisible * scrollDistance) / maxScroll);
-	return IRect(erodedBar.left(), knobCenterY - (knobHeight / 2), erodedBar.width(), knobHeight);
+	return IRect(scrollBarRegion.left(), knobCenterY - (knobHeight / 2), scrollBarRegion.width(), knobHeight);
 }
 
 // Optional limit of scrolling, to be applied when the user don't explicitly scroll away from the selection
