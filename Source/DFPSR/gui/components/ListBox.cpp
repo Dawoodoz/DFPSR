@@ -133,20 +133,21 @@ void ListBox::pressScrollBar(int64_t localY) {
 void ListBox::receiveMouseEvent(const MouseEvent& event) {
 	bool supressEvent = false;
 	this->inside = this->pointIsInside(event.position);
-	bool onScrollBar = this->hasVerticalScroll && event.position.x >= this->location.width() - scrollWidth;
+	IVector2D localPosition = event.position - this->location.upperLeft();
+	bool onScrollBar = this->hasVerticalScroll && localPosition.x >= this->location.width() - scrollWidth;
 	int64_t maxIndex = this->list.value.length() - 1;
-	int64_t hoverIndex = this->firstVisible + ((event.position.y - this->location.top() - textBorderTop) / font_getSize(this->font));
+	int64_t hoverIndex = this->firstVisible + ((localPosition.y - textBorderTop) / font_getSize(this->font));
 	if (hoverIndex > maxIndex) {
 		hoverIndex = -1;
 	}
 	if (event.mouseEventType == MouseEventType::MouseDown) {
 		if (onScrollBar) {
 			this->pressedIndex = -1;
-			if (event.position.y < scrollEndHeight) {
+			if (localPosition.y < scrollEndHeight) {
 				// Upper scroll button
 				this->pressScrollUp = true;
 				this->firstVisible--;
-			} else if (event.position.y > this->location.height() - scrollEndHeight) {
+			} else if (localPosition.y > this->location.height() - scrollEndHeight) {
 				// Lower scroll button
 				this->pressScrollDown = true;
 				this->firstVisible++;
@@ -154,11 +155,11 @@ void ListBox::receiveMouseEvent(const MouseEvent& event) {
 				// Start scrolling with the mouse using the relative height on the scroll bar.
 				IRect knobLocation = this->getKnobLocation();
 				int64_t halfKnobHeight = knobLocation.height() / 2;
-				this->knobHoldOffset = event.position.y - (knobLocation.top() + halfKnobHeight);
+				this->knobHoldOffset = localPosition.y - (knobLocation.top() + halfKnobHeight);
 				if (this->knobHoldOffset < -halfKnobHeight || this->knobHoldOffset > halfKnobHeight) {
 					// If pressing outside of the knob, pull it directly to the pressed location before pulling from the center.
 					this->knobHoldOffset = 0;
-					this->pressScrollBar(event.position.y - this->knobHoldOffset);
+					this->pressScrollBar(localPosition.y - this->knobHoldOffset);
 				}
 				this->holdingScrollBar = true;
 			}
@@ -190,7 +191,7 @@ void ListBox::receiveMouseEvent(const MouseEvent& event) {
 	} else if (event.mouseEventType == MouseEventType::MouseMove) {
 		if (this->holdingScrollBar) {
 			supressEvent = true;
-			this->pressScrollBar(event.position.y - this->knobHoldOffset);
+			this->pressScrollBar(localPosition.y - this->knobHoldOffset);
 		}
 	}
 	if (!supressEvent) {
