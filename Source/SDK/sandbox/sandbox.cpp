@@ -130,6 +130,7 @@ static const String modelPath = string_combine(mediaPath, U"models", file_separa
 
 // Variables
 static bool running = true;
+static bool updateImage = true;
 static IVector2D mousePos;
 static bool panorate = false;
 static bool tileAlign = false;
@@ -368,134 +369,147 @@ void sandbox_main() {
 
 	while(running) {
 		double timer = time_getSeconds();
-		double startTime;
+		double startTime = 0.0;
+
+		// Always render the image when profiling
+		updateImage = overlayMode != OverlayMode_Tools;
 
 		// Execute actions
-		window_executeEvents(window);
-
-		// Request buffers after executing the events, to get newly allocated buffers after resize events
-		AlignedImageRgbaU8 colorBuffer = window_getCanvas(window);
-
-		// Calculate a number of whole millisecond ticks per frame
-		//   By performing game logic in multiples of msTicks, integer operations
-		//   can be scaled without comming to a full stop in high frame rates
-		stepRemainder += secondsPerFrame * 1000.0;
-		int msTicks = (int)stepRemainder;
-		stepRemainder -= (double)msTicks;
-
-		// Move the camera
-		int cameraSteps = (int)(cameraSpeed * msTicks);
-		// TODO: Find a way to move the camera using exact pixel offsets so that the camera's 3D location is only generating the 2D offset when rotating.
-		//       Can the brush be guaranteed to come back to the mouse location after adding and subtracting the same 2D camera offset?
-		//         A new integer coordinate system along the ground might move half a pixel vertically and a full pixel sideways in the diagonal view.
-		//       Otherwise the approximation defeats the whole purpose of using whole integers in msTicks.
-		spriteWorld_moveCameraInPixels(world, cameraMovement * cameraSteps);
-
-		// Remove temporary visuals
-		spriteWorld_clearTemporary(world);
-
-		// Place the brush
-		IVector3D mouseWorldPos = spriteWorld_findGroundAtPixel(world, colorBuffer, mousePos);
-		brush.location.x = mouseWorldPos.x;
-		brush.location.z = mouseWorldPos.z;
-		if (tileAlign) {
-			brush.location = ortho_roundToTile(brush.location);
+		if (window_executeEvents(window)) {
+			// If editing, only update the image when the user did something
+			updateImage = true;
 		}
 
-		// Illuminate the world using soft light from the sky
-		if (ambientLight) {
-			spriteWorld_createTemporary_directedLight(world, FVector3D(1.0f, -1.0f, 0.0f), 0.1f, ColorRgbI32(255, 255, 255));
-		}
+		if (updateImage) {
+			// Request buffers after executing the events, to get newly allocated buffers after resize events
+			AlignedImageRgbaU8 colorBuffer = window_getCanvas(window);
 
-		// Create a temporary point light over the brush
-		//   Temporary light sources are easier to use for dynamic light because they don't need any handle
-		if (mouseLights == 1) {
-			spriteWorld_createTemporary_pointLight(world, ortho_miniToFloatingTile(brush.location) + FVector3D(0.0f, 0.5f, 0.0f), 4.0f, 4.0f, ColorRgbI32(128, 255, 128), true);
-		} else if (mouseLights == 2) {
-			spriteWorld_createTemporary_pointLight(world, ortho_miniToFloatingTile(brush.location) + FVector3D(-2.0f, 0.5f, 1.0f), 4.0f, 2.0f, ColorRgbI32(255, 128, 128), true);
-			spriteWorld_createTemporary_pointLight(world, ortho_miniToFloatingTile(brush.location) + FVector3D(2.0f, 0.52f, -1.0f), 4.0f, 2.0f, ColorRgbI32(128, 255, 128), true);
-		} else if (mouseLights == 3) {
-			spriteWorld_createTemporary_pointLight(world, ortho_miniToFloatingTile(brush.location) + FVector3D(-2.0f, 0.5f, 1.0f), 4.0f, 1.333f, ColorRgbI32(255, 128, 128), true);
-			spriteWorld_createTemporary_pointLight(world, ortho_miniToFloatingTile(brush.location) + FVector3D(1.0f, 0.51f, 2.0f), 4.0f, 1.333f, ColorRgbI32(128, 255, 128), true);
-			spriteWorld_createTemporary_pointLight(world, ortho_miniToFloatingTile(brush.location) + FVector3D(2.0f, 0.52f, -1.0f), 4.0f, 1.333f, ColorRgbI32(128, 128, 255), true);
-		} else if (mouseLights == 4) {
-			spriteWorld_createTemporary_pointLight(world, ortho_miniToFloatingTile(brush.location) + FVector3D(-2.0f, 0.5f, 1.0f), 4.0f, 1.0f, ColorRgbI32(255, 128, 128), true);
-			spriteWorld_createTemporary_pointLight(world, ortho_miniToFloatingTile(brush.location) + FVector3D(1.0f, 0.51f, 2.0f), 4.0f, 1.0f, ColorRgbI32(128, 255, 128), true);
-			spriteWorld_createTemporary_pointLight(world, ortho_miniToFloatingTile(brush.location) + FVector3D(2.0f, 0.52f, -1.0f), 4.0f, 1.0f, ColorRgbI32(128, 128, 255), true);
-			spriteWorld_createTemporary_pointLight(world, ortho_miniToFloatingTile(brush.location) + FVector3D(-1.0f, 0.53f, -2.0f), 4.0f, 1.0f, ColorRgbI32(255, 255, 128), true);
-		}
+			// Calculate a number of whole millisecond ticks per frame
+			//   By performing game logic in multiples of msTicks, integer operations
+			//   can be scaled without comming to a full stop in high frame rates
+			stepRemainder += secondsPerFrame * 1000.0;
+			int msTicks = (int)stepRemainder;
+			stepRemainder -= (double)msTicks;
 
-		// Show the brush
-		if (overlayMode == OverlayMode_Tools) {
-			if (tool == Tool_PlaceSprite) {
-				spriteWorld_addTemporarySprite(world, brush);
-			} else if (tool == Tool_PlaceModel) {
-				// TODO: Implement preview of freely rotated background model brush
-				//spriteWorld_addTemporaryModel(world, ModelInstance(?, ?, ?));
+			// Move the camera
+			int cameraSteps = (int)(cameraSpeed * msTicks);
+			// TODO: Find a way to move the camera using exact pixel offsets so that the camera's 3D location is only generating the 2D offset when rotating.
+			//       Can the brush be guaranteed to come back to the mouse location after adding and subtracting the same 2D camera offset?
+			//         A new integer coordinate system along the ground might move half a pixel vertically and a full pixel sideways in the diagonal view.
+			//       Otherwise the approximation defeats the whole purpose of using whole integers in msTicks.
+			spriteWorld_moveCameraInPixels(world, cameraMovement * cameraSteps);
+
+			// Remove temporary visuals
+			spriteWorld_clearTemporary(world);
+
+			// Place the brush
+			IVector3D mouseWorldPos = spriteWorld_findGroundAtPixel(world, colorBuffer, mousePos);
+			brush.location.x = mouseWorldPos.x;
+			brush.location.z = mouseWorldPos.z;
+			if (tileAlign) {
+				brush.location = ortho_roundToTile(brush.location);
 			}
-		}
 
-		// Test freely rotated models
-		for(int t = 0; t < testModelCount; t++) {
-			float scale = 1.0f;
-			Transform3D testLocation = Transform3D(
-			  FVector3D(cos((timer + t * 25.64f) * 0.36f) * 1.6f, sin(timer) * 0.2f + 0.3f, sin((timer + t * 42.54f) * 0.58f) * 1.6f),
-			  FMatrix3x3::makeAxisSystem(FVector3D(cos(timer), 0.0f, sin(timer)), FVector3D(cos((timer + t * 17.63f) * 2.13f), 1.0f, sin((timer + t * 64.25f) * 3.26f))) * scale
-			);
-			spriteWorld_addTemporaryModel(world, ModelInstance(barrelVisible, barrelShadow, testLocation));
-		}
+			// Illuminate the world using soft light from the sky
+			if (ambientLight) {
+				spriteWorld_createTemporary_directedLight(world, FVector3D(1.0f, -1.0f, 0.0f), 0.1f, ColorRgbI32(255, 255, 255));
+			}
 
-		// Draw the world
-		spriteWorld_draw(world, colorBuffer);
+			// Create a temporary point light over the brush
+			//   Temporary light sources are easier to use for dynamic light because they don't need any handle
+			if (mouseLights == 1) {
+				spriteWorld_createTemporary_pointLight(world, ortho_miniToFloatingTile(brush.location) + FVector3D(0.0f, 0.5f, 0.0f), 4.0f, 4.0f, ColorRgbI32(128, 255, 128), true);
+			} else if (mouseLights == 2) {
+				spriteWorld_createTemporary_pointLight(world, ortho_miniToFloatingTile(brush.location) + FVector3D(-2.0f, 0.5f, 1.0f), 4.0f, 2.0f, ColorRgbI32(255, 128, 128), true);
+				spriteWorld_createTemporary_pointLight(world, ortho_miniToFloatingTile(brush.location) + FVector3D(2.0f, 0.52f, -1.0f), 4.0f, 2.0f, ColorRgbI32(128, 255, 128), true);
+			} else if (mouseLights == 3) {
+				spriteWorld_createTemporary_pointLight(world, ortho_miniToFloatingTile(brush.location) + FVector3D(-2.0f, 0.5f, 1.0f), 4.0f, 1.333f, ColorRgbI32(255, 128, 128), true);
+				spriteWorld_createTemporary_pointLight(world, ortho_miniToFloatingTile(brush.location) + FVector3D(1.0f, 0.51f, 2.0f), 4.0f, 1.333f, ColorRgbI32(128, 255, 128), true);
+				spriteWorld_createTemporary_pointLight(world, ortho_miniToFloatingTile(brush.location) + FVector3D(2.0f, 0.52f, -1.0f), 4.0f, 1.333f, ColorRgbI32(128, 128, 255), true);
+			} else if (mouseLights == 4) {
+				spriteWorld_createTemporary_pointLight(world, ortho_miniToFloatingTile(brush.location) + FVector3D(-2.0f, 0.5f, 1.0f), 4.0f, 1.0f, ColorRgbI32(255, 128, 128), true);
+				spriteWorld_createTemporary_pointLight(world, ortho_miniToFloatingTile(brush.location) + FVector3D(1.0f, 0.51f, 2.0f), 4.0f, 1.0f, ColorRgbI32(128, 255, 128), true);
+				spriteWorld_createTemporary_pointLight(world, ortho_miniToFloatingTile(brush.location) + FVector3D(2.0f, 0.52f, -1.0f), 4.0f, 1.0f, ColorRgbI32(128, 128, 255), true);
+				spriteWorld_createTemporary_pointLight(world, ortho_miniToFloatingTile(brush.location) + FVector3D(-1.0f, 0.53f, -2.0f), 4.0f, 1.0f, ColorRgbI32(255, 255, 128), true);
+			}
 
-		// Debug views (Slow but failsafe)
-		if (debugView == 1) {
-			draw_copy(colorBuffer, spriteWorld_getDiffuseBuffer(world));
-		} else if (debugView == 2) {
-			draw_copy(colorBuffer, spriteWorld_getNormalBuffer(world));
-		} else if (debugView == 3) {
-			AlignedImageF32 heightBuffer = spriteWorld_getHeightBuffer(world);
-			for (int y = 0; y < image_getHeight(colorBuffer); y++) {
-				for (int x = 0; x < image_getWidth(colorBuffer); x++) {
-					float height = image_readPixel_clamp(heightBuffer, x, y) * 255.0f;
-					if (height < 0.0f) { height = 0.0f; }
-					if (height > 255.0f) { height = 255.0f; }
-					image_writePixel(colorBuffer, x, y, ColorRgbaI32(height, 0, 0, 255));
+			// Show the brush
+			if (overlayMode == OverlayMode_Tools) {
+				if (tool == Tool_PlaceSprite) {
+					spriteWorld_addTemporarySprite(world, brush);
+				} else if (tool == Tool_PlaceModel) {
+					// TODO: Implement preview of freely rotated background model brush
+					//spriteWorld_addTemporaryModel(world, ModelInstance(?, ?, ?));
 				}
 			}
-		} else if (debugView == 4) {
-			draw_copy(colorBuffer, spriteWorld_getLightBuffer(world));
-		}
 
-		// Overlays
-		startTime = time_getSeconds();
-			window_drawComponents(window);
-		debugText("Draw GUI: ", (time_getSeconds() - startTime) * 1000.0, " ms\n");
-		// Profiling mode
-		if (overlayMode == OverlayMode_Profiling) {
-			IVector2D writer = IVector2D(10, 10);
-			font_printLine(colorBuffer, font_getDefault(), string_combine(U"FPS: ", profileFrameRate), writer, ColorRgbaI32(255, 255, 255, 255)); writer.y += 20;
-			font_printLine(colorBuffer, font_getDefault(), string_combine(U"avg ms: ", 1000.0f / profileFrameRate), writer, ColorRgbaI32(255, 255, 255, 255)); writer.y += 20;
-			font_printLine(colorBuffer, font_getDefault(), string_combine(U"max ms: ", 1000.0f * lastMaxFrameTime), writer, ColorRgbaI32(255, 255, 255, 255)); writer.y += 20;
-		}
+			// Test freely rotated models
+			if (overlayMode != OverlayMode_Tools) {
+				for(int t = 0; t < testModelCount; t++) {
+					float scale = 1.0f;
+					Transform3D testLocation = Transform3D(
+					  FVector3D(cos((timer + t * 25.64f) * 0.36f) * 1.6f, sin(timer) * 0.2f + 0.3f, sin((timer + t * 42.54f) * 0.58f) * 1.6f),
+					  FMatrix3x3::makeAxisSystem(FVector3D(cos(timer), 0.0f, sin(timer)), FVector3D(cos((timer + t * 17.63f) * 2.13f), 1.0f, sin((timer + t * 64.25f) * 3.26f))) * scale
+					);
+					spriteWorld_addTemporaryModel(world, ModelInstance(barrelVisible, barrelShadow, testLocation));
+				}
+			}
 
-		window_showCanvas(window);
+			// Draw the world
+			spriteWorld_draw(world, colorBuffer);
 
-		double newTime = time_getSeconds();
-		secondsPerFrame = newTime - frameStartTime;
-		frameStartTime = newTime;
-		debugText("Total frame: ", secondsPerFrame * 1000.0, " ms\n\n");
+			// Debug views (Slow but failsafe)
+			if (debugView == 1) {
+				draw_copy(colorBuffer, spriteWorld_getDiffuseBuffer(world));
+			} else if (debugView == 2) {
+				draw_copy(colorBuffer, spriteWorld_getNormalBuffer(world));
+			} else if (debugView == 3) {
+				AlignedImageF32 heightBuffer = spriteWorld_getHeightBuffer(world);
+				for (int y = 0; y < image_getHeight(colorBuffer); y++) {
+					for (int x = 0; x < image_getWidth(colorBuffer); x++) {
+						float height = image_readPixel_clamp(heightBuffer, x, y) * 255.0f;
+						if (height < 0.0f) { height = 0.0f; }
+						if (height > 255.0f) { height = 255.0f; }
+						image_writePixel(colorBuffer, x, y, ColorRgbaI32(height, 0, 0, 255));
+					}
+				}
+			} else if (debugView == 4) {
+				draw_copy(colorBuffer, spriteWorld_getLightBuffer(world));
+			}
 
-		// Profiling
-		if (secondsPerFrame > maxFrameTime) { maxFrameTime = secondsPerFrame; }
-		profileFrameCount++;
-		if (newTime > profileStartTime + 1.0) {
-			double duration = newTime - profileStartTime;
-			profileFrameRate = (double)profileFrameCount / duration;
-			profileStartTime = newTime;
-			profileFrameCount = 0;
-			lastMaxFrameTime = maxFrameTime;
-			maxFrameTime = 0.0;
+			// Overlays
+			startTime = time_getSeconds();
+				window_drawComponents(window);
+			debugText("Draw GUI: ", (time_getSeconds() - startTime) * 1000.0, " ms\n");
+			// Profiling mode
+			if (overlayMode == OverlayMode_Profiling) {
+				IVector2D writer = IVector2D(10, 10);
+				font_printLine(colorBuffer, font_getDefault(), string_combine(U"FPS: ", profileFrameRate), writer, ColorRgbaI32(255, 255, 255, 255)); writer.y += 20;
+				font_printLine(colorBuffer, font_getDefault(), string_combine(U"avg ms: ", 1000.0f / profileFrameRate), writer, ColorRgbaI32(255, 255, 255, 255)); writer.y += 20;
+				font_printLine(colorBuffer, font_getDefault(), string_combine(U"max ms: ", 1000.0f * lastMaxFrameTime), writer, ColorRgbaI32(255, 255, 255, 255)); writer.y += 20;
+			}
+
+			window_showCanvas(window);
+
+			double newTime = time_getSeconds();
+			secondsPerFrame = newTime - frameStartTime;
+			frameStartTime = newTime;
+			debugText("Total frame: ", secondsPerFrame * 1000.0, " ms\n\n");
+
+			// Profiling
+			if (secondsPerFrame > maxFrameTime) { maxFrameTime = secondsPerFrame; }
+			profileFrameCount++;
+			if (newTime > profileStartTime + 1.0) {
+				double duration = newTime - profileStartTime;
+				profileFrameRate = (double)profileFrameCount / duration;
+				profileStartTime = newTime;
+				profileFrameCount = 0;
+				lastMaxFrameTime = maxFrameTime;
+				maxFrameTime = 0.0;
+			}
+		} else {
+			// If updateImage is false then just delay a bit while waiting for input
+			time_sleepSeconds(0.01);
 		}
 	}
 }
