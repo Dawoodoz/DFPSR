@@ -102,16 +102,19 @@ void ListBox::generateGraphics() {
 			if (!image_exists(this->scrollKnob_normal)
 			  || image_getWidth(this->scrollKnob_normal) != knob.width()
 			  || image_getHeight(this->scrollKnob_normal) != knob.height()) {
-				this->scalableImage_scrollKnob(knob.width(), knob.height(), false, color.red, color.green, color.blue)(this->scrollKnob_normal);
+				this->scalableImage_scrollButton(knob.width(), knob.height(), false, color.red, color.green, color.blue)(this->scrollKnob_normal);
 			}
-			// Scroll-bar
-			draw_rectangle(this->image, whole, borderColor);
-			draw_rectangle(this->image, upper, buttonColor);
-			draw_rectangle(this->image, middle, barColor);
-			draw_rectangle(this->image, lower, buttonColor);
-			draw_copy(this->image, (this->pressScrollUp) ? this->scrollButtonTop_pressed : this->scrollButtonTop_normal, upper.left(), upper.top());
+			// Only redraw the scroll list if its dimenstions changed
+			if (!image_exists(this->verticalScrollBar_normal)
+			  || image_getWidth(this->verticalScrollBar_normal) != whole.width()
+			  || image_getHeight(this->verticalScrollBar_normal) != whole.height()) {
+				this->scalableImage_verticalScrollBar(whole.width(), whole.height(), color.red, color.green, color.blue)(this->verticalScrollBar_normal);
+			}
+			// Draw the scroll-bar
+			draw_alphaFilter(this->image, this->verticalScrollBar_normal, whole.left(), whole.top());
 			draw_alphaFilter(this->image, this->scrollKnob_normal, knob.left(), knob.top());
-			draw_copy(this->image, (this->pressScrollDown && this->inside) ? this->scrollButtonBottom_pressed : this->scrollButtonBottom_normal, lower.left(), lower.top());
+			draw_alphaFilter(this->image, (this->pressScrollUp) ? this->scrollButtonTop_pressed : this->scrollButtonTop_normal, upper.left(), upper.top());
+			draw_alphaFilter(this->image, (this->pressScrollDown && this->inside) ? this->scrollButtonBottom_pressed : this->scrollButtonBottom_normal, lower.left(), lower.top());
 		}
 		this->hasImages = true;
 	}
@@ -223,7 +226,7 @@ void ListBox::receiveKeyboardEvent(const KeyboardEvent& event) {
 void ListBox::loadTheme(VisualTheme theme) {
 	this->scalableImage_listBox = theme_getScalableImage(theme, U"ListBox");
 	this->scalableImage_scrollButton = theme_getScalableImage(theme, U"ScrollButton");
-	this->scalableImage_scrollKnob = theme_getScalableImage(theme, U"ScrollKnob");
+	this->scalableImage_verticalScrollBar = theme_getScalableImage(theme, U"VerticalScrollBar");
 	// Generate fixed size buttons for the scroll buttons (because their size is currently given by constants)
 	ColorRgbI32 color = this->color.value;
 	this->scalableImage_scrollButton(scrollWidth, scrollEndHeight, false, color.red, color.green, color.blue)(this->scrollButtonTop_normal);
@@ -273,6 +276,7 @@ void ListBox::setSelectedIndex(int index, bool forceUpdate) {
 		this->selectedIndex.value = index;
 		this->hasImages = false;
 		this->callback_selectEvent(index);
+		this->limitScrolling(true);
 	}
 }
 

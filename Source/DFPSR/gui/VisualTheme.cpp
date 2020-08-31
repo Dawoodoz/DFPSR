@@ -70,7 +70,7 @@ BEGIN: generate_rounded_rectangle
 	RECTANGLE: resultImage, radius, border, w3, r2, 255
 	RECTANGLE: resultImage, radius, h2, w3, r2, 255
 	RECTANGLE: resultImage, border, radius, w4, h3, 255
-	END:
+END:
 
 BEGIN: Button
 	INPUT: FixedPoint, width
@@ -97,35 +97,9 @@ BEGIN: Button
 	MUL: greenImage<ImageU8>, lumaImage, normGreen
 	MUL: blueImage<ImageU8>, lumaImage, normBlue
 	PACK_RGBA: colorImage, redImage, greenImage, blueImage, visImage
-	END:
+END:
 
 BEGIN: ScrollButton
-	INPUT: FixedPoint, width
-	INPUT: FixedPoint, height
-	INPUT: FixedPoint, pressed
-	INPUT: FixedPoint, red
-	INPUT: FixedPoint, green
-	INPUT: FixedPoint, blue
-	OUTPUT: ImageRgbaU8, colorImage
-	# Scale by 2 / 255 so that 127.5 represents full intensity in patternImage
-	MUL: normRed<FixedPoint>, red, 0.007843138
-	MUL: normGreen<FixedPoint>, green, 0.007843138
-	MUL: normBlue<FixedPoint>, blue, 0.007843138
-	CREATE: patternImage<ImageU8>, width, height
-	MUL: pressDarknessHigh<FixedPoint>, pressed, 80
-	MUL: pressDarknessLow<FixedPoint>, pressed, 10
-	SUB: highLuma<FixedPoint>, 150, pressDarknessHigh
-	SUB: lowLuma<FixedPoint>, 100, pressDarknessLow
-	FADE_LINEAR: patternImage,  0, 0, highLuma,  0, height, lowLuma
-	CALL: generate_rounded_rectangle, lumaImage<ImageU8>, width, height, 3, 1
-	MUL: lumaImage, lumaImage, patternImage, 0.003921569
-	MUL: redImage<ImageU8>, lumaImage, normRed
-	MUL: greenImage<ImageU8>, lumaImage, normGreen
-	MUL: blueImage<ImageU8>, lumaImage, normBlue
-	PACK_RGBA: colorImage, redImage, greenImage, blueImage, 255
-	END:
-
-BEGIN: ScrollKnob
 	INPUT: FixedPoint, width
 	INPUT: FixedPoint, height
 	INPUT: FixedPoint, pressed
@@ -150,7 +124,33 @@ BEGIN: ScrollKnob
 	MUL: greenImage<ImageU8>, lumaImage, normGreen
 	MUL: blueImage<ImageU8>, lumaImage, normBlue
 	PACK_RGBA: colorImage, redImage, greenImage, blueImage, visImage
-	END:
+END:
+
+BEGIN: VerticalScrollBar
+	INPUT: FixedPoint, width
+	INPUT: FixedPoint, height
+	INPUT: FixedPoint, red
+	INPUT: FixedPoint, green
+	INPUT: FixedPoint, blue
+	OUTPUT: ImageRgbaU8, colorImage
+	CREATE: visImage<ImageU8>, width, height
+	CREATE: lumaImage<ImageU8>, width, height
+	FADE_LINEAR: visImage, 0, 0, 128, width, 0, 0
+	MUL: fadeLength<FixedPoint>, width, 2.0
+	MUL: maxFadeLength<FixedPoint>, height, 0.5
+	MIN: fadeLength, fadeLength, maxFadeLength
+	FADE_REGION_LINEAR: lumaImage, 0, 0, width, fadeLength, 0, 0, 128, 0, fadeLength, 0
+	SUB: lowerFadeTop<FixedPoint>, height, fadeLength
+	FADE_REGION_LINEAR: lumaImage, 0, lowerFadeTop, width, fadeLength, 0, 0, 0, 0, fadeLength, 128
+	# Scale by 2 / 255 so that 127.5 represents full intensity in patternImage
+	MUL: normRed<FixedPoint>, red, 0.007843138
+	MUL: normGreen<FixedPoint>, green, 0.007843138
+	MUL: normBlue<FixedPoint>, blue, 0.007843138
+	MUL: redImage<ImageU8>, lumaImage, normRed
+	MUL: greenImage<ImageU8>, lumaImage, normGreen
+	MUL: blueImage<ImageU8>, lumaImage, normBlue
+	PACK_RGBA: colorImage, redImage, greenImage, blueImage, visImage
+END:
 
 BEGIN: Panel
 	INPUT: FixedPoint, width
@@ -163,7 +163,7 @@ BEGIN: Panel
 	SUB: w2<FixedPoint>, width, 2
 	SUB: h2<FixedPoint>, height, 2
 	RECTANGLE: colorImage, 1, 1, w2, h2, red, green, blue, 255
-	END:
+END:
 
 BEGIN: ListBox
 	INPUT: FixedPoint, width
@@ -176,7 +176,7 @@ BEGIN: ListBox
 	SUB: w2<FixedPoint>, width, 2
 	SUB: h2<FixedPoint>, height, 2
 	RECTANGLE: colorImage, 1, 1, w2, h2, red, green, blue, 255
-	END:
+END:
 )QUOTE";
 
 class VisualThemeImpl {
