@@ -244,23 +244,27 @@ void sandbox_main() {
 			} else if (key == DsrKey_Escape) {
 				// Terminate safely after the next frame
 				running = false;
-			} else if (key == DsrKey_LeftArrow || key == DsrKey_A) {
+			} else if (key == DsrKey_A) {
 				buttonPressed[0] = 1;
-			} else if (key == DsrKey_RightArrow || key == DsrKey_D) {
+			} else if (key == DsrKey_D) {
 				buttonPressed[1] = 1;
-			} else if (key == DsrKey_UpArrow || key == DsrKey_W) {
+			} else if (key == DsrKey_W) {
 				buttonPressed[2] = 1;
-			} else if (key == DsrKey_DownArrow || key == DsrKey_S) {
+			} else if (key == DsrKey_S) {
 				buttonPressed[3] = 1;
+			} else if (key == DsrKey_LeftArrow) {
+				brush.direction = correctDirection(brush.direction + dir270);
+			} else if (key == DsrKey_RightArrow) {
+				brush.direction = correctDirection(brush.direction + dir90);
 			}
 		} else if (event.keyboardEventType == KeyboardEventType::KeyUp) {
-			if (key == DsrKey_LeftArrow || key == DsrKey_A) {
+			if (key == DsrKey_A) {
 				buttonPressed[0] = 0;
-			} else if (key == DsrKey_RightArrow || key == DsrKey_D) {
+			} else if (key == DsrKey_D) {
 				buttonPressed[1] = 0;
-			} else if (key == DsrKey_UpArrow || key == DsrKey_W) {
+			} else if (key == DsrKey_W) {
 				buttonPressed[2] = 0;
-			} else if (key == DsrKey_DownArrow || key == DsrKey_S) {
+			} else if (key == DsrKey_S) {
 				buttonPressed[3] = 0;
 			}
 		}
