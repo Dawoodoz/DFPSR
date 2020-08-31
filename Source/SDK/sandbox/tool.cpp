@@ -1,10 +1,4 @@
 
-/*
-	TODO:
-		* Make alternative models for animated characters and damaged buildings.
-		* Make the custom rendering system able to render directly into a game with triangle culling and clipping.
-*/
-
 #include <assert.h>
 #include <limits>
 #include <functional>

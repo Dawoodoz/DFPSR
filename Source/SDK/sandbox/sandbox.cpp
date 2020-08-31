@@ -30,6 +30,7 @@ BUGS:
 			An optional triangle patch can be added along the open sides. (all for planes and excluding sides for cylinders)
 
 VISUALS:
+	* Implement freely rotated background models in the sprite engine.
 	* Make a directed light source that casts light and shadows from a fixed direction but can fade like a point light.
 		Useful for street-lights and sky-lights that want to avoid normalizing and projecting light directions per pixel.
 		Can be used both with and without casting shadows.
@@ -71,6 +72,7 @@ VISUALS:
 		The first cubemap will be persistent and used later for dynamic light.
 		The later cubemaps will be temporary when generating the background's softer light.
 USABILITY:
+	* Tool for placing freely rotated isometric models into the background.
 	* Tool for selecting and removing passive sprites.
 		Use both unique handles for simplicity and the raw look-up for handling multiple sprites at once:
 			Given an optional integer argument (defaulted to zero) to background sprite construction.
@@ -131,12 +133,8 @@ static bool running = true;
 static IVector2D mousePos;
 static bool panorate = false;
 static bool tileAlign = false;
-static bool showOverlays = true;
 static int debugView = 0;
 static int mouseLights = 1;
-
-// The window handle
-static Window window;
 
 static int random(const int minimum, const int maximum) {
 	if (maximum > minimum) {
@@ -157,6 +155,29 @@ static const float cameraSpeed = 1.0f;
 static SpriteWorld world;
 bool ambientLight = true;
 int testModelCount = 0;
+
+// GUI
+static Window window;
+Component mainPanel, spritePanel, spriteList, modelPanel, modelList;
+static int overlayMode = 2;
+	static const int OverlayMode_None = 0;
+	static const int OverlayMode_Profiling = 1;
+	static const int OverlayMode_Tools = 2;
+	static const int OverlayModeCount = 3;
+static int tool = 0;
+	static const int Tool_PlaceSprite = 0;
+	static const int Tool_PlaceModel = 1;
+	static const int ToolCount = 2;
+void updateOverlay() {
+	component_setProperty_integer(mainPanel, U"Visible", overlayMode == OverlayMode_Tools);
+		component_setProperty_integer(spritePanel, U"Visible", tool == Tool_PlaceSprite);
+		component_setProperty_integer(modelPanel, U"Visible", tool == Tool_PlaceModel);
+}
+
+void loadSprite(const ReadableString& name) {
+	sprite_loadTypeFromFile(imagePath, name);
+	component_call(spriteList, U"PushElement", name);
+}
 
 void sandbox_main() {
 	// Create the world
@@ -206,17 +227,10 @@ void sandbox_main() {
 			} else if (key == DsrKey_Y) {
 				testModelCount = (testModelCount + 1) % 11;
 			} else if (key == DsrKey_F) {
-				showOverlays = !showOverlays;
+				overlayMode = (overlayMode + 1) % OverlayModeCount;
+				updateOverlay();
 			} else if (key == DsrKey_K) {
 				mouseLights = (mouseLights + 1) % 5;
-			} else if (key == DsrKey_Q) {
-				// Previous type
-				brush.typeIndex = (brush.typeIndex + sprite_getTypeCount() - 1) % sprite_getTypeCount();
-			} else if (key == DsrKey_E) {
-				// Next type
-				brush.typeIndex = (brush.typeIndex + 1) % sprite_getTypeCount();
-			} else if (key == DsrKey_X) {
-				brush.direction = correctDirection(brush.direction + dir90);
 			} else if (key == DsrKey_C) {
 				// Rotate the world clockwise using four camera angles
 				spriteWorld_setCameraDirectionIndex(world, (spriteWorld_getCameraDirectionIndex(world) + 1) % 4);
@@ -253,11 +267,17 @@ void sandbox_main() {
 		cameraMovement.y = buttonPressed[3] - buttonPressed[2];
 	});
 	// Get component handles and assign actions
-	Component mainPanel = window_getRoot(window);
+	mainPanel = window_getRoot(window);
 	component_setMouseDownEvent(mainPanel, [](const MouseEvent& event) {
 		if (event.key == MouseKeyEnum::Left) {
-			// Place a new visual instance using the brush
-			spriteWorld_addBackgroundSprite(world, brush);
+			if (overlayMode == OverlayMode_Tools) {
+				if (tool == Tool_PlaceSprite) {
+					// Place a new visual instance using the brush
+					spriteWorld_addBackgroundSprite(world, brush);
+				} else if (tool == Tool_PlaceModel) {
+					// TODO: Implement a way to place a background model with 3-dimensional location, 3-axis rotation and uniform scaling
+				}
+			}
 		} else if (event.key == MouseKeyEnum::Right) {
 			panorate = true;
 		}
@@ -275,18 +295,46 @@ void sandbox_main() {
 		}
 	});
 
-	Component exitButton = window_findComponentByName(window, U"ExitButton");
-	component_setPressedEvent(exitButton, []() {
-		running = false;
+	mainPanel = window_findComponentByName(window, U"mainPanel");
+	spritePanel = window_findComponentByName(window, U"spritePanel");
+	modelPanel = window_findComponentByName(window, U"modelPanel");
+	component_setPressedEvent(window_findComponentByName(window, U"spriteButton"), []() {
+		tool = Tool_PlaceSprite;
+		updateOverlay();
 	});
+	component_setPressedEvent(window_findComponentByName(window, U"modelButton"), []() {
+		tool = Tool_PlaceModel;
+		updateOverlay();
+	});
+	spriteList = window_findComponentByName(window, U"spriteList");
+	component_setSelectEvent(spriteList, [](int64_t index) {
+		brush.typeIndex = index;
+	});
+	modelList = window_findComponentByName(window, U"modelList");
+	component_setSelectEvent(modelList, [](int64_t index) {
+		// TODO: Implement model selection from the list
+	});
+	component_setPressedEvent(window_findComponentByName(window, U"leftButton"), []() {
+		brush.direction = correctDirection(brush.direction + dir270);
+	});
+	component_setPressedEvent(window_findComponentByName(window, U"rightButton"), []() {
+		brush.direction = correctDirection(brush.direction + dir90);
+	});
+	updateOverlay();
 
-	// Create sprite types
-	sprite_loadTypeFromFile(imagePath, U"Floor");
-	sprite_loadTypeFromFile(imagePath, U"WoodenFloor");
-	sprite_loadTypeFromFile(imagePath, U"WoodenFence");
-	sprite_loadTypeFromFile(imagePath, U"WoodenBarrel");
-	sprite_loadTypeFromFile(imagePath, U"Pillar");
-	sprite_loadTypeFromFile(imagePath, U"Character_Mage");
+	// Create sprite types while listing their presence in the tool menu
+	loadSprite(U"Floor");
+	loadSprite(U"WoodenFloor");
+	loadSprite(U"WoodenFence");
+	loadSprite(U"WoodenBarrel");
+	loadSprite(U"Pillar");
+	loadSprite(U"Character_Mage");
+
+	// Load models
+	DenseModel barrelVisible = DenseModel_create(importer_loadModel(modelPath + U"Barrel_LowDetail.ply", true, Transform3D()));
+	Model barrelShadow = importer_loadModel(modelPath + U"Barrel_Shadow.ply", true, Transform3D());
+	//DenseModel barrelVisible = DenseModel_create(importer_loadModel(modelPath + U"Character_Mage.ply", true, Transform3D()));
+	//Model barrelShadow = importer_loadModel(modelPath + U"Character_Mage_Shadow.ply", true, Transform3D());
 
 	// Create passive sprites
 	for (int z = -300; z < 300; z++) {
@@ -317,12 +365,6 @@ void sandbox_main() {
 	int64_t profileFrameCount = 0; // Frames per second
 	float profileFrameRate = 0.0f;
 	double maxFrameTime = 0.0, lastMaxFrameTime = 0.0; // Peak per second
-
-	// Load models
-	DenseModel barrelVisible = DenseModel_create(importer_loadModel(modelPath + U"Barrel_LowDetail.ply", true, Transform3D()));
-	Model barrelShadow = importer_loadModel(modelPath + U"Barrel_Shadow.ply", true, Transform3D());
-	//DenseModel barrelVisible = DenseModel_create(importer_loadModel(modelPath + U"Character_Mage.ply", true, Transform3D()));
-	//Model barrelShadow = importer_loadModel(modelPath + U"Character_Mage_Shadow.ply", true, Transform3D());
 
 	while(running) {
 		double timer = time_getSeconds();
@@ -384,7 +426,14 @@ void sandbox_main() {
 		}
 
 		// Show the brush
-		spriteWorld_addTemporarySprite(world, brush);
+		if (overlayMode == OverlayMode_Tools) {
+			if (tool == Tool_PlaceSprite) {
+				spriteWorld_addTemporarySprite(world, brush);
+			} else if (tool == Tool_PlaceModel) {
+				// TODO: Implement preview of freely rotated background model brush
+				//spriteWorld_addTemporaryModel(world, ModelInstance(?, ?, ?));
+			}
+		}
 
 		// Test freely rotated models
 		for(int t = 0; t < testModelCount; t++) {
@@ -418,13 +467,13 @@ void sandbox_main() {
 			draw_copy(colorBuffer, spriteWorld_getLightBuffer(world));
 		}
 
-		// Overlays mode
-		if (showOverlays) {
-			startTime = time_getSeconds();
-				window_drawComponents(window);
-			debugText("Draw GUI: ", (time_getSeconds() - startTime) * 1000.0, " ms\n");
-
-			IVector2D writer = IVector2D(10, 55);
+		// Overlays
+		startTime = time_getSeconds();
+			window_drawComponents(window);
+		debugText("Draw GUI: ", (time_getSeconds() - startTime) * 1000.0, " ms\n");
+		// Profiling mode
+		if (overlayMode == OverlayMode_Profiling) {
+			IVector2D writer = IVector2D(10, 10);
 			font_printLine(colorBuffer, font_getDefault(), string_combine(U"FPS: ", profileFrameRate), writer, ColorRgbaI32(255, 255, 255, 255)); writer.y += 20;
 			font_printLine(colorBuffer, font_getDefault(), string_combine(U"avg ms: ", 1000.0f / profileFrameRate), writer, ColorRgbaI32(255, 255, 255, 255)); writer.y += 20;
 			font_printLine(colorBuffer, font_getDefault(), string_combine(U"max ms: ", 1000.0f * lastMaxFrameTime), writer, ColorRgbaI32(255, 255, 255, 255)); writer.y += 20;

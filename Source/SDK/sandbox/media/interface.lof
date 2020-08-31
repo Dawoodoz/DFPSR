@@ -5,18 +5,71 @@ Begin : Panel
 		Name = "toolPanel"
 		Left = +0
 		Top = +0
-		Right = +70
-		Bottom = +50
+		Right = 10%+100
+		Bottom = 100%
 		Solid = 1
 		Color = 100,150,100
 		Begin : Button
-			Name = "ExitButton"
-			Text = "Exit"
+			Name = "spriteButton"
+			Text = "Sprite"
 			Left = +10
 			Top = +10
-			Right = +60
+			Right = 50%-5
 			Bottom = +40
 			Color = 200,200,200
+		End
+		Begin : Button
+			Name = "modelButton"
+			Text = "Model"
+			Left = 50%+5
+			Top = +10
+			Right = 100%-10
+			Bottom = +40
+			Color = 200,200,200
+		End
+		Begin : Panel
+			Name = "spritePanel"
+			Solid = 0
+			Top = +40
+			Begin : Button
+				Name = "leftButton"
+				Text = "<"
+				Left = +10
+				Top = +10
+				Right = 50%-5
+				Bottom = +40
+				Color = 200,200,200
+			End
+			Begin : Button
+				Name = "rightButton"
+				Text = ">"
+				Left = 50%+5
+				Top = +10
+				Right = 100%-10
+				Bottom = +40
+				Color = 200,200,200
+			End
+			Begin : ListBox
+				Name = "spriteList"
+				Left = +10
+				Top = +50
+				Right = 100%-10
+				Bottom = 100%-10
+				Color = 50,75,50
+			End
+		End
+		Begin : Panel
+			Name = "modelPanel"
+			Solid = 0
+			Top = +40
+			Begin : ListBox
+				Name = "modelList"
+				Left = +10
+				Top = +10
+				Right = 100%-10
+				Bottom = 100%-10
+				Color = 50,75,50
+			End
 		End
 	End
 End
