@@ -96,11 +96,29 @@ inline uint16_t absDiff(uint16_t a, uint16_t b) {
 	return (uint16_t)result;
 }
 
+// Allowing compilation on older C++ versions
+// Only use for trivial types if you want to avoid cloning and destruction
 template <typename T>
 inline void swap(T &a, T &b) {
 	T temp = a;
 	a = b;
 	b = temp;
+}
+
+// More compact than min(a, b) when reading from the target
+template <typename T>
+inline void replaceWithSmaller(T& target, T source) {
+	if (source < target) {
+		target = source;
+	}
+}
+
+// More compact than max(a, b) when reading from the target
+template <typename T>
+inline void replaceWithLarger(T& target, T source) {
+	if (source > target) {
+		target = source;
+	}
 }
 
 // True iff high and low bytes are equal
