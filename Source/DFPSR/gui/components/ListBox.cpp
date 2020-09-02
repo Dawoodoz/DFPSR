@@ -90,12 +90,8 @@ void ListBox::generateGraphics() {
 			top += verticalStep;
 		}
 		if (this->hasVerticalScroll) {
-			ColorRgbaI32 buttonColor = ColorRgbaI32(color, 255);
-			ColorRgbaI32 barColor = ColorRgbaI32(color.red / 2, color.green / 2, color.blue / 2, 255);
-			ColorRgbaI32 borderColor = ColorRgbaI32(0, 0, 0, 255);
 			IRect whole = IRect(this->location.width() - scrollWidth, 0, scrollWidth, this->location.height());
 			IRect upper = IRect(whole.left(), whole.top(), whole.width(), scrollEndHeight);
-			IRect middle = IRect(whole.left() + border, whole.top() + scrollEndHeight + border, whole.width() - border * 2, whole.height() - (border + scrollEndHeight) * 2);
 			IRect lower = IRect(whole.left(), whole.bottom() - scrollEndHeight, whole.width(), scrollEndHeight);
 			IRect knob = this->getKnobLocation();
 			// Only redraw the knob image if its dimensions changed
