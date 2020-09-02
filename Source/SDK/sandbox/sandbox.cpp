@@ -146,7 +146,9 @@ static int random(const int minimum, const int maximum) {
 }
 
 // Variables
-static Sprite brush(0, dir0, IVector3D(), true);
+static int brushHeight = 0; // In mini-tile units
+static SpriteInstance spriteBrush(0, dir0, IVector3D(), true);
+static ModelInstance modelBrush(0, Transform3D());
 static const int brushStep = ortho_miniUnitsPerTile / 32;
 static int buttonPressed[4] = {0, 0, 0, 0};
 static IVector2D cameraMovement;
@@ -176,8 +178,15 @@ void updateOverlay() {
 }
 
 void loadSprite(const ReadableString& name) {
-	sprite_loadTypeFromFile(imagePath, name);
+	spriteWorld_loadSpriteTypeFromFile(imagePath, name);
 	component_call(spriteList, U"PushElement", name);
+	component_setProperty_integer(spriteList, U"SelectedIndex", 0);
+}
+
+void loadModel(const ReadableString& name, const ReadableString& visibleName, const ReadableString& shadowName) {
+	spriteWorld_loadModelTypeFromFile(modelPath, visibleName, shadowName);
+	component_call(modelList, U"PushElement", name);
+	component_setProperty_integer(modelList, U"SelectedIndex", 0);
 }
 
 void sandbox_main() {
@@ -253,9 +262,9 @@ void sandbox_main() {
 			} else if (key == DsrKey_S) {
 				buttonPressed[3] = 1;
 			} else if (key == DsrKey_LeftArrow) {
-				brush.direction = correctDirection(brush.direction + dir270);
+				spriteBrush.direction = correctDirection(spriteBrush.direction + dir270);
 			} else if (key == DsrKey_RightArrow) {
-				brush.direction = correctDirection(brush.direction + dir90);
+				spriteBrush.direction = correctDirection(spriteBrush.direction + dir90);
 			}
 		} else if (event.keyboardEventType == KeyboardEventType::KeyUp) {
 			if (key == DsrKey_A) {
@@ -277,8 +286,8 @@ void sandbox_main() {
 		if (event.key == MouseKeyEnum::Left) {
 			if (overlayMode == OverlayMode_Tools) {
 				if (tool == Tool_PlaceSprite) {
-					// Place a new visual instance using the brush
-					spriteWorld_addBackgroundSprite(world, brush);
+					// Place a new visual instance using the sprite brush
+					spriteWorld_addBackgroundSprite(world, spriteBrush);
 				} else if (tool == Tool_PlaceModel) {
 					// TODO: Implement a way to place a background model with 3-dimensional location, 3-axis rotation and uniform scaling
 				}
@@ -294,9 +303,9 @@ void sandbox_main() {
 	});
 	component_setMouseScrollEvent(mainPanel, [](const MouseEvent& event) {
 		if (event.key == MouseKeyEnum::ScrollUp) {
-			brush.location.y += brushStep;
+			brushHeight += brushStep;
 		} else if (event.key == MouseKeyEnum::ScrollDown) {
-			brush.location.y -= brushStep;
+			brushHeight -= brushStep;
 		}
 	});
 
@@ -313,17 +322,17 @@ void sandbox_main() {
 	});
 	spriteList = window_findComponentByName(window, U"spriteList");
 	component_setSelectEvent(spriteList, [](int64_t index) {
-		brush.typeIndex = index;
+		spriteBrush.typeIndex = index;
 	});
 	modelList = window_findComponentByName(window, U"modelList");
 	component_setSelectEvent(modelList, [](int64_t index) {
-		// TODO: Implement model selection from the list
+		modelBrush.typeIndex = index;
 	});
 	component_setPressedEvent(window_findComponentByName(window, U"leftButton"), []() {
-		brush.direction = correctDirection(brush.direction + dir270);
+		spriteBrush.direction = correctDirection(spriteBrush.direction + dir270);
 	});
 	component_setPressedEvent(window_findComponentByName(window, U"rightButton"), []() {
-		brush.direction = correctDirection(brush.direction + dir90);
+		spriteBrush.direction = correctDirection(spriteBrush.direction + dir90);
 	});
 	updateOverlay();
 
@@ -336,26 +345,24 @@ void sandbox_main() {
 	loadSprite(U"Character_Mage");
 
 	// Load models
-	DenseModel barrelVisible = DenseModel_create(importer_loadModel(modelPath + U"Barrel_LowDetail.ply", true, Transform3D()));
-	Model barrelShadow = importer_loadModel(modelPath + U"Barrel_Shadow.ply", true, Transform3D());
-	//DenseModel barrelVisible = DenseModel_create(importer_loadModel(modelPath + U"Character_Mage.ply", true, Transform3D()));
-	//Model barrelShadow = importer_loadModel(modelPath + U"Character_Mage_Shadow.ply", true, Transform3D());
+	loadModel(U"Barrel", U"Barrel_LowDetail.ply", U"Barrel_Shadow.ply");
+	loadModel(U"Mage", U"Character_Mage.ply", U"Character_Mage_Shadow.ply");
 
 	// Create passive sprites
 	for (int z = -300; z < 300; z++) {
 		for (int x = -300; x < 300; x++) {
 			// The bottom floor does not have to throw shadows
-			spriteWorld_addBackgroundSprite(world, Sprite(random(0, 1), random(0, 3) * dir90, IVector3D(x * ortho_miniUnitsPerTile, 0, z * ortho_miniUnitsPerTile), false));
+			spriteWorld_addBackgroundSprite(world, SpriteInstance(random(0, 1), random(0, 3) * dir90, IVector3D(x * ortho_miniUnitsPerTile, 0, z * ortho_miniUnitsPerTile), false));
 		}
 	}
 	for (int z = -300; z < 300; z++) {
 		for (int x = -300; x < 300; x++) {
 			if (random(1, 4) == 1) {
 				// Obstacles should cast shadows when possible
-				spriteWorld_addBackgroundSprite(world, Sprite(random(2, 4), random(0, 3) * dir90, IVector3D(x * ortho_miniUnitsPerTile, 0, z * ortho_miniUnitsPerTile), true));
+				spriteWorld_addBackgroundSprite(world, SpriteInstance(random(2, 4), random(0, 3) * dir90, IVector3D(x * ortho_miniUnitsPerTile, 0, z * ortho_miniUnitsPerTile), true));
 			} else if (random(1, 20) == 1) {
 				// Characters are just static geometry for testing
-				spriteWorld_addBackgroundSprite(world, Sprite(5, random(0, 7) * dir45, IVector3D(x * ortho_miniUnitsPerTile, 0, z * ortho_miniUnitsPerTile), true));
+				spriteWorld_addBackgroundSprite(world, SpriteInstance(5, random(0, 7) * dir45, IVector3D(x * ortho_miniUnitsPerTile, 0, z * ortho_miniUnitsPerTile), true));
 			}
 		}
 	}
@@ -372,8 +379,6 @@ void sandbox_main() {
 	double maxFrameTime = 0.0, lastMaxFrameTime = 0.0; // Peak per second
 
 	while(running) {
-		double timer = time_getSeconds();
-
 		// Always render the image when profiling or moving the camera
 		updateImage = overlayMode != OverlayMode_Tools || cameraMovement.x != 0 || cameraMovement.y != 0;
 
@@ -397,7 +402,7 @@ void sandbox_main() {
 			// Move the camera
 			int cameraSteps = (int)(cameraSpeed * msTicks);
 			// TODO: Find a way to move the camera using exact pixel offsets so that the camera's 3D location is only generating the 2D offset when rotating.
-			//       Can the brush be guaranteed to come back to the mouse location after adding and subtracting the same 2D camera offset?
+			//       Can the sprite brush be guaranteed to come back to the mouse location after adding and subtracting the same 2D camera offset?
 			//         A new integer coordinate system along the ground might move half a pixel vertically and a full pixel sideways in the diagonal view.
 			//       Otherwise the approximation defeats the whole purpose of using whole integers in msTicks.
 			spriteWorld_moveCameraInPixels(world, cameraMovement * cameraSteps);
@@ -407,10 +412,15 @@ void sandbox_main() {
 
 			// Place the brush
 			IVector3D mouseWorldPos = spriteWorld_findGroundAtPixel(world, colorBuffer, mousePos);
-			brush.location.x = mouseWorldPos.x;
-			brush.location.z = mouseWorldPos.z;
+			modelBrush.location = Transform3D(FVector3D(
+			  mouseWorldPos.x * ortho_tilesPerMiniUnit,
+			  brushHeight * ortho_tilesPerMiniUnit,
+			  mouseWorldPos.z * ortho_tilesPerMiniUnit),
+			  FMatrix3x3::makeAxisSystem(FVector3D(1.0f, 0.0f, 0.0f), FVector3D(0.0f, 1.0f, 0.0f)) // TODO: An integer based rotation system for the brush
+			);
+			spriteBrush.location = IVector3D(mouseWorldPos.x, brushHeight, mouseWorldPos.z);
 			if (tileAlign) {
-				brush.location = ortho_roundToTile(brush.location);
+				spriteBrush.location = ortho_roundToTile(spriteBrush.location);
 			}
 
 			// Illuminate the world using soft light from the sky
@@ -421,32 +431,33 @@ void sandbox_main() {
 			// Create a temporary point light over the brush
 			//   Temporary light sources are easier to use for dynamic light because they don't need any handle
 			if (mouseLights == 1) {
-				spriteWorld_createTemporary_pointLight(world, ortho_miniToFloatingTile(brush.location) + FVector3D(0.0f, 0.5f, 0.0f), 4.0f, 4.0f, ColorRgbI32(128, 255, 128), true);
+				spriteWorld_createTemporary_pointLight(world, ortho_miniToFloatingTile(spriteBrush.location) + FVector3D(0.0f, 0.5f, 0.0f), 4.0f, 4.0f, ColorRgbI32(128, 255, 128), true);
 			} else if (mouseLights == 2) {
-				spriteWorld_createTemporary_pointLight(world, ortho_miniToFloatingTile(brush.location) + FVector3D(-2.0f, 0.5f, 1.0f), 4.0f, 2.0f, ColorRgbI32(255, 128, 128), true);
-				spriteWorld_createTemporary_pointLight(world, ortho_miniToFloatingTile(brush.location) + FVector3D(2.0f, 0.52f, -1.0f), 4.0f, 2.0f, ColorRgbI32(128, 255, 128), true);
+				spriteWorld_createTemporary_pointLight(world, ortho_miniToFloatingTile(spriteBrush.location) + FVector3D(-2.0f, 0.5f, 1.0f), 4.0f, 2.0f, ColorRgbI32(255, 128, 128), true);
+				spriteWorld_createTemporary_pointLight(world, ortho_miniToFloatingTile(spriteBrush.location) + FVector3D(2.0f, 0.52f, -1.0f), 4.0f, 2.0f, ColorRgbI32(128, 255, 128), true);
 			} else if (mouseLights == 3) {
-				spriteWorld_createTemporary_pointLight(world, ortho_miniToFloatingTile(brush.location) + FVector3D(-2.0f, 0.5f, 1.0f), 4.0f, 1.333f, ColorRgbI32(255, 128, 128), true);
-				spriteWorld_createTemporary_pointLight(world, ortho_miniToFloatingTile(brush.location) + FVector3D(1.0f, 0.51f, 2.0f), 4.0f, 1.333f, ColorRgbI32(128, 255, 128), true);
-				spriteWorld_createTemporary_pointLight(world, ortho_miniToFloatingTile(brush.location) + FVector3D(2.0f, 0.52f, -1.0f), 4.0f, 1.333f, ColorRgbI32(128, 128, 255), true);
+				spriteWorld_createTemporary_pointLight(world, ortho_miniToFloatingTile(spriteBrush.location) + FVector3D(-2.0f, 0.5f, 1.0f), 4.0f, 1.333f, ColorRgbI32(255, 128, 128), true);
+				spriteWorld_createTemporary_pointLight(world, ortho_miniToFloatingTile(spriteBrush.location) + FVector3D(1.0f, 0.51f, 2.0f), 4.0f, 1.333f, ColorRgbI32(128, 255, 128), true);
+				spriteWorld_createTemporary_pointLight(world, ortho_miniToFloatingTile(spriteBrush.location) + FVector3D(2.0f, 0.52f, -1.0f), 4.0f, 1.333f, ColorRgbI32(128, 128, 255), true);
 			} else if (mouseLights == 4) {
-				spriteWorld_createTemporary_pointLight(world, ortho_miniToFloatingTile(brush.location) + FVector3D(-2.0f, 0.5f, 1.0f), 4.0f, 1.0f, ColorRgbI32(255, 128, 128), true);
-				spriteWorld_createTemporary_pointLight(world, ortho_miniToFloatingTile(brush.location) + FVector3D(1.0f, 0.51f, 2.0f), 4.0f, 1.0f, ColorRgbI32(128, 255, 128), true);
-				spriteWorld_createTemporary_pointLight(world, ortho_miniToFloatingTile(brush.location) + FVector3D(2.0f, 0.52f, -1.0f), 4.0f, 1.0f, ColorRgbI32(128, 128, 255), true);
-				spriteWorld_createTemporary_pointLight(world, ortho_miniToFloatingTile(brush.location) + FVector3D(-1.0f, 0.53f, -2.0f), 4.0f, 1.0f, ColorRgbI32(255, 255, 128), true);
+				spriteWorld_createTemporary_pointLight(world, ortho_miniToFloatingTile(spriteBrush.location) + FVector3D(-2.0f, 0.5f, 1.0f), 4.0f, 1.0f, ColorRgbI32(255, 128, 128), true);
+				spriteWorld_createTemporary_pointLight(world, ortho_miniToFloatingTile(spriteBrush.location) + FVector3D(1.0f, 0.51f, 2.0f), 4.0f, 1.0f, ColorRgbI32(128, 255, 128), true);
+				spriteWorld_createTemporary_pointLight(world, ortho_miniToFloatingTile(spriteBrush.location) + FVector3D(2.0f, 0.52f, -1.0f), 4.0f, 1.0f, ColorRgbI32(128, 128, 255), true);
+				spriteWorld_createTemporary_pointLight(world, ortho_miniToFloatingTile(spriteBrush.location) + FVector3D(-1.0f, 0.53f, -2.0f), 4.0f, 1.0f, ColorRgbI32(255, 255, 128), true);
 			}
 
-			// Show the brush
+			// Show the sprite brush
 			if (overlayMode == OverlayMode_Tools) {
-				if (tool == Tool_PlaceSprite) {
-					spriteWorld_addTemporarySprite(world, brush);
-				} else if (tool == Tool_PlaceModel) {
-					// TODO: Implement preview of freely rotated background model brush
-					//spriteWorld_addTemporaryModel(world, ModelInstance(?, ?, ?));
+				if (tool == Tool_PlaceSprite && spriteWorld_getSpriteTypeCount() > 0) {
+					spriteWorld_addTemporarySprite(world, spriteBrush);
+				} else if (tool == Tool_PlaceModel && spriteWorld_getModelTypeCount() > 0) {
+					spriteWorld_addTemporaryModel(world, modelBrush);
 				}
 			}
 
 			// Test freely rotated models
+			/*
+			double timer = time_getSeconds();
 			if (overlayMode != OverlayMode_Tools) {
 				for(int t = 0; t < testModelCount; t++) {
 					float scale = 1.0f;
@@ -456,7 +467,7 @@ void sandbox_main() {
 					);
 					spriteWorld_addTemporaryModel(world, ModelInstance(barrelVisible, barrelShadow, testLocation));
 				}
-			}
+			}*/
 
 			// Draw the world
 			spriteWorld_draw(world, colorBuffer);

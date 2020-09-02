@@ -23,14 +23,14 @@ inline FVector3D parseFVector3D(const ReadableString& content) {
 
 // A 2D image with depth and normal images for deferred light
 //   To be rendered into images in advance for maximum detail level
-struct Sprite {
+struct SpriteInstance {
 public:
 	int typeIndex;
 	Direction direction;
 	IVector3D location; // Displayed at X, Y-Z in world pixel coordinates
 	bool shadowCasting;
 public:
-	Sprite(int typeIndex, Direction direction, const IVector3D& location, bool shadowCasting)
+	SpriteInstance(int typeIndex, Direction direction, const IVector3D& location, bool shadowCasting)
 	: typeIndex(typeIndex), direction(direction), location(location), shadowCasting(shadowCasting) {}
 };
 
@@ -42,27 +42,27 @@ DenseModel DenseModel_create(const Model& original);
 //   To be rendered during game-play to allow free rotation
 struct ModelInstance {
 public:
-	DenseModel visibleModel;
-	Model shadowModel;
+	int typeIndex;
 	Transform3D location; // 3D tile coordinates with translation and 3-axis rotation allowed
 public:
-	// The shadowCasting property is replaced by multiple constructors
-	ModelInstance(const DenseModel& visibleModel, const Model& shadowModel, const Transform3D& location)
-	: visibleModel(visibleModel), shadowModel(shadowModel), location(location) {}
-	ModelInstance(const DenseModel& visibleModel, const Transform3D& location)
-	: visibleModel(visibleModel), shadowModel(Model()), location(location) {}
+	ModelInstance(int typeIndex, const Transform3D& location)
+	: typeIndex(typeIndex), location(location) {}
 };
 
 class SpriteWorldImpl;
 using SpriteWorld = std::shared_ptr<SpriteWorldImpl>;
 
-int sprite_loadTypeFromFile(const String& folderPath, const String& spriteName);
-int sprite_getTypeCount();
+// Sprite types
+int spriteWorld_loadSpriteTypeFromFile(const String& folderPath, const String& spriteName);
+int spriteWorld_getSpriteTypeCount();
 
-// TODO: Create the ortho system using the content of its configuration file to hide the type itself.
+// Model types
+int spriteWorld_loadModelTypeFromFile(const String& folderPath, const String& visibleModelName, const String& shadowModelName);
+int spriteWorld_getModelTypeCount();
+
 SpriteWorld spriteWorld_create(OrthoSystem ortho, int shadowResolution);
-void spriteWorld_addBackgroundSprite(SpriteWorld& world, const Sprite& sprite);
-void spriteWorld_addTemporarySprite(SpriteWorld& world, const Sprite& sprite);
+void spriteWorld_addBackgroundSprite(SpriteWorld& world, const SpriteInstance& sprite);
+void spriteWorld_addTemporarySprite(SpriteWorld& world, const SpriteInstance& sprite);
 void spriteWorld_addTemporaryModel(SpriteWorld& world, const ModelInstance& instance);
 
 // Create a point light that only exists until the next call to spriteWorld_clearTemporary.
@@ -76,7 +76,6 @@ void spriteWorld_draw(SpriteWorld& world, AlignedImageRgbaU8& colorTarget);
 
 // The result is an approximation in mini-tile units.
 //   The 3D system does not align with screen pixels for less than whole tile units.
-//   TODO: See if an exact float position can be returned from pixelToMiniOffset instead of using integers that are less precise.
 IVector3D spriteWorld_findGroundAtPixel(SpriteWorld& world, const AlignedImageRgbaU8& colorBuffer, const IVector2D& pixelLocation);
 
 // Approximates a mini-tile offset along the ground from the given pixel offset and moves the camera accordingly

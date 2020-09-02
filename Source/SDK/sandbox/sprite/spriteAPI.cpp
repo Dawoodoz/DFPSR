@@ -212,17 +212,48 @@ public:
 	}
 };
 
-// Global list of all sprite types ever loaded
-List<SpriteType> types;
+struct ModelType {
+public:
+	DenseModel visibleModel;
+	Model shadowModel;
+public:
+	// folderPath should end with a path separator
+	ModelType(const String& folderPath, const String& visibleModelName, const String& shadowModelName) {
+		this->visibleModel = DenseModel_create(importer_loadModel(folderPath + visibleModelName, true, Transform3D()));
+		this->shadowModel = importer_loadModel(folderPath + shadowModelName, true, Transform3D());
+	}
+	ModelType(const DenseModel& visibleModel, const Model& shadowModel)
+	: visibleModel(visibleModel), shadowModel(shadowModel) {}
+};
 
-static int getSpriteFrameIndex(const Sprite& sprite, OrthoView view) {
-	return types[sprite.typeIndex].getFrameIndex(view.worldDirection + sprite.direction);
+// Global list of all sprite types ever loaded
+List<SpriteType> spriteTypes;
+int spriteWorld_loadSpriteTypeFromFile(const String& folderPath, const String& spriteName) {
+	spriteTypes.pushConstruct(folderPath, spriteName);
+	return spriteTypes.length() - 1;
+}
+int spriteWorld_getSpriteTypeCount() {
+	return spriteTypes.length();
+}
+
+// Global list of all model types ever loaded
+List<ModelType> modelTypes;
+int spriteWorld_loadModelTypeFromFile(const String& folderPath, const String& visibleModelName, const String& shadowModelName) {
+	modelTypes.pushConstruct(folderPath, visibleModelName, shadowModelName);
+	return modelTypes.length() - 1;
+}
+int spriteWorld_getModelTypeCount() {
+	return modelTypes.length();
+}
+
+static int getSpriteFrameIndex(const SpriteInstance& sprite, OrthoView view) {
+	return spriteTypes[sprite.typeIndex].getFrameIndex(view.worldDirection + sprite.direction);
 }
 
 // Returns a 2D bounding box of affected target pixels
-static IRect drawSprite(const Sprite& sprite, const OrthoView& ortho, const IVector2D& worldCenter, ImageF32 targetHeight, ImageRgbaU8 targetColor, ImageRgbaU8 targetNormal) {
+static IRect drawSprite(const SpriteInstance& sprite, const OrthoView& ortho, const IVector2D& worldCenter, ImageF32 targetHeight, ImageRgbaU8 targetColor, ImageRgbaU8 targetNormal) {
 	int frameIndex = getSpriteFrameIndex(sprite, ortho);
-	const SpriteFrame* frame = &types[sprite.typeIndex].frames[frameIndex];
+	const SpriteFrame* frame = &spriteTypes[sprite.typeIndex].frames[frameIndex];
 	IVector2D screenSpace = ortho.miniTilePositionToScreenPixel(sprite.location, worldCenter) - frame->centerPoint;
 	float heightOffset = sprite.location.y * ortho_tilesPerMiniUnit;
 	draw_higher(targetHeight, frame->heightImage, targetColor, frame->colorImage, targetNormal, frame->normalImage, screenSpace.x, screenSpace.y, heightOffset);
@@ -230,7 +261,7 @@ static IRect drawSprite(const Sprite& sprite, const OrthoView& ortho, const IVec
 }
 
 static IRect drawModel(const ModelInstance& instance, const OrthoView& ortho, const IVector2D& worldCenter, ImageF32 targetHeight, ImageRgbaU8 targetColor, ImageRgbaU8 targetNormal) {
-	return renderDenseModel<false>(instance.visibleModel, ortho, targetHeight, targetColor, targetNormal, FVector2D(worldCenter.x, worldCenter.y), instance.location);
+	return renderDenseModel<false>(modelTypes[instance.typeIndex].visibleModel, ortho, targetHeight, targetColor, targetNormal, FVector2D(worldCenter.x, worldCenter.y), instance.location);
 }
 
 // The camera transform for each direction
@@ -281,11 +312,11 @@ public:
 	PointLight(FVector3D position, float radius, float intensity, ColorRgbI32 color, bool shadowCasting)
 	: position(position), radius(radius), intensity(intensity), color(color), shadowCasting(shadowCasting) {}
 public:
-	void renderModelShadow(CubeMapF32& shadowTarget, const ModelInstance& instance, const FMatrix3x3& normalToWorld) const {
-		Model model = instance.shadowModel;
+	void renderModelShadow(CubeMapF32& shadowTarget, const ModelInstance& modelInstance, const FMatrix3x3& normalToWorld) const {
+		Model model = modelTypes[modelInstance.typeIndex].shadowModel;
 		if (model_exists(model)) {
 			// Place the model relative to the light source's position, to make rendering in light-space easier
-			Transform3D modelToWorldTransform = instance.location;
+			Transform3D modelToWorldTransform = modelInstance.location;
 			modelToWorldTransform.position = modelToWorldTransform.position - this->position;
 			for (int s = 0; s < 6; s++) {
 				Camera camera = Camera::createPerspective(Transform3D(FVector3D(), ShadowCubeMapSides[s] * normalToWorld), shadowTarget.resolution, shadowTarget.resolution);
@@ -293,12 +324,12 @@ public:
 			}
 		}
 	}
-	void renderSpriteShadow(CubeMapF32& shadowTarget, const Sprite& sprite, const FMatrix3x3& normalToWorld) const {
-		if (sprite.shadowCasting) {
-			Model model = types[sprite.typeIndex].shadowModel;
+	void renderSpriteShadow(CubeMapF32& shadowTarget, const SpriteInstance& spriteInstance, const FMatrix3x3& normalToWorld) const {
+		if (spriteInstance.shadowCasting) {
+			Model model = spriteTypes[spriteInstance.typeIndex].shadowModel;
 			if (model_exists(model)) {
 				// Place the model relative to the light source's position, to make rendering in light-space easier
-				Transform3D modelToWorldTransform = Transform3D(ortho_miniToFloatingTile(sprite.location) - this->position, spriteDirections[sprite.direction]);
+				Transform3D modelToWorldTransform = Transform3D(ortho_miniToFloatingTile(spriteInstance.location) - this->position, spriteDirections[spriteInstance.direction]);
 				for (int s = 0; s < 6; s++) {
 					Camera camera = Camera::createPerspective(Transform3D(FVector3D(), ShadowCubeMapSides[s] * normalToWorld), shadowTarget.resolution, shadowTarget.resolution);
 					model_renderDepth(model, modelToWorldTransform, shadowTarget.cubeMapViews[s], camera);
@@ -306,11 +337,11 @@ public:
 			}
 		}
 	}
-	void renderSpriteShadows(CubeMapF32& shadowTarget, Octree<Sprite>& sprites, const FMatrix3x3& normalToWorld) const {
+	void renderSpriteShadows(CubeMapF32& shadowTarget, Octree<SpriteInstance>& sprites, const FMatrix3x3& normalToWorld) const {
 		IVector3D center = ortho_floatingTileToMini(this->position);
 		IVector3D minBound = center - ortho_floatingTileToMini(radius);
 		IVector3D maxBound = center + ortho_floatingTileToMini(radius);
-		sprites.map(minBound, maxBound, [this, shadowTarget, normalToWorld](Sprite& sprite, const IVector3D origin, const IVector3D minBound, const IVector3D maxBound) mutable {
+		sprites.map(minBound, maxBound, [this, shadowTarget, normalToWorld](SpriteInstance& sprite, const IVector3D origin, const IVector3D minBound, const IVector3D maxBound) mutable {
 			this->renderSpriteShadow(shadowTarget, sprite, normalToWorld);
 		});
 	}
@@ -368,7 +399,7 @@ private:
 		);
 	}
 	// Pre-condition: diffuseBuffer must be cleared unless sprites cover the whole block
-	void draw(Octree<Sprite>& sprites, const OrthoView& ortho) {
+	void draw(Octree<SpriteInstance>& sprites, const OrthoView& ortho) {
 		image_fill(this->normalBuffer, ColorRgbaI32(128));
 		image_fill(this->heightBuffer, -std::numeric_limits<float>::max());
 		sprites.map(
@@ -419,19 +450,19 @@ private:
 			}
 			return true;
 		},
-		[this, ortho](Sprite& sprite, const IVector3D origin, const IVector3D minBound, const IVector3D maxBound){
+		[this, ortho](SpriteInstance& sprite, const IVector3D origin, const IVector3D minBound, const IVector3D maxBound){
 			drawSprite(sprite, ortho, -this->worldRegion.upperLeft(), this->heightBuffer, this->diffuseBuffer, this->normalBuffer);
 		});
 	}
 public:
-	BackgroundBlock(Octree<Sprite>& sprites, const IRect& worldRegion, const OrthoView& ortho)
+	BackgroundBlock(Octree<SpriteInstance>& sprites, const IRect& worldRegion, const OrthoView& ortho)
 	: worldRegion(worldRegion), cameraId(ortho.id), state(BlockState::Ready),
 	  diffuseBuffer(image_create_RgbaU8(blockSize, blockSize)),
 	  normalBuffer(image_create_RgbaU8(blockSize, blockSize)),
 	  heightBuffer(image_create_F32(blockSize, blockSize)) {
 		this->draw(sprites, ortho);
 	}
-	void update(Octree<Sprite>& sprites, const IRect& worldRegion, const OrthoView& ortho) {
+	void update(Octree<SpriteInstance>& sprites, const IRect& worldRegion, const OrthoView& ortho) {
 		this->worldRegion = worldRegion;
 		this->cameraId = ortho.id;
 		image_fill(this->diffuseBuffer, ColorRgbaI32(0));
@@ -461,10 +492,10 @@ public:
 	// World
 	OrthoSystem ortho;
 	// Sprites that rarely change and can be stored in a background image. (no animations allowed)
-	// TODO: Don't store the position twice, by keeping it separate from the Sprite struct.
-	Octree<Sprite> passiveSprites;
+	// TODO: Don't store the position twice, by keeping it separate from the SpriteInstance struct.
+	Octree<SpriteInstance> passiveSprites;
 	// Temporary things are deleted when spriteWorld_clearTemporary is called
-	List<Sprite> temporarySprites;
+	List<SpriteInstance> temporarySprites;
 	List<ModelInstance> temporaryModels;
 	List<PointLight> temporaryPointLights;
 	List<DirectedLight> temporaryDirectedLights;
@@ -682,40 +713,31 @@ public:
 	}
 };
 
-int sprite_loadTypeFromFile(const String& folderPath, const String& spriteName) {
-	types.pushConstruct(folderPath, spriteName);
-	return types.length() - 1;
-}
-
-int sprite_getTypeCount() {
-	return types.length();
-}
-
 SpriteWorld spriteWorld_create(OrthoSystem ortho, int shadowResolution) {
 	return std::make_shared<SpriteWorldImpl>(ortho, shadowResolution);
 }
 
 #define MUST_EXIST(OBJECT, METHOD) if (OBJECT.get() == nullptr) { throwError("The " #OBJECT " handle was null in " #METHOD "\n"); }
 
-void spriteWorld_addBackgroundSprite(SpriteWorld& world, const Sprite& sprite) {
+void spriteWorld_addBackgroundSprite(SpriteWorld& world, const SpriteInstance& sprite) {
 	MUST_EXIST(world, spriteWorld_addBackgroundSprite);
-	if (sprite.typeIndex < 0 || sprite.typeIndex >= types.length()) { throwError(U"Sprite type index ", sprite.typeIndex, " is out of bound!\n"); }
+	if (sprite.typeIndex < 0 || sprite.typeIndex >= spriteTypes.length()) { throwError(U"Sprite type index ", sprite.typeIndex, " is out of bound!\n"); }
 	// Add the passive sprite to the octree
 	IVector3D origin = sprite.location;
-	IVector3D minBound = origin + types[sprite.typeIndex].minBoundMini;
-	IVector3D maxBound = origin + types[sprite.typeIndex].maxBoundMini;
+	IVector3D minBound = origin + spriteTypes[sprite.typeIndex].minBoundMini;
+	IVector3D maxBound = origin + spriteTypes[sprite.typeIndex].maxBoundMini;
 	world->passiveSprites.insert(sprite, origin, minBound, maxBound);
 	// Find the affected passive region and make it dirty
 	int frameIndex = getSpriteFrameIndex(sprite, world->ortho.view[world->cameraIndex]);
-	const SpriteFrame* frame = &types[sprite.typeIndex].frames[frameIndex];
+	const SpriteFrame* frame = &spriteTypes[sprite.typeIndex].frames[frameIndex];
 	IVector2D upperLeft = world->ortho.miniTilePositionToScreenPixel(sprite.location, world->cameraIndex, IVector2D()) - frame->centerPoint;
 	IRect region = IRect(upperLeft.x, upperLeft.y, image_getWidth(frame->colorImage), image_getHeight(frame->colorImage));
 	world->updatePassiveRegion(region);
 }
 
-void spriteWorld_addTemporarySprite(SpriteWorld& world, const Sprite& sprite) {
+void spriteWorld_addTemporarySprite(SpriteWorld& world, const SpriteInstance& sprite) {
 	MUST_EXIST(world, spriteWorld_addTemporarySprite);
-	if (sprite.typeIndex < 0 || sprite.typeIndex >= types.length()) { throwError(U"Sprite type index ", sprite.typeIndex, " is out of bound!\n"); }
+	if (sprite.typeIndex < 0 || sprite.typeIndex >= spriteTypes.length()) { throwError(U"Sprite type index ", sprite.typeIndex, " is out of bound!\n"); }
 	// Add the temporary sprite
 	world->temporarySprites.push(sprite);
 }
