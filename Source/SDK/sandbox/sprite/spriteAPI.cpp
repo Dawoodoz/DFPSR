@@ -5,6 +5,7 @@
 #include "importer.h"
 #include "../../../DFPSR/render/ITriangle2D.h"
 #include "../../../DFPSR/base/endian.h"
+#include "../../../DFPSR/math/scalar.h"
 
 // Comment out a flag to disable an optimization when debugging
 #define DIRTY_RECTANGLE_OPTIMIZATION
@@ -16,6 +17,14 @@ static IRect renderModel(const Model& model, OrthoView view, ImageF32 depthBuffe
 
 template <bool HIGH_QUALITY>
 static IRect renderDenseModel(const DenseModel& model, OrthoView view, ImageF32 depthBuffer, ImageRgbaU8 diffuseTarget, ImageRgbaU8 normalTarget, const FVector2D& worldOrigin, const Transform3D& modelToWorldSpace);
+
+static Transform3D combineWorldToScreenTransform(const FMatrix3x3& worldSpaceToScreenDepth, const FVector2D& worldOrigin) {
+	return Transform3D(FVector3D(worldOrigin.x, worldOrigin.y, 0.0f), worldSpaceToScreenDepth);
+}
+
+static Transform3D combineModelToScreenTransform(const Transform3D& modelToWorldSpace, const FMatrix3x3& worldSpaceToScreenDepth, const FVector2D& worldOrigin) {
+	return modelToWorldSpace * combineWorldToScreenTransform(worldSpaceToScreenDepth, worldOrigin);
+}
 
 struct SpriteConfig {
 	int centerX, centerY; // The sprite's origin in pixels relative to the upper left corner
@@ -212,6 +221,30 @@ public:
 	}
 };
 
+struct DenseTriangle {
+public:
+	FVector3D colorA, colorB, colorC, posA, posB, posC, normalA, normalB, normalC;
+public:
+	DenseTriangle() {}
+	DenseTriangle(
+	  const FVector3D& colorA, const FVector3D& colorB, const FVector3D& colorC,
+	  const FVector3D& posA, const FVector3D& posB, const FVector3D& posC,
+	  const FVector3D& normalA, const FVector3D& normalB, const FVector3D& normalC)
+	  : colorA(colorA), colorB(colorB), colorC(colorC),
+	    posA(posA), posB(posB), posC(posC),
+	    normalA(normalA), normalB(normalB), normalC(normalC) {}
+};
+// The raw format for dense models using vertex colors instead of textures
+// Due to the high number of triangles, indexing positions would cause a lot of cache misses
+struct DenseModelImpl {
+public:
+	Array<DenseTriangle> triangles;
+	FVector3D minBound, maxBound;
+public:
+	// Optimize an existing model
+	DenseModelImpl(const Model& original);
+};
+
 struct ModelType {
 public:
 	DenseModel visibleModel;
@@ -337,7 +370,17 @@ public:
 			}
 		}
 	}
-	void renderSpriteShadows(CubeMapF32& shadowTarget, Octree<SpriteInstance>& sprites, const FMatrix3x3& normalToWorld) const {
+	// Render shadows from passive models
+	void renderPassiveShadows(CubeMapF32& shadowTarget, Octree<ModelInstance>& models, const FMatrix3x3& normalToWorld) const {
+		IVector3D center = ortho_floatingTileToMini(this->position);
+		IVector3D minBound = center - ortho_floatingTileToMini(radius);
+		IVector3D maxBound = center + ortho_floatingTileToMini(radius);
+		models.map(minBound, maxBound, [this, shadowTarget, normalToWorld](ModelInstance& model, const IVector3D origin, const IVector3D minBound, const IVector3D maxBound) mutable {
+			this->renderModelShadow(shadowTarget, model, normalToWorld);
+		});
+	}
+	// Render shadows from passive sprites
+	void renderPassiveShadows(CubeMapF32& shadowTarget, Octree<SpriteInstance>& sprites, const FMatrix3x3& normalToWorld) const {
 		IVector3D center = ortho_floatingTileToMini(this->position);
 		IVector3D minBound = center - ortho_floatingTileToMini(radius);
 		IVector3D maxBound = center + ortho_floatingTileToMini(radius);
@@ -399,11 +442,10 @@ private:
 		);
 	}
 	// Pre-condition: diffuseBuffer must be cleared unless sprites cover the whole block
-	void draw(Octree<SpriteInstance>& sprites, const OrthoView& ortho) {
+	void draw(Octree<SpriteInstance>& sprites, Octree<ModelInstance>& models, const OrthoView& ortho) {
 		image_fill(this->normalBuffer, ColorRgbaI32(128));
 		image_fill(this->heightBuffer, -std::numeric_limits<float>::max());
-		sprites.map(
-		[ortho,this](const IVector3D& minBound, const IVector3D& maxBound){
+		OcTreeFilter orthoCullingFilter = [ortho,this](const IVector3D& minBound, const IVector3D& maxBound){
 			IVector2D corners[8];
 			for (int c = 0; c < 8; c++) {
 				corners[c] = ortho.miniTileOffsetToScreenPixel(getBoxCorner(minBound, maxBound, c));
@@ -449,24 +491,27 @@ private:
 				return false;
 			}
 			return true;
-		},
-		[this, ortho](SpriteInstance& sprite, const IVector3D origin, const IVector3D minBound, const IVector3D maxBound){
+		};
+		sprites.map(orthoCullingFilter, [this, ortho](SpriteInstance& sprite, const IVector3D origin, const IVector3D minBound, const IVector3D maxBound){
 			drawSprite(sprite, ortho, -this->worldRegion.upperLeft(), this->heightBuffer, this->diffuseBuffer, this->normalBuffer);
+		});
+		models.map(orthoCullingFilter, [this, ortho](ModelInstance& model, const IVector3D origin, const IVector3D minBound, const IVector3D maxBound){
+			drawModel(model, ortho, -this->worldRegion.upperLeft(), this->heightBuffer, this->diffuseBuffer, this->normalBuffer);
 		});
 	}
 public:
-	BackgroundBlock(Octree<SpriteInstance>& sprites, const IRect& worldRegion, const OrthoView& ortho)
+	BackgroundBlock(Octree<SpriteInstance>& sprites, Octree<ModelInstance>& models, const IRect& worldRegion, const OrthoView& ortho)
 	: worldRegion(worldRegion), cameraId(ortho.id), state(BlockState::Ready),
 	  diffuseBuffer(image_create_RgbaU8(blockSize, blockSize)),
 	  normalBuffer(image_create_RgbaU8(blockSize, blockSize)),
 	  heightBuffer(image_create_F32(blockSize, blockSize)) {
-		this->draw(sprites, ortho);
+		this->draw(sprites, models, ortho);
 	}
-	void update(Octree<SpriteInstance>& sprites, const IRect& worldRegion, const OrthoView& ortho) {
+	void update(Octree<SpriteInstance>& sprites, Octree<ModelInstance>& models, const IRect& worldRegion, const OrthoView& ortho) {
 		this->worldRegion = worldRegion;
 		this->cameraId = ortho.id;
 		image_fill(this->diffuseBuffer, ColorRgbaI32(0));
-		this->draw(sprites, ortho);
+		this->draw(sprites, models, ortho);
 		this->state = BlockState::Ready;
 	}
 	void draw(ImageRgbaU8& diffuseTarget, ImageRgbaU8& normalTarget, ImageF32& heightTarget, const IRect& seenRegion) const {
@@ -486,14 +531,17 @@ public:
 	}
 };
 
-// TODO: A way to delete passive sprites using search criterias for bounding box and leaf content using a boolean lambda
+// TODO: A way to delete passive sprites and models using search criterias for bounding box and leaf content using a boolean lambda
 class SpriteWorldImpl {
 public:
 	// World
 	OrthoSystem ortho;
-	// Sprites that rarely change and can be stored in a background image. (no animations allowed)
-	// TODO: Don't store the position twice, by keeping it separate from the SpriteInstance struct.
+	// Having one passive and one active collection per member type allow packing elements tighter to reduce cache misses.
+	//   It also allow executing rendering sorted by which code has to be fetched into the instruction cache.
+	// Sprites that rarely change and can be stored in a background image.
 	Octree<SpriteInstance> passiveSprites;
+	// Rarely moved models can be rendered using free rotation and uniform scaling to the background image.
+	Octree<ModelInstance> passiveModels;
 	// Temporary things are deleted when spriteWorld_clearTemporary is called
 	List<SpriteInstance> temporarySprites;
 	List<ModelInstance> temporaryModels;
@@ -518,7 +566,7 @@ private:
 	CubeMapF32 temporaryShadowMap;
 public:
 	SpriteWorldImpl(const OrthoSystem &ortho, int shadowResolution)
-	: ortho(ortho), passiveSprites(ortho_miniUnitsPerTile * 64), shadowResolution(shadowResolution), temporaryShadowMap(shadowResolution) {}
+	: ortho(ortho), passiveSprites(ortho_miniUnitsPerTile * 64), passiveModels(ortho_miniUnitsPerTile * 64), shadowResolution(shadowResolution), temporaryShadowMap(shadowResolution) {}
 public:
 	void updateBlockAt(const IRect& blockRegion, const IRect& seenRegion) {
 		int unusedBlockIndex = -1;
@@ -532,7 +580,7 @@ public:
 					if (currentBlockPtr->worldRegion.left() == blockRegion.left() && currentBlockPtr->worldRegion.top() == blockRegion.top()) {
 						// Update if needed
 						if (currentBlockPtr->state == BlockState::Dirty) {
-							currentBlockPtr->update(this->passiveSprites, blockRegion, this->ortho.view[this->cameraIndex]);
+							currentBlockPtr->update(this->passiveSprites, this->passiveModels, blockRegion, this->ortho.view[this->cameraIndex]);
 						}
 						// Use the block
 						return;
@@ -559,10 +607,10 @@ public:
 		// If none of them matched, we should've passed by any unused block already
 		if (unusedBlockIndex > -1) {
 			// We have a block to reuse
-			this->backgroundBlocks[unusedBlockIndex].update(this->passiveSprites, blockRegion, this->ortho.view[this->cameraIndex]);
+			this->backgroundBlocks[unusedBlockIndex].update(this->passiveSprites, this->passiveModels, blockRegion, this->ortho.view[this->cameraIndex]);
 		} else {
 			// Create a new block
-			this->backgroundBlocks.pushConstruct(this->passiveSprites, blockRegion, this->ortho.view[this->cameraIndex]);
+			this->backgroundBlocks.pushConstruct(this->passiveSprites, this->passiveModels, blockRegion, this->ortho.view[this->cameraIndex]);
 		}
 	}
 	void invalidateBlockAt(int left, int top) {
@@ -632,6 +680,7 @@ public:
 		}
 	}
 public:
+	// modifiedRegion is given in pixels relative to the world origin for the current camera angle
 	void updatePassiveRegion(const IRect& modifiedRegion) {
 		int64_t roundedLeft = roundDown(modifiedRegion.left(), BackgroundBlock::blockSize);
 		int64_t roundedTop = roundDown(modifiedRegion.top(), BackgroundBlock::blockSize);
@@ -690,7 +739,8 @@ public:
 				startTime = time_getSeconds();
 				this->temporaryShadowMap.clear();
 				// Shadows from background sprites
-				currentLight->renderSpriteShadows(this->temporaryShadowMap, this->passiveSprites, ortho.view[this->cameraIndex].normalToWorldSpace);
+				currentLight->renderPassiveShadows(this->temporaryShadowMap, this->passiveSprites, ortho.view[this->cameraIndex].normalToWorldSpace);
+				currentLight->renderPassiveShadows(this->temporaryShadowMap, this->passiveModels, ortho.view[this->cameraIndex].normalToWorldSpace);
 				// Shadows from temporary sprites
 				for (int s = 0; s < this->temporarySprites.length(); s++) {
 					currentLight->renderSpriteShadow(this->temporaryShadowMap, this->temporarySprites[s], ortho.view[this->cameraIndex].normalToWorldSpace);
@@ -734,7 +784,6 @@ void spriteWorld_addBackgroundSprite(SpriteWorld& world, const SpriteInstance& s
 	IRect region = IRect(upperLeft.x, upperLeft.y, image_getWidth(frame->colorImage), image_getHeight(frame->colorImage));
 	world->updatePassiveRegion(region);
 }
-
 void spriteWorld_addTemporarySprite(SpriteWorld& world, const SpriteInstance& sprite) {
 	MUST_EXIST(world, spriteWorld_addTemporarySprite);
 	if (sprite.typeIndex < 0 || sprite.typeIndex >= spriteTypes.length()) { throwError(U"Sprite type index ", sprite.typeIndex, " is out of bound!\n"); }
@@ -742,6 +791,53 @@ void spriteWorld_addTemporarySprite(SpriteWorld& world, const SpriteInstance& sp
 	world->temporarySprites.push(sprite);
 }
 
+static void transformCorners(const FVector3D& minBound, const FVector3D& maxBound, const Transform3D& transform, FVector3D* resultCorners) {
+	resultCorners[0] = transform.transformPoint(FVector3D(minBound.x, minBound.y, minBound.z));
+	resultCorners[1] = transform.transformPoint(FVector3D(maxBound.x, minBound.y, minBound.z));
+	resultCorners[2] = transform.transformPoint(FVector3D(minBound.x, maxBound.y, minBound.z));
+	resultCorners[3] = transform.transformPoint(FVector3D(maxBound.x, maxBound.y, minBound.z));
+	resultCorners[4] = transform.transformPoint(FVector3D(minBound.x, minBound.y, maxBound.z));
+	resultCorners[5] = transform.transformPoint(FVector3D(maxBound.x, minBound.y, maxBound.z));
+	resultCorners[6] = transform.transformPoint(FVector3D(minBound.x, maxBound.y, maxBound.z));
+	resultCorners[7] = transform.transformPoint(FVector3D(maxBound.x, maxBound.y, maxBound.z));
+}
+
+void spriteWorld_addBackgroundModel(SpriteWorld& world, const ModelInstance& instance) {
+	MUST_EXIST(world, spriteWorld_addBackgroundModel);
+	if (instance.typeIndex < 0 || instance.typeIndex >= modelTypes.length()) { throwError(U"Model type index ", instance.typeIndex, " is out of bound!\n"); }
+	// Get the origin and outer bounds
+	ModelType *type = &(modelTypes[instance.typeIndex]);
+	// Create a transform for global pixels
+	Transform3D worldToGlobalPixels = combineWorldToScreenTransform(world->ortho.view[world->cameraIndex].worldSpaceToScreenDepth, FVector2D());
+	FVector3D transformedCorners[8];
+	transformCorners(type->visibleModel->minBound, type->visibleModel->maxBound, instance.location, transformedCorners);
+	// World-space bound
+	IVector3D worldModelOrigin = ortho_floatingTileToMini(instance.location.position);
+	IVector3D worldMinBound = worldModelOrigin;
+	IVector3D worldMaxBound = worldModelOrigin;
+	// Screen bound
+	FVector3D globalPixelOrigin = worldToGlobalPixels.transformPoint(instance.location.position);
+	IVector2D globalPixelMinBound = IVector2D((int32_t)floor(globalPixelOrigin.x), (int32_t)floor(globalPixelOrigin.y));
+	IVector2D globalPixelMaxBound = globalPixelMinBound;
+	for (int c = 0; c < 8; c++) {
+		FVector3D miniSpaceCorner = transformedCorners[c] * (float)ortho_miniUnitsPerTile;
+		replaceWithSmaller(worldMinBound.x, (int32_t)floor(miniSpaceCorner.x));
+		replaceWithSmaller(worldMinBound.y, (int32_t)floor(miniSpaceCorner.y));
+		replaceWithSmaller(worldMinBound.z, (int32_t)floor(miniSpaceCorner.z));
+		replaceWithLarger(worldMaxBound.x, (int32_t)ceil(miniSpaceCorner.x));
+		replaceWithLarger(worldMaxBound.y, (int32_t)ceil(miniSpaceCorner.y));
+		replaceWithLarger(worldMaxBound.z, (int32_t)ceil(miniSpaceCorner.z));
+		FVector3D globalPixelSpaceCorner = worldToGlobalPixels.transformPoint(transformedCorners[c]);
+		replaceWithSmaller(globalPixelMinBound.x, (int32_t)floor(globalPixelSpaceCorner.x));
+		replaceWithSmaller(globalPixelMinBound.y, (int32_t)floor(globalPixelSpaceCorner.y));
+		replaceWithLarger(globalPixelMaxBound.x, (int32_t)ceil(globalPixelSpaceCorner.x));
+		replaceWithLarger(globalPixelMaxBound.y, (int32_t)ceil(globalPixelSpaceCorner.y));
+	}
+	// Add the passive sprite to the octree
+	world->passiveModels.insert(instance, worldModelOrigin, worldMinBound, worldMaxBound);
+	// Find the affected passive region and make it dirty
+	world->updatePassiveRegion(IRect(globalPixelMinBound.x, globalPixelMinBound.y, globalPixelMaxBound.x - globalPixelMinBound.x, globalPixelMaxBound.y - globalPixelMinBound.y));
+}
 void spriteWorld_addTemporaryModel(SpriteWorld& world, const ModelInstance& instance) {
 	MUST_EXIST(world, spriteWorld_addTemporaryModel);
 	// Add the temporary model
@@ -832,19 +928,11 @@ static IRect boundFromVertex(const FVector3D& screenProjection) {
 
 // Returns true iff the box might be seen using a pessimistic test
 static IRect boundingBoxToRectangle(const FVector3D& minBound, const FVector3D& maxBound, const Transform3D& objectToScreenSpace) {
-	FVector3D points[8] = {
-	  FVector3D(minBound.x, minBound.y, minBound.z),
-	  FVector3D(maxBound.x, minBound.y, minBound.z),
-	  FVector3D(minBound.x, maxBound.y, minBound.z),
-	  FVector3D(maxBound.x, maxBound.y, minBound.z),
-	  FVector3D(minBound.x, minBound.y, maxBound.z),
-	  FVector3D(maxBound.x, minBound.y, maxBound.z),
-	  FVector3D(minBound.x, maxBound.y, maxBound.z),
-	  FVector3D(maxBound.x, maxBound.y, maxBound.z)
-	};
-	IRect result = boundFromVertex(objectToScreenSpace.transformPoint(points[0]));
+	FVector3D points[8];
+	transformCorners(minBound, maxBound, objectToScreenSpace, points);
+	IRect result = boundFromVertex(points[0]);
 	for (int p = 1; p < 8; p++) {
-		result = IRect::merge(result, boundFromVertex(objectToScreenSpace.transformPoint(points[p])));
+		result = IRect::merge(result, boundFromVertex(points[p]));
 	}
 	return result;
 }
@@ -879,30 +967,6 @@ static FVector3D getAverageNormal(const Model& model, int part, int poly) {
 	}
 	return normalize(normalSum);
 }
-
-struct DenseTriangle {
-public:
-	FVector3D colorA, colorB, colorC, posA, posB, posC, normalA, normalB, normalC;
-public:
-	DenseTriangle() {}
-	DenseTriangle(
-	  const FVector3D& colorA, const FVector3D& colorB, const FVector3D& colorC,
-	  const FVector3D& posA, const FVector3D& posB, const FVector3D& posC,
-	  const FVector3D& normalA, const FVector3D& normalB, const FVector3D& normalC)
-	  : colorA(colorA), colorB(colorB), colorC(colorC),
-	    posA(posA), posB(posB), posC(posC),
-	    normalA(normalA), normalB(normalB), normalC(normalC) {}
-};
-// The raw format for dense models using vertex colors instead of textures
-// Due to the high number of triangles, indexing positions would cause a lot of cache misses
-struct DenseModelImpl {
-public:
-	Array<DenseTriangle> triangles;
-	FVector3D minBound, maxBound;
-public:
-	// Optimize an existing model
-	DenseModelImpl(const Model& original);
-};
 
 DenseModel DenseModel_create(const Model& original) {
 	return std::make_shared<DenseModelImpl>(original);
@@ -976,7 +1040,7 @@ DenseModelImpl::DenseModelImpl(const Model& original)
 template <bool HIGH_QUALITY>
 static IRect renderDenseModel(const DenseModel& model, OrthoView view, ImageF32 depthBuffer, ImageRgbaU8 diffuseTarget, ImageRgbaU8 normalTarget, const FVector2D& worldOrigin, const Transform3D& modelToWorldSpace) {
 	// Combine position transforms
-	Transform3D objectToScreenSpace = modelToWorldSpace * Transform3D(FVector3D(worldOrigin.x, worldOrigin.y, 0.0f), view.worldSpaceToScreenDepth);
+	Transform3D objectToScreenSpace = combineModelToScreenTransform(modelToWorldSpace, view.worldSpaceToScreenDepth, worldOrigin);
 	// Create a pessimistic 2D bound from the 3D bounding box
 	IRect pessimisticBound = boundingBoxToRectangle(model->minBound, model->maxBound, objectToScreenSpace);
 	// Get the target image bound

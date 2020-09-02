@@ -62,6 +62,7 @@ int spriteWorld_getModelTypeCount();
 
 SpriteWorld spriteWorld_create(OrthoSystem ortho, int shadowResolution);
 void spriteWorld_addBackgroundSprite(SpriteWorld& world, const SpriteInstance& sprite);
+void spriteWorld_addBackgroundModel(SpriteWorld& world, const ModelInstance& instance);
 void spriteWorld_addTemporarySprite(SpriteWorld& world, const SpriteInstance& sprite);
 void spriteWorld_addTemporaryModel(SpriteWorld& world, const ModelInstance& instance);
 

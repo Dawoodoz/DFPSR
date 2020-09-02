@@ -30,7 +30,6 @@ BUGS:
 			An optional triangle patch can be added along the open sides. (all for planes and excluding sides for cylinders)
 
 VISUALS:
-	* Implement freely rotated background models in the sprite engine.
 	* Make a directed light source that casts light and shadows from a fixed direction but can fade like a point light.
 		Useful for street-lights and sky-lights that want to avoid normalizing and projecting light directions per pixel.
 		Can be used both with and without casting shadows.
@@ -285,11 +284,11 @@ void sandbox_main() {
 	component_setMouseDownEvent(mainPanel, [](const MouseEvent& event) {
 		if (event.key == MouseKeyEnum::Left) {
 			if (overlayMode == OverlayMode_Tools) {
+				// Place a passive visual instance using the brush
 				if (tool == Tool_PlaceSprite) {
-					// Place a new visual instance using the sprite brush
 					spriteWorld_addBackgroundSprite(world, spriteBrush);
 				} else if (tool == Tool_PlaceModel) {
-					// TODO: Implement a way to place a background model with 3-dimensional location, 3-axis rotation and uniform scaling
+					spriteWorld_addBackgroundModel(world, modelBrush);
 				}
 			}
 		} else if (event.key == MouseKeyEnum::Right) {
