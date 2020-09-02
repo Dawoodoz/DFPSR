@@ -71,7 +71,6 @@ VISUALS:
 		The first cubemap will be persistent and used later for dynamic light.
 		The later cubemaps will be temporary when generating the background's softer light.
 USABILITY:
-	* Tool for placing freely rotated isometric models into the background.
 	* Tool for selecting and removing passive sprites.
 		Use both unique handles for simplicity and the raw look-up for handling multiple sprites at once:
 			Given an optional integer argument (defaulted to zero) to background sprite construction.
@@ -147,6 +146,7 @@ static int random(const int minimum, const int maximum) {
 // Variables
 static int brushHeight = 0; // In mini-tile units
 static SpriteInstance spriteBrush(0, dir0, IVector3D(), true);
+static bool placingModel = false; // True when left mouse button is pressed and the direction is being assigned
 static ModelInstance modelBrush(0, Transform3D());
 static const int brushStep = ortho_miniUnitsPerTile / 32;
 static int buttonPressed[4] = {0, 0, 0, 0};
@@ -288,7 +288,7 @@ void sandbox_main() {
 				if (tool == Tool_PlaceSprite) {
 					spriteWorld_addBackgroundSprite(world, spriteBrush);
 				} else if (tool == Tool_PlaceModel) {
-					spriteWorld_addBackgroundModel(world, modelBrush);
+					placingModel = true;
 				}
 			}
 		} else if (event.key == MouseKeyEnum::Right) {
@@ -296,7 +296,15 @@ void sandbox_main() {
 		}
 	});
 	component_setMouseUpEvent(mainPanel, [](const MouseEvent& event) {
-		if (event.key == MouseKeyEnum::Right) {
+		if (event.key == MouseKeyEnum::Left) {
+			if (overlayMode == OverlayMode_Tools) {
+				// Place a passive visual instance using the brush
+				if (tool == Tool_PlaceModel && placingModel) {
+					spriteWorld_addBackgroundModel(world, modelBrush);
+					placingModel = false;
+				}
+			}
+		} else if (event.key == MouseKeyEnum::Right) {
 			panorate = false;
 		}
 	});
@@ -313,10 +321,12 @@ void sandbox_main() {
 	modelPanel = window_findComponentByName(window, U"modelPanel");
 	component_setPressedEvent(window_findComponentByName(window, U"spriteButton"), []() {
 		tool = Tool_PlaceSprite;
+		placingModel = false;
 		updateOverlay();
 	});
 	component_setPressedEvent(window_findComponentByName(window, U"modelButton"), []() {
 		tool = Tool_PlaceModel;
+		placingModel = false;
 		updateOverlay();
 	});
 	spriteList = window_findComponentByName(window, U"spriteList");
@@ -410,14 +420,23 @@ void sandbox_main() {
 			spriteWorld_clearTemporary(world);
 
 			// Place the brush
-			IVector3D mouseWorldPos = spriteWorld_findGroundAtPixel(world, colorBuffer, mousePos);
-			modelBrush.location = Transform3D(FVector3D(
-			  mouseWorldPos.x * ortho_tilesPerMiniUnit,
+			IVector3D mouseMiniPos = spriteWorld_findGroundAtPixel(world, colorBuffer, mousePos);
+			FVector3D worldBrushPos = FVector3D(
+			  mouseMiniPos.x * ortho_tilesPerMiniUnit,
 			  brushHeight * ortho_tilesPerMiniUnit,
-			  mouseWorldPos.z * ortho_tilesPerMiniUnit),
-			  FMatrix3x3::makeAxisSystem(FVector3D(1.0f, 0.0f, 0.0f), FVector3D(0.0f, 1.0f, 0.0f)) // TODO: An integer based rotation system for the brush
+			  mouseMiniPos.z * ortho_tilesPerMiniUnit
 			);
-			spriteBrush.location = IVector3D(mouseWorldPos.x, brushHeight, mouseWorldPos.z);
+			if (placingModel) {
+				// Drag with the left mouse button around the selected location to select the angle
+				// Scroll to another height to direct it towards another height
+				modelBrush.location.transform = FMatrix3x3::makeAxisSystem(modelBrush.location.position - worldBrushPos, FVector3D(0.0f, 1.0f, 0.0f)); // TODO: An integer based rotation system for the brush
+			} else {
+				modelBrush.location = Transform3D(
+				  worldBrushPos,
+				  FMatrix3x3::makeAxisSystem(FVector3D(1.0f, 0.0f, 0.0f), FVector3D(0.0f, 1.0f, 0.0f)) // TODO: An integer based rotation system for the brush
+				);
+			}
+			spriteBrush.location = IVector3D(mouseMiniPos.x, brushHeight, mouseMiniPos.z);
 			if (tileAlign) {
 				spriteBrush.location = ortho_roundToTile(spriteBrush.location);
 			}
