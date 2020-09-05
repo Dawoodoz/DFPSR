@@ -1,4 +1,4 @@
-
+﻿
 #include "lightAPI.h"
 #include "../../../DFPSR/base/simd3D.h"
 #include "../../../DFPSR/base/threading.h" // TODO: Make an official "dangerous" API for multi-threading

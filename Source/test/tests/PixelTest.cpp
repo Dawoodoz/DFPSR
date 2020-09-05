@@ -1,4 +1,4 @@
-
+﻿
 #include "../testTools.h"
 
 START_TEST(Pixel)

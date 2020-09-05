@@ -1,4 +1,4 @@
-
+﻿
 // A rasterization of Ubuntu Mono size 16, with some minor pixel alignment for increased sharpness in the specific resolution.
 // The font was selected because it has a reusable generic style and permits both modification and embedding.
 // See the official website for full license terms

@@ -1,4 +1,4 @@
-Begin : Panel
+﻿Begin : Panel
 	Name = "mainPanel"
 	Solid = 0
 	Begin : Panel

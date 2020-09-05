@@ -1,4 +1,4 @@
-
+﻿
 #include "spriteAPI.h"
 #include "Octree.h"
 #include "DirtyRectangles.h"

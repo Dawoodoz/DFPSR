@@ -1,4 +1,4 @@
-
+﻿
 #include "../testTools.h"
 
 // TODO: Cannot use casting to parent type at the same time as automatic conversion from const char*

@@ -1,4 +1,4 @@
-
+﻿
 // Avoid cluttering the global namespace by hiding these from the header
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>

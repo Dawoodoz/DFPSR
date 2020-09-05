@@ -1,4 +1,4 @@
-
+﻿
 /*
 	An application for previewing tiles and sprites together for potential games.
 	If you design game assets separatelly, they will often look much worse when you put them together.

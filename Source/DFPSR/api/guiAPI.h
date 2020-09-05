@@ -1,4 +1,4 @@
-
+﻿
 // zlib open source license
 //
 // Copyright (c) 2019 David Forsgren Piuva

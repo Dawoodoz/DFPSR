@@ -1,4 +1,4 @@
-
+﻿
 #include "../testTools.h"
 
 #define INITIALIZE \

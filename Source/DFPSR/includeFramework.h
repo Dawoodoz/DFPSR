@@ -1,4 +1,4 @@
-
+﻿
 // Header for including the most commonly needed parts of the framework
 
 #ifndef DFPSR_INCLUDED_FRAMEWORK

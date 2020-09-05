@@ -1,4 +1,4 @@
-
+﻿
 #ifndef DFPSR_DIRTY_RECTANGLES
 #define DFPSR_DIRTY_RECTANGLES
 

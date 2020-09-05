@@ -1,4 +1,4 @@
-
+﻿
 // Header for including collections
 
 #include "Array.h"

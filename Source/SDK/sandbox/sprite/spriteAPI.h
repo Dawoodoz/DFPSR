@@ -1,4 +1,4 @@
-
+﻿
 #ifndef DFPSR_SPRITE_ENGINE
 #define DFPSR_SPRITE_ENGINE
 
