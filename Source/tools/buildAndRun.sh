@@ -15,7 +15,7 @@ LINKER_FLAGS=$9 # Additional linker flags for libraries and such
 chmod +x ${ROOT_PATH}/tools/build.sh
 
 # Compile and link
-${ROOT_PATH}/tools/build.sh $1 $2 $3 $4 $5 $6 $7 $8 $9
+${ROOT_PATH}/tools/build.sh "$1" "$2" "$3" "$4" "$5" "$6" "$7" "$8" "$9"
 if [ $? -ne 0 ]
 then
 	exit 1
