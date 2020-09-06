@@ -17,13 +17,13 @@ TEMP_SUB=$(echo $TEMP_SUB | tr -d " =-")
 TEMP_DIR=${TEMP_ROOT}/${TEMP_SUB}
 echo "Building version ${TEMP_SUB}"
 
-# Create a temporary folder
-mkdir -p ${TEMP_DIR}
-# Remove objects, but keep libraries
-rm -f ${TEMP_DIR}/*.o
 
-# Allow calling the build script
+# Allow calling other scripts
+chmod +x ${ROOT_PATH}/tools/clean.sh
 chmod +x ${ROOT_PATH}/tools/buildLibrary.sh
+
+# Make a clean folder
+${ROOT_PATH}/tools/clean.sh ${TEMP_DIR}
 
 echo "Compiling renderer framework."
 ${ROOT_PATH}/tools/buildLibrary.sh g++ ${ROOT_PATH}/DFPSR ${TEMP_DIR} "dfpsr" ${CPP_VERSION} ${O_LEVEL} ${MODE} LAZY
