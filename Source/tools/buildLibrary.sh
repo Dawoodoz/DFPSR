@@ -10,18 +10,14 @@ SOURCE_FOLDER=$2
 TARGET=$3
 # The name of your library without any path nor extension
 LIBRARY_NAME=$4
-OBJECT_POSTFIX="_$4_TEMP.o"
-# C++ version
-CPP_VERSION=$5
-# Optimization level
-O_LEVEL=$6
-# Debug -DDEBUG or Release -DNDEBUG
-MODE=$7
+OBJECT_POSTFIX="_${LIBRARY_NAME}_TEMP.o"
+# Compiler flags
+COMPILER_FLAGS=$5
 # Use CLEAN to recompile everything
 # Use LAZY to only recompile if the source folder itself has changed
 #   If the library depends on anything outside of its folder that changes, lazy compilation will fail
 #   If you change modes a lot and compiler versions a lot, multiple temporary folders may be useful
-BUILD_METHOD=$8
+BUILD_METHOD=$6
 
 LIBRARY_FILENAME=${TARGET}/${LIBRARY_NAME}.a
 SUM_FILENAME=${TARGET}/${LIBRARY_NAME}.md5
@@ -67,7 +63,7 @@ if [ ! -f ${LIBRARY_FILENAME} ]; then
 			# Get name without extension nor path
 			base=${name%.cpp}
 			echo "  C++ ${file}"
-			${COMPILER} ${CPP_VERSION} ${O_LEVEL} ${MODE} -Wall -c ${file} -o ${TARGET}/${base}${OBJECT_POSTFIX}
+			${COMPILER} ${COMPILER_FLAGS} -Wall -c ${file} -o ${TARGET}/${base}${OBJECT_POSTFIX}
 			if [ $? -ne 0 ]
 			then
 				echo "Failed to compile ${file}!"

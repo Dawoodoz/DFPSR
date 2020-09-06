@@ -6,17 +6,14 @@ TARGET_FILE=$2 # Your executable to build
 ROOT_PATH=$3 # The parent folder of DFPSR, SDK and tools
 TEMP_ROOT=$4 # Where your temporary objects should be
 WINDOW_MANAGER=$5 # Which library to use for creating a window
-MODE=$6 # Use -DDEBUG for debug mode or -DNDEBUG for release mode
-CPP_VERSION=$7 # Default is -std=c++14
-O_LEVEL=$8 # Default is -O2
-LINKER_FLAGS=$9 # Additional linker flags for libraries and such
+COMPILER_FLAGS=$6 # -DDEBUG/-DNDEBUG -std=c++14/-std=c++17 -O2/-O3
+LINKER_FLAGS=$7 # Additional linker flags for libraries and such
 
-TEMP_SUB="${MODE}_${CPP_VERSION}_${O_LEVEL}"
+TEMP_SUB="${COMPILER_FLAGS// /_}"
 TEMP_SUB=$(echo $TEMP_SUB | tr "+" "p")
 TEMP_SUB=$(echo $TEMP_SUB | tr -d " =-")
 TEMP_DIR=${TEMP_ROOT}/${TEMP_SUB}
 echo "Building version ${TEMP_SUB}"
-
 
 # Allow calling other scripts
 chmod +x ${ROOT_PATH}/tools/clean.sh
@@ -26,7 +23,7 @@ chmod +x ${ROOT_PATH}/tools/buildLibrary.sh
 ${ROOT_PATH}/tools/clean.sh ${TEMP_DIR}
 
 echo "Compiling renderer framework."
-${ROOT_PATH}/tools/buildLibrary.sh g++ ${ROOT_PATH}/DFPSR ${TEMP_DIR} "dfpsr" ${CPP_VERSION} ${O_LEVEL} ${MODE} LAZY
+${ROOT_PATH}/tools/buildLibrary.sh g++ ${ROOT_PATH}/DFPSR ${TEMP_DIR} "dfpsr" "${COMPILER_FLAGS}" LAZY
 if [ $? -ne 0 ]
 then
 	exit 1
@@ -39,7 +36,7 @@ then
 fi
 
 echo "Compiling application."
-${ROOT_PATH}/tools/buildLibrary.sh g++ ${PROJECT_FOLDER} ${TEMP_DIR} "application" ${CPP_VERSION} ${O_LEVEL} ${MODE} CLEAN
+${ROOT_PATH}/tools/buildLibrary.sh g++ ${PROJECT_FOLDER} ${TEMP_DIR} "application" "${COMPILER_FLAGS}" CLEAN
 if [ $? -ne 0 ]
 then
 	exit 1
@@ -61,7 +58,7 @@ else
 fi
 
 echo "Compiling window manager (${WINDOW_SOURCE})"
-g++ ${CPP_VERSION} ${O_LEVEL} ${MODE} -Wall -c ${WINDOW_SOURCE} -o ${TEMP_DIR}/NativeWindow.o
+g++ ${COMPILER_FLAGS} -Wall -c ${WINDOW_SOURCE} -o ${TEMP_DIR}/NativeWindow.o
 if [ $? -ne 0 ]
 then
 	exit 1
