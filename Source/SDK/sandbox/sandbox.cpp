@@ -156,7 +156,7 @@ static const float cameraSpeed = 1.0f;
 // World
 static SpriteWorld world;
 bool ambientLight = true;
-int testModelCount = 0;
+bool castShadows = true;
 
 // GUI
 static Window window;
@@ -234,7 +234,7 @@ void sandbox_main() {
 			} else if (key == DsrKey_T) {
 				tileAlign = !tileAlign;
 			} else if (key == DsrKey_Y) {
-				testModelCount = (testModelCount + 1) % 11;
+				castShadows = !castShadows;
 			} else if (key == DsrKey_F) {
 				overlayMode = (overlayMode + 1) % OverlayModeCount;
 				updateOverlay();
@@ -449,19 +449,19 @@ void sandbox_main() {
 			// Create a temporary point light over the brush
 			//   Temporary light sources are easier to use for dynamic light because they don't need any handle
 			if (mouseLights == 1) {
-				spriteWorld_createTemporary_pointLight(world, ortho_miniToFloatingTile(spriteBrush.location) + FVector3D(0.0f, 0.5f, 0.0f), 4.0f, 4.0f, ColorRgbI32(128, 255, 128), true);
+				spriteWorld_createTemporary_pointLight(world, ortho_miniToFloatingTile(spriteBrush.location) + FVector3D(0.0f, 0.5f, 0.0f), 4.0f, 4.0f, ColorRgbI32(128, 255, 128), castShadows);
 			} else if (mouseLights == 2) {
-				spriteWorld_createTemporary_pointLight(world, ortho_miniToFloatingTile(spriteBrush.location) + FVector3D(-2.0f, 0.5f, 1.0f), 4.0f, 2.0f, ColorRgbI32(255, 128, 128), true);
-				spriteWorld_createTemporary_pointLight(world, ortho_miniToFloatingTile(spriteBrush.location) + FVector3D(2.0f, 0.52f, -1.0f), 4.0f, 2.0f, ColorRgbI32(128, 255, 128), true);
+				spriteWorld_createTemporary_pointLight(world, ortho_miniToFloatingTile(spriteBrush.location) + FVector3D(-2.0f, 0.5f, 1.0f), 4.0f, 2.0f, ColorRgbI32(255, 128, 128), castShadows);
+				spriteWorld_createTemporary_pointLight(world, ortho_miniToFloatingTile(spriteBrush.location) + FVector3D(2.0f, 0.52f, -1.0f), 4.0f, 2.0f, ColorRgbI32(128, 255, 128), castShadows);
 			} else if (mouseLights == 3) {
-				spriteWorld_createTemporary_pointLight(world, ortho_miniToFloatingTile(spriteBrush.location) + FVector3D(-2.0f, 0.5f, 1.0f), 4.0f, 1.333f, ColorRgbI32(255, 128, 128), true);
-				spriteWorld_createTemporary_pointLight(world, ortho_miniToFloatingTile(spriteBrush.location) + FVector3D(1.0f, 0.51f, 2.0f), 4.0f, 1.333f, ColorRgbI32(128, 255, 128), true);
-				spriteWorld_createTemporary_pointLight(world, ortho_miniToFloatingTile(spriteBrush.location) + FVector3D(2.0f, 0.52f, -1.0f), 4.0f, 1.333f, ColorRgbI32(128, 128, 255), true);
+				spriteWorld_createTemporary_pointLight(world, ortho_miniToFloatingTile(spriteBrush.location) + FVector3D(-2.0f, 0.5f, 1.0f), 4.0f, 1.333f, ColorRgbI32(255, 128, 128), castShadows);
+				spriteWorld_createTemporary_pointLight(world, ortho_miniToFloatingTile(spriteBrush.location) + FVector3D(1.0f, 0.51f, 2.0f), 4.0f, 1.333f, ColorRgbI32(128, 255, 128), castShadows);
+				spriteWorld_createTemporary_pointLight(world, ortho_miniToFloatingTile(spriteBrush.location) + FVector3D(2.0f, 0.52f, -1.0f), 4.0f, 1.333f, ColorRgbI32(128, 128, 255), castShadows);
 			} else if (mouseLights == 4) {
-				spriteWorld_createTemporary_pointLight(world, ortho_miniToFloatingTile(spriteBrush.location) + FVector3D(-2.0f, 0.5f, 1.0f), 4.0f, 1.0f, ColorRgbI32(255, 128, 128), true);
-				spriteWorld_createTemporary_pointLight(world, ortho_miniToFloatingTile(spriteBrush.location) + FVector3D(1.0f, 0.51f, 2.0f), 4.0f, 1.0f, ColorRgbI32(128, 255, 128), true);
-				spriteWorld_createTemporary_pointLight(world, ortho_miniToFloatingTile(spriteBrush.location) + FVector3D(2.0f, 0.52f, -1.0f), 4.0f, 1.0f, ColorRgbI32(128, 128, 255), true);
-				spriteWorld_createTemporary_pointLight(world, ortho_miniToFloatingTile(spriteBrush.location) + FVector3D(-1.0f, 0.53f, -2.0f), 4.0f, 1.0f, ColorRgbI32(255, 255, 128), true);
+				spriteWorld_createTemporary_pointLight(world, ortho_miniToFloatingTile(spriteBrush.location) + FVector3D(-2.0f, 0.5f, 1.0f), 4.0f, 1.0f, ColorRgbI32(255, 128, 128), castShadows);
+				spriteWorld_createTemporary_pointLight(world, ortho_miniToFloatingTile(spriteBrush.location) + FVector3D(1.0f, 0.51f, 2.0f), 4.0f, 1.0f, ColorRgbI32(128, 255, 128), castShadows);
+				spriteWorld_createTemporary_pointLight(world, ortho_miniToFloatingTile(spriteBrush.location) + FVector3D(2.0f, 0.52f, -1.0f), 4.0f, 1.0f, ColorRgbI32(128, 128, 255), castShadows);
+				spriteWorld_createTemporary_pointLight(world, ortho_miniToFloatingTile(spriteBrush.location) + FVector3D(-1.0f, 0.53f, -2.0f), 4.0f, 1.0f, ColorRgbI32(255, 255, 128), castShadows);
 			}
 
 			// Show the sprite brush
@@ -472,20 +472,6 @@ void sandbox_main() {
 					spriteWorld_addTemporaryModel(world, modelBrush);
 				}
 			}
-
-			// Test freely rotated models
-			/*
-			double timer = time_getSeconds();
-			if (overlayMode != OverlayMode_Tools) {
-				for(int t = 0; t < testModelCount; t++) {
-					float scale = 1.0f;
-					Transform3D testLocation = Transform3D(
-					  FVector3D(cos((timer + t * 25.64f) * 0.36f) * 1.6f, sin(timer) * 0.2f + 0.3f, sin((timer + t * 42.54f) * 0.58f) * 1.6f),
-					  FMatrix3x3::makeAxisSystem(FVector3D(cos(timer), 0.0f, sin(timer)), FVector3D(cos((timer + t * 17.63f) * 2.13f), 1.0f, sin((timer + t * 64.25f) * 3.26f))) * scale
-					);
-					spriteWorld_addTemporaryModel(world, ModelInstance(barrelVisible, barrelShadow, testLocation));
-				}
-			}*/
 
 			// Draw the world
 			spriteWorld_draw(world, colorBuffer);
