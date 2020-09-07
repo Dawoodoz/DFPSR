@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Assuming that you called build.sh from its own folder, you should already be in the project folder.
-PROJECT_FOLDER=.
+PROJECT_FOLDERS=". ../SpriteEngine"
 # Placing your executable in the project folder allow using the same relative paths in the final release.
 TARGET_FILE=./sandbox
 # The root folder is where DFPSR, SDK and tools are located.
@@ -20,4 +20,4 @@ LINKER_FLAGS=""
 # Give execution permission
 chmod +x ${ROOT_PATH}/tools/buildAndRun.sh;
 # Compile everything
-${ROOT_PATH}/tools/buildAndRun.sh "${PROJECT_FOLDER}" "${TARGET_FILE}" "${ROOT_PATH}" "${TEMP_DIR}" "${WINDOW_MANAGER}" "${COMPILER_FLAGS}" "${LINKER_FLAGS}";
+${ROOT_PATH}/tools/buildAndRun.sh "${PROJECT_FOLDERS}" "${TARGET_FILE}" "${ROOT_PATH}" "${TEMP_DIR}" "${WINDOW_MANAGER}" "${COMPILER_FLAGS}" "${LINKER_FLAGS}";

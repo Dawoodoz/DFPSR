@@ -114,9 +114,8 @@ LATER:
 */
 
 #include "../../DFPSR/includeFramework.h"
-#include "sprite/spriteAPI.h"
-#include "sprite/importer.h"
-#include "../../DFPSR/image/PackOrder.h"
+#include "../SpriteEngine/spriteAPI.h"
+#include "../SpriteEngine/importer.h"
 #include <assert.h>
 #include <limits>
 

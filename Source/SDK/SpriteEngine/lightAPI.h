@@ -3,7 +3,7 @@
 #define DFPSR_DEFERRED_LIGHT_ENGINE
 
 #include <assert.h>
-#include "../../../DFPSR/includeFramework.h"
+#include "../../DFPSR/includeFramework.h"
 #include "orthoAPI.h"
 
 namespace dsr {

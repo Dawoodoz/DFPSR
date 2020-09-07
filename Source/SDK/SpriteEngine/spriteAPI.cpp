@@ -3,9 +3,9 @@
 #include "Octree.h"
 #include "DirtyRectangles.h"
 #include "importer.h"
-#include "../../../DFPSR/render/ITriangle2D.h"
-#include "../../../DFPSR/base/endian.h"
-#include "../../../DFPSR/math/scalar.h"
+#include "../../DFPSR/render/ITriangle2D.h"
+#include "../../DFPSR/base/endian.h"
+#include "../../DFPSR/math/scalar.h"
 
 // Comment out a flag to disable an optimization when debugging
 #define DIRTY_RECTANGLE_OPTIMIZATION

@@ -2,7 +2,7 @@
 #ifndef DFPSR_SPRITE_ENGINE
 #define DFPSR_SPRITE_ENGINE
 
-#include "../../../DFPSR/includeFramework.h"
+#include "../../DFPSR/includeFramework.h"
 #include "orthoAPI.h"
 #include "lightAPI.h"
 #include <assert.h>

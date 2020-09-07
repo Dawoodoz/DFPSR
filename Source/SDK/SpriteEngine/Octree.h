@@ -2,7 +2,7 @@
 #ifndef DFPSR_OCTREE
 #define DFPSR_OCTREE
 
-#include "../../../DFPSR/includeFramework.h"
+#include "../../DFPSR/includeFramework.h"
 #include <memory>
 
 namespace dsr {

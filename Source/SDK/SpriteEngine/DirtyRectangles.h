@@ -2,7 +2,7 @@
 #ifndef DFPSR_DIRTY_RECTANGLES
 #define DFPSR_DIRTY_RECTANGLES
 
-#include "../../../DFPSR/includeFramework.h"
+#include "../../DFPSR/includeFramework.h"
 
 namespace dsr {
 
