@@ -4,8 +4,8 @@
 
 # The global command for running the compiler (tested with g++ and clang++)
 COMPILER=$1
-# The root of the source files
-SOURCE_FOLDER=$2
+# The root of each folder containing source files
+SOURCE_FOLDERS=$2
 # The target folder where the library will be created
 TARGET=$3
 # The name of your library without any path nor extension
@@ -34,7 +34,7 @@ then
 	# Cat takes a filename and returns the content
 	OLD_SUM="$(cat ${SUM_FILENAME})"
 	# Use tar to create an archive and apply md5sum on the archive
-	NEW_SUM="$(tar cf - ${SOURCE_FOLDER} | md5sum)"
+	NEW_SUM="$(tar cf - ${SOURCE_FOLDERS} | md5sum)"
 	# Remove extra characters from the result
 	NEW_SUM=$(echo $NEW_SUM | tr -d " \t\n\r-")
 	echo "  Old md5 checksum: ${OLD_SUM}"
@@ -51,9 +51,14 @@ then
 fi
 
 # Check if the target library already exists
-if [ ! -f ${LIBRARY_FILENAME} ]; then
+if [ ! -f ${LIBRARY_FILENAME} ]
+then
 	# Argument: $1 as the folder to compile recursively
 	compileFolder() {
+		if [ ! -d "$1" ]; then
+			echo "Failed to compile files in $1 because the folder does not exist!"
+			exit 1
+		fi
 		# Compile files in the folder
 		for file in "$1"/*.cpp
 		do
@@ -79,12 +84,26 @@ if [ ! -f ${LIBRARY_FILENAME} ]; then
 			fi
 		done
 	}
-	# Compiling temporary objects
-	echo "Compiling cpp files into object files in $TARGET using $MODE mode."
-	compileFolder ${SOURCE_FOLDER}
+
+	# Split the space separated folders into an array
+	OLD_IFS="${IFS}"
+	IFS=" "
+	read -ra FOLDER_ARRAY <<< "$SOURCE_FOLDERS"
+	IFS="${OLD_IFS}" # IFS must be brought back to avoid crashing the compiler
+	#Compile each of the project folders (Only one of them may contain main, so the rest must be libraries)
+	for FOLDER in "${FOLDER_ARRAY[@]}"; do
+		echo "Compiling ${FOLDER} using ${COMPILER_FLAGS}."
+		compileFolder "${FOLDER}"
+		if [ $? -ne 0 ]
+		then
+			exit 1
+		fi
+	done
+
 	# Assembling static library
 	echo "Assembling object files into ${LIBRARY_NAME}.a."
 	ar rcs ${LIBRARY_FILENAME} ${TARGET}/*${OBJECT_POSTFIX}
+
 	# Cleaning up temporary objects
 	echo "Cleaning up temporary ${LIBRARY_NAME} object files."
 	rm -f ${TARGET}/*${OBJECT_POSTFIX}

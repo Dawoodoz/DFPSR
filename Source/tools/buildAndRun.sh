@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Load arguments into named variables in order
-PROJECT_FOLDER=$1 # Where your code is
+PROJECT_FOLDERS=$1 # Where your code is as a space separated list of folders in a quote
 TARGET_FILE=$2 # Your executable to build
 ROOT_PATH=$3 # The parent folder of DFPSR, SDK and tools
 TEMP_ROOT=$4 # Where your temporary objects should be

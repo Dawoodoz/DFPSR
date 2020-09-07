@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Load arguments into named variables in order
-PROJECT_FOLDER=$1 # Where your code is
+PROJECT_FOLDERS=$1 # Where your code is as a space separated list of folders in a quote
 TARGET_FILE=$2 # Your executable to build
 ROOT_PATH=$3 # The parent folder of DFPSR, SDK and tools
 TEMP_ROOT=$4 # Where your temporary objects should be
@@ -30,13 +30,13 @@ then
 fi
 
 # Abort if the project folder is replaced with the NONE keyword
-if [ ${PROJECT_FOLDER} = "NONE" ]
+if [ "${PROJECT_FOLDERS}" = "NONE" ]
 then
 	exit 0
 fi
 
 echo "Compiling application."
-${ROOT_PATH}/tools/buildLibrary.sh g++ ${PROJECT_FOLDER} ${TEMP_DIR} "application" "${COMPILER_FLAGS}" CLEAN
+${ROOT_PATH}/tools/buildLibrary.sh g++ "${PROJECT_FOLDERS}" ${TEMP_DIR} "application" "${COMPILER_FLAGS}" CLEAN
 if [ $? -ne 0 ]
 then
 	exit 1
