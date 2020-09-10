@@ -159,7 +159,7 @@ bool castShadows = true;
 
 // GUI
 static Window window;
-Component mainPanel, spritePanel, spriteList, modelPanel, modelList;
+Component mainPanel, toolPanel, spritePanel, spriteList, modelPanel, modelList;
 static int overlayMode = 2;
 	static const int OverlayMode_None = 0;
 	static const int OverlayMode_Profiling = 1;
@@ -170,7 +170,7 @@ static int tool = 0;
 	static const int Tool_PlaceModel = 1;
 	static const int ToolCount = 2;
 void updateOverlay() {
-	component_setProperty_integer(mainPanel, U"Visible", overlayMode == OverlayMode_Tools);
+	component_setProperty_integer(toolPanel, U"Visible", overlayMode == OverlayMode_Tools);
 		component_setProperty_integer(spritePanel, U"Visible", tool == Tool_PlaceSprite);
 		component_setProperty_integer(modelPanel, U"Visible", tool == Tool_PlaceModel);
 }
@@ -315,7 +315,7 @@ void sandbox_main() {
 		}
 	});
 
-	mainPanel = window_findComponentByName(window, U"mainPanel");
+	toolPanel = window_findComponentByName(window, U"toolPanel");
 	spritePanel = window_findComponentByName(window, U"spritePanel");
 	modelPanel = window_findComponentByName(window, U"modelPanel");
 	component_setPressedEvent(window_findComponentByName(window, U"spriteButton"), []() {
