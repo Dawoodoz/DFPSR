@@ -73,7 +73,11 @@ void spriteWorld_createTemporary_directedLight(SpriteWorld& world, const FVector
 
 void spriteWorld_clearTemporary(SpriteWorld& world);
 
+// Draw the world using the current camera at the center of colorTarget
 void spriteWorld_draw(SpriteWorld& world, AlignedImageRgbaU8& colorTarget);
+
+// Draw debug information
+void spriteWorld_debug_octrees(SpriteWorld& world, AlignedImageRgbaU8& colorTarget);
 
 // The result is an approximation in mini-tile units.
 //   The 3D system does not align with screen pixels for less than whole tile units.

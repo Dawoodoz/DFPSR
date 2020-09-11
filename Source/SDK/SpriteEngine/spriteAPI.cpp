@@ -416,6 +416,63 @@ public:
 	}
 };
 
+IVector3D getBoxCorner(const IVector3D& minBound, const IVector3D& maxBound, int cornerIndex) {
+	assert(cornerIndex >= 0 && cornerIndex < 8);
+	return IVector3D(
+	  ((uint32_t)cornerIndex & 1u) ? maxBound.x : minBound.x,
+	  ((uint32_t)cornerIndex & 2u) ? maxBound.y : minBound.y,
+	  ((uint32_t)cornerIndex & 4u) ? maxBound.z : minBound.z
+	);
+}
+
+static bool orthoCullingTest(const OrthoView& ortho, const IVector3D& minBound, const IVector3D& maxBound, const IRect& seenRegion) {
+	IVector2D corners[8];
+	for (int c = 0; c < 8; c++) {
+		corners[c] = ortho.miniTileOffsetToScreenPixel(getBoxCorner(minBound, maxBound, c));
+	}
+	if (corners[0].x < seenRegion.left()
+	 && corners[1].x < seenRegion.left()
+	 && corners[2].x < seenRegion.left()
+	 && corners[3].x < seenRegion.left()
+	 && corners[4].x < seenRegion.left()
+	 && corners[5].x < seenRegion.left()
+	 && corners[6].x < seenRegion.left()
+	 && corners[7].x < seenRegion.left()) {
+		return false;
+	}
+	if (corners[0].x > seenRegion.right()
+	 && corners[1].x > seenRegion.right()
+	 && corners[2].x > seenRegion.right()
+	 && corners[3].x > seenRegion.right()
+	 && corners[4].x > seenRegion.right()
+	 && corners[5].x > seenRegion.right()
+	 && corners[6].x > seenRegion.right()
+	 && corners[7].x > seenRegion.right()) {
+		return false;
+	}
+	if (corners[0].y < seenRegion.top()
+	 && corners[1].y < seenRegion.top()
+	 && corners[2].y < seenRegion.top()
+	 && corners[3].y < seenRegion.top()
+	 && corners[4].y < seenRegion.top()
+	 && corners[5].y < seenRegion.top()
+	 && corners[6].y < seenRegion.top()
+	 && corners[7].y < seenRegion.top()) {
+		return false;
+	}
+	if (corners[0].y > seenRegion.bottom()
+	 && corners[1].y > seenRegion.bottom()
+	 && corners[2].y > seenRegion.bottom()
+	 && corners[3].y > seenRegion.bottom()
+	 && corners[4].y > seenRegion.bottom()
+	 && corners[5].y > seenRegion.bottom()
+	 && corners[6].y > seenRegion.bottom()
+	 && corners[7].y > seenRegion.bottom()) {
+		return false;
+	}
+	return true;
+}
+
 // BlockState keeps track of when the background itself needs to update from static objects being created or destroyed
 enum class BlockState {
 	Unused,
@@ -433,64 +490,12 @@ public:
 	OrderedImageRgbaU8 normalBuffer;
 	AlignedImageF32 heightBuffer;
 private:
-	IVector3D getBoxCorner(const IVector3D& minBound, const IVector3D& maxBound, int cornerIndex) {
-		assert(cornerIndex >= 0 && cornerIndex < 8);
-		return IVector3D(
-		  ((uint32_t)cornerIndex & 1u) ? maxBound.x : minBound.x,
-		  ((uint32_t)cornerIndex & 2u) ? maxBound.y : minBound.y,
-		  ((uint32_t)cornerIndex & 4u) ? maxBound.z : minBound.z
-		);
-	}
 	// Pre-condition: diffuseBuffer must be cleared unless sprites cover the whole block
 	void draw(Octree<SpriteInstance>& sprites, Octree<ModelInstance>& models, const OrthoView& ortho) {
 		image_fill(this->normalBuffer, ColorRgbaI32(128));
 		image_fill(this->heightBuffer, -std::numeric_limits<float>::max());
 		OcTreeFilter orthoCullingFilter = [ortho,this](const IVector3D& minBound, const IVector3D& maxBound){
-			IVector2D corners[8];
-			for (int c = 0; c < 8; c++) {
-				corners[c] = ortho.miniTileOffsetToScreenPixel(getBoxCorner(minBound, maxBound, c));
-			}
-			if (corners[0].x < this->worldRegion.left()
-			 && corners[1].x < this->worldRegion.left()
-			 && corners[2].x < this->worldRegion.left()
-			 && corners[3].x < this->worldRegion.left()
-			 && corners[4].x < this->worldRegion.left()
-			 && corners[5].x < this->worldRegion.left()
-			 && corners[6].x < this->worldRegion.left()
-			 && corners[7].x < this->worldRegion.left()) {
-				return false;
-			}
-			if (corners[0].x > this->worldRegion.right()
-			 && corners[1].x > this->worldRegion.right()
-			 && corners[2].x > this->worldRegion.right()
-			 && corners[3].x > this->worldRegion.right()
-			 && corners[4].x > this->worldRegion.right()
-			 && corners[5].x > this->worldRegion.right()
-			 && corners[6].x > this->worldRegion.right()
-			 && corners[7].x > this->worldRegion.right()) {
-				return false;
-			}
-			if (corners[0].y < this->worldRegion.top()
-			 && corners[1].y < this->worldRegion.top()
-			 && corners[2].y < this->worldRegion.top()
-			 && corners[3].y < this->worldRegion.top()
-			 && corners[4].y < this->worldRegion.top()
-			 && corners[5].y < this->worldRegion.top()
-			 && corners[6].y < this->worldRegion.top()
-			 && corners[7].y < this->worldRegion.top()) {
-				return false;
-			}
-			if (corners[0].y > this->worldRegion.bottom()
-			 && corners[1].y > this->worldRegion.bottom()
-			 && corners[2].y > this->worldRegion.bottom()
-			 && corners[3].y > this->worldRegion.bottom()
-			 && corners[4].y > this->worldRegion.bottom()
-			 && corners[5].y > this->worldRegion.bottom()
-			 && corners[6].y > this->worldRegion.bottom()
-			 && corners[7].y > this->worldRegion.bottom()) {
-				return false;
-			}
-			return true;
+			return orthoCullingTest(ortho, minBound, maxBound, this->worldRegion);
 		};
 		sprites.map(orthoCullingFilter, [this, ortho](SpriteInstance& sprite, const IVector3D origin, const IVector3D minBound, const IVector3D maxBound){
 			drawSprite(sprite, ortho, -this->worldRegion.upperLeft(), this->heightBuffer, this->diffuseBuffer, this->normalBuffer);
@@ -865,6 +870,43 @@ void spriteWorld_clearTemporary(SpriteWorld& world) {
 void spriteWorld_draw(SpriteWorld& world, AlignedImageRgbaU8& colorTarget) {
 	MUST_EXIST(world, spriteWorld_draw);
 	world->draw(colorTarget);
+}
+
+#define BOX_LINE(INDEX_A, INDEX_B) draw_line(target, corners[INDEX_A].x, corners[INDEX_A].y, corners[INDEX_B].x, corners[INDEX_B].y, color);
+void debugDrawBound(SpriteWorld& world, const IVector2D& worldCenter, AlignedImageRgbaU8& target, const ColorRgbaI32& color, const IVector3D& minBound, const IVector3D& maxBound) {
+	IVector2D corners[8];
+	for (int c = 0; c < 8; c++) {
+		// TODO: Convert to real screen pixels using the camera offset.
+		corners[c] = world->ortho.view[world->cameraIndex].miniTilePositionToScreenPixel(getBoxCorner(minBound, maxBound, c), worldCenter);
+	}
+	BOX_LINE(0, 1);
+	BOX_LINE(2, 3);
+	BOX_LINE(4, 5);
+	BOX_LINE(6, 7);
+	BOX_LINE(0, 2);
+	BOX_LINE(1, 3);
+	BOX_LINE(4, 6);
+	BOX_LINE(5, 7);
+	BOX_LINE(0, 4);
+	BOX_LINE(1, 5);
+	BOX_LINE(2, 6);
+	BOX_LINE(3, 7);
+}
+
+void spriteWorld_debug_octrees(SpriteWorld& world, AlignedImageRgbaU8& colorTarget) {
+	MUST_EXIST(world, spriteWorld_debug_octrees);
+	IVector2D worldCenter = world->findWorldCenter(colorTarget);
+	IRect seenRegion = IRect(-worldCenter.x, -worldCenter.y, image_getWidth(colorTarget), image_getHeight(colorTarget));
+	OcTreeFilter orthoCullingFilter = [&world, &worldCenter, &seenRegion, &colorTarget](const IVector3D& minBound, const IVector3D& maxBound){
+		debugDrawBound(world, worldCenter, colorTarget, ColorRgbaI32(100, 100, 100, 255), minBound, maxBound);
+		return orthoCullingTest(world->ortho.view[world->cameraIndex], minBound, maxBound, seenRegion);
+	};
+	world->passiveSprites.map(orthoCullingFilter, [&world, &worldCenter, &colorTarget](SpriteInstance& sprite, const IVector3D origin, const IVector3D minBound, const IVector3D maxBound){
+		debugDrawBound(world, worldCenter, colorTarget, ColorRgbaI32(0, 255, 0, 255), minBound, maxBound);
+	});
+	world->passiveModels.map(orthoCullingFilter, [&world, &worldCenter, &colorTarget](ModelInstance& model, const IVector3D origin, const IVector3D minBound, const IVector3D maxBound){
+		debugDrawBound(world, worldCenter, colorTarget, ColorRgbaI32(0, 0, 255, 255), minBound, maxBound);
+	});
 }
 
 IVector3D spriteWorld_findGroundAtPixel(SpriteWorld& world, const AlignedImageRgbaU8& colorBuffer, const IVector2D& pixelLocation) {
