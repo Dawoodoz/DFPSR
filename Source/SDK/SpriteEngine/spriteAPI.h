@@ -27,7 +27,7 @@ struct SpriteInstance {
 public:
 	int typeIndex;
 	Direction direction;
-	IVector3D location; // Displayed at X, Y-Z in world pixel coordinates
+	IVector3D location; // Mini-tile coordinates
 	bool shadowCasting;
 public:
 	SpriteInstance(int typeIndex, Direction direction, const IVector3D& location, bool shadowCasting)

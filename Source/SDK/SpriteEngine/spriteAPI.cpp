@@ -26,6 +26,14 @@ static Transform3D combineModelToScreenTransform(const Transform3D& modelToWorld
 	return modelToWorldSpace * combineWorldToScreenTransform(worldSpaceToScreenDepth, worldOrigin);
 }
 
+static FVector3D IVector3DToFVector3D(const IVector3D& v) {
+	return FVector3D(v.x, v.y, v.z);
+}
+
+static IVector3D FVector3DToIVector3D(const FVector3D& v) {
+	return IVector3D(v.x, v.y, v.z);
+}
+
 struct SpriteConfig {
 	int centerX, centerY; // The sprite's origin in pixels relative to the upper left corner
 	int frameRows; // The atlas has one row for each frame
@@ -774,28 +782,6 @@ SpriteWorld spriteWorld_create(OrthoSystem ortho, int shadowResolution) {
 
 #define MUST_EXIST(OBJECT, METHOD) if (OBJECT.get() == nullptr) { throwError("The " #OBJECT " handle was null in " #METHOD "\n"); }
 
-void spriteWorld_addBackgroundSprite(SpriteWorld& world, const SpriteInstance& sprite) {
-	MUST_EXIST(world, spriteWorld_addBackgroundSprite);
-	if (sprite.typeIndex < 0 || sprite.typeIndex >= spriteTypes.length()) { throwError(U"Sprite type index ", sprite.typeIndex, " is out of bound!\n"); }
-	// Add the passive sprite to the octree
-	IVector3D origin = sprite.location;
-	IVector3D minBound = origin + spriteTypes[sprite.typeIndex].minBoundMini;
-	IVector3D maxBound = origin + spriteTypes[sprite.typeIndex].maxBoundMini;
-	world->passiveSprites.insert(sprite, origin, minBound, maxBound);
-	// Find the affected passive region and make it dirty
-	int frameIndex = getSpriteFrameIndex(sprite, world->ortho.view[world->cameraIndex]);
-	const SpriteFrame* frame = &spriteTypes[sprite.typeIndex].frames[frameIndex];
-	IVector2D upperLeft = world->ortho.miniTilePositionToScreenPixel(sprite.location, world->cameraIndex, IVector2D()) - frame->centerPoint;
-	IRect region = IRect(upperLeft.x, upperLeft.y, image_getWidth(frame->colorImage), image_getHeight(frame->colorImage));
-	world->updatePassiveRegion(region);
-}
-void spriteWorld_addTemporarySprite(SpriteWorld& world, const SpriteInstance& sprite) {
-	MUST_EXIST(world, spriteWorld_addTemporarySprite);
-	if (sprite.typeIndex < 0 || sprite.typeIndex >= spriteTypes.length()) { throwError(U"Sprite type index ", sprite.typeIndex, " is out of bound!\n"); }
-	// Add the temporary sprite
-	world->temporarySprites.push(sprite);
-}
-
 static void transformCorners(const FVector3D& minBound, const FVector3D& maxBound, const Transform3D& transform, FVector3D* resultCorners) {
 	resultCorners[0] = transform.transformPoint(FVector3D(minBound.x, minBound.y, minBound.z));
 	resultCorners[1] = transform.transformPoint(FVector3D(maxBound.x, minBound.y, minBound.z));
@@ -807,25 +793,30 @@ static void transformCorners(const FVector3D& minBound, const FVector3D& maxBoun
 	resultCorners[7] = transform.transformPoint(FVector3D(maxBound.x, maxBound.y, maxBound.z));
 }
 
-void spriteWorld_addBackgroundModel(SpriteWorld& world, const ModelInstance& instance) {
-	MUST_EXIST(world, spriteWorld_addBackgroundModel);
-	if (instance.typeIndex < 0 || instance.typeIndex >= modelTypes.length()) { throwError(U"Model type index ", instance.typeIndex, " is out of bound!\n"); }
-	// Get the origin and outer bounds
-	ModelType *type = &(modelTypes[instance.typeIndex]);
+// References:
+//   world contains the camera system for convenience
+// Input:
+//   transform tells how the local bounds are transformed into mini-tile world-space
+//   localMinBound and localMaxBound is the local mini-tile bound relative to the given origin
+// Output:
+//   worldMinBound and worldMaxBound is the bound in mini-tile coordinates relative to world origin
+//   globalPixelMinBound and globalPixelMaxBound is the bound in pixel coordinates relative to world origin
+static void transformBounds(
+  SpriteWorld& world, const Transform3D& transform, const FVector3D& localMinBound, const FVector3D& localMaxBound,
+  IVector3D& worldMinBound, IVector3D& worldMaxBound, IVector2D& globalPixelMinBound, IVector2D& globalPixelMaxBound) {
 	// Create a transform for global pixels
 	Transform3D worldToGlobalPixels = combineWorldToScreenTransform(world->ortho.view[world->cameraIndex].worldSpaceToScreenDepth, FVector2D());
 	FVector3D transformedCorners[8];
-	transformCorners(type->visibleModel->minBound, type->visibleModel->maxBound, instance.location, transformedCorners);
-	// World-space bound
-	IVector3D worldModelOrigin = ortho_floatingTileToMini(instance.location.position);
-	IVector3D worldMinBound = worldModelOrigin;
-	IVector3D worldMaxBound = worldModelOrigin;
+	transformCorners(localMinBound, localMaxBound, transform, transformedCorners);
+	// Initialize 3D bound
+	worldMinBound = FVector3DToIVector3D(transform.position);
+	worldMaxBound = FVector3DToIVector3D(transform.position);
 	// Screen bound
-	FVector3D globalPixelOrigin = worldToGlobalPixels.transformPoint(instance.location.position);
-	IVector2D globalPixelMinBound = IVector2D((int32_t)floor(globalPixelOrigin.x), (int32_t)floor(globalPixelOrigin.y));
-	IVector2D globalPixelMaxBound = globalPixelMinBound;
+	FVector3D globalPixelOrigin = worldToGlobalPixels.transformPoint(transform.position * ortho_tilesPerMiniUnit);
+	globalPixelMinBound = IVector2D((int32_t)floor(globalPixelOrigin.x), (int32_t)floor(globalPixelOrigin.y));
+	globalPixelMaxBound = globalPixelMinBound;
 	for (int c = 0; c < 8; c++) {
-		FVector3D miniSpaceCorner = transformedCorners[c] * (float)ortho_miniUnitsPerTile;
+		FVector3D miniSpaceCorner = transformedCorners[c];
 		replaceWithSmaller(worldMinBound.x, (int32_t)floor(miniSpaceCorner.x));
 		replaceWithSmaller(worldMinBound.y, (int32_t)floor(miniSpaceCorner.y));
 		replaceWithSmaller(worldMinBound.z, (int32_t)floor(miniSpaceCorner.z));
@@ -838,11 +829,54 @@ void spriteWorld_addBackgroundModel(SpriteWorld& world, const ModelInstance& ins
 		replaceWithLarger(globalPixelMaxBound.x, (int32_t)ceil(globalPixelSpaceCorner.x));
 		replaceWithLarger(globalPixelMaxBound.y, (int32_t)ceil(globalPixelSpaceCorner.y));
 	}
+}
+
+void spriteWorld_addBackgroundSprite(SpriteWorld& world, const SpriteInstance& sprite) {
+	MUST_EXIST(world, spriteWorld_addBackgroundSprite);
+	if (sprite.typeIndex < 0 || sprite.typeIndex >= spriteTypes.length()) { throwError(U"Sprite type index ", sprite.typeIndex, " is out of bound!\n"); }
+	// Transform the bounds
+	IVector3D worldMinBound = sprite.location, worldMaxBound = sprite.location;
+	IVector2D globalPixelMinBound, globalPixelMaxBound;
+	transformBounds(world, Transform3D(IVector3DToFVector3D(sprite.location), spriteDirections[sprite.direction]), IVector3DToFVector3D(spriteTypes[sprite.typeIndex].minBoundMini), IVector3DToFVector3D(spriteTypes[sprite.typeIndex].maxBoundMini), worldMinBound, worldMaxBound, globalPixelMinBound, globalPixelMaxBound);
 	// Add the passive sprite to the octree
-	world->passiveModels.insert(instance, worldModelOrigin, worldMinBound, worldMaxBound);
+	world->passiveSprites.insert(sprite, sprite.location, worldMinBound, worldMaxBound);
 	// Find the affected passive region and make it dirty
+	int frameIndex = getSpriteFrameIndex(sprite, world->ortho.view[world->cameraIndex]);
+	const SpriteFrame* frame = &spriteTypes[sprite.typeIndex].frames[frameIndex];
+	IVector2D upperLeft = world->ortho.miniTilePositionToScreenPixel(sprite.location, world->cameraIndex, IVector2D()) - frame->centerPoint;
+	IRect region = IRect(upperLeft.x, upperLeft.y, image_getWidth(frame->colorImage), image_getHeight(frame->colorImage));
+	world->updatePassiveRegion(region);
+}
+
+void spriteWorld_addBackgroundModel(SpriteWorld& world, const ModelInstance& instance) {
+	MUST_EXIST(world, spriteWorld_addBackgroundModel);
+	if (instance.typeIndex < 0 || instance.typeIndex >= modelTypes.length()) { throwError(U"Model type index ", instance.typeIndex, " is out of bound!\n"); }
+	// Get the origin and outer bounds
+	ModelType *type = &(modelTypes[instance.typeIndex]);
+	// Transform the bounds
+	IVector3D origin = ortho_floatingTileToMini(instance.location.position);
+	IVector3D worldMinBound = origin, worldMaxBound = origin;
+	IVector2D globalPixelMinBound, globalPixelMaxBound;
+	Transform3D transform = Transform3D(instance.location.position * (float)ortho_miniUnitsPerTile, instance.location.transform);
+	transformBounds(
+	  world, transform,
+	  type->visibleModel->minBound * (float)ortho_miniUnitsPerTile,
+	  type->visibleModel->maxBound * (float)ortho_miniUnitsPerTile,
+	  worldMinBound, worldMaxBound, globalPixelMinBound, globalPixelMaxBound
+	);
+	// Add the passive model to the octree
+	world->passiveModels.insert(instance, origin, worldMinBound, worldMaxBound);
+	// Make the affected region dirty
 	world->updatePassiveRegion(IRect(globalPixelMinBound.x, globalPixelMinBound.y, globalPixelMaxBound.x - globalPixelMinBound.x, globalPixelMaxBound.y - globalPixelMinBound.y));
 }
+
+void spriteWorld_addTemporarySprite(SpriteWorld& world, const SpriteInstance& sprite) {
+	MUST_EXIST(world, spriteWorld_addTemporarySprite);
+	if (sprite.typeIndex < 0 || sprite.typeIndex >= spriteTypes.length()) { throwError(U"Sprite type index ", sprite.typeIndex, " is out of bound!\n"); }
+	// Add the temporary sprite
+	world->temporarySprites.push(sprite);
+}
+
 void spriteWorld_addTemporaryModel(SpriteWorld& world, const ModelInstance& instance) {
 	MUST_EXIST(world, spriteWorld_addTemporaryModel);
 	// Add the temporary model
