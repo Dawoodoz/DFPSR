@@ -65,10 +65,10 @@ void directedLight(const FMatrix3x3& normalToWorldSpace, OrderedImageRgbaU8& lig
 	});
 }
 void setDirectedLight(const OrthoView& camera, OrderedImageRgbaU8& lightBuffer, const OrderedImageRgbaU8& normalBuffer, const FVector3D& lightDirection, float lightIntensity, const ColorRgbI32& lightColor) {
-	directedLight<false>(camera.normalToWorldSpace, lightBuffer, normalBuffer, lightDirection, lightIntensity, ColorRgbI32(255, 255, 255));
+	directedLight<false>(camera.normalToWorldSpace, lightBuffer, normalBuffer, lightDirection, lightIntensity, lightColor);
 }
 void addDirectedLight(const OrthoView& camera, OrderedImageRgbaU8& lightBuffer, const OrderedImageRgbaU8& normalBuffer, const FVector3D& lightDirection, float lightIntensity, const ColorRgbI32& lightColor) {
-	directedLight<true>(camera.normalToWorldSpace, lightBuffer, normalBuffer, lightDirection, lightIntensity, ColorRgbI32(255, 255, 255));
+	directedLight<true>(camera.normalToWorldSpace, lightBuffer, normalBuffer, lightDirection, lightIntensity, lightColor);
 }
 
 static IRect calculateBound(const OrthoView& camera, const IVector2D& worldCenter, OrderedImageRgbaU8& lightBuffer, const FVector3D& lightSpacePosition, float lightRadius, int alignmentPixels) {
