@@ -948,6 +948,14 @@ IVector3D spriteWorld_findGroundAtPixel(SpriteWorld& world, const AlignedImageRg
 	return world->ortho.pixelToMiniPosition(pixelLocation, world->cameraIndex, world->findWorldCenter(colorBuffer));
 }
 
+void spriteWorld_setCameraLocation(SpriteWorld& world, const IVector3D miniTileLocation) {
+	MUST_EXIST(world, spriteWorld_setCameraLocation);
+	if (world->cameraLocation != miniTileLocation) {
+		world->cameraLocation = miniTileLocation;
+		world->dirtyBackground.allDirty();
+	}
+}
+
 void spriteWorld_moveCameraInPixels(SpriteWorld& world, const IVector2D& pixelOffset) {
 	MUST_EXIST(world, spriteWorld_moveCameraInPixels);
 	if (pixelOffset.x != 0 || pixelOffset.y != 0) {

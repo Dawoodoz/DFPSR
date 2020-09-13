@@ -83,6 +83,9 @@ void spriteWorld_debug_octrees(SpriteWorld& world, AlignedImageRgbaU8& colorTarg
 //   The 3D system does not align with screen pixels for less than whole tile units.
 IVector3D spriteWorld_findGroundAtPixel(SpriteWorld& world, const AlignedImageRgbaU8& colorBuffer, const IVector2D& pixelLocation);
 
+// Set the camera's location directly
+void spriteWorld_setCameraLocation(SpriteWorld& world, const IVector3D miniTileLocation);
+
 // Approximates a mini-tile offset along the ground from the given pixel offset and moves the camera accordingly
 //   If the offset is too small, the camera might not move at all
 void spriteWorld_moveCameraInPixels(SpriteWorld& world, const IVector2D& pixelOffset);
