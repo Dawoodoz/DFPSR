@@ -150,7 +150,7 @@ static ModelInstance modelBrush(0, Transform3D());
 static const int brushStep = ortho_miniUnitsPerTile / 32;
 static int pressing_left = 0, pressing_right = 0, pressing_up = 0, pressing_down = 0, pressing_delete = 0;
 static IVector2D cameraMovement;
-static const float cameraSpeed = 1.0f;
+static const int cameraSpeed = 1;
 
 // World
 static SpriteWorld world;
@@ -412,7 +412,7 @@ void sandbox_main() {
 			stepRemainder -= (double)msTicks;
 
 			// Move the camera
-			int cameraSteps = (int)(cameraSpeed * msTicks);
+			int cameraSteps = cameraSpeed * msTicks;
 			// TODO: Find a way to move the camera using exact pixel offsets so that the camera's 3D location is only generating the 2D offset when rotating.
 			//       Can the sprite brush be guaranteed to come back to the mouse location after adding and subtracting the same 2D camera offset?
 			//         A new integer coordinate system along the ground might move half a pixel vertically and a full pixel sideways in the diagonal view.
