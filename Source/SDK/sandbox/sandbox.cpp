@@ -148,7 +148,7 @@ static SpriteInstance spriteBrush(0, dir0, IVector3D(), true);
 static bool placingModel = false; // True when left mouse button is pressed and the direction is being assigned
 static ModelInstance modelBrush(0, Transform3D());
 static const int brushStep = ortho_miniUnitsPerTile / 32;
-static int buttonPressed[4] = {0, 0, 0, 0};
+static int pressing_left = 0, pressing_right = 0, pressing_up = 0, pressing_down = 0, pressing_delete = 0;
 static IVector2D cameraMovement;
 static const float cameraSpeed = 1.0f;
 
@@ -252,13 +252,15 @@ void sandbox_main() {
 				// Terminate safely after the next frame
 				running = false;
 			} else if (key == DsrKey_A) {
-				buttonPressed[0] = 1;
+				pressing_left = 1;
 			} else if (key == DsrKey_D) {
-				buttonPressed[1] = 1;
+				pressing_right = 1;
 			} else if (key == DsrKey_W) {
-				buttonPressed[2] = 1;
+				pressing_up = 1;
 			} else if (key == DsrKey_S) {
-				buttonPressed[3] = 1;
+				pressing_down = 1;
+			} else if (key == DsrKey_Delete) {
+				pressing_delete = 1;
 			} else if (key == DsrKey_LeftArrow) {
 				spriteBrush.direction = correctDirection(spriteBrush.direction + dir270);
 			} else if (key == DsrKey_RightArrow) {
@@ -266,17 +268,19 @@ void sandbox_main() {
 			}
 		} else if (event.keyboardEventType == KeyboardEventType::KeyUp) {
 			if (key == DsrKey_A) {
-				buttonPressed[0] = 0;
+				pressing_left = 0;
 			} else if (key == DsrKey_D) {
-				buttonPressed[1] = 0;
+				pressing_right = 0;
 			} else if (key == DsrKey_W) {
-				buttonPressed[2] = 0;
+				pressing_up = 0;
 			} else if (key == DsrKey_S) {
-				buttonPressed[3] = 0;
+				pressing_down = 0;
+			} else if (key == DsrKey_Delete) {
+				pressing_delete = 0;
 			}
 		}
-		cameraMovement.x = buttonPressed[1] - buttonPressed[0];
-		cameraMovement.y = buttonPressed[3] - buttonPressed[2];
+		cameraMovement.x = pressing_right - pressing_left;
+		cameraMovement.y = pressing_down - pressing_up;
 	});
 	// Get component handles and assign actions
 	mainPanel = window_getRoot(window);
@@ -438,6 +442,14 @@ void sandbox_main() {
 			spriteBrush.location = IVector3D(mouseMiniPos.x, brushHeight, mouseMiniPos.z);
 			if (tileAlign) {
 				spriteBrush.location = ortho_roundToTile(spriteBrush.location);
+			}
+
+			// Repeated tools
+			if (pressing_delete) {
+				IVector3D searchMinBound = IVector3D(mouseMiniPos.x - ortho_miniUnitsPerTile / 2,-1000000, mouseMiniPos.z - ortho_miniUnitsPerTile / 2);
+				IVector3D searchMaxBound = IVector3D(mouseMiniPos.x + ortho_miniUnitsPerTile / 2, 1000000, mouseMiniPos.z + ortho_miniUnitsPerTile / 2);
+				spriteWorld_removeBackgroundSprites(world, searchMinBound, searchMaxBound);
+				spriteWorld_removeBackgroundModels(world, searchMinBound, searchMaxBound);
 			}
 
 			// Illuminate the world using soft light from the sky

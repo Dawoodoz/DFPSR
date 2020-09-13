@@ -7,15 +7,21 @@
 
 namespace dsr {
 
-// TODO: A method for receiving 3D line drawing callbacks for debug drawing the entire octree in 3D.
+enum class LeafAction {
+	None,
+	Erase // Erase the leaf as soon as possible
+};
 
+// Used for recursively selecting parts of the tree to enter
 // bool(const IVector3D& minBound, const IVector3D& maxBound)
 using OcTreeFilter = std::function<bool(const IVector3D&, const IVector3D&)>;
 
+// Used to read data from the tree
 // void(T& content, const IVector3D origin, const IVector3D minBound, const IVector3D maxBound)
 template <typename T>
-using OcTreeLeafOperation = std::function<void(T&, const IVector3D, const IVector3D, const IVector3D)>;
+using OcTreeLeafOperation = std::function<LeafAction(T&, const IVector3D, const IVector3D, const IVector3D)>;
 
+// A leaf
 template <typename T>
 class OctreeLeaf {
 public:
@@ -25,9 +31,11 @@ public:
 	OctreeLeaf(const T& content, const IVector3D origin, const IVector3D minBound, const IVector3D maxBound)
 	: content(content), origin(origin), minBound(minBound), maxBound(maxBound) {}
 public:
-	void find(const OcTreeFilter& boundFilter, const OcTreeLeafOperation<T>& leafOperation) {
+	LeafAction find(const OcTreeFilter& boundFilter, const OcTreeLeafOperation<T>& leafOperation) {
 		if (boundFilter(this->minBound, this->maxBound)) {
-			leafOperation(this->content, this->origin, this->minBound, this->maxBound);
+			return leafOperation(this->content, this->origin, this->minBound, this->maxBound);
+		} else {
+			return LeafAction::None;
 		}
 	}
 };
@@ -57,6 +65,7 @@ inline IBox3D splitBound(const IBox3D& parent, int branchIndex) {
 	return IBox3D(minBound, maxBound);
 }
 
+// A branch
 template <typename T>
 class OctreeNode {
 public:
@@ -68,7 +77,7 @@ public:
 	//   Leaves that are too large may stay at the parent node
 	bool divided = false;
 	// One optional child node for each of the 8 sections in the octree
-	std::shared_ptr<OctreeNode<T>> childNodes[8]; // TODO: Use for branching when getting too crowded with direct leaves
+	std::shared_ptr<OctreeNode<T>> childNodes[8]; // Used for branching when getting too crowded with direct leaves
 	// The leaves that have not yet been assigned to a specific child node
 	List<OctreeLeaf<T>> leaves;
 public:
@@ -170,9 +179,13 @@ public:
 	}
 	void find(const OcTreeFilter& boundFilter, const OcTreeLeafOperation<T>& leafOperation) {
 		if (boundFilter(this->minLeafBound, this->maxLeafBound)) {
-			for (int l = 0; l < this->leaves.length(); l++) {
-				this->leaves[l].find(boundFilter, leafOperation);
+			// Looping backwards over leaves allow erasing without stepping into recently moved elements
+			for (int l = this->leaves.length() - 1; l >= 0; l--) {
+				if (this->leaves[l].find(boundFilter, leafOperation) == LeafAction::Erase) {
+					this->leaves.remove(l);
+				}
 			}
+			// Search in the other branches recursively
 			for (int n = 0; n < 8; n++) {
 				if (this->childNodes[n].get() != nullptr) {
 					this->childNodes[n]->find(boundFilter, leafOperation);
@@ -182,6 +195,7 @@ public:
 	}
 };
 
+// The root
 template <typename T>
 class Octree {
 private:

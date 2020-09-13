@@ -378,15 +378,6 @@ public:
 			}
 		}
 	}
-	// Render shadows from passive models
-	void renderPassiveShadows(CubeMapF32& shadowTarget, Octree<ModelInstance>& models, const FMatrix3x3& normalToWorld) const {
-		IVector3D center = ortho_floatingTileToMini(this->position);
-		IVector3D minBound = center - ortho_floatingTileToMini(radius);
-		IVector3D maxBound = center + ortho_floatingTileToMini(radius);
-		models.map(minBound, maxBound, [this, shadowTarget, normalToWorld](ModelInstance& model, const IVector3D origin, const IVector3D minBound, const IVector3D maxBound) mutable {
-			this->renderModelShadow(shadowTarget, model, normalToWorld);
-		});
-	}
 	// Render shadows from passive sprites
 	void renderPassiveShadows(CubeMapF32& shadowTarget, Octree<SpriteInstance>& sprites, const FMatrix3x3& normalToWorld) const {
 		IVector3D center = ortho_floatingTileToMini(this->position);
@@ -394,6 +385,17 @@ public:
 		IVector3D maxBound = center + ortho_floatingTileToMini(radius);
 		sprites.map(minBound, maxBound, [this, shadowTarget, normalToWorld](SpriteInstance& sprite, const IVector3D origin, const IVector3D minBound, const IVector3D maxBound) mutable {
 			this->renderSpriteShadow(shadowTarget, sprite, normalToWorld);
+			return LeafAction::None;
+		});
+	}
+	// Render shadows from passive models
+	void renderPassiveShadows(CubeMapF32& shadowTarget, Octree<ModelInstance>& models, const FMatrix3x3& normalToWorld) const {
+		IVector3D center = ortho_floatingTileToMini(this->position);
+		IVector3D minBound = center - ortho_floatingTileToMini(radius);
+		IVector3D maxBound = center + ortho_floatingTileToMini(radius);
+		models.map(minBound, maxBound, [this, shadowTarget, normalToWorld](ModelInstance& model, const IVector3D origin, const IVector3D minBound, const IVector3D maxBound) mutable {
+			this->renderModelShadow(shadowTarget, model, normalToWorld);
+			return LeafAction::None;
 		});
 	}
 public:
@@ -507,9 +509,11 @@ private:
 		};
 		sprites.map(orthoCullingFilter, [this, ortho](SpriteInstance& sprite, const IVector3D origin, const IVector3D minBound, const IVector3D maxBound){
 			drawSprite(sprite, ortho, -this->worldRegion.upperLeft(), this->heightBuffer, this->diffuseBuffer, this->normalBuffer);
+			return LeafAction::None;
 		});
 		models.map(orthoCullingFilter, [this, ortho](ModelInstance& model, const IVector3D origin, const IVector3D minBound, const IVector3D maxBound){
 			drawModel(model, ortho, -this->worldRegion.upperLeft(), this->heightBuffer, this->diffuseBuffer, this->normalBuffer);
+			return LeafAction::None;
 		});
 	}
 public:
@@ -782,6 +786,19 @@ SpriteWorld spriteWorld_create(OrthoSystem ortho, int shadowResolution) {
 
 #define MUST_EXIST(OBJECT, METHOD) if (OBJECT.get() == nullptr) { throwError("The " #OBJECT " handle was null in " #METHOD "\n"); }
 
+// Get the eight corners of an axis-aligned bounding box
+static void getCorners(const FVector3D& minBound, const FVector3D& maxBound, FVector3D* resultCorners) {
+	resultCorners[0] = FVector3D(minBound.x, minBound.y, minBound.z);
+	resultCorners[1] = FVector3D(maxBound.x, minBound.y, minBound.z);
+	resultCorners[2] = FVector3D(minBound.x, maxBound.y, minBound.z);
+	resultCorners[3] = FVector3D(maxBound.x, maxBound.y, minBound.z);
+	resultCorners[4] = FVector3D(minBound.x, minBound.y, maxBound.z);
+	resultCorners[5] = FVector3D(maxBound.x, minBound.y, maxBound.z);
+	resultCorners[6] = FVector3D(minBound.x, maxBound.y, maxBound.z);
+	resultCorners[7] = FVector3D(maxBound.x, maxBound.y, maxBound.z);
+}
+
+// Transform the eight corners of an axis-aligned bounding box
 static void transformCorners(const FVector3D& minBound, const FVector3D& maxBound, const Transform3D& transform, FVector3D* resultCorners) {
 	resultCorners[0] = transform.transformPoint(FVector3D(minBound.x, minBound.y, minBound.z));
 	resultCorners[1] = transform.transformPoint(FVector3D(maxBound.x, minBound.y, minBound.z));
@@ -800,21 +817,15 @@ static void transformCorners(const FVector3D& minBound, const FVector3D& maxBoun
 //   localMinBound and localMaxBound is the local mini-tile bound relative to the given origin
 // Output:
 //   worldMinBound and worldMaxBound is the bound in mini-tile coordinates relative to world origin
-//   globalPixelMinBound and globalPixelMaxBound is the bound in pixel coordinates relative to world origin
-static void transformBounds(
-  SpriteWorld& world, const Transform3D& transform, const FVector3D& localMinBound, const FVector3D& localMaxBound,
-  IVector3D& worldMinBound, IVector3D& worldMaxBound, IVector2D& globalPixelMinBound, IVector2D& globalPixelMaxBound) {
-	// Create a transform for global pixels
-	Transform3D worldToGlobalPixels = combineWorldToScreenTransform(world->ortho.view[world->cameraIndex].worldSpaceToScreenDepth, FVector2D());
+static void get3DBounds(
+  SpriteWorld& world, const Transform3D& transform, const FVector3D& localMinBound, const FVector3D& localMaxBound, IVector3D& worldMinBound, IVector3D& worldMaxBound) {
+	// Transform from local to global coordinates
 	FVector3D transformedCorners[8];
 	transformCorners(localMinBound, localMaxBound, transform, transformedCorners);
-	// Initialize 3D bound
+	// Initialize 3D bound to the center point so that tree branches expand bounds to include the origins of every leaf
+	//   This make searches a lot easier for off-centered sprites and models by belonging to a coordinate independent of the design
 	worldMinBound = FVector3DToIVector3D(transform.position);
 	worldMaxBound = FVector3DToIVector3D(transform.position);
-	// Screen bound
-	FVector3D globalPixelOrigin = worldToGlobalPixels.transformPoint(transform.position * ortho_tilesPerMiniUnit);
-	globalPixelMinBound = IVector2D((int32_t)floor(globalPixelOrigin.x), (int32_t)floor(globalPixelOrigin.y));
-	globalPixelMaxBound = globalPixelMinBound;
 	for (int c = 0; c < 8; c++) {
 		FVector3D miniSpaceCorner = transformedCorners[c];
 		replaceWithSmaller(worldMinBound.x, (int32_t)floor(miniSpaceCorner.x));
@@ -823,7 +834,26 @@ static void transformBounds(
 		replaceWithLarger(worldMaxBound.x, (int32_t)ceil(miniSpaceCorner.x));
 		replaceWithLarger(worldMaxBound.y, (int32_t)ceil(miniSpaceCorner.y));
 		replaceWithLarger(worldMaxBound.z, (int32_t)ceil(miniSpaceCorner.z));
-		FVector3D globalPixelSpaceCorner = worldToGlobalPixels.transformPoint(transformedCorners[c]);
+	}
+}
+
+// References:
+//   world contains the camera system for convenience
+// Input:
+//   worldMinBound and worldMaxBound is the bound in mini-tile coordinates relative to world origin
+// Output:
+//   globalPixelMinBound and globalPixelMaxBound is the bound in pixel coordinates relative to world origin
+static void getScreenBounds(SpriteWorld& world, const IVector3D& worldMinBound, const IVector3D& worldMaxBound, IVector2D& globalPixelMinBound, IVector2D& globalPixelMaxBound) {
+	// Create a transform for global pixels
+	Transform3D worldToGlobalPixels = combineWorldToScreenTransform(world->ortho.view[world->cameraIndex].worldSpaceToScreenDepth, FVector2D());
+	FVector3D corners[8];
+	getCorners(IVector3DToFVector3D(worldMinBound) * ortho_tilesPerMiniUnit, IVector3DToFVector3D(worldMaxBound) * ortho_tilesPerMiniUnit, corners);
+	// Screen bound
+	FVector3D firstGlobalPixelSpaceCorner = worldToGlobalPixels.transformPoint(corners[0]);
+	globalPixelMinBound = IVector2D((int32_t)floor(firstGlobalPixelSpaceCorner.x), (int32_t)floor(firstGlobalPixelSpaceCorner.y));
+	globalPixelMaxBound = IVector2D((int32_t)ceil(firstGlobalPixelSpaceCorner.x), (int32_t)ceil(firstGlobalPixelSpaceCorner.y));
+	for (int c = 0; c < 8; c++) {
+		FVector3D globalPixelSpaceCorner = worldToGlobalPixels.transformPoint(corners[c]);
 		replaceWithSmaller(globalPixelMinBound.x, (int32_t)floor(globalPixelSpaceCorner.x));
 		replaceWithSmaller(globalPixelMinBound.y, (int32_t)floor(globalPixelSpaceCorner.y));
 		replaceWithLarger(globalPixelMaxBound.x, (int32_t)ceil(globalPixelSpaceCorner.x));
@@ -834,10 +864,10 @@ static void transformBounds(
 void spriteWorld_addBackgroundSprite(SpriteWorld& world, const SpriteInstance& sprite) {
 	MUST_EXIST(world, spriteWorld_addBackgroundSprite);
 	if (sprite.typeIndex < 0 || sprite.typeIndex >= spriteTypes.length()) { throwError(U"Sprite type index ", sprite.typeIndex, " is out of bound!\n"); }
-	// Transform the bounds
+	// Get world aligned 3D bounds based on the local bounding box
 	IVector3D worldMinBound = sprite.location, worldMaxBound = sprite.location;
-	IVector2D globalPixelMinBound, globalPixelMaxBound;
-	transformBounds(world, Transform3D(IVector3DToFVector3D(sprite.location), spriteDirections[sprite.direction]), IVector3DToFVector3D(spriteTypes[sprite.typeIndex].minBoundMini), IVector3DToFVector3D(spriteTypes[sprite.typeIndex].maxBoundMini), worldMinBound, worldMaxBound, globalPixelMinBound, globalPixelMaxBound);
+	get3DBounds(world, Transform3D(IVector3DToFVector3D(sprite.location), spriteDirections[sprite.direction]), IVector3DToFVector3D(spriteTypes[sprite.typeIndex].minBoundMini), IVector3DToFVector3D(spriteTypes[sprite.typeIndex].maxBoundMini), worldMinBound, worldMaxBound);
+	// No need for getScreenBounds when the sprite has known image bounds that are more precise
 	// Add the passive sprite to the octree
 	world->passiveSprites.insert(sprite, sprite.location, worldMinBound, worldMaxBound);
 	// Find the affected passive region and make it dirty
@@ -855,19 +885,57 @@ void spriteWorld_addBackgroundModel(SpriteWorld& world, const ModelInstance& ins
 	ModelType *type = &(modelTypes[instance.typeIndex]);
 	// Transform the bounds
 	IVector3D origin = ortho_floatingTileToMini(instance.location.position);
+	// Get world aligned 3D bounds based on the local bounding box
 	IVector3D worldMinBound = origin, worldMaxBound = origin;
 	IVector2D globalPixelMinBound, globalPixelMaxBound;
 	Transform3D transform = Transform3D(instance.location.position * (float)ortho_miniUnitsPerTile, instance.location.transform);
-	transformBounds(
-	  world, transform,
-	  type->visibleModel->minBound * (float)ortho_miniUnitsPerTile,
-	  type->visibleModel->maxBound * (float)ortho_miniUnitsPerTile,
-	  worldMinBound, worldMaxBound, globalPixelMinBound, globalPixelMaxBound
-	);
+	get3DBounds(world, transform, type->visibleModel->minBound * (float)ortho_miniUnitsPerTile, type->visibleModel->maxBound * (float)ortho_miniUnitsPerTile, worldMinBound, worldMaxBound);
+	// Getting screen bounds from world aligned bounds will grow even more when transformed to the screen, but this won't affect already dirty regions when adding many models at the same time
+	getScreenBounds(world, worldMinBound, worldMaxBound, globalPixelMinBound, globalPixelMaxBound);
 	// Add the passive model to the octree
 	world->passiveModels.insert(instance, origin, worldMinBound, worldMaxBound);
 	// Make the affected region dirty
 	world->updatePassiveRegion(IRect(globalPixelMinBound.x, globalPixelMinBound.y, globalPixelMaxBound.x - globalPixelMinBound.x, globalPixelMaxBound.y - globalPixelMinBound.y));
+}
+
+//using SpriteSelection = std::function<bool(SpriteInstance&, const IVector3D, const IVector3D, const IVector3D)>;
+void spriteWorld_removeBackgroundSprites(SpriteWorld& world, const IVector3D& searchMinBound, const IVector3D& searchMaxBound, const SpriteSelection& filter) {
+	world->passiveSprites.map(searchMinBound, searchMaxBound, [world, filter](SpriteInstance& sprite, const IVector3D origin, const IVector3D minBound, const IVector3D maxBound) mutable {
+		if (filter(sprite, origin, minBound, maxBound)) {
+			IVector2D globalPixelMinBound, globalPixelMaxBound;
+			getScreenBounds(world, minBound, maxBound, globalPixelMinBound, globalPixelMaxBound);
+			world->updatePassiveRegion(IRect(globalPixelMinBound.x, globalPixelMinBound.y, globalPixelMaxBound.x - globalPixelMinBound.x, globalPixelMaxBound.y - globalPixelMinBound.y));
+			return LeafAction::Erase;
+		} else {
+			return LeafAction::None;
+		}
+	});
+}
+
+void spriteWorld_removeBackgroundSprites(SpriteWorld& world, const IVector3D& searchMinBound, const IVector3D& searchMaxBound) {
+	spriteWorld_removeBackgroundSprites(world, searchMinBound, searchMaxBound, [](SpriteInstance& sprite, const IVector3D origin, const IVector3D minBound, const IVector3D maxBound) {
+		return true; // Erase everything in the bound
+	});
+}
+
+//using ModelSelection = std::function<bool(ModelInstance&, const IVector3D, const IVector3D, const IVector3D)>;
+void spriteWorld_removeBackgroundModels(SpriteWorld& world, const IVector3D& searchMinBound, const IVector3D& searchMaxBound, const ModelSelection& filter) {
+	world->passiveModels.map(searchMinBound, searchMaxBound, [world, filter](ModelInstance& model, const IVector3D origin, const IVector3D minBound, const IVector3D maxBound) mutable {
+		if (filter(model, origin, minBound, maxBound)) {
+			IVector2D globalPixelMinBound, globalPixelMaxBound;
+			getScreenBounds(world, minBound, maxBound, globalPixelMinBound, globalPixelMaxBound);
+			world->updatePassiveRegion(IRect(globalPixelMinBound.x, globalPixelMinBound.y, globalPixelMaxBound.x - globalPixelMinBound.x, globalPixelMaxBound.y - globalPixelMinBound.y));
+			return LeafAction::Erase;
+		} else {
+			return LeafAction::None;
+		}
+	});
+}
+
+void spriteWorld_removeBackgroundModels(SpriteWorld& world, const IVector3D& searchMinBound, const IVector3D& searchMaxBound) {
+	spriteWorld_removeBackgroundModels(world, searchMinBound, searchMaxBound, [](ModelInstance& model, const IVector3D origin, const IVector3D minBound, const IVector3D maxBound) {
+		return true; // Erase everything in the bound
+	});
 }
 
 void spriteWorld_addTemporarySprite(SpriteWorld& world, const SpriteInstance& sprite) {
@@ -937,9 +1005,11 @@ void spriteWorld_debug_octrees(SpriteWorld& world, AlignedImageRgbaU8& colorTarg
 	};
 	world->passiveSprites.map(orthoCullingFilter, [&world, &worldCenter, &colorTarget](SpriteInstance& sprite, const IVector3D origin, const IVector3D minBound, const IVector3D maxBound){
 		debugDrawBound(world, worldCenter, colorTarget, ColorRgbaI32(0, 255, 0, 255), minBound, maxBound);
+		return LeafAction::None;
 	});
 	world->passiveModels.map(orthoCullingFilter, [&world, &worldCenter, &colorTarget](ModelInstance& model, const IVector3D origin, const IVector3D minBound, const IVector3D maxBound){
 		debugDrawBound(world, worldCenter, colorTarget, ColorRgbaI32(0, 0, 255, 255), minBound, maxBound);
+		return LeafAction::None;
 	});
 }
 

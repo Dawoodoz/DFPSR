@@ -123,6 +123,7 @@ public:
 		return this->last();
 	}
 	// Side-effect: Deletes the element at removedIndex
+	//   We can assume that the order is stable in the STD implementation, because ListTest.cpp would catch alternative interpretations
 	void remove(int64_t removedIndex) {
 		this->backend.erase(this->backend.begin() + removedIndex);
 	}

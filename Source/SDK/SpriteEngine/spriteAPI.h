@@ -25,13 +25,14 @@ inline FVector3D parseFVector3D(const ReadableString& content) {
 //   To be rendered into images in advance for maximum detail level
 struct SpriteInstance {
 public:
-	int typeIndex;
+	int32_t typeIndex;
 	Direction direction;
 	IVector3D location; // Mini-tile coordinates
 	bool shadowCasting;
+	uint64_t userData; // Can be used to store additional information needed for specific games
 public:
-	SpriteInstance(int typeIndex, Direction direction, const IVector3D& location, bool shadowCasting)
-	: typeIndex(typeIndex), direction(direction), location(location), shadowCasting(shadowCasting) {}
+	SpriteInstance(int typeIndex, Direction direction, const IVector3D& location, bool shadowCasting, uint64_t userData = 0)
+	: typeIndex(typeIndex), direction(direction), location(location), shadowCasting(shadowCasting), userData(userData) {}
 };
 
 struct DenseModelImpl;
@@ -44,9 +45,10 @@ struct ModelInstance {
 public:
 	int typeIndex;
 	Transform3D location; // 3D tile coordinates with translation and 3-axis rotation allowed
+	uint64_t userData; // Can be used to store additional information needed for specific games
 public:
-	ModelInstance(int typeIndex, const Transform3D& location)
-	: typeIndex(typeIndex), location(location) {}
+	ModelInstance(int typeIndex, const Transform3D& location, uint64_t userData = 0)
+	: typeIndex(typeIndex), location(location), userData(userData) {}
 };
 
 class SpriteWorldImpl;
@@ -65,6 +67,24 @@ void spriteWorld_addBackgroundSprite(SpriteWorld& world, const SpriteInstance& s
 void spriteWorld_addBackgroundModel(SpriteWorld& world, const ModelInstance& instance);
 void spriteWorld_addTemporarySprite(SpriteWorld& world, const SpriteInstance& sprite);
 void spriteWorld_addTemporaryModel(SpriteWorld& world, const ModelInstance& instance);
+
+// SpriteInstance& sprite, const IVector3D origin, const IVector3D minBound, const IVector3D maxBound -> bool selected
+using SpriteSelection = std::function<bool(SpriteInstance&, const IVector3D, const IVector3D, const IVector3D)>;
+// Remove sprites using an axis aligned serach box in mini-tile coordinates and a lambda filter
+//   Use userData in the lambda's first argument to get ownership information
+//   Return true for each sprite to remove from the background
+void spriteWorld_removeBackgroundSprites(SpriteWorld& world, const IVector3D& searchMinBound, const IVector3D& searchMaxBound, const SpriteSelection& filter);
+// Erasing every sprite within the bound
+void spriteWorld_removeBackgroundSprites(SpriteWorld& world, const IVector3D& searchMinBound, const IVector3D& searchMaxBound);
+
+// ModelInstance& model, const IVector3D origin, const IVector3D minBound, const IVector3D maxBound -> bool selected
+using ModelSelection = std::function<bool(ModelInstance&, const IVector3D, const IVector3D, const IVector3D)>;
+// Remove models using an axis aligned serach box in mini-tile coordinates and a lambda filter
+//   Use userData in the lambda's first argument to get ownership information
+//   Return true for each model to remove from the background
+void spriteWorld_removeBackgroundModels(SpriteWorld& world, const IVector3D& searchMinBound, const IVector3D& searchMaxBound, const ModelSelection& filter);
+// Erasing every model within the bound
+void spriteWorld_removeBackgroundModels(SpriteWorld& world, const IVector3D& searchMinBound, const IVector3D& searchMaxBound);
 
 // Create a point light that only exists until the next call to spriteWorld_clearTemporary.
 //   position is in tile unit world-space.
