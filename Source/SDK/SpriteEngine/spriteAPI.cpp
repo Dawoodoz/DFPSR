@@ -1248,7 +1248,7 @@ static IRect renderDenseModel(const DenseModel& model, OrthoView view, ImageF32 
 					FVector2D weightBC = offsetToWeight.transform(FVector2D(x + 0.5f, y + 0.5f) - cornerA);
 					FVector3D weight = FVector3D(1.0f - (weightBC.x + weightBC.y), weightBC.x, weightBC.y);
 					// Check if the pixel is inside the triangle
-					if (weight.x >= 0.0f && weight.y >= 0.0f && weight.z >= 0.0f ) {
+					if (weight.x >= -0.00001f && weight.y >= -0.00001f && weight.z >= -0.00001f ) {
 						float height = interpolateUsingAffineWeight(projectedA.z, projectedB.z, projectedC.z, weight);
 						if (height > *heightPixel) {
 							FVector3D vertexColor = interpolateUsingAffineWeight(triangle.colorA, triangle.colorB, triangle.colorC, weight);
