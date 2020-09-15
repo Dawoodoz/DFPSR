@@ -57,10 +57,12 @@ using SpriteWorld = std::shared_ptr<SpriteWorldImpl>;
 // Sprite types
 int spriteWorld_loadSpriteTypeFromFile(const String& folderPath, const String& spriteName);
 int spriteWorld_getSpriteTypeCount();
+String spriteWorld_getSpriteTypeName(int index);
 
 // Model types
 int spriteWorld_loadModelTypeFromFile(const String& folderPath, const String& visibleModelName, const String& shadowModelName);
 int spriteWorld_getModelTypeCount();
+String spriteWorld_getModelTypeName(int index);
 
 SpriteWorld spriteWorld_create(OrthoSystem ortho, int shadowResolution);
 void spriteWorld_addBackgroundSprite(SpriteWorld& world, const SpriteInstance& sprite);

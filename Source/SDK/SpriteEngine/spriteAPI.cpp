@@ -176,6 +176,7 @@ struct SpriteFrame {
 
 struct SpriteType {
 public:
+	String name;
 	IVector3D minBoundMini, maxBoundMini;
 	List<SpriteFrame> frames;
 	// TODO: Compress the data using a shadow-only model type of only positions and triangle indices in a single part.
@@ -185,11 +186,11 @@ public:
 	Model shadowModel;
 public:
 	// folderPath should end with a path separator
-	SpriteType(const String& folderPath, const String& spriteName) {
+	SpriteType(const String& folderPath, const String& name) : name(name) {
 		// Load the image atlas
-		ImageRgbaU8 loadedAtlas = image_load_RgbaU8(string_combine(folderPath, spriteName, U".png"));
+		ImageRgbaU8 loadedAtlas = image_load_RgbaU8(string_combine(folderPath, name, U".png"));
 		// Load the settings
-		const SpriteConfig configuration = SpriteConfig(string_load(string_combine(folderPath, spriteName, U".ini")));
+		const SpriteConfig configuration = SpriteConfig(string_load(string_combine(folderPath, name, U".ini")));
 		this->minBoundMini = IVector3D(
 		  floor(configuration.minBound.x * ortho_miniUnitsPerTile),
 		  floor(configuration.minBound.y * ortho_miniUnitsPerTile),
@@ -255,11 +256,19 @@ public:
 
 struct ModelType {
 public:
+	String name;
 	DenseModel visibleModel;
 	Model shadowModel;
 public:
 	// folderPath should end with a path separator
-	ModelType(const String& folderPath, const String& visibleModelName, const String& shadowModelName) {
+	ModelType(const String& folderPath, const String& visibleModelName, const String& shadowModelName)
+	: name(visibleModelName) {
+		int64_t dotIndex = string_findFirst(visibleModelName, U'.');
+		if (dotIndex > -1) {
+			name = string_before(visibleModelName, dotIndex);
+		} else {
+			name = visibleModelName;
+		}
 		this->visibleModel = DenseModel_create(importer_loadModel(folderPath + visibleModelName, true, Transform3D()));
 		this->shadowModel = importer_loadModel(folderPath + shadowModelName, true, Transform3D());
 	}
@@ -276,6 +285,9 @@ int spriteWorld_loadSpriteTypeFromFile(const String& folderPath, const String& s
 int spriteWorld_getSpriteTypeCount() {
 	return spriteTypes.length();
 }
+String spriteWorld_getSpriteTypeName(int index) {
+	return spriteTypes[index].name;
+}
 
 // Global list of all model types ever loaded
 List<ModelType> modelTypes;
@@ -285,6 +297,9 @@ int spriteWorld_loadModelTypeFromFile(const String& folderPath, const String& vi
 }
 int spriteWorld_getModelTypeCount() {
 	return modelTypes.length();
+}
+String spriteWorld_getModelTypeName(int index) {
+	return modelTypes[index].name;
 }
 
 static int getSpriteFrameIndex(const SpriteInstance& sprite, OrthoView view) {
