@@ -10,6 +10,9 @@
 // Comment out a flag to disable an optimization when debugging
 #define DIRTY_RECTANGLE_OPTIMIZATION
 
+// Do not place anything visible below the bottom clip plane
+static const float bottomClipPlane = -1000000.0f;
+
 namespace dsr {
 
 template <bool HIGH_QUALITY>
@@ -518,7 +521,7 @@ private:
 	// Pre-condition: diffuseBuffer must be cleared unless sprites cover the whole block
 	void draw(Octree<SpriteInstance>& sprites, Octree<ModelInstance>& models, const OrthoView& ortho) {
 		image_fill(this->normalBuffer, ColorRgbaI32(128));
-		image_fill(this->heightBuffer, -std::numeric_limits<float>::max());
+		image_fill(this->heightBuffer, bottomClipPlane);
 		OcTreeFilter orthoCullingFilter = [ortho,this](const IVector3D& minBound, const IVector3D& maxBound){
 			return orthoCullingTest(ortho, minBound, maxBound, this->worldRegion);
 		};

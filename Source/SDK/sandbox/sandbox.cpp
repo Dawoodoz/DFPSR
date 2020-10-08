@@ -12,8 +12,6 @@ BUGS:
 		How can a new mouse-move event be triggered from the current location when toggling full-screen so that the window itself moves?
 	* Tiles placed at different heights do not have synchronized rounding between each other.
 		Try to round the Y offset separatelly from the XZ location's screen coordinate.
-	* The light buffer gets white from point light when there's nothing drawn on the background.
-		This prevent using other background colors than black.
 
 3D BUGS:
 	DRAWN:
