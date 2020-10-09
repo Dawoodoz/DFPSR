@@ -1044,6 +1044,11 @@ void spriteWorld_setCameraLocation(SpriteWorld& world, const IVector3D miniTileL
 	}
 }
 
+IVector3D spriteWorld_getCameraLocation(const SpriteWorld& world) {
+	MUST_EXIST(world, spriteWorld_getCameraLocation);
+	return world->cameraLocation;
+}
+
 void spriteWorld_moveCameraInPixels(SpriteWorld& world, const IVector2D& pixelOffset) {
 	MUST_EXIST(world, spriteWorld_moveCameraInPixels);
 	if (pixelOffset.x != 0 || pixelOffset.y != 0) {
@@ -1072,7 +1077,7 @@ AlignedImageF32 spriteWorld_getHeightBuffer(SpriteWorld& world) {
 	return world->heightBuffer;
 }
 
-int spriteWorld_getCameraDirectionIndex(SpriteWorld& world) {
+int spriteWorld_getCameraDirectionIndex(const SpriteWorld& world) {
 	MUST_EXIST(world, spriteWorld_getCameraDirectionIndex);
 	return world->cameraIndex;
 }
@@ -1083,6 +1088,16 @@ void spriteWorld_setCameraDirectionIndex(SpriteWorld& world, int index) {
 		world->cameraIndex = index;
 		world->dirtyBackground.allDirty();
 	}
+}
+
+OrthoView& spriteWorld_getCurrentOrthoView(SpriteWorld& world) {
+	MUST_EXIST(world, spriteWorld_getCurrentOrthoView)
+	return world->ortho.view[world->cameraIndex];
+}
+
+OrthoSystem& spriteWorld_getOrthoSystem(SpriteWorld& world) {
+	MUST_EXIST(world, spriteWorld_getOrthoSystem)
+	return world->ortho;
 }
 
 static FVector3D FVector4Dto3D(FVector4D v) {
