@@ -454,6 +454,13 @@ static dsr::DsrKey getDsrKey(KeySym keyCode) {
 	return result;
 }
 
+// TODO: Implement support for typing in UNICODE. How can this be tested when even Chinese keyboards use phonetic typing?
+static uint32_t getNativeCharacterCode(XEvent& event) {
+	KeySym key; char text[255]; uint32_t character = '\0';
+	if (XLookupString(&event.xkey, text, 255, &key, 0) == 1) { character = text[0]; }
+	return character;
+}
+
 // Also locked, but cannot change the name when overriding
 void X11Window::prefetchEvents() {
 	// Only prefetch new events if nothing else is using the communication link
@@ -478,12 +485,13 @@ void X11Window::prefetchEvents() {
 					this->queueInputEvent(new dsr::WindowEvent(dsr::WindowEventType::Redraw, this->windowWidth, this->windowHeight));
 				} else if (currentEvent.type == KeyPress || currentEvent.type == KeyRelease) {
 					// Key down/up
-					// TODO: Are unicode characters handled with determinism?
-					KeySym key; char text[255]; char character = '\0';
-					if (XLookupString(&currentEvent.xkey, text, 255, &key, 0) == 1) { character = text[0]; }
+					uint32_t character = getNativeCharacterCode(currentEvent);
 					dsr::DsrKey dsrKey = getDsrKey(XLookupKeysym(&currentEvent.xkey, 0));
 					// Distinguish between fake and physical repeats using time stamps
-					if (hasNextEvent && currentEvent.type == KeyRelease && nextEvent.type == KeyPress && currentEvent.xkey.time == nextEvent.xkey.time) {
+					if (hasNextEvent
+					 && currentEvent.type == KeyRelease && nextEvent.type == KeyPress
+					 && currentEvent.xkey.time == nextEvent.xkey.time
+					 && character == getNativeCharacterCode(nextEvent)) {
 						// Repeated typing
 						this->queueInputEvent(new dsr::KeyboardEvent(dsr::KeyboardEventType::KeyType, character, dsrKey));
 						// Skip next event
