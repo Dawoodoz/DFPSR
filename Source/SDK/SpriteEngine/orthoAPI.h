@@ -2,7 +2,6 @@
 #ifndef DFPSR_ORTHO
 #define DFPSR_ORTHO
 
-#include <assert.h>
 #include "../../DFPSR/includeFramework.h"
 
 namespace dsr {
