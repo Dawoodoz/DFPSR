@@ -44,12 +44,6 @@ VISUALS:
 		Allow defining decals locally for each level by loading their images from a temporary image pool of level specific content.
 			This can be used to write instructions specific to a certain mission and give a unique look to an otherwise generic level.
 			Billboards and signs can also be possible to reuse with custom images and text.
-	* Static 3D models that are rendered when the background updates.
-		These have normal resolution and can be freely rotated, scaled and colored.
-		They draw shadows just like the pre-rendered sprites.
-	* See if there's a shadow smoothing method worth using on the CPU.
-		The blend filter is already quite heavy with the saturation, so it might as well do something more useful than a single multiplication as the main feature.
-		The difficult thing is to preserve details from normal mapping and tiny details while making shadow edges look smooth.
 	* Allow having many high-quality light sources by introducing fully passive lights.
 		Useful for indirect light from the sky and general ambient light.
 		The background stores RGBA light buffers to make passive lights super cheap.
@@ -68,15 +62,7 @@ VISUALS:
 			of looking it up from the same offset is compensated for somehow.
 		The first cubemap will be persistent and used later for dynamic light.
 		The later cubemaps will be temporary when generating the background's softer light.
-USABILITY:
-	* Tool for selecting and removing passive sprites.
-		Use both unique handles for simplicity and the raw look-up for handling multiple sprites at once:
-			Given an optional integer argument (defaulted to zero) to background sprite construction.
-			This allow making custom filtering of sprites by category or giving a unique index to a sprite.
-			A lookup can later return references to the sprite instances together with the key and allow custom filtering.
-			A deletion lookup can take a function returning true when the background sprite should be deleted.
-				The full 3D location and custom key will be returned for filtering.
-				If the game wants to filter by direction or anything else, then encode that into the key.
+
 OPTIMIZE:
 	* Make a tile based light culling.
 		The background has pre-stored minimum and maximum depth for tiles of 32² pixel blocks.
@@ -92,10 +78,6 @@ OPTIMIZE:
 			1--12-21-10-0
 			1--12-21-10-0
 			1-----10----0
-	* Decrease peak time using a vertical brick pattern using a half row offset on odd background block columns.
-		This is optimized for wide aspect ratios, which is more common than standing formats.
-		Cutting the peak repainting area into half without increasing the minimum buffered region.
-		Scheduling updates of nearby blocks can take one at a time when there's nothing that must be updated instantly.
 	* Create a debug feature in spriteAPI for displaying the octree using lines.
 		One color for the owned space and another for the sprite bounding boxes.
 		Pressing a certain button in Sandbox should toggle the debug drawing to allow asserting that the tree is well balanced for the level's size.

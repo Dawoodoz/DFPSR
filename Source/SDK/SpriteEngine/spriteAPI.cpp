@@ -603,7 +603,8 @@ public:
 	SpriteWorldImpl(const OrthoSystem &ortho, int shadowResolution)
 	: ortho(ortho), passiveSprites(ortho_miniUnitsPerTile * 64), passiveModels(ortho_miniUnitsPerTile * 64), shadowResolution(shadowResolution), temporaryShadowMap(shadowResolution) {}
 public:
-	void updateBlockAt(const IRect& blockRegion, const IRect& seenRegion) {
+	// Post-condition: Returns the number of redrawn background blocks. (0 or 1)
+	int updateBlockAt(const IRect& blockRegion, const IRect& seenRegion) {
 		int unusedBlockIndex = -1;
 		// Find an existing block
 		for (int b = 0; b < this->backgroundBlocks.length(); b++) {
@@ -613,12 +614,13 @@ public:
 				if (currentBlockPtr->cameraId == this->ortho.view[this->cameraIndex].id) {
 					// Check location
 					if (currentBlockPtr->worldRegion.left() == blockRegion.left() && currentBlockPtr->worldRegion.top() == blockRegion.top()) {
-						// Update if needed
+						// Update if needed before using the block
 						if (currentBlockPtr->state == BlockState::Dirty) {
 							currentBlockPtr->update(this->passiveSprites, this->passiveModels, blockRegion, this->ortho.view[this->cameraIndex]);
+							return 1;
+						} else {
+							return 0;
 						}
-						// Use the block
-						return;
 					} else {
 						// See if the block is too far from the camera
 						if (currentBlockPtr->worldRegion.right() < seenRegion.left() - BackgroundBlock::maxDistance
@@ -647,6 +649,7 @@ public:
 			// Create a new block
 			this->backgroundBlocks.pushConstruct(this->passiveSprites, this->passiveModels, blockRegion, this->ortho.view[this->cameraIndex]);
 		}
+		return 1;
 	}
 	void invalidateBlockAt(int left, int top) {
 		// Find an existing block
@@ -662,7 +665,10 @@ public:
 		}
 	}
 	// Make sure that each pixel in seenRegion is occupied by an updated background block
-	void updateBlocks(const IRect& seenRegion) {
+	// If maxUpdates is larger than -1, the work is scheduled to do at most maxUpdates per call.
+	// Post-condition: Returns the number of redrawn background blocks.
+	int updateBlocks(const IRect& seenRegion, int maxUpdates = -1) {
+		int updateCount = 0;
 		// Round inclusive pixel indices down to containing blocks and iterate over them in strides along x and y
 		int64_t roundedLeft = roundDown(seenRegion.left(), BackgroundBlock::blockSize);
 		int64_t roundedTop = roundDown(seenRegion.top(), BackgroundBlock::blockSize);
@@ -671,9 +677,14 @@ public:
 		for (int64_t y = roundedTop; y <= roundedBottom; y += BackgroundBlock::blockSize) {
 			for (int64_t x = roundedLeft; x <= roundedRight; x += BackgroundBlock::blockSize) {
 				// Make sure that a block is allocated and pre-drawn at this location
-				this->updateBlockAt(IRect(x, y, BackgroundBlock::blockSize, BackgroundBlock::blockSize), seenRegion);
+				updateCount += this->updateBlockAt(IRect(x, y, BackgroundBlock::blockSize, BackgroundBlock::blockSize), seenRegion);
+				if (maxUpdates > -1 && updateCount >= maxUpdates) {
+					// Skip early if the maximum update count has been reached.
+					return updateCount;
+				}
 			}
 		}
+		return updateCount;
 	}
 	void drawDeferred(OrderedImageRgbaU8& diffuseTarget, OrderedImageRgbaU8& normalTarget, AlignedImageF32& heightTarget, const IRect& seenRegion) {
 		// Check image dimensions
@@ -681,9 +692,13 @@ public:
 		assert(image_getWidth(normalTarget) == seenRegion.width() && image_getHeight(normalTarget) == seenRegion.height());
 		assert(image_getWidth(heightTarget) == seenRegion.width() && image_getHeight(heightTarget) == seenRegion.height());
 		this->dirtyBackground.setTargetResolution(seenRegion.width(), seenRegion.height());
-		// Draw passive sprites to blocks
-		this->updateBlocks(seenRegion);
-
+		// Draw passive sprites and models to blocks
+		int forcedUpdates = this->updateBlocks(seenRegion);
+		// If no critical updates were made to the background
+		if (forcedUpdates < 1) {
+			// Schedule drawing of up to one block from a larger region
+			this->updateBlocks(seenRegion.expanded(128), 1);
+		}
 		// Draw background blocks to the target images
 		for (int b = 0; b < this->backgroundBlocks.length(); b++) {
 			#ifdef DIRTY_RECTANGLE_OPTIMIZATION
