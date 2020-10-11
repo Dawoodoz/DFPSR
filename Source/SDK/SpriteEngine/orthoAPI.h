@@ -7,19 +7,18 @@
 
 namespace dsr {
 
-// TODO: Give an ortho_ prefix
 using Direction = int32_t;
-static const Direction dir360 = 8;
-static const Direction dir315 = 7;
-static const Direction dir270 = 6;
-static const Direction dir225 = 5;
-static const Direction dir180 = 4;
-static const Direction dir135 = 3;
-static const Direction dir90 = 2;
-static const Direction dir45 = 1;
-static const Direction dir0 = 0;
+static const Direction ortho_dir360 = 8;
+static const Direction ortho_dir315 = 7;
+static const Direction ortho_dir270 = 6;
+static const Direction ortho_dir225 = 5;
+static const Direction ortho_dir180 = 4;
+static const Direction ortho_dir135 = 3;
+static const Direction ortho_dir90 = 2;
+static const Direction ortho_dir45 = 1;
+static const Direction ortho_dir0 = 0;
 inline int correctDirection(Direction direction) {
-	return (int32_t)((uint32_t)((int32_t)direction + (dir360 * 1024)) % dir360);
+	return (int32_t)((uint32_t)((int32_t)direction + (ortho_dir360 * 1024)) % ortho_dir360);
 }
 
 // World 3D units
@@ -46,7 +45,7 @@ public:
 	int id = -1;
 
 	// Direction for rotating sprites
-	Direction worldDirection = dir0; // How are sprites in the world rotated relative to the camera's point of view
+	Direction worldDirection = ortho_dir0; // How are sprites in the world rotated relative to the camera's point of view
 
 	// The rotating transform from normal-space to world-space.
 	//   Light-space is a superset of normal-space with the origin around the camera. (Almost like camera-space but with Y straight up)

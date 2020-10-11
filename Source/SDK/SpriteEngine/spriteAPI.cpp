@@ -228,7 +228,7 @@ public:
 public:
 	// TODO: Force frame count to a power of two or replace modulo with look-up tables in sprite configurations.
 	int getFrameIndex(Direction direction) {
-		const int frameFromDir[dir360] = {4, 1, 5, 2, 6, 3, 7, 0};
+		const int frameFromDir[8] = {4, 1, 5, 2, 6, 3, 7, 0};
 		return frameFromDir[correctDirection(direction)] % this->frames.length();
 	}
 };

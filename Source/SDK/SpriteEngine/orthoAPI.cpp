@@ -84,7 +84,7 @@ void OrthoSystem::update() {
 
 	// Define sprite directions
 	FVector3D upAxis = FVector3D(0.0f, 1.0f, 0.0f);
-	Direction worldDirections[8] = {dir315, dir45, dir135, dir225, dir0, dir90, dir180, dir270};
+	Direction worldDirections[8] = {ortho_dir315, ortho_dir45, ortho_dir135, ortho_dir225, ortho_dir0, ortho_dir90, ortho_dir180, ortho_dir270};
 	// Define approximate camera systems just to get something axis aligned
 	FMatrix3x3 cameraSystems[8];
 	cameraSystems[0] = FMatrix3x3::makeAxisSystem(FVector3D(diag, this->cameraTilt, diag), upAxis);

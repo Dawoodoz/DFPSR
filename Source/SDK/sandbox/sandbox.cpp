@@ -142,7 +142,7 @@ static int random(const int minimum, const int maximum) {
 
 // Variables
 static int brushHeight = 0; // In mini-tile units
-static SpriteInstance spriteBrush(0, dir0, IVector3D(), true);
+static SpriteInstance spriteBrush(0, ortho_dir0, IVector3D(), true);
 static bool placingModel = false; // True when left mouse button is pressed and the direction is being assigned
 static ModelInstance modelBrush(0, Transform3D());
 static const int brushStep = ortho_miniUnitsPerTile / 32;
@@ -260,9 +260,9 @@ void sandbox_main() {
 			} else if (key == DsrKey_Delete) {
 				pressing_delete = 1;
 			} else if (key == DsrKey_LeftArrow) {
-				spriteBrush.direction = correctDirection(spriteBrush.direction + dir270);
+				spriteBrush.direction = correctDirection(spriteBrush.direction + ortho_dir270);
 			} else if (key == DsrKey_RightArrow) {
-				spriteBrush.direction = correctDirection(spriteBrush.direction + dir90);
+				spriteBrush.direction = correctDirection(spriteBrush.direction + ortho_dir90);
 			}
 		} else if (event.keyboardEventType == KeyboardEventType::KeyUp) {
 			if (key == DsrKey_A) {
@@ -339,10 +339,10 @@ void sandbox_main() {
 		modelBrush.typeIndex = index;
 	});
 	component_setPressedEvent(window_findComponentByName(window, U"leftButton"), []() {
-		spriteBrush.direction = correctDirection(spriteBrush.direction + dir270);
+		spriteBrush.direction = correctDirection(spriteBrush.direction + ortho_dir270);
 	});
 	component_setPressedEvent(window_findComponentByName(window, U"rightButton"), []() {
-		spriteBrush.direction = correctDirection(spriteBrush.direction + dir90);
+		spriteBrush.direction = correctDirection(spriteBrush.direction + ortho_dir90);
 	});
 	updateOverlay();
 
@@ -362,17 +362,17 @@ void sandbox_main() {
 	for (int z = -300; z < 300; z++) {
 		for (int x = -300; x < 300; x++) {
 			// The bottom floor does not have to throw shadows
-			spriteWorld_addBackgroundSprite(world, SpriteInstance(random(0, 1), random(0, 3) * dir90, IVector3D(x * ortho_miniUnitsPerTile, 0, z * ortho_miniUnitsPerTile), false));
+			spriteWorld_addBackgroundSprite(world, SpriteInstance(random(0, 1), random(0, 3) * ortho_dir90, IVector3D(x * ortho_miniUnitsPerTile, 0, z * ortho_miniUnitsPerTile), false));
 		}
 	}
 	for (int z = -300; z < 300; z++) {
 		for (int x = -300; x < 300; x++) {
 			if (random(1, 4) == 1) {
 				// Obstacles should cast shadows when possible
-				spriteWorld_addBackgroundSprite(world, SpriteInstance(random(2, 4), random(0, 3) * dir90, IVector3D(x * ortho_miniUnitsPerTile, 0, z * ortho_miniUnitsPerTile), true));
+				spriteWorld_addBackgroundSprite(world, SpriteInstance(random(2, 4), random(0, 3) * ortho_dir90, IVector3D(x * ortho_miniUnitsPerTile, 0, z * ortho_miniUnitsPerTile), true));
 			} else if (random(1, 20) == 1) {
 				// Characters are just static geometry for testing
-				spriteWorld_addBackgroundSprite(world, SpriteInstance(5, random(0, 7) * dir45, IVector3D(x * ortho_miniUnitsPerTile, 0, z * ortho_miniUnitsPerTile), true));
+				spriteWorld_addBackgroundSprite(world, SpriteInstance(5, random(0, 7) * ortho_dir45, IVector3D(x * ortho_miniUnitsPerTile, 0, z * ortho_miniUnitsPerTile), true));
 			}
 		}
 	}
