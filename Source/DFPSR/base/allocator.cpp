@@ -1,12 +1,14 @@
-﻿
+
+// This allocator does not have any header and can be disabled by not linking it into the application
+// or by defining DISABLE_ALLOCATOR (usually with a -DDISABLE_ALLOCATOR compiler flag).
+#ifndef DISABLE_ALLOCATOR
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <mutex>
 
 static std::mutex allocationLock;
-
-// This allocator does not have any header and can be disabled by not linking it into the application
 
 // Allocation head stored in the beginning of each allocation
 // The caller's content begins alignedHeadSize bytes after the head
@@ -133,3 +135,5 @@ void operator delete(void* content) {
 		}
     allocationLock.unlock();
 }
+
+#endif
