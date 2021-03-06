@@ -4,6 +4,10 @@ When you just want to code in your own pace without worrying about API deprecati
 
 *
 <- Starting.html | Getting started
+
+*
+<- Troubleshooting.html | Troubleshooting
+
 ---
 Title2: APIs
 

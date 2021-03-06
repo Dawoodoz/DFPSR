@@ -1,0 +1,54 @@
+﻿<- Manual.html | Back to main page
+
+Title: Troubleshooting
+
+To add a compiler flag when not using an IDE, append it to COMPILER_FLAGS in your build.sh script.
+---
+Title2: To use or not use an IDE with a built-in debugger
+
+*
+If your low-level code is crashing often from advanced optimizations,
+you might need an IDE with a built-in debugger to quickly show where the crash happened.
+The IDE integration can then directly point to the code instead of showing line numbers from a separate debugger.
+
+*
+If your high-level code only crashes rarely but the amount of pixel data is too much for a debugger,
+create a debug window showing internal images or debug overlays with coordinates on top of the program's existing graphics.
+
+---
+Title2: Finding the cause of bugs takes too long.
+
+*
+Unless you are profiling, test in debug mode using the -DDEBUG compiler flag.
+This catches bugs earlier with more information about the crash.
+Make sure that the release flag -DNDEBUG is not also active.
+
+*
+If using raw pointers, you might want to replace them with the SafePointer class to get tighter bound checks in debug mode.
+Debuggers will wait until your bugs write outside of the whole allocation before throwing an error.
+
+*
+Make sure that all your multi-threading can be turned off easily when finding the root cause.
+
+*
+Create a basic reference implementation without dangerous optimizations for every advanced feature.
+Both for finding the cause of instability and being able to remove a feature without sending emergency patches in panic with more bugs.
+Image filters are first written using lambdas returning the color of a pixel based on the pixel coordinate and exception-free pixel sampling.
+Then one can make an optimized version using SafePointer and SIMD vectors.
+
+---
+Title2: Getting crashes after linking to an external library.
+
+*
+Try adding the -DDISABLE_ALLOCATOR compiler flag.
+This will disable the library's memory recycling at DFPSR/base/allocator.cpp in case that another library already has a memory recycler.
+
+---
+
+Title2: Getting linker errors when creating a new project without a window.
+
+*
+Linking to a window manager without using it may cause linker errors because the renderer library makes a call to outside of the library.
+The solution is to use WINDOW_MANAGER=NONE in build.sh or include NoWindow.cpp manually in your project instead of the system's actual window manager.
+
+---
