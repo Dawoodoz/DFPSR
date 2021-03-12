@@ -223,7 +223,7 @@ inline void safeMemoryCopy(SafePointer<T> target, const SafePointer<S>& source, 
 		source.assertInside("memoryCopy (source)", source.getUnsafe(), (size_t)byteSize);
 		// memcpy doesn't allow pointer aliasing
 		// TODO: Make a general assertion with the same style as out of bound exceptions
-		assert(((const uint8_t*)target.getUnsafe()) + byteSize < (uint8_t*)source.getUnsafe() || ((const uint8_t*)source.getUnsafe()) + byteSize < (uint8_t*)target.getUnsafe());
+		assert(((const uint8_t*)target.getUnsafe()) + byteSize <= (uint8_t*)source.getUnsafe() || ((const uint8_t*)source.getUnsafe()) + byteSize <= (uint8_t*)target.getUnsafe());
 	#endif
 	std::memcpy(target.getUnsafe(), source.getUnsafe(), (size_t)byteSize);
 }
