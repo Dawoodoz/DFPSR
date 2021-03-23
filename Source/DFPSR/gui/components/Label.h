@@ -41,9 +41,6 @@ public:
 	void declareAttributes(StructureDefinition &target) const override;
 	Persistent* findAttribute(const ReadableString &name) override;
 private:
-	// Temporary
-	bool pressed = false;
-	bool inside = false;
 	// Given from the style
 	RasterFont font;
 	void completeAssets();

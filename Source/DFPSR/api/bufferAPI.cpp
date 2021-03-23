@@ -52,7 +52,6 @@ public:
 
 // buffer_alignment must be a power of two for buffer_alignment_mask to work
 static const int buffer_alignment = 16;
-static const uintptr_t buffer_alignment_mask = ~((uintptr_t)(buffer_alignment - 1));
 
 // If this C++ version additionally includes the C11 features then we may assume that aligned_alloc is available
 #ifdef _ISOC11_SOURCE
@@ -63,6 +62,7 @@ static const uintptr_t buffer_alignment_mask = ~((uintptr_t)(buffer_alignment - 
 		return allocation;
 	}
 #else
+	static const uintptr_t buffer_alignment_mask = ~((uintptr_t)(buffer_alignment - 1));
 	// Allocate data of newSize and write the corresponding destructor function to targetDestructor
 	static uint8_t* buffer_allocate(int64_t newSize, std::function<void(uint8_t *)>& targetDestructor) {
 		uintptr_t padding = buffer_alignment - 1;

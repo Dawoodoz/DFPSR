@@ -60,7 +60,6 @@ static const int textBorderLeft = 6;
 static const int textBorderTop = 4;
 static const int scrollWidth = 16; // The width of the scroll bar
 static const int scrollEndHeight = 14; // The height of upper and lower scroll buttons
-static const int border = 1; // Scroll-bar edge thickness
 
 void ListBox::generateGraphics() {
 	int width = this->location.width();
