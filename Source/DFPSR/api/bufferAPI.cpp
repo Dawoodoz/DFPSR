@@ -78,6 +78,9 @@ BufferImpl::BufferImpl(int64_t newSize) :
   size(newSize),
   bufferSize(roundUp(newSize, buffer_alignment)) {
 	this->data = buffer_allocate(this->bufferSize, this->destructor);
+	if (this->data == nullptr) {
+		throwError(U"Failed to allocate buffer of ", newSize, " bytes!\n");
+	}
 	memset(this->data, 0, this->bufferSize);
 }
 
