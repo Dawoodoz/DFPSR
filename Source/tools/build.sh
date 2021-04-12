@@ -65,7 +65,7 @@ then
 fi
 echo "Linking application with libraries (${LIBS})"
 # Main must exist in the first library when linking
-g++ ${TEMP_DIR}/application.a ${TEMP_DIR}/dfpsr.a ${TEMP_DIR}/NativeWindow.o ${LIBS} -o ${TARGET_FILE}
+g++ ${TEMP_DIR}/application.a ${TEMP_DIR}/NativeWindow.o ${LIBS} ${TEMP_DIR}/dfpsr.a -o ${TARGET_FILE}
 if [ $? -ne 0 ]
 then
 	exit 1
