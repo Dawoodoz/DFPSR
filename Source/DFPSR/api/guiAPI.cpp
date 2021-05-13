@@ -249,6 +249,7 @@ ReturnCode dsr::component_setProperty_string(const Component& component, const R
 		return ReturnCode::KeyNotFound;
 	} else {
 		stringTarget->value = value;
+		component->changedAttribute(propertyName);
 		return ReturnCode::Good;
 	}
 }
@@ -283,9 +284,11 @@ ReturnCode dsr::component_setProperty_integer(const Component& component, const 
 		PersistentBoolean* booleanTarget = dynamic_cast<PersistentBoolean*>(target);
 		if (integerTarget != nullptr) {
 			integerTarget->value = value;
+			component->changedAttribute(propertyName);
 			return ReturnCode::Good;
 		} else if (booleanTarget != nullptr) {
 			booleanTarget->value = value ? 1 : 0;
+			component->changedAttribute(propertyName);
 			return ReturnCode::Good;
 		} else {
 			if (mustAssign) {
