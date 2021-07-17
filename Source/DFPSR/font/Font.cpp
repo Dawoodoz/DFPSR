@@ -175,7 +175,7 @@ void RasterFontImpl::printMultiLine(ImageRgbaU8& target, const ReadableString& c
 				}
 			} else {
 				wordStarted = true;
-				if (lineWidth + newCharWidth > bound.width()) {
+				if (lineWidth + newCharWidth >= bound.width()) {
 					int splitIndex = lastWordBreak;
 					if (lastWordBreak == rowStartIndex) {
 						// The word is too big to be printed as a whole
