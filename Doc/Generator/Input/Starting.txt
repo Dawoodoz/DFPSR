@@ -31,7 +31,7 @@ Title2: If no example runs, try regression tests to diagnose:
 Open the source folder in a terminal and run the test script:
 
 <PRE><BLOCKQUOTE>chmod +x test.sh
-./test.sh</blockquote></BLOCKQUOTE></PRE>
+./test.sh</BLOCKQUOTE></PRE>
 
 This will stop with a clearly visible error message if any of the tests fail.
 

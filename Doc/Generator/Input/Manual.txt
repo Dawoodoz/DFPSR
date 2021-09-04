@@ -18,10 +18,17 @@ Title2: APIs
 <- Images.html | Image API
 
 ---
+Title2: Techniques
+
+*
+<- ImageProcessing.html | Image processing
+
+---
 Title2: Modifying the library
 
 *
 <- StyleGuide.html | Style guide
+
 ---
 Title2: Technical details
 

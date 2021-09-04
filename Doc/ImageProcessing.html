@@ -1,0 +1,293 @@
+﻿<!DOCTYPE html> <HTML lang=en> <HEAD> <STYLE>
+body { background-color: #EEFFEE;  font-size: 1.0rem; font-family: Arial; max-width: 60rem;
+      color: #000000; margin: 0px;
+      padding-left:  0px; padding-right:  0px; padding-top:  0px; padding-bottom:  0px; }
+H1 {  padding-left: 10px; padding-right:  0px; padding-top: 10px; padding-bottom: 10px; font-size: 1.4rem; }
+H2 {  padding-left: 10px; padding-right:  0px; padding-top: 10px; padding-bottom:  0px; font-size: 1.2rem; }
+blockquote {
+  tab-size: 3rem;
+  color: #FFFFFF; background: #000000;
+  font-size: 1.2rem; font-family: monospace;
+  padding-left: 5px; padding-right: 5px;
+  padding-top: 5px; padding-bottom: 5px;
+}
+P {   padding-left: 20px; padding-right:  0px; padding-top:  0px; padding-bottom:  0px; }
+IMG { padding-left:  0px; padding-right:  0px; padding-top:  2px; padding-bottom:  0px;
+      max-width: 100%; }
+A { display: inline; border-radius: 4px;
+    font-size: 1.0rem; font-family: Arial; color: #000044; text-decoration: none;
+    padding-left: 4px; padding-right: 4px; padding-top: 4px; padding-bottom: 4px; }
+A:hover { color: #FFFF00; background: #000044; }
+A:active { color: #FFFFFF; background: #444444; }
+</STYLE> </HEAD> <BODY>
+<IMG SRC="Images/Title.png" ALT="Images/Title.png">
+<P>
+<A href="Manual.html">Back to main page</A>
+</P><P>
+</P><H1> Image processing</H1><P>When creating your own image filter, you should begin by creating a reference implementation.
+This allow experimenting with different math formulas and effects without having to worry about optimization and crashes.
+
+</P><P>
+Then create a pixel loop where you have more control and can start to apply SIMD.
+
+</P><P>
+If the filters take a long time to execute, multi-threading might be useful depending on how it is implemented.
+With lower resolutions or trivial operations, SIMD is so fast that a single thread is complete before a second thread had the time to start.
+
+</P><P>
+See <B>Source/test/tests/ImageProcessingTest.cpp</B> for a an executable version of these example functions called from <B>Source/test.sh</B>.
+
+</P><P>
+See <B>Source/SDK/SpriteEngine/lightAPI.cpp</B> for a real use of multi-threading with threadedSplit.
+
+</P><P>
+</P><IMG SRC="Images/Border.png"><P>
+
+</P><P>
+</P><H2> Read pixel functions (slow but safe)</H2><P>
+</P><P>
+Both basic pixel loops and lambdas may find this way of reading pixel data useful for prototyping.
+
+</P><P>
+<B>Source/DFPSR/api/imageAPI.h</B> contains image_readPixel_border, which allow specifying a uniform color for out of bound reads.
+
+</P><P>
+<B>Source/DFPSR/api/imageAPI.h</B> contains image_readPixel_clamp, which reads the closest valid pixel.
+
+</P><P>
+<B>Source/DFPSR/api/imageAPI.h</B> contains image_readPixel_tile, which loops the image like a repeated tile to fill the space.
+
+</P><P>
+All these sampling methods will safely return zero if the image handle contains null.
+
+</P><P>
+</P><IMG SRC="Images/Border.png"><P>
+
+</P><P>
+</P><H2> Write pixel functions (slow but safe)</H2><P>
+</P><P>
+Only for prototyping with own pixel loops.
+
+</P><P>
+<B>Source/DFPSR/api/imageAPI.h</B> contains image_writePixel, which allow writing pixel data only when the given x, y coordinate is inside of an image that exists.
+
+</P><P>
+</P><IMG SRC="Images/Border.png"><P>
+
+</P><P>
+</P><H2> Map functions (slow but safe)</H2><P>
+</P><P>
+<B>Source/DFPSR/api/filterAPI.h</B> contains filter_mapRgbaU8, filter_mapU8, et cetera...
+
+</P><P>
+Useful for prototyping something that later will become an optimized in-place image filter.
+The map functions simply call your lambda function for each pixel in the image and gives the x, y coordinate as arguments.
+If you enter startX and startY offsets, these will be uniformly added to the x, y coordinates entering your function, which is useful for panorating a view or partial updates of blocks.
+Input images and other resources can be captured by the lambda.
+The returned result is automatically saturated to the resulting color type and written without any need for bound checks.
+
+</P><P>
+Adding two grayscale images using <B>filter_mapU8</B>:
+<PRE><BLOCKQUOTE>void addImages_map(ImageU8 targetImage, ImageU8 imageA, ImageU8 imageB) {
+	// Call your lambda for each pixel in targetImage
+	filter_mapU8(targetImage,
+		[imageA, imageB](int x, int y) {
+			int lumaA = image_readPixel_clamp(imageA, x, y);
+			int lumaB = image_readPixel_clamp(imageB, x, y);
+			return lumaA + lumaB;
+		}
+	);
+}</BLOCKQUOTE></PRE>
+
+</P><P>
+</P><IMG SRC="Images/Border.png"><P>
+
+</P><P>
+</P><H2> Generate functions (slow but safe)</H2><P>
+</P><P>
+<B>Source/DFPSR/api/filterAPI.h</B> also contains filter_generateRgbaU8, filter_generateU8, et cetera...
+
+</P><P>
+Useful for generating images when starting the application where executing once is not making a notable difference.
+Allocates a new image of the specified dimensions before evaluating the lambda function on each pixel.
+Same performance as allocating an image yourself and then calling the map function.
+
+</P><P>
+When taking inputs, try to allow unaligned images if you don't plan to use it for SIMD later.
+When returning a result that was just created and not a sub-image let it be aligned or even ordered to describe it as closely as possible.
+
+</P><P>
+Adding two grayscale images using <B>filter_generateU8</B>:
+<PRE><BLOCKQUOTE>AlignedImageU8 addImages_generate(ImageU8 imageA, ImageU8 imageB) {
+	int width = image_getWidth(imageA);
+	int height = image_getHeight(imageA);
+	// Call your lambda for width times height pixels
+	return filter_generateU8(width, height,
+		[imageA, imageB](int x, int y) {
+			int lumaA = image_readPixel_clamp(imageA, x, y);
+			int lumaB = image_readPixel_clamp(imageB, x, y);
+			return lumaA + lumaB;
+		}
+	);
+}</BLOCKQUOTE></PRE>
+
+</P><P>
+</P><IMG SRC="Images/Border.png"><P>
+
+</P><P>
+</P><H2> Loops with image_writePixel (slow but safe)</H2><P>When beginning to optimize, make your own pixel loop using x and y integers.
+
+</P><P>
+Because pixels on the same row are packed together in memory, you should try to read the pixels of different x coordinates before moving to the next row along y.
+Otherwise the memory will be read in an order that is hard to predict when reading memory into data cache.
+
+</P><P>
+Storing the dimensions before the loop prevents calling non-inlined functions inside the loop.
+Calling functions that can not be inlined inside of a loop would be very bad for performance by clearing the CPU's execution window with each call.
+
+</P><P>
+Writing the result using image_writePixel will automatically saturate to fit into 8 bits.
+
+</P><P>
+Adding two grayscale images using <B>image_writePixel</B>:
+<PRE><BLOCKQUOTE>void addImages_loop(ImageU8 targetImage, ImageU8 imageA, ImageU8 imageB) {
+	int width = image_getWidth(targetImage);
+	int height = image_getHeight(targetImage);
+	// Loop over all x, y coordinates yourself
+	for (int y = 0; y < height; y++) {
+		for (int x = 0; x < width; x++) {
+			int lumaA = image_readPixel_clamp(imageA, x, y);
+			int lumaB = image_readPixel_clamp(imageB, x, y);
+			image_writePixel(targetImage, x, y, lumaA + lumaB);
+		}
+	}
+}</BLOCKQUOTE></PRE>
+
+</P><P>
+</P><IMG SRC="Images/Border.png"><P>
+
+</P><P>
+</P><H2> Loops with safe pointers (fast in release and safe in debug)</H2><P>
+</P><P>
+Use safe pointers instead of raw pointers when you need better error messages with tighter memory bounds in debug mode, but can not afford any performance penalty in release mode.
+
+</P><P>
+Safe pointers may only be used within the lifetime of the resource, because the safe pointer does not affect any reference counting for the allocation.
+
+</P><P>
+Saturation of the result can be done using an atomic if statement containing a basic assignment, which will be optimized into a conditional move instruction taking a single cycle on most CPU architectures.
+Because we are adding two unsigned images, we do not have to clamp any negative values to zero and only need to clamp values larger than the largest unsigned 8-bit integer (255).
+
+</P><P>
+Adding two grayscale images using <B>SafePointer<uint8_t></B>:
+<PRE><BLOCKQUOTE>void addImages_pointer(ImageU8 targetImage, ImageU8 imageA, ImageU8 imageB) {
+	int width = image_getWidth(targetImage);
+	int height = image_getHeight(targetImage);
+	SafePointer<uint8_t> targetRow = image_getSafePointer(targetImage);
+	SafePointer<uint8_t> rowA = image_getSafePointer(imageA);
+	SafePointer<uint8_t> rowB = image_getSafePointer(imageB);
+	int targetStride = image_getStride(targetImage);
+	int strideA = image_getStride(imageA);
+	int strideB = image_getStride(imageB);
+	for (int y = 0; y < height; y++) {
+		SafePointer<uint8_t> targetPixel = targetRow;
+		SafePointer<uint8_t> pixelA = rowA;
+		SafePointer<uint8_t> pixelB = rowB;
+		for (int x = 0; x < width; x++) {
+			// Read both source pixels and add them
+			int result = *pixelA + *pixelB;
+			// Clamp overflow
+			if (result > 255) result = 255;
+			// Can skip underflow check
+			//if (result < 0) result = 0;
+			// Write the result
+			*targetPixel = result;
+			// Move pixel pointers to the next pixel
+			targetPixel += 1;
+			pixelA += 1;
+			pixelB += 1;
+		}
+		// Move row pointers to the next row
+		targetRow.increaseBytes(targetStride);
+		rowA.increaseBytes(strideA);
+		rowB.increaseBytes(strideB);
+	}
+}</BLOCKQUOTE></PRE>
+
+</P><P>
+</P><IMG SRC="Images/Border.png"><P>
+
+</P><P>
+</P><H2> Loops with SIMD vectorization (very fast in release and safe in debug)</H2><P>
+</P><P>
+<B>Source/DFPSR/base/simd.h</B> contains F32x4, a SIMD vector storing 4 32-bit floats.
+
+</P><P>
+<B>Source/DFPSR/base/simd.h</B> contains I32x4, a SIMD vector storing 4 signed 32-bit integers.
+
+</P><P>
+<B>Source/DFPSR/base/simd.h</B> contains U32x4, a SIMD vector storing 4 unsigned 32-bit integers.
+
+</P><P>
+<B>Source/DFPSR/base/simd.h</B> contains U16x8, a SIMD vector storing 8 unsigned 16-bit integers.
+
+</P><P>
+<B>Source/DFPSR/base/simd.h</B> contains U8x16, a SIMD vector storing 16 unsigned 8-bit integers.
+
+</P><P>
+SIMD vectorization requires that the images are aligned.
+Ordered images such as OrderedImageRgbaU8 are also aligned.
+Sub-images from image_getSubImage are not aligned, because otherwise their construction would require runtime checks that might randomly fail and requesting an aligned image for SIMD will often also assume ownership of any padding bytes for writing over with garbage data.
+
+</P><P>
+When using readAligned or writeAligned in debug mode, you get both bound checks and alignment checks at runtime.
+So make sure that you enable debug mode when developing with the SIMD vectors.
+
+</P><P>
+You might want to check which SIMD functions are available before writing your algorithm, because some are only available for certain datatypes.
+
+</P><P>
+Iterate in multiples of 16 bytes over the pixel rows to stay aligned with the memory.
+When adding an integer to a pointer, the address offset is multiplied by the pointer's element size.
+This means that a pointers of uint32_t for a color pixel only needs to add 4 elements to the pointer to move 16 bytes, while pointers of uint16_t moves 8 elements and pointers of uint8_t moves 16 elements.
+
+</P><P>
+Adding two grayscale images using SIMD vectorization</B>:
+<PRE><BLOCKQUOTE>void addImages_simd(AlignedImageU8 targetImage, AlignedImageU8 imageA, AlignedImageU8 imageB) {
+	int width = image_getWidth(targetImage);
+	int height = image_getHeight(targetImage);
+	SafePointer<uint8_t> targetRow = image_getSafePointer(targetImage);
+	SafePointer<uint8_t> rowA = image_getSafePointer(imageA);
+	SafePointer<uint8_t> rowB = image_getSafePointer(imageB);
+	int targetStride = image_getStride(targetImage);
+	int strideA = image_getStride(imageA);
+	int strideB = image_getStride(imageB);
+	for (int y = 0; y < height; y++) {
+		SafePointer<uint8_t> targetPixel = targetRow;
+		SafePointer<uint8_t> pixelA = rowA;
+		SafePointer<uint8_t> pixelB = rowB;
+		// Assuming that we have ownership of any padding pixels
+		for (int x = 0; x < width; x += 16) {
+			// Read 16 source pixels at a time
+			U8x16 a = U8x16::readAligned(pixelA, "addImages: reading pixelA");
+			U8x16 b = U8x16::readAligned(pixelB, "addImages: reading pixelB");
+			// Saturated operations replace conditional move
+			U8x16 result = saturatedAddition(a, b);
+			// Write the result 16 pixels at a time
+			result.writeAligned(targetPixel, "addImages: writing result");
+			// Move pixel pointers to the next pixel
+			targetPixel += 16;
+			pixelA += 16;
+			pixelB += 16;
+		}
+		// Move row pointers to the next row
+		targetRow.increaseBytes(targetStride);
+		rowA.increaseBytes(strideA);
+		rowB.increaseBytes(strideB);
+	}
+}</BLOCKQUOTE></PRE>
+
+</P><P>
+</P><IMG SRC="Images/Border.png"><P>
+</P>
+</BODY> </HTML>
