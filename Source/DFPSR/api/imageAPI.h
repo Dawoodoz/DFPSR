@@ -135,12 +135,6 @@ namespace dsr {
 	float image_readPixel_tile(const ImageF32& image, int32_t x, int32_t y);
 	ColorRgbaI32 image_readPixel_tile(const ImageRgbaU8& image, int32_t x, int32_t y);
 
-
-
-// ------------------------ Below is untested! ------------------------ //
-
-
-
 // Loading and saving
 	OrderedImageRgbaU8 image_load_RgbaU8(const String& filename, bool mustExist = true);
 	bool image_save(const ImageRgbaU8 &image, const String& filename);
