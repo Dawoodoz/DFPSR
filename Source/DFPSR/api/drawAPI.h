@@ -29,12 +29,6 @@
 
 namespace dsr {
 
-
-
-// ------------------------ Below is untested! ------------------------ //
-
-
-
 // Drawing shapes
 	void draw_rectangle(ImageU8& image, const IRect& bound, int color);
 	void draw_rectangle(ImageF32& image, const IRect& bound, float color);
