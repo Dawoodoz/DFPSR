@@ -43,6 +43,8 @@ namespace dsr {
 // Window Construction
 	// A portable window will be wrapped around a native window backend supplied from a call to createBackendWindow.
 	Window window_create(const dsr::String& title, int32_t width, int32_t height);
+	// If the game starts in full screen, this constructor should be used instead.
+	//   Otherwise the canvas may ask for the window's dimensions while the system still keeps the old dimensions due to delays.
 	Window window_create_fullscreen(const dsr::String& title);
 	// Returns true iff the window exists
 	bool window_exists(const Window& window);
