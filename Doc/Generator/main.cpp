@@ -12,6 +12,24 @@ bool string_beginsWith(const ReadableString &a, const ReadableString &b) {
 	return string_caseInsensitiveMatch(string_before(a, string_length(b)), b);
 }
 
+String substituteCharacters(ReadableString text) {
+	String result;
+	for (int i = 0; i < string_length(text); i++) {
+		DsrChar c = text[i];
+		if (c == U'<') {
+			string_append(result, U"&lt;");
+		} else if (c == U'>') {
+			string_append(result, U"&gt;");
+		} else if (c == U'\\') {
+			string_append(result, U"&bsol;");
+		} else {
+			string_appendChar(result, text[i]);
+		}
+	}
+	return result;
+}
+
+bool codeBlock = false;
 void processContent(String &target, String content) {
 	string_split_callback([&target](ReadableString section) {
 		//printText(U"Processing: ", section, U"\n");
@@ -60,13 +78,19 @@ void processContent(String &target, String content) {
 			ReadableString title = string_from(section, 7);
 			//printText(U"    Title3: ", title, U"\n");
 			string_append(target, U"</P><H3>", title, U"</H3><P>");
-		} else if (string_beginsWith(section, U"Code:")) {
-            // TODO: Find a clean syntax for multi-line quotes in <PRE><BLOCKQUOTE>...</PRE></BLOCKQUOTE>
-			ReadableString code = string_from(section, 5);
-			//printText(U"    Code: ", code, U"\n");
-			string_append(target, U"<blockquote>", code, U"</blockquote>");
+		} else if (string_beginsWith(section, U"CodeStart:")) {
+			ReadableString code = string_from(section, 10);
+			string_append(target, U"<PRE><BLOCKQUOTE>", substituteCharacters(code));
+			codeBlock = true;
+		} else if (string_beginsWith(section, U"CodeEnd:")) {
+			string_append(target, U"</BLOCKQUOTE></PRE>");
+			codeBlock = false;
 		} else {
-			string_append(target, section, U"\n");
+			if (codeBlock) {
+				string_append(target, substituteCharacters(section), U"\n");
+			} else {
+				string_append(target, section, U"\n");
+			}
 		}
 	}, content, U'\n');
 }

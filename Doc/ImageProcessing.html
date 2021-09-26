@@ -97,8 +97,8 @@ Adding two grayscale images using <B>filter_mapU8</B>:
 			return lumaA + lumaB;
 		}
 	);
-}</BLOCKQUOTE></PRE>
-
+}
+</BLOCKQUOTE></PRE>
 </P><P>
 </P><IMG SRC="Images/Border.png"><P>
 
@@ -129,8 +129,8 @@ Adding two grayscale images using <B>filter_generateU8</B>:
 			return lumaA + lumaB;
 		}
 	);
-}</BLOCKQUOTE></PRE>
-
+}
+</BLOCKQUOTE></PRE>
 </P><P>
 </P><IMG SRC="Images/Border.png"><P>
 
@@ -154,15 +154,15 @@ Adding two grayscale images using <B>image_writePixel</B>:
 	int width = image_getWidth(targetImage);
 	int height = image_getHeight(targetImage);
 	// Loop over all x, y coordinates yourself
-	for (int y = 0; y < height; y++) {
-		for (int x = 0; x < width; x++) {
+	for (int y = 0; y &lt; height; y++) {
+		for (int x = 0; x &lt; width; x++) {
 			int lumaA = image_readPixel_clamp(imageA, x, y);
 			int lumaB = image_readPixel_clamp(imageB, x, y);
 			image_writePixel(targetImage, x, y, lumaA + lumaB);
 		}
 	}
-}</BLOCKQUOTE></PRE>
-
+}
+</BLOCKQUOTE></PRE>
 </P><P>
 </P><IMG SRC="Images/Border.png"><P>
 
@@ -183,23 +183,23 @@ Adding two grayscale images using <B>SafePointer<uint8_t></B>:
 <PRE><BLOCKQUOTE>void addImages_pointer(ImageU8 targetImage, ImageU8 imageA, ImageU8 imageB) {
 	int width = image_getWidth(targetImage);
 	int height = image_getHeight(targetImage);
-	SafePointer<uint8_t> targetRow = image_getSafePointer(targetImage);
-	SafePointer<uint8_t> rowA = image_getSafePointer(imageA);
-	SafePointer<uint8_t> rowB = image_getSafePointer(imageB);
+	SafePointer&lt;uint8_t&gt; targetRow = image_getSafePointer(targetImage);
+	SafePointer&lt;uint8_t&gt; rowA = image_getSafePointer(imageA);
+	SafePointer&lt;uint8_t&gt; rowB = image_getSafePointer(imageB);
 	int targetStride = image_getStride(targetImage);
 	int strideA = image_getStride(imageA);
 	int strideB = image_getStride(imageB);
-	for (int y = 0; y < height; y++) {
-		SafePointer<uint8_t> targetPixel = targetRow;
-		SafePointer<uint8_t> pixelA = rowA;
-		SafePointer<uint8_t> pixelB = rowB;
-		for (int x = 0; x < width; x++) {
+	for (int y = 0; y &lt; height; y++) {
+		SafePointer&lt;uint8_t&gt; targetPixel = targetRow;
+		SafePointer&lt;uint8_t&gt; pixelA = rowA;
+		SafePointer&lt;uint8_t&gt; pixelB = rowB;
+		for (int x = 0; x &lt; width; x++) {
 			// Read both source pixels and add them
 			int result = *pixelA + *pixelB;
 			// Clamp overflow
-			if (result > 255) result = 255;
+			if (result &gt; 255) result = 255;
 			// Can skip underflow check
-			//if (result < 0) result = 0;
+			//if (result &lt; 0) result = 0;
 			// Write the result
 			*targetPixel = result;
 			// Move pixel pointers to the next pixel
@@ -212,8 +212,8 @@ Adding two grayscale images using <B>SafePointer<uint8_t></B>:
 		rowA.increaseBytes(strideA);
 		rowB.increaseBytes(strideB);
 	}
-}</BLOCKQUOTE></PRE>
-
+}
+</BLOCKQUOTE></PRE>
 </P><P>
 </P><IMG SRC="Images/Border.png"><P>
 
@@ -256,18 +256,18 @@ Adding two grayscale images using SIMD vectorization</B>:
 <PRE><BLOCKQUOTE>void addImages_simd(AlignedImageU8 targetImage, AlignedImageU8 imageA, AlignedImageU8 imageB) {
 	int width = image_getWidth(targetImage);
 	int height = image_getHeight(targetImage);
-	SafePointer<uint8_t> targetRow = image_getSafePointer(targetImage);
-	SafePointer<uint8_t> rowA = image_getSafePointer(imageA);
-	SafePointer<uint8_t> rowB = image_getSafePointer(imageB);
+	SafePointer&lt;uint8_t&gt; targetRow = image_getSafePointer(targetImage);
+	SafePointer&lt;uint8_t&gt; rowA = image_getSafePointer(imageA);
+	SafePointer&lt;uint8_t&gt; rowB = image_getSafePointer(imageB);
 	int targetStride = image_getStride(targetImage);
 	int strideA = image_getStride(imageA);
 	int strideB = image_getStride(imageB);
-	for (int y = 0; y < height; y++) {
-		SafePointer<uint8_t> targetPixel = targetRow;
-		SafePointer<uint8_t> pixelA = rowA;
-		SafePointer<uint8_t> pixelB = rowB;
+	for (int y = 0; y &lt; height; y++) {
+		SafePointer&lt;uint8_t&gt; targetPixel = targetRow;
+		SafePointer&lt;uint8_t&gt; pixelA = rowA;
+		SafePointer&lt;uint8_t&gt; pixelB = rowB;
 		// Assuming that we have ownership of any padding pixels
-		for (int x = 0; x < width; x += 16) {
+		for (int x = 0; x &lt; width; x += 16) {
 			// Read 16 source pixels at a time
 			U8x16 a = U8x16::readAligned(pixelA, "addImages: reading pixelA");
 			U8x16 b = U8x16::readAligned(pixelB, "addImages: reading pixelB");
@@ -285,8 +285,8 @@ Adding two grayscale images using SIMD vectorization</B>:
 		rowA.increaseBytes(strideA);
 		rowB.increaseBytes(strideB);
 	}
-}</BLOCKQUOTE></PRE>
-
+}
+</BLOCKQUOTE></PRE>
 </P><P>
 </P><IMG SRC="Images/Border.png"><P>
 </P>
