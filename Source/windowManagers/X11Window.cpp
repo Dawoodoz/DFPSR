@@ -486,12 +486,14 @@ void X11Window::prefetchEvents() {
 				} else if (currentEvent.type == KeyPress || currentEvent.type == KeyRelease) {
 					// Key down/up
 					uint32_t character = getNativeCharacterCode(currentEvent);
-					dsr::DsrKey dsrKey = getDsrKey(XLookupKeysym(&currentEvent.xkey, 0));
+					KeySym nativeKey = XLookupKeysym(&currentEvent.xkey, 0);
+					dsr::DsrKey dsrKey = getDsrKey(nativeKey);
+					KeySym nextNativeKey = hasNextEvent ? XLookupKeysym(&nextEvent.xkey, 0) : 0;
 					// Distinguish between fake and physical repeats using time stamps
 					if (hasNextEvent
 					 && currentEvent.type == KeyRelease && nextEvent.type == KeyPress
 					 && currentEvent.xkey.time == nextEvent.xkey.time
-					 && character == getNativeCharacterCode(nextEvent)) {
+					 && nativeKey == nextNativeKey) {
 						// Repeated typing
 						this->queueInputEvent(new dsr::KeyboardEvent(dsr::KeyboardEventType::KeyType, character, dsrKey));
 						// Skip next event
