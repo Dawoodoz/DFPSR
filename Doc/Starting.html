@@ -86,7 +86,27 @@ Update header include paths to the library from the new folder location.
 </P><P>
 <IMG SRC="Images/SmallDot.png">
 Add your own external dependencies to LINKER_FLAGS within a quote with -l in front of each library name.
-</P><IMG SRC="Images/Border.png"><P>
+
+</P><P>
+</P><H2> Create a shortcut</H2><P>
+</P><P>
+There are two types of shortcuts on Linux, symbolic links which are used to make a folder appear on two locations and *.desktop files.
+For a shortcut to a program, you will create a *.desktop file because it allows you to select an icon and which folder to execute the application from, so that your media files can be found using relative paths.
+On some Linux distributions, you can just right click on the desktop, select that you want to create a program starter and fill in the information.
+
+</P><P>
+If you are making an installer however, you might want to automatically generate the desktop file with the .desktop extension using the installation path given by the user.
+<PRE><BLOCKQUOTE>[Desktop Entry]
+Version=1.0
+Type=Application
+Name=ShortcutName
+Comment=
+Exec=/pathToProgram/program
+Icon=theProgramsIcon
+Path=/pathToProgram
+Terminal=false
+StartupNotify=false
+</BLOCKQUOTE></PRE></P><IMG SRC="Images/Border.png"><P>
 </P><H2> Compiling a project on Microsoft Windows</H2><P>
 </P><P>
 Create a project from existing code:
