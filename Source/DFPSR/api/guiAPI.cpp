@@ -330,6 +330,27 @@ String dsr::component_call(const Component& component, const ReadableString& met
 	return component_call(component, methodName, U"");
 }
 
+void dsr::component_detachFromParent(const Component& component) {
+	MUST_EXIST(component, component_detachFromParent);
+	component->detachFromParent();
+}
+
+Component dsr::component_create(const Component& parent, const ReadableString& className, const ReadableString& identifierName, int index) {
+	// Making sure that the default components exist before trying to create a component manually.
+	gui_initialize();
+	// Creating a component from the name
+	Component child = std::dynamic_pointer_cast<VisualComponent>(createPersistentClass(className));
+	if (child) {
+		child->setName(identifierName);
+		child->setIndex(index);
+		// Attaching to a parent is optional, but convenient to do in the same call.
+		if (parent) {
+			parent->addChildComponent(child);
+		}
+	}
+	return child;
+}
+
 void dsr::window_applyTheme(const Window& window, const VisualTheme& theme) {
 	MUST_EXIST(window, window_applyTheme);
 	MUST_EXIST(theme, window_applyTheme);

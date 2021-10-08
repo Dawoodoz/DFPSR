@@ -152,7 +152,7 @@ std::shared_ptr<Persistent> dsr::createPersistentClassFromText(const ReadableStr
 				String keyword = string_removeOuterWhiteSpace(string_before(line, colonIndex));
 				if (string_caseInsensitiveMatch(keyword, U"Begin")) {
 					String type = string_removeOuterWhiteSpace(string_after(line, colonIndex));
-					newObject = dsr::createPersistentClass(type);
+					newObject = createPersistentClass(type);
 					if (rootObject.get() == nullptr) {
 						rootObject = newObject;
 					} else {

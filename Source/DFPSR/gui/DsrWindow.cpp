@@ -38,7 +38,7 @@
 using namespace dsr;
 
 static bool initialized = false;
-static void initializeGui() {
+void dsr::gui_initialize() {
 	if (!initialized) {
 		// Register built-in components by name
 		REGISTER_PERSISTENT_CLASS(Panel)
@@ -54,7 +54,7 @@ static void initializeGui() {
 DsrWindow::DsrWindow(std::shared_ptr<BackendWindow> backend)
  : backend(backend), innerWidth(backend->getWidth()), innerHeight(backend->getHeight()) {
 	// Initialize the GUI system if needed
-	initializeGui();
+	gui_initialize();
 	// Listen to mouse and keyboard events from the backend window
 	this->backend->mouseEvent() = [this](const MouseEvent& event) {
 		this->sendMouseEvent(event);

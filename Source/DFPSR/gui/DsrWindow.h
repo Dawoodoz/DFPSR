@@ -36,6 +36,9 @@
 
 namespace dsr {
 
+// Called to register the default components before trying to construct visual components from text or names.
+void gui_initialize();
+
 class DsrWindow {
 private:
 	// Window backend

@@ -144,25 +144,35 @@ namespace dsr {
 	int window_getInnerHeight(const Window& window);
 
 // Direct window events
-	// Listen to window mouse events
+	// Listen to window mouse events.
 	//   Raises an exception if window doesn't exist.
-	//   event.mouseEventType gives the type of mouse event
-	//   event.key gives the key being used
+	//   event.mouseEventType gives the type of mouse event.
+	//   event.key gives the key being used.
 	void window_setMouseEvent(const Window& window, const MouseCallback& mouseEvent);
-	// Listen to window keyboard events
+	// Listen to window keyboard events.
 	//   Raises an exception if window doesn't exist.
-	//   event.keyboardEventType gives the type of keyboard event
-	//   event.dsrKey gives the key being used
+	//   event.keyboardEventType gives the type of keyboard event.
+	//   event.dsrKey gives the key being used.
 	void window_setKeyboardEvent(const Window& window, const KeyboardCallback& keyboardEvent);
-	// Listen to the window close event
+	// Listen to the window close event.
 	//   Raises an exception if window doesn't exist.
 	void window_setCloseEvent(const Window& window, const EmptyCallback& closeEvent);
 
 // Components
-	// Returns true iff the component exists
+	// Create a new component belonging to parent.
+	// Returns a handle to the component or an empty handle if className have not been registered.
+	//   Can use component_exists on the result to check if the operation was a success.
+	// className must be the name of a registered persistent class inheriting from VisualComponent.
+	// identifierName is used to find the component.
+	// index can be used to identify multiple components with the same name without having to generate numbered names.
+	Component component_create(const Component& parent, const ReadableString& className, const ReadableString& identifierName, int index = 0);
+	// Returns true iff the component exists.
 	bool component_exists(const Component& component);
-
-	// Returns true iff propertyName exists in component
+	// Removed the component from the parent.
+	//   Does nothing if used against the root component.
+	//   Make sure to erase any other references to the component if you want it erased.
+	void component_detachFromParent(const Component& component);
+	// Returns true iff propertyName exists in component.
 	bool component_hasProperty(const Component& component, const ReadableString& propertyName);
 	// Sets a property found using propertyName in component to the value serialized in value.
 	//   Raises an exception if component doesn't exist.
