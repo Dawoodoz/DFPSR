@@ -322,6 +322,49 @@ int64_t dsr::component_getProperty_integer(const Component& component, const Rea
 	}
 }
 
+ReturnCode dsr::component_setProperty_image(const Component& component, const ReadableString& propertyName, const OrderedImageRgbaU8& value, bool mustAssign) {
+	MUST_EXIST(component, component_setProperty_image);
+	Persistent* target = component->findAttribute(propertyName);
+	if (target == nullptr) {
+		if (mustAssign) {
+			throwError("component_setProperty_image: ", propertyName, " in ", component->getClassName(), " could not be found.\n");
+		}
+		return ReturnCode::KeyNotFound;
+	} else {
+		PersistentImage* imageTarget = dynamic_cast<PersistentImage*>(target);
+		if (imageTarget != nullptr) {
+			imageTarget->value = value;
+			component->changedAttribute(propertyName);
+			return ReturnCode::Good;
+		} else {
+			if (mustAssign) {
+				throwError("component_setProperty_image: ", propertyName, " in ", component->getClassName(), " was a ", target->getClassName(), " instead of an image.\n");
+			}
+			return ReturnCode::KeyNotFound;
+		}
+	}
+}
+OrderedImageRgbaU8 dsr::component_getProperty_image(const Component& component, const ReadableString& propertyName, bool mustExist) {
+	MUST_EXIST(component, component_getProperty_image);
+	Persistent* target = component->findAttribute(propertyName);
+	if (target == nullptr) {
+		if (mustExist) {
+			throwError("component_getProperty_image: ", propertyName, " in ", component->getClassName(), " could not be found.\n");
+		}
+		return OrderedImageRgbaU8();
+	} else {
+		PersistentImage* imageTarget = dynamic_cast<PersistentImage*>(target);
+		if (imageTarget != nullptr) {
+			return imageTarget->value;
+		} else {
+			if (mustExist) {
+				throwError("component_getProperty_image: ", propertyName, " in ", component->getClassName(), " was a ", target->getClassName(), " instead of an image.\n");
+			}
+			return OrderedImageRgbaU8();
+		}
+	}
+}
+
 String dsr::component_call(const Component& component, const ReadableString& methodName, const ReadableString& arguments) {
 	MUST_EXIST(component, component_call);
 	return component->call(methodName, arguments);

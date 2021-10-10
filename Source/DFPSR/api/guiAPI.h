@@ -191,6 +191,8 @@ namespace dsr {
 	//     Use 1 (or another non-zero value) for true and 0 for false.
 	//     Boolean properties will convery any non-zero values into ones.
 	ReturnCode component_setProperty_integer(const Component& component, const ReadableString& propertyName, int64_t value, bool mustAssign = true);
+	// A version for setting images.
+	ReturnCode component_setProperty_image(const Component& component, const ReadableString& propertyName, const OrderedImageRgbaU8& value, bool mustAssign = true);
 	// A version optimized for basic strings to bypass quote mangling
 	//   The new value is given as it is without unmangling.
 	ReturnCode component_setProperty_string(const Component& component, const ReadableString& propertyName, const ReadableString& value, bool mustAssign = true);
@@ -202,9 +204,11 @@ namespace dsr {
 	//   If mustExist is false
 	//     Returns an empty string when propertyName isn't found.
 	String component_getProperty(const Component& component, const ReadableString& propertyName, bool mustExist = true);
-	// A version for setting integers and booleans.
+	// A version for getting integers and booleans.
 	//   Returns defaultValue on failure, which should use a value that is never actually used.
 	int64_t component_getProperty_integer(const Component& component, const ReadableString& propertyName, bool mustExist = true, int64_t defaultValue = 0);
+	// A version for getting images
+	OrderedImageRgbaU8 component_getProperty_image(const Component& component, const ReadableString& propertyName, bool mustExist = true);
 	// A version optimized for basic strings to bypass quote mangling.
 	//   Returns the result without adding any quote signs or escape characters.
 	String component_getProperty_string(const Component& component, const ReadableString& propertyName, bool mustExist = true);
