@@ -50,7 +50,7 @@ Persistent* Label::findAttribute(const ReadableString &name) {
 Label::Label() {}
 
 bool Label::isContainer() const {
-	return true;
+	return false;
 }
 
 void Label::drawSelf(ImageRgbaU8& targetImage, const IRect &relativeLocation) {

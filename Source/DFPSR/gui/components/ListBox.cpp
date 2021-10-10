@@ -53,7 +53,7 @@ ListBox::ListBox() {
 }
 
 bool ListBox::isContainer() const {
-	return true;
+	return false;
 }
 
 static const int textBorderLeft = 6;
