@@ -7,4 +7,4 @@
 #include "atomic/PersistentString.h"
 #include "atomic/PersistentStringList.h"
 #include "atomic/PersistentColor.h"
-
+#include "atomic/PersistentImage.h"

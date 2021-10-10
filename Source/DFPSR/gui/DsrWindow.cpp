@@ -28,6 +28,7 @@
 #include "components/Button.h"
 #include "components/ListBox.h"
 #include "components/Label.h"
+#include "components/Picture.h"
 // <<<< Include new components here
 
 #include "../math/scalar.h"
@@ -45,6 +46,7 @@ void dsr::gui_initialize() {
 		REGISTER_PERSISTENT_CLASS(Button)
 		REGISTER_PERSISTENT_CLASS(ListBox)
 		REGISTER_PERSISTENT_CLASS(Label)
+		REGISTER_PERSISTENT_CLASS(Picture)
 		// <<<< Register new components here
 
 		initialized = true;
