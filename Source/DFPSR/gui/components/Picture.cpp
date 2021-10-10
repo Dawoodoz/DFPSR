@@ -31,12 +31,15 @@ PERSISTENT_DEFINITION(Picture)
 void Picture::declareAttributes(StructureDefinition &target) const {
 	VisualComponent::declareAttributes(target);
 	target.declareAttribute(U"Image");
+	target.declareAttribute(U"ImagePressed");
 	target.declareAttribute(U"Interpolation");
 }
 
 Persistent* Picture::findAttribute(const ReadableString &name) {
 	if (string_caseInsensitiveMatch(name, U"Image")) {
 		return &(this->image);
+	} else if (string_caseInsensitiveMatch(name, U"ImagePressed")) {
+		return &(this->imagePressed);
 	} else if (string_caseInsensitiveMatch(name, U"Interpolation")) {
 		return &(this->interpolation);
 	} else if (string_caseInsensitiveMatch(name, U"Clickable")) {
@@ -55,7 +58,7 @@ bool Picture::isContainer() const {
 void Picture::drawSelf(ImageRgbaU8& targetImage, const IRect &relativeLocation) {
 	if (image_exists(this->image.value)) {
 		this->generateGraphics();
-		draw_alphaFilter(targetImage, this->finalImage, relativeLocation.left(), relativeLocation.top());
+		draw_alphaFilter(targetImage, (this->pressed && this->inside) ? this->finalImagePressed : this->finalImage, relativeLocation.left(), relativeLocation.top());
 	}
 }
 
@@ -91,6 +94,7 @@ void Picture::generateGraphics() {
 	if (height < 1) { height = 1; }
 	if (!this->hasImages) {
 		this->finalImage = filter_resize(this->image.value, this->interpolation.value ? Sampler::Linear : Sampler::Nearest, width, height);
+		this->finalImagePressed = filter_resize(this->imagePressed.value, this->interpolation.value ? Sampler::Linear : Sampler::Nearest, width, height);
 		this->hasImages = true;
 	}
 }

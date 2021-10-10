@@ -32,12 +32,13 @@ class Picture : public VisualComponent {
 PERSISTENT_DECLARATION(Picture)
 public:
 	// Attributes
-	PersistentImage image;
+	PersistentImage image; // The default image
+	PersistentImage imagePressed; // Only visible when pressing like a button (Requires clickable)
 	PersistentBoolean interpolation; // False (0) for nearest neighbor, True (1) for bi-linear
 	PersistentBoolean clickable; // Allow catching mouse events (false by default)
 	// Generated
 	bool hasImages = false;
-	OrderedImageRgbaU8 finalImage;
+	OrderedImageRgbaU8 finalImage, finalImagePressed;
 	void generateGraphics();
 	// Temporary
 	bool pressed = false;
