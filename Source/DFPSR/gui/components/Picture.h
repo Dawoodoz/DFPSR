@@ -39,6 +39,9 @@ public:
 	bool hasImages = false;
 	OrderedImageRgbaU8 finalImage;
 	void generateGraphics();
+	// Temporary
+	bool pressed = false;
+	bool inside = false;
 	// Attribute access
 	void declareAttributes(StructureDefinition &target) const override;
 	Persistent* findAttribute(const ReadableString &name) override;
@@ -47,6 +50,7 @@ public:
 public:
 	bool isContainer() const override;
 	void drawSelf(ImageRgbaU8& targetImage, const IRect &relativeLocation) override;
+	void receiveMouseEvent(const MouseEvent& event) override;
 	bool pointIsInside(const IVector2D& pixelPosition) override;
 	void changedLocation(const IRect &oldLocation, const IRect &newLocation) override;
 	void changedAttribute(const ReadableString &name) override;

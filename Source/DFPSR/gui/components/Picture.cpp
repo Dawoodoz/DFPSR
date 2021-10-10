@@ -71,6 +71,19 @@ bool Picture::pointIsInside(const IVector2D& pixelPosition) {
 	}
 }
 
+void Picture::receiveMouseEvent(const MouseEvent& event) {
+	if (event.mouseEventType == MouseEventType::MouseDown) {
+		this->pressed = true;
+	} else if (this->pressed && event.mouseEventType == MouseEventType::MouseUp) {
+		this->pressed = false;
+		if (this->inside) {
+			this->callback_pressedEvent();
+		}
+	}
+	this->inside = this->pointIsInside(event.position);
+	VisualComponent::receiveMouseEvent(event);
+}
+
 void Picture::generateGraphics() {
 	int width = this->location.width();
 	int height = this->location.height();
