@@ -34,6 +34,7 @@ public:
 	// Attributes
 	PersistentImage image;
 	PersistentBoolean interpolation; // False (0) for nearest neighbor, True (1) for bi-linear
+	PersistentBoolean clickable; // Allow catching mouse events (false by default)
 	// Generated
 	bool hasImages = false;
 	OrderedImageRgbaU8 finalImage;

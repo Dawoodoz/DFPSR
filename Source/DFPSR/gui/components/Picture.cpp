@@ -39,6 +39,8 @@ Persistent* Picture::findAttribute(const ReadableString &name) {
 		return &(this->image);
 	} else if (string_caseInsensitiveMatch(name, U"Interpolation")) {
 		return &(this->interpolation);
+	} else if (string_caseInsensitiveMatch(name, U"Clickable")) {
+		return &(this->clickable);
 	} else {
 		return VisualComponent::findAttribute(name);
 	}
@@ -58,7 +60,15 @@ void Picture::drawSelf(ImageRgbaU8& targetImage, const IRect &relativeLocation) 
 }
 
 bool Picture::pointIsInside(const IVector2D& pixelPosition) {
-	return false;
+	if (this->clickable.value) {
+		this->generateGraphics();
+		// Get the point relative to the component instead of its direct container
+		IVector2D localPoint = pixelPosition - this->location.upperLeft();
+		// Sample opacity at the location
+		return dsr::image_readPixel_border(this->finalImage, localPoint.x, localPoint.y).alpha > 127;
+	} else {
+		return false;
+	}
 }
 
 void Picture::generateGraphics() {
