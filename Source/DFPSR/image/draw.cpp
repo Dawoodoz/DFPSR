@@ -1199,6 +1199,54 @@ static void blockMagnify_2x2(ImageRgbaU8Impl& target, const ImageRgbaU8Impl& sou
 	#endif
 }
 
+// Pre-condition:
+//   * The source and target images have the same pack order
+//   * Both source and target are 16-byte aligned, but does not have to own their padding
+//   * clipWidth % 4 == 0
+//   * clipHeight % 4 == 0
+static void blockMagnify_4x4(ImageRgbaU8Impl& target, const ImageRgbaU8Impl& source, int clipWidth, int clipHeight) {
+	const SafePointer<uint32_t> sourceRow = imageInternal::getSafeData<uint32_t>(source);
+	SafePointer<uint32_t> targetRowA = imageInternal::getSafeData<uint32_t>(target, 0);
+	SafePointer<uint32_t> targetRowB = imageInternal::getSafeData<uint32_t>(target, 1);
+	SafePointer<uint32_t> targetRowC = imageInternal::getSafeData<uint32_t>(target, 2);
+	SafePointer<uint32_t> targetRowD = imageInternal::getSafeData<uint32_t>(target, 3);
+	int quadTargetStride = target.stride * 4;
+	for (int upperTargetY = 0; upperTargetY + 4 <= clipHeight; upperTargetY+=4) {
+		// Carriage return
+		const SafePointer<uint32_t> sourcePixel = sourceRow;
+		SafePointer<uint32_t> targetPixelA = targetRowA;
+		SafePointer<uint32_t> targetPixelB = targetRowB;
+		SafePointer<uint32_t> targetPixelC = targetRowC;
+		SafePointer<uint32_t> targetPixelD = targetRowD;
+		// Write to whole multiples of 8 pixels
+		int writeLeftX = 0;
+		while (writeLeftX + 4 <= clipWidth) {
+			// Read one pixel at a time
+			uint32_t scalarValue = *sourcePixel;
+			sourcePixel += 1;
+			// Convert scalar to SIMD vector of 4 repeated pixels
+			ALIGN16 U32x4 sourcePixels = U32x4(scalarValue);
+			// Write to 4x4 pixels using 4 SIMD writes
+			sourcePixels.writeAligned(targetPixelA, "blockMagnify_4x4 @ write A");
+			sourcePixels.writeAligned(targetPixelB, "blockMagnify_4x4 @ write B");
+			sourcePixels.writeAligned(targetPixelC, "blockMagnify_4x4 @ write C");
+			sourcePixels.writeAligned(targetPixelD, "blockMagnify_4x4 @ write D");
+			targetPixelA += 4;
+			targetPixelB += 4;
+			targetPixelC += 4;
+			targetPixelD += 4;
+			// Count
+			writeLeftX += 4;
+		}
+		// Line feed
+		sourceRow.increaseBytes(source.stride);
+		targetRowA.increaseBytes(quadTargetStride);
+		targetRowB.increaseBytes(quadTargetStride);
+		targetRowC.increaseBytes(quadTargetStride);
+		targetRowD.increaseBytes(quadTargetStride);
+	}
+}
+
 static void blackEdges(ImageRgbaU8Impl& target, int excludedWidth, int excludedHeight) {
 	// Right side
 	drawSolidRectangleMemset<Color4xU8>(target, excludedWidth, 0, target.width, excludedHeight, 0);
@@ -1214,8 +1262,14 @@ void dsr::imageImpl_blockMagnify(ImageRgbaU8Impl& target, const ImageRgbaU8Impl&
 	int clipWidth = roundDown(std::min(target.width, source.width * pixelWidth), pixelWidth);
 	int clipHeight = roundDown(std::min(target.height, source.height * pixelHeight), pixelHeight);
 	if (sameOrder) {
-		if (imageIs16ByteAligned(source) && imageIs16ByteAligned(target) && pixelWidth == 2 && pixelHeight == 2) {
-			blockMagnify_2x2(target, source, clipWidth, clipHeight);
+		if (imageIs16ByteAligned(source) && imageIs16ByteAligned(target)) {
+			if (pixelWidth == 2 && pixelHeight == 2) {
+				blockMagnify_2x2(target, source, clipWidth, clipHeight);
+			} else if (pixelWidth == 4 && pixelHeight == 4) {
+				blockMagnify_4x4(target, source, clipWidth, clipHeight);
+			} else {
+				blockMagnify_reference<false>(target, source, pixelWidth, pixelHeight, clipWidth, clipHeight);
+			}
 		} else {
 			blockMagnify_reference<false>(target, source, pixelWidth, pixelHeight, clipWidth, clipHeight);
 		}
