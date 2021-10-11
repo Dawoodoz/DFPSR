@@ -1202,6 +1202,46 @@ static void blockMagnify_2x2(ImageRgbaU8Impl& target, const ImageRgbaU8Impl& sou
 // Pre-condition:
 //   * The source and target images have the same pack order
 //   * Both source and target are 16-byte aligned, but does not have to own their padding
+//   * clipWidth % 3 == 0
+//   * clipHeight % 3 == 0
+static void blockMagnify_3x3(ImageRgbaU8Impl& target, const ImageRgbaU8Impl& source, int clipWidth, int clipHeight) {
+	const SafePointer<uint32_t> sourceRow = imageInternal::getSafeData<uint32_t>(source);
+	SafePointer<uint32_t> targetRowA = imageInternal::getSafeData<uint32_t>(target, 0);
+	SafePointer<uint32_t> targetRowB = imageInternal::getSafeData<uint32_t>(target, 1);
+	SafePointer<uint32_t> targetRowC = imageInternal::getSafeData<uint32_t>(target, 2);
+	int blockTargetStride = target.stride * 3;
+	for (int upperTargetY = 0; upperTargetY + 3 <= clipHeight; upperTargetY+=3) {
+		// Carriage return
+		const SafePointer<uint32_t> sourcePixel = sourceRow;
+		SafePointer<uint32_t> targetPixelA = targetRowA;
+		SafePointer<uint32_t> targetPixelB = targetRowB;
+		SafePointer<uint32_t> targetPixelC = targetRowC;
+		int writeLeftX = 0;
+		while (writeLeftX + 3 <= clipWidth) {
+			// Read one pixel at a time
+			uint32_t scalarValue = *sourcePixel;
+			sourcePixel += 1;
+			// Write to a whole block of pixels
+			targetPixelA[0] = scalarValue; targetPixelA[1] = scalarValue; targetPixelA[2] = scalarValue;
+			targetPixelB[0] = scalarValue; targetPixelB[1] = scalarValue; targetPixelB[2] = scalarValue;
+			targetPixelC[0] = scalarValue; targetPixelC[1] = scalarValue; targetPixelC[2] = scalarValue;
+			targetPixelA += 3;
+			targetPixelB += 3;
+			targetPixelC += 3;
+			// Count
+			writeLeftX += 3;
+		}
+		// Line feed
+		sourceRow.increaseBytes(source.stride);
+		targetRowA.increaseBytes(blockTargetStride);
+		targetRowB.increaseBytes(blockTargetStride);
+		targetRowC.increaseBytes(blockTargetStride);
+	}
+}
+
+// Pre-condition:
+//   * The source and target images have the same pack order
+//   * Both source and target are 16-byte aligned, but does not have to own their padding
 //   * clipWidth % 4 == 0
 //   * clipHeight % 4 == 0
 static void blockMagnify_4x4(ImageRgbaU8Impl& target, const ImageRgbaU8Impl& source, int clipWidth, int clipHeight) {
@@ -1218,7 +1258,6 @@ static void blockMagnify_4x4(ImageRgbaU8Impl& target, const ImageRgbaU8Impl& sou
 		SafePointer<uint32_t> targetPixelB = targetRowB;
 		SafePointer<uint32_t> targetPixelC = targetRowC;
 		SafePointer<uint32_t> targetPixelD = targetRowD;
-		// Write to whole multiples of 8 pixels
 		int writeLeftX = 0;
 		while (writeLeftX + 4 <= clipWidth) {
 			// Read one pixel at a time
@@ -1247,6 +1286,236 @@ static void blockMagnify_4x4(ImageRgbaU8Impl& target, const ImageRgbaU8Impl& sou
 	}
 }
 
+// Pre-condition:
+//   * The source and target images have the same pack order
+//   * Both source and target are 16-byte aligned, but does not have to own their padding
+//   * clipWidth % 5 == 0
+//   * clipHeight % 5 == 0
+static void blockMagnify_5x5(ImageRgbaU8Impl& target, const ImageRgbaU8Impl& source, int clipWidth, int clipHeight) {
+	const SafePointer<uint32_t> sourceRow = imageInternal::getSafeData<uint32_t>(source);
+	SafePointer<uint32_t> targetRowA = imageInternal::getSafeData<uint32_t>(target, 0);
+	SafePointer<uint32_t> targetRowB = imageInternal::getSafeData<uint32_t>(target, 1);
+	SafePointer<uint32_t> targetRowC = imageInternal::getSafeData<uint32_t>(target, 2);
+	SafePointer<uint32_t> targetRowD = imageInternal::getSafeData<uint32_t>(target, 3);
+	SafePointer<uint32_t> targetRowE = imageInternal::getSafeData<uint32_t>(target, 4);
+	int blockTargetStride = target.stride * 5;
+	for (int upperTargetY = 0; upperTargetY + 5 <= clipHeight; upperTargetY+=5) {
+		// Carriage return
+		const SafePointer<uint32_t> sourcePixel = sourceRow;
+		SafePointer<uint32_t> targetPixelA = targetRowA;
+		SafePointer<uint32_t> targetPixelB = targetRowB;
+		SafePointer<uint32_t> targetPixelC = targetRowC;
+		SafePointer<uint32_t> targetPixelD = targetRowD;
+		SafePointer<uint32_t> targetPixelE = targetRowE;
+		int writeLeftX = 0;
+		while (writeLeftX + 5 <= clipWidth) {
+			// Read one pixel at a time
+			uint32_t scalarValue = *sourcePixel;
+			sourcePixel += 1;
+			// Write to a whole block of pixels
+			targetPixelA[0] = scalarValue; targetPixelA[1] = scalarValue; targetPixelA[2] = scalarValue; targetPixelA[3] = scalarValue; targetPixelA[4] = scalarValue;
+			targetPixelB[0] = scalarValue; targetPixelB[1] = scalarValue; targetPixelB[2] = scalarValue; targetPixelB[3] = scalarValue; targetPixelB[4] = scalarValue;
+			targetPixelC[0] = scalarValue; targetPixelC[1] = scalarValue; targetPixelC[2] = scalarValue; targetPixelC[3] = scalarValue; targetPixelC[4] = scalarValue;
+			targetPixelD[0] = scalarValue; targetPixelD[1] = scalarValue; targetPixelD[2] = scalarValue; targetPixelD[3] = scalarValue; targetPixelD[4] = scalarValue;
+			targetPixelE[0] = scalarValue; targetPixelE[1] = scalarValue; targetPixelE[2] = scalarValue; targetPixelE[3] = scalarValue; targetPixelE[4] = scalarValue;
+			targetPixelA += 5;
+			targetPixelB += 5;
+			targetPixelC += 5;
+			targetPixelD += 5;
+			targetPixelE += 5;
+			// Count
+			writeLeftX += 5;
+		}
+		// Line feed
+		sourceRow.increaseBytes(source.stride);
+		targetRowA.increaseBytes(blockTargetStride);
+		targetRowB.increaseBytes(blockTargetStride);
+		targetRowC.increaseBytes(blockTargetStride);
+		targetRowD.increaseBytes(blockTargetStride);
+		targetRowE.increaseBytes(blockTargetStride);
+	}
+}
+
+// Pre-condition:
+//   * The source and target images have the same pack order
+//   * Both source and target are 16-byte aligned, but does not have to own their padding
+//   * clipWidth % 6 == 0
+//   * clipHeight % 6 == 0
+static void blockMagnify_6x6(ImageRgbaU8Impl& target, const ImageRgbaU8Impl& source, int clipWidth, int clipHeight) {
+	const SafePointer<uint32_t> sourceRow = imageInternal::getSafeData<uint32_t>(source);
+	SafePointer<uint32_t> targetRowA = imageInternal::getSafeData<uint32_t>(target, 0);
+	SafePointer<uint32_t> targetRowB = imageInternal::getSafeData<uint32_t>(target, 1);
+	SafePointer<uint32_t> targetRowC = imageInternal::getSafeData<uint32_t>(target, 2);
+	SafePointer<uint32_t> targetRowD = imageInternal::getSafeData<uint32_t>(target, 3);
+	SafePointer<uint32_t> targetRowE = imageInternal::getSafeData<uint32_t>(target, 4);
+	SafePointer<uint32_t> targetRowF = imageInternal::getSafeData<uint32_t>(target, 5);
+	int blockTargetStride = target.stride * 6;
+	for (int upperTargetY = 0; upperTargetY + 6 <= clipHeight; upperTargetY+=6) {
+		// Carriage return
+		const SafePointer<uint32_t> sourcePixel = sourceRow;
+		SafePointer<uint32_t> targetPixelA = targetRowA;
+		SafePointer<uint32_t> targetPixelB = targetRowB;
+		SafePointer<uint32_t> targetPixelC = targetRowC;
+		SafePointer<uint32_t> targetPixelD = targetRowD;
+		SafePointer<uint32_t> targetPixelE = targetRowE;
+		SafePointer<uint32_t> targetPixelF = targetRowF;
+		int writeLeftX = 0;
+		while (writeLeftX + 6 <= clipWidth) {
+			// Read one pixel at a time
+			uint32_t scalarValue = *sourcePixel;
+			sourcePixel += 1;
+			// Write to a whole block of pixels
+			targetPixelA[0] = scalarValue; targetPixelA[1] = scalarValue; targetPixelA[2] = scalarValue; targetPixelA[3] = scalarValue; targetPixelA[4] = scalarValue; targetPixelA[5] = scalarValue;
+			targetPixelB[0] = scalarValue; targetPixelB[1] = scalarValue; targetPixelB[2] = scalarValue; targetPixelB[3] = scalarValue; targetPixelB[4] = scalarValue; targetPixelB[5] = scalarValue;
+			targetPixelC[0] = scalarValue; targetPixelC[1] = scalarValue; targetPixelC[2] = scalarValue; targetPixelC[3] = scalarValue; targetPixelC[4] = scalarValue; targetPixelC[5] = scalarValue;
+			targetPixelD[0] = scalarValue; targetPixelD[1] = scalarValue; targetPixelD[2] = scalarValue; targetPixelD[3] = scalarValue; targetPixelD[4] = scalarValue; targetPixelD[5] = scalarValue;
+			targetPixelE[0] = scalarValue; targetPixelE[1] = scalarValue; targetPixelE[2] = scalarValue; targetPixelE[3] = scalarValue; targetPixelE[4] = scalarValue; targetPixelE[5] = scalarValue;
+			targetPixelF[0] = scalarValue; targetPixelF[1] = scalarValue; targetPixelF[2] = scalarValue; targetPixelF[3] = scalarValue; targetPixelF[4] = scalarValue; targetPixelF[5] = scalarValue;
+			targetPixelA += 6;
+			targetPixelB += 6;
+			targetPixelC += 6;
+			targetPixelD += 6;
+			targetPixelE += 6;
+			targetPixelF += 6;
+			// Count
+			writeLeftX += 6;
+		}
+		// Line feed
+		sourceRow.increaseBytes(source.stride);
+		targetRowA.increaseBytes(blockTargetStride);
+		targetRowB.increaseBytes(blockTargetStride);
+		targetRowC.increaseBytes(blockTargetStride);
+		targetRowD.increaseBytes(blockTargetStride);
+		targetRowE.increaseBytes(blockTargetStride);
+		targetRowF.increaseBytes(blockTargetStride);
+	}
+}
+
+// Pre-condition:
+//   * The source and target images have the same pack order
+//   * Both source and target are 16-byte aligned, but does not have to own their padding
+//   * clipWidth % 7 == 0
+//   * clipHeight % 7 == 0
+static void blockMagnify_7x7(ImageRgbaU8Impl& target, const ImageRgbaU8Impl& source, int clipWidth, int clipHeight) {
+	const SafePointer<uint32_t> sourceRow = imageInternal::getSafeData<uint32_t>(source);
+	SafePointer<uint32_t> targetRowA = imageInternal::getSafeData<uint32_t>(target, 0);
+	SafePointer<uint32_t> targetRowB = imageInternal::getSafeData<uint32_t>(target, 1);
+	SafePointer<uint32_t> targetRowC = imageInternal::getSafeData<uint32_t>(target, 2);
+	SafePointer<uint32_t> targetRowD = imageInternal::getSafeData<uint32_t>(target, 3);
+	SafePointer<uint32_t> targetRowE = imageInternal::getSafeData<uint32_t>(target, 4);
+	SafePointer<uint32_t> targetRowF = imageInternal::getSafeData<uint32_t>(target, 5);
+	SafePointer<uint32_t> targetRowG = imageInternal::getSafeData<uint32_t>(target, 6);
+	int blockTargetStride = target.stride * 7;
+	for (int upperTargetY = 0; upperTargetY + 7 <= clipHeight; upperTargetY+=7) {
+		// Carriage return
+		const SafePointer<uint32_t> sourcePixel = sourceRow;
+		SafePointer<uint32_t> targetPixelA = targetRowA;
+		SafePointer<uint32_t> targetPixelB = targetRowB;
+		SafePointer<uint32_t> targetPixelC = targetRowC;
+		SafePointer<uint32_t> targetPixelD = targetRowD;
+		SafePointer<uint32_t> targetPixelE = targetRowE;
+		SafePointer<uint32_t> targetPixelF = targetRowF;
+		SafePointer<uint32_t> targetPixelG = targetRowG;
+		int writeLeftX = 0;
+		while (writeLeftX + 7 <= clipWidth) {
+			// Read one pixel at a time
+			uint32_t scalarValue = *sourcePixel;
+			sourcePixel += 1;
+			// Write to a whole block of pixels
+			targetPixelA[0] = scalarValue; targetPixelA[1] = scalarValue; targetPixelA[2] = scalarValue; targetPixelA[3] = scalarValue; targetPixelA[4] = scalarValue; targetPixelA[5] = scalarValue; targetPixelA[6] = scalarValue;
+			targetPixelB[0] = scalarValue; targetPixelB[1] = scalarValue; targetPixelB[2] = scalarValue; targetPixelB[3] = scalarValue; targetPixelB[4] = scalarValue; targetPixelB[5] = scalarValue; targetPixelB[6] = scalarValue;
+			targetPixelC[0] = scalarValue; targetPixelC[1] = scalarValue; targetPixelC[2] = scalarValue; targetPixelC[3] = scalarValue; targetPixelC[4] = scalarValue; targetPixelC[5] = scalarValue; targetPixelC[6] = scalarValue;
+			targetPixelD[0] = scalarValue; targetPixelD[1] = scalarValue; targetPixelD[2] = scalarValue; targetPixelD[3] = scalarValue; targetPixelD[4] = scalarValue; targetPixelD[5] = scalarValue; targetPixelD[6] = scalarValue;
+			targetPixelE[0] = scalarValue; targetPixelE[1] = scalarValue; targetPixelE[2] = scalarValue; targetPixelE[3] = scalarValue; targetPixelE[4] = scalarValue; targetPixelE[5] = scalarValue; targetPixelE[6] = scalarValue;
+			targetPixelF[0] = scalarValue; targetPixelF[1] = scalarValue; targetPixelF[2] = scalarValue; targetPixelF[3] = scalarValue; targetPixelF[4] = scalarValue; targetPixelF[5] = scalarValue; targetPixelF[6] = scalarValue;
+			targetPixelG[0] = scalarValue; targetPixelG[1] = scalarValue; targetPixelG[2] = scalarValue; targetPixelG[3] = scalarValue; targetPixelG[4] = scalarValue; targetPixelG[5] = scalarValue; targetPixelG[6] = scalarValue;
+			targetPixelA += 7;
+			targetPixelB += 7;
+			targetPixelC += 7;
+			targetPixelD += 7;
+			targetPixelE += 7;
+			targetPixelF += 7;
+			targetPixelG += 7;
+			// Count
+			writeLeftX += 7;
+		}
+		// Line feed
+		sourceRow.increaseBytes(source.stride);
+		targetRowA.increaseBytes(blockTargetStride);
+		targetRowB.increaseBytes(blockTargetStride);
+		targetRowC.increaseBytes(blockTargetStride);
+		targetRowD.increaseBytes(blockTargetStride);
+		targetRowE.increaseBytes(blockTargetStride);
+		targetRowF.increaseBytes(blockTargetStride);
+		targetRowG.increaseBytes(blockTargetStride);
+	}
+}
+
+// Pre-condition:
+//   * The source and target images have the same pack order
+//   * Both source and target are 16-byte aligned, but does not have to own their padding
+//   * clipWidth % 8 == 0
+//   * clipHeight % 8 == 0
+static void blockMagnify_8x8(ImageRgbaU8Impl& target, const ImageRgbaU8Impl& source, int clipWidth, int clipHeight) {
+	const SafePointer<uint32_t> sourceRow = imageInternal::getSafeData<uint32_t>(source);
+	SafePointer<uint32_t> targetRowA = imageInternal::getSafeData<uint32_t>(target, 0);
+	SafePointer<uint32_t> targetRowB = imageInternal::getSafeData<uint32_t>(target, 1);
+	SafePointer<uint32_t> targetRowC = imageInternal::getSafeData<uint32_t>(target, 2);
+	SafePointer<uint32_t> targetRowD = imageInternal::getSafeData<uint32_t>(target, 3);
+	SafePointer<uint32_t> targetRowE = imageInternal::getSafeData<uint32_t>(target, 4);
+	SafePointer<uint32_t> targetRowF = imageInternal::getSafeData<uint32_t>(target, 5);
+	SafePointer<uint32_t> targetRowG = imageInternal::getSafeData<uint32_t>(target, 6);
+	SafePointer<uint32_t> targetRowH = imageInternal::getSafeData<uint32_t>(target, 7);
+	int blockTargetStride = target.stride * 8;
+	for (int upperTargetY = 0; upperTargetY + 8 <= clipHeight; upperTargetY+=8) {
+		// Carriage return
+		const SafePointer<uint32_t> sourcePixel = sourceRow;
+		SafePointer<uint32_t> targetPixelA = targetRowA;
+		SafePointer<uint32_t> targetPixelB = targetRowB;
+		SafePointer<uint32_t> targetPixelC = targetRowC;
+		SafePointer<uint32_t> targetPixelD = targetRowD;
+		SafePointer<uint32_t> targetPixelE = targetRowE;
+		SafePointer<uint32_t> targetPixelF = targetRowF;
+		SafePointer<uint32_t> targetPixelG = targetRowG;
+		SafePointer<uint32_t> targetPixelH = targetRowH;
+		int writeLeftX = 0;
+		while (writeLeftX + 8 <= clipWidth) {
+			// Read one pixel at a time
+			uint32_t scalarValue = *sourcePixel;
+			sourcePixel += 1;
+			// Write to a whole block of pixels
+			targetPixelA[0] = scalarValue; targetPixelA[1] = scalarValue; targetPixelA[2] = scalarValue; targetPixelA[3] = scalarValue; targetPixelA[4] = scalarValue; targetPixelA[5] = scalarValue; targetPixelA[6] = scalarValue; targetPixelA[7] = scalarValue;
+			targetPixelB[0] = scalarValue; targetPixelB[1] = scalarValue; targetPixelB[2] = scalarValue; targetPixelB[3] = scalarValue; targetPixelB[4] = scalarValue; targetPixelB[5] = scalarValue; targetPixelB[6] = scalarValue; targetPixelB[7] = scalarValue;
+			targetPixelC[0] = scalarValue; targetPixelC[1] = scalarValue; targetPixelC[2] = scalarValue; targetPixelC[3] = scalarValue; targetPixelC[4] = scalarValue; targetPixelC[5] = scalarValue; targetPixelC[6] = scalarValue; targetPixelC[7] = scalarValue;
+			targetPixelD[0] = scalarValue; targetPixelD[1] = scalarValue; targetPixelD[2] = scalarValue; targetPixelD[3] = scalarValue; targetPixelD[4] = scalarValue; targetPixelD[5] = scalarValue; targetPixelD[6] = scalarValue; targetPixelD[7] = scalarValue;
+			targetPixelE[0] = scalarValue; targetPixelE[1] = scalarValue; targetPixelE[2] = scalarValue; targetPixelE[3] = scalarValue; targetPixelE[4] = scalarValue; targetPixelE[5] = scalarValue; targetPixelE[6] = scalarValue; targetPixelE[7] = scalarValue;
+			targetPixelF[0] = scalarValue; targetPixelF[1] = scalarValue; targetPixelF[2] = scalarValue; targetPixelF[3] = scalarValue; targetPixelF[4] = scalarValue; targetPixelF[5] = scalarValue; targetPixelF[6] = scalarValue; targetPixelF[7] = scalarValue;
+			targetPixelG[0] = scalarValue; targetPixelG[1] = scalarValue; targetPixelG[2] = scalarValue; targetPixelG[3] = scalarValue; targetPixelG[4] = scalarValue; targetPixelG[5] = scalarValue; targetPixelG[6] = scalarValue; targetPixelG[7] = scalarValue;
+			targetPixelH[0] = scalarValue; targetPixelH[1] = scalarValue; targetPixelH[2] = scalarValue; targetPixelH[3] = scalarValue; targetPixelH[4] = scalarValue; targetPixelH[5] = scalarValue; targetPixelH[6] = scalarValue; targetPixelH[7] = scalarValue;
+			targetPixelA += 8;
+			targetPixelB += 8;
+			targetPixelC += 8;
+			targetPixelD += 8;
+			targetPixelE += 8;
+			targetPixelF += 8;
+			targetPixelG += 8;
+			targetPixelH += 8;
+			// Count
+			writeLeftX += 8;
+		}
+		// Line feed
+		sourceRow.increaseBytes(source.stride);
+		targetRowA.increaseBytes(blockTargetStride);
+		targetRowB.increaseBytes(blockTargetStride);
+		targetRowC.increaseBytes(blockTargetStride);
+		targetRowD.increaseBytes(blockTargetStride);
+		targetRowE.increaseBytes(blockTargetStride);
+		targetRowF.increaseBytes(blockTargetStride);
+		targetRowG.increaseBytes(blockTargetStride);
+		targetRowH.increaseBytes(blockTargetStride);
+	}
+}
+
 static void blackEdges(ImageRgbaU8Impl& target, int excludedWidth, int excludedHeight) {
 	// Right side
 	drawSolidRectangleMemset<Color4xU8>(target, excludedWidth, 0, target.width, excludedHeight, 0);
@@ -1265,8 +1534,18 @@ void dsr::imageImpl_blockMagnify(ImageRgbaU8Impl& target, const ImageRgbaU8Impl&
 		if (imageIs16ByteAligned(source) && imageIs16ByteAligned(target)) {
 			if (pixelWidth == 2 && pixelHeight == 2) {
 				blockMagnify_2x2(target, source, clipWidth, clipHeight);
+			} else if (pixelWidth == 3 && pixelHeight == 3) {
+				blockMagnify_3x3(target, source, clipWidth, clipHeight);
 			} else if (pixelWidth == 4 && pixelHeight == 4) {
 				blockMagnify_4x4(target, source, clipWidth, clipHeight);
+			} else if (pixelWidth == 5 && pixelHeight == 5) {
+				blockMagnify_5x5(target, source, clipWidth, clipHeight);
+			} else if (pixelWidth == 6 && pixelHeight == 6) {
+				blockMagnify_6x6(target, source, clipWidth, clipHeight);
+			} else if (pixelWidth == 7 && pixelHeight == 7) {
+				blockMagnify_7x7(target, source, clipWidth, clipHeight);
+			} else if (pixelWidth == 8 && pixelHeight == 8) {
+				blockMagnify_8x8(target, source, clipWidth, clipHeight);
 			} else {
 				blockMagnify_reference<false>(target, source, pixelWidth, pixelHeight, clipWidth, clipHeight);
 			}
