@@ -39,6 +39,8 @@ PERSISTENT_DECLARATION(VisualComponent)
 protected:
 	// Parent component
 	VisualComponent *parent = nullptr;
+	IVector2D parentSize; // Remembering the parent's size so that the root component can remember the window's size when moving
+	bool regionAccessed = false; // If someone requested access to the region, remember to update layout in case of new settings
 	// Child components
 	List<std::shared_ptr<VisualComponent>> children;
 	// Remember the component used for a drag event
@@ -70,12 +72,16 @@ public:
 		} else if (string_caseInsensitiveMatch(name, U"Visible")) {
 			return &(this->visible);
 		} else if (string_caseInsensitiveMatch(name, U"Left")) {
+			this->regionAccessed = true;
 			return &(this->region.sides[0]);
 		} else if (string_caseInsensitiveMatch(name, U"Top")) {
+			this->regionAccessed = true;
 			return &(this->region.sides[1]);
 		} else if (string_caseInsensitiveMatch(name, U"Right")) {
+			this->regionAccessed = true;
 			return &(this->region.sides[2]);
 		} else if (string_caseInsensitiveMatch(name, U"Bottom")) {
+			this->regionAccessed = true;
 			return &(this->region.sides[3]);
 		} else {
 			return nullptr;
@@ -97,8 +103,8 @@ public:
 	virtual ~VisualComponent();
 public:
 	virtual bool isContainer() const;
-	IRect getLocation() const;
-	IVector2D getSize() const;
+	IRect getLocation();
+	IVector2D getSize();
 	void setRegion(const FlexRegion &newRegion);
 	FlexRegion getRegion() const;
 	void setVisible(bool visible);
@@ -178,6 +184,8 @@ public:
 	//   parentHeight must be the current height of the parent container
 	// Override to apply a custom behaviour, which may be useful for fixed size components.
 	virtual void applyLayout(IVector2D parentSize);
+	// Update layout when the component moved but the parent has the same dimensions
+	void updateLayout();
 	// Called after the component has been created, moved or resized.
 	virtual void updateLocationEvent(const IRect& oldLocation, const IRect& newLocation);
 	// Returns true iff the pixel with its upper left corner at pixelPosition is inside the component.

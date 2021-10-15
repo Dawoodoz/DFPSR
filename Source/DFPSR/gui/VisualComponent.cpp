@@ -42,12 +42,18 @@ bool VisualComponent::isContainer() const {
 	return true;
 }
 
-IRect VisualComponent::getLocation() const {
+IRect VisualComponent::getLocation() {
+	// If someone requested access to Left, Top, Right or Bottom, regionAccessed will be true
+	if (this->regionAccessed) {
+		// Now that a fixed location is requested, we need to recalculate the location from the flexible region based on parent dimensions
+		this->updateLayout();
+		this->regionAccessed = false;
+	}
 	return this->location;
 }
 
-IVector2D VisualComponent::getSize() const {
-	return this->location.size();
+IVector2D VisualComponent::getSize() {
+	return this->getLocation().size();
 }
 
 void VisualComponent::setRegion(const FlexRegion &newRegion) {
@@ -91,8 +97,13 @@ void VisualComponent::setLocation(const IRect &newLocation) {
 	this->changedLocation(oldLocation, newLocation);
 }
 
+void VisualComponent::updateLayout() {
+	this->setLocation(this->region.getNewLocation(this->parentSize));
+}
+
 void VisualComponent::applyLayout(IVector2D parentSize) {
-	this->setLocation(this->region.getNewLocation(parentSize));
+	this->parentSize = parentSize;
+	this->updateLayout();
 }
 
 void VisualComponent::updateLocationEvent(const IRect& oldLocation, const IRect& newLocation) {
