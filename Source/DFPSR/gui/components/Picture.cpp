@@ -58,7 +58,7 @@ bool Picture::isContainer() const {
 void Picture::drawSelf(ImageRgbaU8& targetImage, const IRect &relativeLocation) {
 	if (image_exists(this->image.value)) {
 		this->generateGraphics();
-		draw_alphaFilter(targetImage, (this->pressed && this->inside) ? this->finalImagePressed : this->finalImage, relativeLocation.left(), relativeLocation.top());
+		draw_alphaFilter(targetImage, (this->pressed && this->inside && image_exists(this->finalImagePressed)) ? this->finalImagePressed : this->finalImage, relativeLocation.left(), relativeLocation.top());
 	}
 }
 
