@@ -39,7 +39,7 @@ public:
 	FVector3D cs;
 	// Image space
 	//   Target pixel coordinates from the upper left corner
-	//   Used for perspectiva correct vertex weights
+	//   Used for perspective correct vertex weights
 	FVector2D is;
 	// Fixed sub-pixel precision target pixel coordinate from the upper left corner
 	//   Used for integer rasterization to prevent holes between triangles

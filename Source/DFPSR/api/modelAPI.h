@@ -305,9 +305,15 @@ namespace dsr {
 	// An empty model handle will be skipped silently, which can be used instead of an model with zero polygons.
 	// Side-effect: The visible triangles are queued up in the renderer.
 	void renderer_giveTask(Renderer& renderer, const Model& model, const Transform3D &modelToWorldTransform, const Camera &camera);
+	// Use already given triangles as occluders
+	void renderer_occludeFromExistingTriangles(Renderer& renderer);
+
+	// TODO: Create methods for occluding from basic shapes, which can be debug drawn together with the triangles.
+
 	// Side-effect: Finishes all the jobs in the rendering context so that triangles are rasterized to the targets given to renderer_begin.
 	// Pre-condition: renderer must refer to an existing renderer.
-	void renderer_end(Renderer& renderer);
+	// If debugWireframe is true, each triangle's edges will be drawn on top of the drawn world to indicate how well the occlusion system is working
+	void renderer_end(Renderer& renderer, bool debugWireframe = false);
 
 	// Imports a DMF model from file content.
 	//   Use in combination with string_load or your own system for storing files.

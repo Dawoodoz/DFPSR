@@ -65,8 +65,10 @@ struct TriangleDrawCommand : public TriangleDrawData {
 	FVector3D subB, subC;
 	// Extra clipping in case that the receiver of the command goes out of bound
 	IRect clipBound;
+	// Late removal of triangles without having to shuffle around any data
+	bool occluded;
 	TriangleDrawCommand(const TriangleDrawData &triangleDrawData, const ITriangle2D &triangle, const FVector3D &subB, const FVector3D &subC, const IRect &clipBound)
-	: TriangleDrawData(triangleDrawData), triangle(triangle), subB(subB), subC(subC), clipBound(clipBound) {}
+	: TriangleDrawData(triangleDrawData), triangle(triangle), subB(subB), subC(subC), clipBound(clipBound), occluded(false) {}
 };
 
 // Get the visibility state for the triangle as seen by the camera.
@@ -82,9 +84,8 @@ void executeTriangleDrawing(const TriangleDrawCommand &command, const IRect &cli
 
 // A queue of draw commands
 class CommandQueue {
-private:
-	List<TriangleDrawCommand> buffer;
 public:
+	List<TriangleDrawCommand> buffer;
 	void add(const TriangleDrawCommand &command);
 	// Multi-threading will be disabled if jobCount equals 1.
 	void execute(const IRect &clipBound, int jobCount = 12) const;

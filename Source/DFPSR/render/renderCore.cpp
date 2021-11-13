@@ -526,7 +526,9 @@ void CommandQueue::execute(const IRect &clipBound, int jobCount) const {
 	if (jobCount <= 1) {
 		// TODO: Make a setting for sorting triangles using indices within each job
 		for (int i = 0; i < this->buffer.length(); i++) {
-			executeTriangleDrawing(this->buffer[i], clipBound);
+			if (!this->buffer[i].occluded) {
+				executeTriangleDrawing(this->buffer[i], clipBound);
+			}
 		}
 	} else {
 		std::function<void()> jobs[jobCount];
@@ -542,7 +544,9 @@ void CommandQueue::execute(const IRect &clipBound, int jobCount) const {
 			jobs[j] = [this, subBound]() {
 				//this->execute(subBound, 1);
 				for (int i = 0; i < this->buffer.length(); i++) {
-					executeTriangleDrawing(this->buffer[i], subBound);
+					if (!this->buffer[i].occluded) {
+						executeTriangleDrawing(this->buffer[i], subBound);
+					}
 				}
 			};
 			y1 = y2;

@@ -59,8 +59,6 @@ bool ITriangle2D::isFrontfacing() const {
 	return ((flatC.x - flatA.x) * (flatB.y - flatA.y)) + ((flatC.y - flatA.y) * (flatA.x - flatB.x)) < 0;
 }
 
-#define INSIDE(VALUE,TRESH) !((VALUE)[0] > (TRESH)[0] || (VALUE)[1] > (TRESH)[1] || (VALUE)[2] > (TRESH)[2])
-
 inline static void cutRight(int32_t& rightBound, int32_t value) {
 	rightBound = std::min(rightBound, value);
 }

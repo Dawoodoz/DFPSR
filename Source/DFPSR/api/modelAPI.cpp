@@ -23,7 +23,9 @@
 
 #include "modelAPI.h"
 #include "imageAPI.h"
+#include "drawAPI.h"
 #include "../render/model/Model.h"
+#include <limits>
 
 #define MUST_EXIST(OBJECT, METHOD) if (OBJECT.get() == nullptr) { throwError("The " #OBJECT " handle was null in " #METHOD "\n"); }
 
@@ -162,13 +164,11 @@ ImageRgbaU8 model_getDiffuseMap(const Model& model, int partIndex) {
 	return model->getDiffuseMap(partIndex);
 }
 
-// TODO: Change the backend's argument order for partIndex or simply inline all of it's functionality
 void model_setDiffuseMap(Model& model, int partIndex, const ImageRgbaU8 &diffuseMap) {
 	MUST_EXIST(model,model_setDiffuseMap);
 	model->setDiffuseMap(diffuseMap, partIndex);
 }
 
-// TODO: Change the backend's argument order for partIndex or simply inline all of it's functionality
 void model_setDiffuseMapByName(Model& model, int partIndex, ResourcePool &pool, const String &filename) {
 	MUST_EXIST(model,model_setDiffuseMapByName);
 	model->setDiffuseMapByName(pool, filename, partIndex);
@@ -179,13 +179,11 @@ ImageRgbaU8 model_getLightMap(Model& model, int partIndex) {
 	return model->getLightMap(partIndex);
 }
 
-// TODO: Change the backend's argument order for partIndex or simply inline all of it's functionality
 void model_setLightMap(Model& model, int partIndex, const ImageRgbaU8 &lightMap) {
 	MUST_EXIST(model,model_setLightMap);
 	model->setLightMap(lightMap, partIndex);
 }
 
-// TODO: Change the backend's argument order for partIndex or simply inline all of it's functionality
 void model_setLightMapByName(Model& model, int partIndex, ResourcePool &pool, const String &filename) {
 	MUST_EXIST(model,model_setLightMapByName);
 	model->setLightMapByName(pool, filename, partIndex);
@@ -209,13 +207,18 @@ void model_getBoundingBox(const Model& model, FVector3D& minimum, FVector3D& max
 	maximum = model->maxBound;
 }
 
+static const int cellSize = 16;
+
 // Context for rendering multiple models at the same time for improved speed
 class RendererImpl {
 private:
 	bool receiving = false; // Preventing version dependency by only allowing calls in the expected order
-	ImageRgbaU8 colorBuffer;
-	ImageF32 depthBuffer;
+	ImageRgbaU8 colorBuffer; // The color image being rendered to
+	ImageF32 depthBuffer; // Linear depth for isometric cameras, 1 / depth for perspective cameras
+	ImageF32 depthGrid; // An occlusion grid of cellSize² cells representing the longest linear depth where something might be visible
 	CommandQueue commandQueue;
+	int width = 0, height = 0, gridWidth = 0, gridHeight = 0;
+	bool occluded = false;
 public:
 	RendererImpl() {}
 	void beginFrame(ImageRgbaU8& colorBuffer, ImageF32& depthBuffer) {
@@ -225,6 +228,16 @@ public:
 		this->receiving = true;
 		this->colorBuffer = colorBuffer;
 		this->depthBuffer = depthBuffer;
+		if (image_exists(this->colorBuffer)) {
+			this->width = image_getWidth(this->colorBuffer);
+			this->height = image_getHeight(this->colorBuffer);
+		} else if (image_exists(this->depthBuffer)) {
+			this->width = image_getWidth(this->depthBuffer);
+			this->height = image_getHeight(this->depthBuffer);
+		}
+		this->gridWidth = (this->width + (cellSize - 1)) / cellSize;
+		this->gridHeight = (this->height + (cellSize - 1)) / cellSize;
+		this->occluded = false;
 	}
 	void giveTask(const Model& model, const Transform3D &modelToWorldTransform, const Camera &camera) {
 		if (!this->receiving) {
@@ -234,18 +247,153 @@ public:
 		//       An extra argument may choose to force an instance directly into the command queue
 		//           Because the model is being borrowed for vertex animation
 		//           To prevent the command queue from getting full hold as much as possible in a sorted list of instances
-		//           When the command queue is full, the solid
+		//           When the command queue is full, the solid instances will be drawn front to back before filtered is drawn back to front
 		model->render(&this->commandQueue, this->colorBuffer, this->depthBuffer, modelToWorldTransform, camera);
 	}
-	void endFrame() {
+	bool pointInsideOfEdge(const LVector2D &edgeA, const LVector2D &edgeB, const LVector2D &point) {
+		LVector2D edgeDirection = LVector2D(edgeB.y - edgeA.y, edgeA.x - edgeB.x);
+		LVector2D relativePosition = point - edgeA;
+		int64_t dotProduct = (edgeDirection.x * relativePosition.x) + (edgeDirection.y * relativePosition.y);
+		return dotProduct <= 0;
+	}
+	// Returns true iff the point is inside of the triangle
+	bool pointInsideOfTriangle(const ITriangle2D &triangle, const LVector2D &point) {
+		return pointInsideOfEdge(triangle.position[0].flat, triangle.position[1].flat, point)
+		    && pointInsideOfEdge(triangle.position[1].flat, triangle.position[2].flat, point)
+		    && pointInsideOfEdge(triangle.position[2].flat, triangle.position[0].flat, point);
+	}
+	// Returns true iff all cornets of the rectangle are inside of the triangle
+	bool rectangleInsideOfTriangle(const ITriangle2D &triangle, const IRect &rectangle) {
+		return pointInsideOfTriangle(triangle, LVector2D(rectangle.left(), rectangle.top()))
+		    && pointInsideOfTriangle(triangle, LVector2D(rectangle.right(), rectangle.top()))
+		    && pointInsideOfTriangle(triangle, LVector2D(rectangle.left(), rectangle.bottom()))
+		    && pointInsideOfTriangle(triangle, LVector2D(rectangle.right(), rectangle.bottom()));
+	}
+	IRect getOuterCellBound(const ITriangle2D &triangle) {
+		int minCellX = triangle.wholeBound.left() / cellSize;
+		int maxCellX = triangle.wholeBound.right() / cellSize + 1;
+		int minCellY = triangle.wholeBound.top() / cellSize;
+		int maxCellY = triangle.wholeBound.bottom() / cellSize + 1;
+		if (minCellX < 0) { minCellX = 0; }
+		if (minCellY < 0) { minCellY = 0; }
+		if (maxCellX > this->gridWidth) { maxCellX = this->gridWidth; }
+		if (maxCellY > this->gridHeight) { maxCellY = this->gridHeight; }
+		return IRect(minCellX, minCellY, maxCellX - minCellX, maxCellY - minCellY);
+	}
+	// Called before occluding so that the grid is initialized once when used and skipped when not used
+	void prepareForOcclusion() {
+		if (!this->occluded) {
+			// Allocate the grid if a sufficiently large one does not already exist
+			if (!(image_exists(this->depthGrid) && image_getWidth(this->depthGrid) >= gridWidth && image_getHeight(this->depthGrid) >= gridHeight)) {
+				this->depthGrid = image_create_F32(gridWidth, gridHeight);
+			}
+			// Use inifnite depth in camera space
+			image_fill(this->depthGrid, std::numeric_limits<float>::infinity());
+		}
+		this->occluded = true;
+	}
+	// If any occluder has been used during this pass, all triangles in the buffer will be filtered based using depthGrid
+	void completeOcclusion() {
+		if (this->occluded) {
+			for (int t = this->commandQueue.buffer.length() - 1; t >= 0; t--) {
+				bool anyVisible = false;
+				ITriangle2D triangle = this->commandQueue.buffer[t].triangle;
+				IRect outerBound = getOuterCellBound(triangle);
+				for (int cellY = outerBound.top(); cellY < outerBound.bottom(); cellY++) {
+					for (int cellX = outerBound.left(); cellX < outerBound.right(); cellX++) {
+						// TODO: Optimize access using SafePointer iteration
+						float backgroundDepth = image_readPixel_clamp(this->depthGrid, cellX, cellY);
+						float triangleDepth = triangle.position[0].cs.z;
+						replaceWithSmaller(triangleDepth, triangle.position[1].cs.z);
+						replaceWithSmaller(triangleDepth, triangle.position[2].cs.z);
+						if (triangleDepth < backgroundDepth + 0.001) {
+							anyVisible = true;
+						}
+					}
+				}
+				if (!anyVisible) {
+					// TODO: Make triangle swapping work so that the list can be sorted
+					this->commandQueue.buffer[t].occluded = true;
+				}
+			}
+		}
+	}
+	void occludeFromExistingTriangles() {
+		prepareForOcclusion();
+		// Generate a depth grid to remove many small triangles behind larger triangles
+		//   This will leave triangles along seams but at least begin to remove the worst unwanted drawing
+		for (int t = 0; t < this->commandQueue.buffer.length(); t++) {
+			// Get the current triangle from the queue
+			Filter filter = this->commandQueue.buffer[t].filter;
+			if (filter == Filter::Solid) {
+				ITriangle2D triangle = this->commandQueue.buffer[t].triangle;
+				// Loop over all cells within the bound
+				IRect outerBound = getOuterCellBound(triangle);
+				// Loop over the outer bound while excluding the outmost rows and columns that are unlikely to be fully occluded by the triangle
+				if (triangle.wholeBound.width() > cellSize && triangle.wholeBound.height() > cellSize) {
+					for (int cellY = outerBound.top(); cellY < outerBound.bottom(); cellY++) {
+						for (int cellX = outerBound.left(); cellX < outerBound.right(); cellX++) {
+							IRect pixelRegion = IRect(cellX * cellSize, cellY * cellSize, cellSize, cellSize);
+							IRect subPixelRegion = pixelRegion * constants::unitsPerPixel;
+							if (rectangleInsideOfTriangle(triangle, subPixelRegion)) {
+								float oldDepth = image_readPixel_clamp(this->depthGrid, cellX, cellY);
+								float newDepth = triangle.position[0].cs.z;
+								replaceWithLarger(newDepth, triangle.position[1].cs.z);
+								replaceWithLarger(newDepth, triangle.position[2].cs.z);
+								if (newDepth < oldDepth) {
+									image_writePixel(this->depthGrid, cellX, cellY, newDepth);
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	void debugDrawTriangles() {
+		if (image_exists(this->colorBuffer)) {
+			if (image_exists(this->depthGrid)) {
+				for (int cellY = 0; cellY < this->gridHeight; cellY++) {
+					for (int cellX = 0; cellX < this->gridWidth; cellX++) {
+						float depth = image_readPixel_clamp(this->depthGrid, cellX, cellY);
+						if (depth < std::numeric_limits<float>::infinity()) {
+							int intensity = depth;
+							draw_rectangle(this->colorBuffer, IRect(cellX * cellSize + 4, cellY * cellSize + 4, cellSize - 8, cellSize - 8), ColorRgbaI32(intensity, intensity, 0, 255));
+						}
+					}
+				}
+			}
+			for (int t = 0; t < this->commandQueue.buffer.length(); t++) {
+				if (!this->commandQueue.buffer[t].occluded) {
+					ITriangle2D *triangle = &(this->commandQueue.buffer[t].triangle);
+					draw_line(this->colorBuffer,
+					  triangle->position[0].flat.x / constants::unitsPerPixel, triangle->position[0].flat.y / constants::unitsPerPixel,
+					  triangle->position[1].flat.x / constants::unitsPerPixel, triangle->position[1].flat.y / constants::unitsPerPixel,
+					  ColorRgbaI32(255, 255, 255, 255)
+					);
+					draw_line(this->colorBuffer,
+					  triangle->position[1].flat.x / constants::unitsPerPixel, triangle->position[1].flat.y / constants::unitsPerPixel,
+					  triangle->position[2].flat.x / constants::unitsPerPixel, triangle->position[2].flat.y / constants::unitsPerPixel,
+					  ColorRgbaI32(255, 255, 255, 255)
+					);
+					draw_line(this->colorBuffer,
+					  triangle->position[2].flat.x / constants::unitsPerPixel, triangle->position[2].flat.y / constants::unitsPerPixel,
+					  triangle->position[0].flat.x / constants::unitsPerPixel, triangle->position[0].flat.y / constants::unitsPerPixel,
+					  ColorRgbaI32(255, 255, 255, 255)
+					);
+				}
+			}
+		}
+	}
+	void endFrame(bool debugWireframe) {
 		if (!this->receiving) {
 			throwError("Called renderer_end without renderer_begin!\n");
 		}
 		this->receiving = false;
-		if (image_exists(this->colorBuffer)) {
-			this->commandQueue.execute(IRect::FromSize(image_getWidth(this->colorBuffer), image_getHeight(this->colorBuffer)));
-		} else if (image_exists(this->depthBuffer)) {
-			this->commandQueue.execute(IRect::FromSize(image_getWidth(this->depthBuffer), image_getHeight(this->depthBuffer)));
+		completeOcclusion();
+		this->commandQueue.execute(IRect::FromSize(this->width, this->height));
+		if (debugWireframe) {
+			this->debugDrawTriangles();
 		}
 		this->commandQueue.clear();
 	}
@@ -279,9 +427,14 @@ void renderer_giveTask(Renderer& renderer, const Model& model, const Transform3D
 	}
 }
 
-void renderer_end(Renderer& renderer) {
+void renderer_occludeFromExistingTriangles(Renderer& renderer) {
+	MUST_EXIST(renderer,renderer_optimize);
+	renderer->occludeFromExistingTriangles();
+}
+
+void renderer_end(Renderer& renderer, bool debugWireframe) {
 	MUST_EXIST(renderer,renderer_end);
-	renderer->endFrame();
+	renderer->endFrame(debugWireframe);
 }
 
 }

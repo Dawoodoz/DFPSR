@@ -147,11 +147,14 @@ int main(int argn, char **argv) {
 		ImageF32 depth = useDepthBuffer ? depthBuffer : ImageF32();
 		// Begin render batch
 		renderer_begin(worker, colorBuffer, depth);
-		// Solid
+		// Solid geometry
 		renderer_giveTask(worker, crateModel, crateLocation, camera);
 		renderer_giveTask(worker, barrelModel, barrelLocation, camera);
 		renderer_giveTask(worker, testModel, testLocation, camera);
-		// Filter
+		// Use triangles as occluders
+		//   The occlusion system knows that only solid triangles occlude, but including them would be redundant work
+		renderer_occludeFromExistingTriangles(worker);
+		// Filtered geometry
 		renderer_giveTask(worker, cubeModel, cubeLocation, camera);
 		// Complete render batch
 		renderer_end(worker);
