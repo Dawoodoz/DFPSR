@@ -247,17 +247,6 @@ public:
 		this->gridHeight = (this->height + (cellSize - 1)) / cellSize;
 		this->occluded = false;
 	}
-	void giveTask(const Model& model, const Transform3D &modelToWorldTransform, const Camera &camera) {
-		if (!this->receiving) {
-			throwError("Cannot call renderer_giveTask before renderer_begin!\n");
-		}
-		// TODO: Make an algorithm for selecting if the model should be queued as an instance or triangulated at once
-		//       An extra argument may choose to force an instance directly into the command queue
-		//           Because the model is being borrowed for vertex animation
-		//           To prevent the command queue from getting full hold as much as possible in a sorted list of instances
-		//           When the command queue is full, the solid instances will be drawn front to back before filtered is drawn back to front
-		model->render(&this->commandQueue, this->colorBuffer, this->depthBuffer, modelToWorldTransform, camera);
-	}
 	bool pointInsideOfEdge(const LVector2D &edgeA, const LVector2D &edgeB, const LVector2D &point) {
 		LVector2D edgeDirection = LVector2D(edgeB.y - edgeA.y, edgeA.x - edgeB.x);
 		LVector2D relativePosition = point - edgeA;
@@ -359,12 +348,15 @@ public:
 			}
 		}
 	}
-	void occludeFromSortedHull(const ProjectedPoint* convexHullCorners, int cornerCount) {
-		IRect pixelBound = IRect(convexHullCorners[0].flat.x / constants::unitsPerPixel, convexHullCorners[0].flat.y / constants::unitsPerPixel, 1, 1);
+	IRect getPixelBoundFromProjection(const ProjectedPoint* convexHullCorners, int cornerCount) {
+		IRect result = IRect(convexHullCorners[0].flat.x / constants::unitsPerPixel, convexHullCorners[0].flat.y / constants::unitsPerPixel, 1, 1);
 		for (int p = 1; p < cornerCount; p++) {
-			pixelBound = IRect::merge(pixelBound, IRect(convexHullCorners[p].flat.x / constants::unitsPerPixel, convexHullCorners[p].flat.y / constants::unitsPerPixel, 1, 1));
+			result = IRect::merge(result, IRect(convexHullCorners[p].flat.x / constants::unitsPerPixel, convexHullCorners[p].flat.y / constants::unitsPerPixel, 1, 1));
 		}
-		occludeFromSortedHull(convexHullCorners, cornerCount, pixelBound);
+		return result;
+	}
+	void occludeFromSortedHull(const ProjectedPoint* convexHullCorners, int cornerCount) {
+		occludeFromSortedHull(convexHullCorners, cornerCount, getPixelBoundFromProjection(convexHullCorners, cornerCount));
 	}
 	void occludeFromExistingTriangles() {
 		prepareForOcclusion();
@@ -466,11 +458,66 @@ public:
 			}
 		}
 	}
+	// Occlusion test for whole model bounds
+	bool isHullVisible(ProjectedPoint* outputHullCorners, const FVector3D* inputHullCorners, int cornerCount, const Transform3D &modelToWorldTransform, const Camera &camera) {
+		for (int p = 0; p < cornerCount; p++) {
+			FVector3D worldPoint = modelToWorldTransform.transformPoint(inputHullCorners[p]);
+			FVector3D cameraPoint = camera.worldToCamera(worldPoint);
+			outputHullCorners[p] = camera.cameraToScreen(cameraPoint);
+		}
+		IRect pixelBound = getPixelBoundFromProjection(outputHullCorners, cornerCount);
+		
+		float closestDistance = std::numeric_limits<float>::infinity();
+		for (int c = 0; c < cornerCount; c++) {
+			replaceWithSmaller(closestDistance, outputHullCorners[c].cs.z);
+		}
+		// Loop over all cells within the bound
+		IRect outerBound = getOuterCellBound(pixelBound);
+		for (int cellY = outerBound.top(); cellY < outerBound.bottom(); cellY++) {
+			for (int cellX = outerBound.left(); cellX < outerBound.right(); cellX++) {
+				if (closestDistance < image_readPixel_clamp(this->depthGrid, cellX, cellY)) {
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+	void giveTask(const Model& model, const Transform3D &modelToWorldTransform, const Camera &camera) {
+		if (!this->receiving) {
+			throwError("Cannot call renderer_giveTask before renderer_begin!\n");
+		}
+		// If occluders are present, check if the model's bound is visible
+		if (this->occluded) {
+			FVector3D minimum, maximum;
+			model_getBoundingBox(model, minimum, maximum);
+			FVector3D corners[8];
+			ProjectedPoint projections[8];
+			corners[0] = FVector3D(minimum.x, minimum.y, minimum.z);
+			corners[1] = FVector3D(minimum.x, minimum.y, maximum.z);
+			corners[2] = FVector3D(minimum.x, maximum.y, minimum.z);
+			corners[3] = FVector3D(minimum.x, maximum.y, maximum.z);
+			corners[4] = FVector3D(maximum.x, minimum.y, minimum.z);
+			corners[5] = FVector3D(maximum.x, minimum.y, maximum.z);
+			corners[6] = FVector3D(maximum.x, maximum.y, minimum.z);
+			corners[7] = FVector3D(maximum.x, maximum.y, maximum.z);
+			if (!isHullVisible(projections, corners, 8, modelToWorldTransform, camera)) {
+				// Skip projection of triangles if the whole bounding box is already behind occluders
+				return;
+			}
+		}
+		// TODO: Make an algorithm for selecting if the model should be queued as an instance or triangulated at once
+		//       An extra argument may choose to force an instance directly into the command queue
+		//           Because the model is being borrowed for vertex animation
+		//           To prevent the command queue from getting full hold as much as possible in a sorted list of instances
+		//           When the command queue is full, the solid instances will be drawn front to back before filtered is drawn back to front
+		model->render(&this->commandQueue, this->colorBuffer, this->depthBuffer, modelToWorldTransform, camera);
+	}
 	void endFrame(bool debugWireframe) {
 		if (!this->receiving) {
 			throwError("Called renderer_end without renderer_begin!\n");
 		}
 		this->receiving = false;
+		// Mark occluded triangles to prevent them from being rendered
 		completeOcclusion();
 		this->commandQueue.execute(IRect::FromSize(this->width, this->height));
 		if (image_exists(this->colorBuffer)) {
