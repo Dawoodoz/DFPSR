@@ -209,6 +209,13 @@ void model_getBoundingBox(const Model& model, FVector3D& minimum, FVector3D& max
 
 static const int cellSize = 16;
 
+struct DebugLine {
+	int64_t x1, y1, x2, y2;
+	ColorRgbaI32 color;
+	DebugLine(int64_t x1, int64_t y1, int64_t x2, int64_t y2, const ColorRgbaI32& color)
+	: x1(x1), y1(y1), x2(x2), y2(y2), color(color) {}
+};
+
 // Context for rendering multiple models at the same time for improved speed
 class RendererImpl {
 private:
@@ -216,7 +223,8 @@ private:
 	ImageRgbaU8 colorBuffer; // The color image being rendered to
 	ImageF32 depthBuffer; // Linear depth for isometric cameras, 1 / depth for perspective cameras
 	ImageF32 depthGrid; // An occlusion grid of cellSize² cells representing the longest linear depth where something might be visible
-	CommandQueue commandQueue;
+	CommandQueue commandQueue; // Triangles to be drawn
+	List<DebugLine> debugLines; // Additional lines to be drawn as an overlay for debugging occlusion
 	int width = 0, height = 0, gridWidth = 0, gridHeight = 0;
 	bool occluded = false;
 public:
@@ -256,24 +264,34 @@ public:
 		int64_t dotProduct = (edgeDirection.x * relativePosition.x) + (edgeDirection.y * relativePosition.y);
 		return dotProduct <= 0;
 	}
-	// Returns true iff the point is inside of the triangle
-	bool pointInsideOfTriangle(const ITriangle2D &triangle, const LVector2D &point) {
-		return pointInsideOfEdge(triangle.position[0].flat, triangle.position[1].flat, point)
-		    && pointInsideOfEdge(triangle.position[1].flat, triangle.position[2].flat, point)
-		    && pointInsideOfEdge(triangle.position[2].flat, triangle.position[0].flat, point);
+	// Returns true iff the point is inside of the hull
+	// convexHullCorners from 0 to cornerCount-1 must be sorted clockwise and may not include any concave corners
+	bool pointInsideOfHull(const ProjectedPoint* convexHullCorners, int cornerCount, const LVector2D &point) {
+		for (int c = 0; c < cornerCount; c++) {
+			int nc = c + 1;
+			if (nc == cornerCount) {
+				nc = 0;
+			}
+			if (!pointInsideOfEdge(convexHullCorners[c].flat, convexHullCorners[nc].flat, point)) {
+				// Outside of one edge, not inside
+				return false;
+			}
+		}
+		// Passed all edge tests
+		return true;
 	}
-	// Returns true iff all cornets of the rectangle are inside of the triangle
-	bool rectangleInsideOfTriangle(const ITriangle2D &triangle, const IRect &rectangle) {
-		return pointInsideOfTriangle(triangle, LVector2D(rectangle.left(), rectangle.top()))
-		    && pointInsideOfTriangle(triangle, LVector2D(rectangle.right(), rectangle.top()))
-		    && pointInsideOfTriangle(triangle, LVector2D(rectangle.left(), rectangle.bottom()))
-		    && pointInsideOfTriangle(triangle, LVector2D(rectangle.right(), rectangle.bottom()));
+	// Returns true iff all cornets of the rectangle are inside of the hull
+	bool rectangleInsideOfHull(const ProjectedPoint* convexHullCorners, int cornerCount, const IRect &rectangle) {
+		return pointInsideOfHull(convexHullCorners, cornerCount, LVector2D(rectangle.left(), rectangle.top()))
+		    && pointInsideOfHull(convexHullCorners, cornerCount, LVector2D(rectangle.right(), rectangle.top()))
+		    && pointInsideOfHull(convexHullCorners, cornerCount, LVector2D(rectangle.left(), rectangle.bottom()))
+		    && pointInsideOfHull(convexHullCorners, cornerCount, LVector2D(rectangle.right(), rectangle.bottom()));
 	}
-	IRect getOuterCellBound(const ITriangle2D &triangle) {
-		int minCellX = triangle.wholeBound.left() / cellSize;
-		int maxCellX = triangle.wholeBound.right() / cellSize + 1;
-		int minCellY = triangle.wholeBound.top() / cellSize;
-		int maxCellY = triangle.wholeBound.bottom() / cellSize + 1;
+	IRect getOuterCellBound(const IRect &pixelBound) {
+		int minCellX = pixelBound.left() / cellSize;
+		int maxCellX = pixelBound.right() / cellSize + 1;
+		int minCellY = pixelBound.top() / cellSize;
+		int maxCellY = pixelBound.bottom() / cellSize + 1;
 		if (minCellX < 0) { minCellX = 0; }
 		if (minCellY < 0) { minCellY = 0; }
 		if (maxCellX > this->gridWidth) { maxCellX = this->gridWidth; }
@@ -298,7 +316,7 @@ public:
 			for (int t = this->commandQueue.buffer.length() - 1; t >= 0; t--) {
 				bool anyVisible = false;
 				ITriangle2D triangle = this->commandQueue.buffer[t].triangle;
-				IRect outerBound = getOuterCellBound(triangle);
+				IRect outerBound = getOuterCellBound(triangle.wholeBound);
 				for (int cellY = outerBound.top(); cellY < outerBound.bottom(); cellY++) {
 					for (int cellX = outerBound.left(); cellX < outerBound.right(); cellX++) {
 						// TODO: Optimize access using SafePointer iteration
@@ -318,6 +336,36 @@ public:
 			}
 		}
 	}
+	void occludeFromSortedHull(const ProjectedPoint* convexHullCorners, int cornerCount, const IRect& pixelBound) {
+		// Loop over the outer bound
+		if (pixelBound.width() > cellSize && pixelBound.height() > cellSize) {
+			float distance = 0.0f;
+			for (int c = 0; c < cornerCount; c++) {
+				replaceWithLarger(distance, convexHullCorners[c].cs.z);
+			}
+			// Loop over all cells within the bound
+			IRect outerBound = getOuterCellBound(pixelBound);
+			for (int cellY = outerBound.top(); cellY < outerBound.bottom(); cellY++) {
+				for (int cellX = outerBound.left(); cellX < outerBound.right(); cellX++) {
+					IRect pixelRegion = IRect(cellX * cellSize, cellY * cellSize, cellSize, cellSize);
+					IRect subPixelRegion = pixelRegion * constants::unitsPerPixel;
+					if (rectangleInsideOfHull(convexHullCorners, cornerCount, subPixelRegion)) {
+						float oldDepth = image_readPixel_clamp(this->depthGrid, cellX, cellY);
+						if (distance < oldDepth) {
+							image_writePixel(this->depthGrid, cellX, cellY, distance);
+						}
+					}
+				}
+			}
+		}
+	}
+	void occludeFromSortedHull(const ProjectedPoint* convexHullCorners, int cornerCount) {
+		IRect pixelBound = IRect(convexHullCorners[0].flat.x / constants::unitsPerPixel, convexHullCorners[0].flat.y / constants::unitsPerPixel, 1, 1);
+		for (int p = 1; p < cornerCount; p++) {
+			pixelBound = IRect::merge(pixelBound, IRect(convexHullCorners[p].flat.x / constants::unitsPerPixel, convexHullCorners[p].flat.y / constants::unitsPerPixel, 1, 1));
+		}
+		occludeFromSortedHull(convexHullCorners, cornerCount, pixelBound);
+	}
 	void occludeFromExistingTriangles() {
 		prepareForOcclusion();
 		// Generate a depth grid to remove many small triangles behind larger triangles
@@ -327,60 +375,97 @@ public:
 			Filter filter = this->commandQueue.buffer[t].filter;
 			if (filter == Filter::Solid) {
 				ITriangle2D triangle = this->commandQueue.buffer[t].triangle;
-				// Loop over all cells within the bound
-				IRect outerBound = getOuterCellBound(triangle);
-				// Loop over the outer bound while excluding the outmost rows and columns that are unlikely to be fully occluded by the triangle
-				if (triangle.wholeBound.width() > cellSize && triangle.wholeBound.height() > cellSize) {
-					for (int cellY = outerBound.top(); cellY < outerBound.bottom(); cellY++) {
-						for (int cellX = outerBound.left(); cellX < outerBound.right(); cellX++) {
-							IRect pixelRegion = IRect(cellX * cellSize, cellY * cellSize, cellSize, cellSize);
-							IRect subPixelRegion = pixelRegion * constants::unitsPerPixel;
-							if (rectangleInsideOfTriangle(triangle, subPixelRegion)) {
-								float oldDepth = image_readPixel_clamp(this->depthGrid, cellX, cellY);
-								float newDepth = triangle.position[0].cs.z;
-								replaceWithLarger(newDepth, triangle.position[1].cs.z);
-								replaceWithLarger(newDepth, triangle.position[2].cs.z);
-								if (newDepth < oldDepth) {
-									image_writePixel(this->depthGrid, cellX, cellY, newDepth);
-								}
-							}
-						}
-					}
-				}
+				occludeFromSortedHull(triangle.position, 3, triangle.wholeBound);
 			}
 		}
 	}
-	void debugDrawTriangles() {
-		if (image_exists(this->colorBuffer)) {
-			if (image_exists(this->depthGrid)) {
-				for (int cellY = 0; cellY < this->gridHeight; cellY++) {
-					for (int cellX = 0; cellX < this->gridWidth; cellX++) {
-						float depth = image_readPixel_clamp(this->depthGrid, cellX, cellY);
-						if (depth < std::numeric_limits<float>::infinity()) {
-							int intensity = depth;
-							draw_rectangle(this->colorBuffer, IRect(cellX * cellSize + 4, cellY * cellSize + 4, cellSize - 8, cellSize - 8), ColorRgbaI32(intensity, intensity, 0, 255));
-						}
-					}
+	bool counterClockwise(const ProjectedPoint& p, const ProjectedPoint& q, const ProjectedPoint& r) {
+		return (q.flat.y - p.flat.y) * (r.flat.x - q.flat.x) - (q.flat.x - p.flat.x) * (r.flat.y - q.flat.y) < 0;
+	}
+	// outputHullCorners must be at least as big as inputHullCorners, so that it can hold the worst case output size.
+	// Instead of not allowing less than three points, it copies the input as output when it happens to reduce pre-conditions.
+	void jarvisConvexHullAlgorithm(ProjectedPoint* outputHullCorners, int& outputCornerCount, const ProjectedPoint* inputHullCorners, int inputCornerCount) {
+		if (inputCornerCount < 3) {
+			outputCornerCount = inputCornerCount;
+			for (int p = 0; p < inputCornerCount; p++) {
+				outputHullCorners[p] = inputHullCorners[p];
+			}
+		} else {
+			int l = 0;
+			outputCornerCount = 0;
+			for (int i = 1; i < inputCornerCount; i++) {
+				if (inputHullCorners[i].flat.x < inputHullCorners[l].flat.x) {
+					l = i;
 				}
 			}
-			for (int t = 0; t < this->commandQueue.buffer.length(); t++) {
-				if (!this->commandQueue.buffer[t].occluded) {
-					ITriangle2D *triangle = &(this->commandQueue.buffer[t].triangle);
-					draw_line(this->colorBuffer,
-					  triangle->position[0].flat.x / constants::unitsPerPixel, triangle->position[0].flat.y / constants::unitsPerPixel,
-					  triangle->position[1].flat.x / constants::unitsPerPixel, triangle->position[1].flat.y / constants::unitsPerPixel,
-					  ColorRgbaI32(255, 255, 255, 255)
-					);
-					draw_line(this->colorBuffer,
-					  triangle->position[1].flat.x / constants::unitsPerPixel, triangle->position[1].flat.y / constants::unitsPerPixel,
-					  triangle->position[2].flat.x / constants::unitsPerPixel, triangle->position[2].flat.y / constants::unitsPerPixel,
-					  ColorRgbaI32(255, 255, 255, 255)
-					);
-					draw_line(this->colorBuffer,
-					  triangle->position[2].flat.x / constants::unitsPerPixel, triangle->position[2].flat.y / constants::unitsPerPixel,
-					  triangle->position[0].flat.x / constants::unitsPerPixel, triangle->position[0].flat.y / constants::unitsPerPixel,
-					  ColorRgbaI32(255, 255, 255, 255)
-					);
+			int p = l;
+			do {
+				if (outputCornerCount >= inputCornerCount) {
+					// Prevent getting stuck in an infinite loop from overflow
+					return;
+				}
+				outputHullCorners[outputCornerCount] = inputHullCorners[p]; outputCornerCount++;
+				int q = (p + 1) % inputCornerCount;
+				for (int i = 0; i < inputCornerCount; i++) {
+					if (counterClockwise(inputHullCorners[p], inputHullCorners[i], inputHullCorners[q])) {
+						q = i;
+					}
+				}
+				p = q;
+			} while (p != l);
+		}
+	}
+	// Transform and project the corners of a hull, so that the output can be given to the convex hull algorithm and used for occluding
+	// Returns true if occluder culling passed, which may skip occluders that could have been visible
+	bool projectHull(ProjectedPoint* outputHullCorners, const FVector3D* inputHullCorners, int cornerCount, const Transform3D &modelToWorldTransform, const Camera &camera) {
+		int outsideCount = 0;
+		for (int p = 0; p < cornerCount; p++) {
+			FVector3D worldPoint = modelToWorldTransform.transformPoint(inputHullCorners[p]);
+			FVector3D cameraPoint = camera.worldToCamera(worldPoint);
+			if (cameraPoint.z < camera.nearClip || cameraPoint.z > camera.farClip) {
+				// Too close or far away to make a difference
+				return false;
+			}
+			for (int s = 0; s < camera.cullFrustum.getPlaneCount(); s++) {
+				FPlane3D plane = camera.cullFrustum.getPlane(s);
+				if (!plane.inside(cameraPoint)) {
+					outsideCount++;
+				}
+			}
+			outputHullCorners[p] = camera.cameraToScreen(cameraPoint);
+		}
+		return outsideCount < 8;
+	}
+	void occludeFromBox(const FVector3D& minimum, const FVector3D& maximum, const Transform3D &modelToWorldTransform, const Camera &camera, bool debugSilhouette) {
+		prepareForOcclusion();
+		static const int pointCount = 8;
+		FVector3D localPoints[pointCount];
+		ProjectedPoint projections[pointCount];
+		ProjectedPoint edgeCorners[pointCount];
+		localPoints[0] = FVector3D(minimum.x, minimum.y, minimum.z);
+		localPoints[1] = FVector3D(minimum.x, minimum.y, maximum.z);
+		localPoints[2] = FVector3D(minimum.x, maximum.y, minimum.z);
+		localPoints[3] = FVector3D(minimum.x, maximum.y, maximum.z);
+		localPoints[4] = FVector3D(maximum.x, minimum.y, minimum.z);
+		localPoints[5] = FVector3D(maximum.x, minimum.y, maximum.z);
+		localPoints[6] = FVector3D(maximum.x, maximum.y, minimum.z);
+		localPoints[7] = FVector3D(maximum.x, maximum.y, maximum.z);
+		if (projectHull(projections, localPoints, 8, modelToWorldTransform, camera)) {
+			// Get a 2D convex hull from the projected corners
+			int edgeCornerCount = 0;
+			jarvisConvexHullAlgorithm(edgeCorners, edgeCornerCount, projections, 8);
+			occludeFromSortedHull(edgeCorners, edgeCornerCount);
+			// Allow saving the 2D silhouette for debugging
+			if (debugSilhouette) {
+				for (int p = 0; p < edgeCornerCount; p++) {
+					int q = (p + 1) % edgeCornerCount;
+					if (projections[p].cs.z > camera.nearClip) {
+						this->debugLines.pushConstruct(
+						  edgeCorners[p].flat.x / constants::unitsPerPixel, edgeCorners[p].flat.y / constants::unitsPerPixel,
+						  edgeCorners[q].flat.x / constants::unitsPerPixel, edgeCorners[q].flat.y / constants::unitsPerPixel,
+						  ColorRgbaI32(64, 128, 128, 255)
+						);
+					}
 				}
 			}
 		}
@@ -392,8 +477,46 @@ public:
 		this->receiving = false;
 		completeOcclusion();
 		this->commandQueue.execute(IRect::FromSize(this->width, this->height));
-		if (debugWireframe) {
-			this->debugDrawTriangles();
+		if (image_exists(this->colorBuffer)) {
+			// Debug drawn triangles
+			if (debugWireframe) {
+				if (image_exists(this->depthGrid)) {
+					for (int cellY = 0; cellY < this->gridHeight; cellY++) {
+						for (int cellX = 0; cellX < this->gridWidth; cellX++) {
+							float depth = image_readPixel_clamp(this->depthGrid, cellX, cellY);
+							if (depth < std::numeric_limits<float>::infinity()) {
+								int intensity = depth;
+								draw_rectangle(this->colorBuffer, IRect(cellX * cellSize + 4, cellY * cellSize + 4, cellSize - 8, cellSize - 8), ColorRgbaI32(intensity, intensity, 0, 255));
+							}
+						}
+					}
+				}
+				for (int t = 0; t < this->commandQueue.buffer.length(); t++) {
+					if (!this->commandQueue.buffer[t].occluded) {
+						ITriangle2D *triangle = &(this->commandQueue.buffer[t].triangle);
+						draw_line(this->colorBuffer,
+						  triangle->position[0].flat.x / constants::unitsPerPixel, triangle->position[0].flat.y / constants::unitsPerPixel,
+						  triangle->position[1].flat.x / constants::unitsPerPixel, triangle->position[1].flat.y / constants::unitsPerPixel,
+						  ColorRgbaI32(255, 255, 255, 255)
+						);
+						draw_line(this->colorBuffer,
+						  triangle->position[1].flat.x / constants::unitsPerPixel, triangle->position[1].flat.y / constants::unitsPerPixel,
+						  triangle->position[2].flat.x / constants::unitsPerPixel, triangle->position[2].flat.y / constants::unitsPerPixel,
+						  ColorRgbaI32(255, 255, 255, 255)
+						);
+						draw_line(this->colorBuffer,
+						  triangle->position[2].flat.x / constants::unitsPerPixel, triangle->position[2].flat.y / constants::unitsPerPixel,
+						  triangle->position[0].flat.x / constants::unitsPerPixel, triangle->position[0].flat.y / constants::unitsPerPixel,
+						  ColorRgbaI32(255, 255, 255, 255)
+						);
+					}
+				}
+			}
+			// Debug anything else added to debugLines
+			for (int l = 0; l < this->debugLines.length(); l++) {
+				draw_line(this->colorBuffer, this->debugLines[l].x1, this->debugLines[l].y1, this->debugLines[l].x2, this->debugLines[l].y2, this->debugLines[l].color);
+			}
+			this->debugLines.clear();
 		}
 		this->commandQueue.clear();
 	}
@@ -425,6 +548,11 @@ void renderer_giveTask(Renderer& renderer, const Model& model, const Transform3D
 	if (model.get() != nullptr) {
 		renderer->giveTask(model, modelToWorldTransform, camera);
 	}
+}
+
+void renderer_occludeFromBox(Renderer& renderer, const FVector3D& minimum, const FVector3D& maximum, const Transform3D &modelToWorldTransform, const Camera &camera, bool debugSilhouette) {
+	MUST_EXIST(renderer,renderer_occludeFromBox);
+	renderer->occludeFromBox(minimum, maximum, modelToWorldTransform, camera, debugSilhouette);
 }
 
 void renderer_occludeFromExistingTriangles(Renderer& renderer) {

@@ -299,6 +299,10 @@ namespace dsr {
 	//   renderer must refer to an existing renderer.
 	//   colorBuffer and depthBuffer must have the same dimensions.
 	void renderer_begin(Renderer& renderer, ImageRgbaU8& colorBuffer, ImageF32& depthBuffer);
+	// Project an occluding box against the occlusion grid so that triangles hidden behind it will not be drawn.
+	// Occluders may only be placed within solid geometry, because otherwise it may affect the visual result.
+	// Should ideally be used before giving render tasks, so that optimizations can take advantage of early occlusion checks.
+	void renderer_occludeFromBox(Renderer& renderer, const FVector3D& minimum, const FVector3D& maximum, const Transform3D &modelToWorldTransform, const Camera &camera, bool debugSilhouette = false);
 	// Once an object passed game-specific occlusion tests, give it to the renderer using renderer_giveTask.
 	// The render job will be performed during the next call to renderer_end.
 	// Pre-condition: renderer must refer to an existing renderer.
@@ -307,9 +311,6 @@ namespace dsr {
 	void renderer_giveTask(Renderer& renderer, const Model& model, const Transform3D &modelToWorldTransform, const Camera &camera);
 	// Use already given triangles as occluders
 	void renderer_occludeFromExistingTriangles(Renderer& renderer);
-
-	// TODO: Create methods for occluding from basic shapes, which can be debug drawn together with the triangles.
-
 	// Side-effect: Finishes all the jobs in the rendering context so that triangles are rasterized to the targets given to renderer_begin.
 	// Pre-condition: renderer must refer to an existing renderer.
 	// If debugWireframe is true, each triangle's edges will be drawn on top of the drawn world to indicate how well the occlusion system is working
