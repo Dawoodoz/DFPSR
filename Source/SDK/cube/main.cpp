@@ -12,6 +12,8 @@ float distance = 4.0f;
 bool running = true;
 bool useOrthogonalCamera = false;
 bool useDepthBuffer = true;
+bool debugDrawnTriangles = false;
+bool debugOccluders = false;
 
 // The window handle
 Window window;
@@ -73,6 +75,8 @@ int main(int argn, char **argv) {
 	Component mainPanel = window_findComponentByName(window, U"mainPanel", true);
 	Component buttonA = window_findComponentByName(window, U"buttonA", true);
 	Component buttonB = window_findComponentByName(window, U"buttonB", true);
+	Component buttonC = window_findComponentByName(window, U"buttonC", true);
+	Component buttonD = window_findComponentByName(window, U"buttonD", true);
 
 	// Connect components with actions
 	component_setMouseMoveEvent(mainPanel, [](const MouseEvent& event) {
@@ -83,6 +87,12 @@ int main(int argn, char **argv) {
 	});
 	component_setPressedEvent(buttonB, []() {
 		useDepthBuffer = !useDepthBuffer;
+	});
+	component_setPressedEvent(buttonC, []() {
+		debugOccluders = !debugOccluders;
+	});
+	component_setPressedEvent(buttonD, []() {
+		debugDrawnTriangles = !debugDrawnTriangles;
 	});
 
 	// Create a cube model
@@ -147,17 +157,20 @@ int main(int argn, char **argv) {
 		ImageF32 depth = useDepthBuffer ? depthBuffer : ImageF32();
 		// Begin render batch
 		renderer_begin(worker, colorBuffer, depth);
+		// Occluders
+		//   An occluder box is placed inside of the crate where it will not be seen
+		renderer_occludeFromBox(worker, FVector3D(-0.15f, -0.15f, -0.15f), FVector3D(0.15f, 0.15f, 0.15f), crateLocation, camera, debugOccluders);
 		// Solid geometry
 		renderer_giveTask(worker, crateModel, crateLocation, camera);
 		renderer_giveTask(worker, barrelModel, barrelLocation, camera);
 		renderer_giveTask(worker, testModel, testLocation, camera);
 		// Use triangles as occluders
-		//   The occlusion system knows that only solid triangles occlude, but including them would be redundant work
-		renderer_occludeFromExistingTriangles(worker);
+		//   This simpler approach to occlusion is not nearly as efficient as full shapes, but without the added work of placing occluders
+		//renderer_occludeFromExistingTriangles(worker);
 		// Filtered geometry
 		renderer_giveTask(worker, cubeModel, cubeLocation, camera);
 		// Complete render batch
-		renderer_end(worker);
+		renderer_end(worker, debugDrawnTriangles);
 		printText("Draw world: ", (time_getSeconds() - startTime) * 1000.0, " ms\n");
 
 		startTime = time_getSeconds();

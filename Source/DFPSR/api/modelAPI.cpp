@@ -463,7 +463,7 @@ public:
 						this->debugLines.pushConstruct(
 						  edgeCorners[p].flat.x / constants::unitsPerPixel, edgeCorners[p].flat.y / constants::unitsPerPixel,
 						  edgeCorners[q].flat.x / constants::unitsPerPixel, edgeCorners[q].flat.y / constants::unitsPerPixel,
-						  ColorRgbaI32(64, 128, 128, 255)
+						  ColorRgbaI32(0, 255, 255, 255)
 						);
 					}
 				}
@@ -480,7 +480,7 @@ public:
 		if (image_exists(this->colorBuffer)) {
 			// Debug drawn triangles
 			if (debugWireframe) {
-				if (image_exists(this->depthGrid)) {
+				/*if (image_exists(this->depthGrid)) {
 					for (int cellY = 0; cellY < this->gridHeight; cellY++) {
 						for (int cellX = 0; cellX < this->gridWidth; cellX++) {
 							float depth = image_readPixel_clamp(this->depthGrid, cellX, cellY);
@@ -490,7 +490,7 @@ public:
 							}
 						}
 					}
-				}
+				}*/
 				for (int t = 0; t < this->commandQueue.buffer.length(); t++) {
 					if (!this->commandQueue.buffer[t].occluded) {
 						ITriangle2D *triangle = &(this->commandQueue.buffer[t].triangle);

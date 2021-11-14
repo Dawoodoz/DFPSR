@@ -5,7 +5,7 @@
 		Name = "sidePanel"
 		Left = "+10"
 		Top = "+10"
-		Right = "+100"
+		Right = "+120"
 		Bottom = "100%-10"
 		Solid = 1
 		Color = "100,100,100"
@@ -25,6 +25,24 @@
 			Top = "+60"
 			Right = "100%-10"
 			Bottom = "+100"
+			Color = "200,200,200"
+		End
+		Begin : Button
+			Name = "buttonC"
+			Text = "Occluders"
+			Left = "+10"
+			Top = "+110"
+			Right = "100%-10"
+			Bottom = "+150"
+			Color = "200,200,200"
+		End
+		Begin : Button
+			Name = "buttonD"
+			Text = "Triangles"
+			Left = "+10"
+			Top = "+160"
+			Right = "100%-10"
+			Bottom = "+200"
 			Color = "200,200,200"
 		End
 	End
