@@ -418,23 +418,19 @@ public:
 	// Transform and project the corners of a hull, so that the output can be given to the convex hull algorithm and used for occluding
 	// Returns true if occluder culling passed, which may skip occluders that could have been visible
 	bool projectHull(ProjectedPoint* outputHullCorners, const FVector3D* inputHullCorners, int cornerCount, const Transform3D &modelToWorldTransform, const Camera &camera) {
-		int outsideCount = 0;
 		for (int p = 0; p < cornerCount; p++) {
 			FVector3D worldPoint = modelToWorldTransform.transformPoint(inputHullCorners[p]);
 			FVector3D cameraPoint = camera.worldToCamera(worldPoint);
-			if (cameraPoint.z < camera.nearClip || cameraPoint.z > camera.farClip) {
-				// Too close or far away to make a difference
-				return false;
-			}
+			FVector3D narrowPoint = cameraPoint * FVector3D(0.5f, 0.5f, 1.0f);
 			for (int s = 0; s < camera.cullFrustum.getPlaneCount(); s++) {
 				FPlane3D plane = camera.cullFrustum.getPlane(s);
-				if (!plane.inside(cameraPoint)) {
-					outsideCount++;
+				if (!plane.inside(narrowPoint)) {
+					return false;
 				}
 			}
 			outputHullCorners[p] = camera.cameraToScreen(cameraPoint);
 		}
-		return outsideCount < 8;
+		return true;
 	}
 	void occludeFromBox(const FVector3D& minimum, const FVector3D& maximum, const Transform3D &modelToWorldTransform, const Camera &camera, bool debugSilhouette) {
 		prepareForOcclusion();
