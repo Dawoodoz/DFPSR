@@ -51,6 +51,11 @@
 		#define USE_DIRECT_SIMD_MEMORY_ACCESS
 		#include <emmintrin.h> // SSE2
 
+		#ifdef __SSSE3__
+			#include <tmmintrin.h> // SSSE3
+			// Comment out this line to test without SSSE3
+			#define USE_SSSE3
+		#endif
 		#ifdef __AVX2__
 			#include <immintrin.h> // AVX2
 			#define GATHER_U32_AVX2(SOURCE, FOUR_OFFSETS, SCALE) _mm_i32gather_epi32((const int32_t*)(SOURCE), FOUR_OFFSETS, SCALE)
@@ -1493,7 +1498,6 @@
 		#endif
 	}
 
-	// TODO: Use overloading to only name the target type
 	inline I32x4 truncateToI32(const F32x4& vector) {
 		#ifdef USE_BASIC_SIMD
 			return I32x4(F32_TO_I32_SIMD(vector.v));
@@ -1619,6 +1623,92 @@
 			);
 		#endif
 	}
+
+	// Helper macros for generating the vector extract functions.
+	//   Having one function for each type and offset makes sure that the compiler gets an immediate integer within the valid range.
+	#ifdef USE_BASIC_SIMD
+		#ifdef USE_SSE2
+			#ifdef USE_SSSE3
+				// This does not work as expected when compiling with "-mssse3"!
+				#define _MM_ALIGNR_EPI8(A, B, OFFSET) _mm_alignr_epi8(A, B, OFFSET)
+			#else
+				// If SSSE3 is not used, emulate it using stack memory and unaligned reading of data.
+				static inline SIMD_U8x16 _MM_ALIGNR_EPI8(SIMD_U8x16 a, SIMD_U8x16 b, int offset) {
+					ALIGN16 uint8_t vectorBuffer[32];
+					_mm_store_si128((SIMD_U8x16*)(vectorBuffer), b);
+					_mm_store_si128((SIMD_U8x16*)(vectorBuffer + 16), a);
+					return _mm_loadu_si128((SIMD_U8x16*)(vectorBuffer + offset));
+				}
+			#endif
+			#define VECTOR_EXTRACT_GENERATOR_U8(OFFSET, FALLBACK_RESULT) return U8x16(_MM_ALIGNR_EPI8(b.v, a.v, OFFSET));
+			#define VECTOR_EXTRACT_GENERATOR_U16(OFFSET, FALLBACK_RESULT) return U16x8(_MM_ALIGNR_EPI8(b.v, a.v, OFFSET * 2));
+			#define VECTOR_EXTRACT_GENERATOR_U32(OFFSET, FALLBACK_RESULT) return U32x4(_MM_ALIGNR_EPI8(b.v, a.v, OFFSET * 4));
+			#define VECTOR_EXTRACT_GENERATOR_I32(OFFSET, FALLBACK_RESULT) return I32x4(_MM_ALIGNR_EPI8(b.v, a.v, OFFSET * 4));
+			#define VECTOR_EXTRACT_GENERATOR_F32(OFFSET, FALLBACK_RESULT) return F32x4(SIMD_F32x4(_MM_ALIGNR_EPI8(SIMD_U32x4(b.v), SIMD_U32x4(a.v), OFFSET * 4)));
+		#elif USE_NEON
+			#define VECTOR_EXTRACT_GENERATOR_U8(OFFSET, FALLBACK_RESULT) return U8x16(vextq_u8(a.v, b.v, OFFSET));
+			#define VECTOR_EXTRACT_GENERATOR_U16(OFFSET, FALLBACK_RESULT) return U16x8(vextq_u16(a.v, b.v, OFFSET));
+			#define VECTOR_EXTRACT_GENERATOR_U32(OFFSET, FALLBACK_RESULT) return U32x4(vextq_u32(a.v, b.v, OFFSET));
+			#define VECTOR_EXTRACT_GENERATOR_I32(OFFSET, FALLBACK_RESULT) return I32x4(vextq_s32(a.v, b.v, OFFSET));
+			#define VECTOR_EXTRACT_GENERATOR_F32(OFFSET, FALLBACK_RESULT) return F32x4(vextq_f32(a.v, b.v, OFFSET));
+		#endif
+	#else
+		#define VECTOR_EXTRACT_GENERATOR_U8(OFFSET, FALLBACK_RESULT) return FALLBACK_RESULT;
+		#define VECTOR_EXTRACT_GENERATOR_U16(OFFSET, FALLBACK_RESULT) return FALLBACK_RESULT;
+		#define VECTOR_EXTRACT_GENERATOR_U32(OFFSET, FALLBACK_RESULT) return FALLBACK_RESULT;
+		#define VECTOR_EXTRACT_GENERATOR_I32(OFFSET, FALLBACK_RESULT) return FALLBACK_RESULT;
+		#define VECTOR_EXTRACT_GENERATOR_F32(OFFSET, FALLBACK_RESULT) return FALLBACK_RESULT;
+	#endif
+
+	// Vector extraction concatunates two input vectors and reads a vector between them using an offset.
+	//   The first and last offsets that only return one of the inputs can be used for readability, because they will be inlined and removed by the compiler.
+	//   To get elements from the right side, combine the center vector with the right vector and shift one element to the left using vectorExtract_1 for the given type.
+	//   To get elements from the left side, combine the left vector with the center vector and shift one element to the right using vectorExtract_15 for 16 lanes, vectorExtract_7 for 8 lanes, or vectorExtract_3 for 4 lanes.
+	U8x16 inline vectorExtract_0(const U8x16 &a, const U8x16 &b) { return a; }
+	U8x16 inline vectorExtract_1(const U8x16 &a, const U8x16 &b) { VECTOR_EXTRACT_GENERATOR_U8(1, U8x16(a.emulated[1], a.emulated[2], a.emulated[3], a.emulated[4], a.emulated[5], a.emulated[6], a.emulated[7], a.emulated[8], a.emulated[9], a.emulated[10], a.emulated[11], a.emulated[12], a.emulated[13], a.emulated[14], a.emulated[15], b.emulated[0])) }
+	U8x16 inline vectorExtract_2(const U8x16 &a, const U8x16 &b) { VECTOR_EXTRACT_GENERATOR_U8(2, U8x16(a.emulated[2], a.emulated[3], a.emulated[4], a.emulated[5], a.emulated[6], a.emulated[7], a.emulated[8], a.emulated[9], a.emulated[10], a.emulated[11], a.emulated[12], a.emulated[13], a.emulated[14], a.emulated[15], b.emulated[0], b.emulated[1])) }
+	U8x16 inline vectorExtract_3(const U8x16 &a, const U8x16 &b) { VECTOR_EXTRACT_GENERATOR_U8(3, U8x16(a.emulated[3], a.emulated[4], a.emulated[5], a.emulated[6], a.emulated[7], a.emulated[8], a.emulated[9], a.emulated[10], a.emulated[11], a.emulated[12], a.emulated[13], a.emulated[14], a.emulated[15], b.emulated[0], b.emulated[1], b.emulated[2])) }
+	U8x16 inline vectorExtract_4(const U8x16 &a, const U8x16 &b) { VECTOR_EXTRACT_GENERATOR_U8(4, U8x16(a.emulated[4], a.emulated[5], a.emulated[6], a.emulated[7], a.emulated[8], a.emulated[9], a.emulated[10], a.emulated[11], a.emulated[12], a.emulated[13], a.emulated[14], a.emulated[15], b.emulated[0], b.emulated[1], b.emulated[2], b.emulated[3])) }
+	U8x16 inline vectorExtract_5(const U8x16 &a, const U8x16 &b) { VECTOR_EXTRACT_GENERATOR_U8(5, U8x16(a.emulated[5], a.emulated[6], a.emulated[7], a.emulated[8], a.emulated[9], a.emulated[10], a.emulated[11], a.emulated[12], a.emulated[13], a.emulated[14], a.emulated[15], b.emulated[0], b.emulated[1], b.emulated[2], b.emulated[3], b.emulated[4])) }
+	U8x16 inline vectorExtract_6(const U8x16 &a, const U8x16 &b) { VECTOR_EXTRACT_GENERATOR_U8(6, U8x16(a.emulated[6], a.emulated[7], a.emulated[8], a.emulated[9], a.emulated[10], a.emulated[11], a.emulated[12], a.emulated[13], a.emulated[14], a.emulated[15], b.emulated[0], b.emulated[1], b.emulated[2], b.emulated[3], b.emulated[4], b.emulated[5])) }
+	U8x16 inline vectorExtract_7(const U8x16 &a, const U8x16 &b) { VECTOR_EXTRACT_GENERATOR_U8(7, U8x16(a.emulated[7], a.emulated[8], a.emulated[9], a.emulated[10], a.emulated[11], a.emulated[12], a.emulated[13], a.emulated[14], a.emulated[15], b.emulated[0], b.emulated[1], b.emulated[2], b.emulated[3], b.emulated[4], b.emulated[5], b.emulated[6])) }
+	U8x16 inline vectorExtract_8(const U8x16 &a, const U8x16 &b) { VECTOR_EXTRACT_GENERATOR_U8(8, U8x16(a.emulated[8], a.emulated[9], a.emulated[10], a.emulated[11], a.emulated[12], a.emulated[13], a.emulated[14], a.emulated[15], b.emulated[0], b.emulated[1], b.emulated[2], b.emulated[3], b.emulated[4], b.emulated[5], b.emulated[6], b.emulated[7])) }
+	U8x16 inline vectorExtract_9(const U8x16 &a, const U8x16 &b) { VECTOR_EXTRACT_GENERATOR_U8(9, U8x16(a.emulated[9], a.emulated[10], a.emulated[11], a.emulated[12], a.emulated[13], a.emulated[14], a.emulated[15], b.emulated[0], b.emulated[1], b.emulated[2], b.emulated[3], b.emulated[4], b.emulated[5], b.emulated[6], b.emulated[7], b.emulated[8])) }
+	U8x16 inline vectorExtract_10(const U8x16 &a, const U8x16 &b) { VECTOR_EXTRACT_GENERATOR_U8(10, U8x16(a.emulated[10], a.emulated[11], a.emulated[12], a.emulated[13], a.emulated[14], a.emulated[15], b.emulated[0], b.emulated[1], b.emulated[2], b.emulated[3], b.emulated[4], b.emulated[5], b.emulated[6], b.emulated[7], b.emulated[8], b.emulated[9])) }
+	U8x16 inline vectorExtract_11(const U8x16 &a, const U8x16 &b) { VECTOR_EXTRACT_GENERATOR_U8(11, U8x16(a.emulated[11], a.emulated[12], a.emulated[13], a.emulated[14], a.emulated[15], b.emulated[0], b.emulated[1], b.emulated[2], b.emulated[3], b.emulated[4], b.emulated[5], b.emulated[6], b.emulated[7], b.emulated[8], b.emulated[9], b.emulated[10])) }
+	U8x16 inline vectorExtract_12(const U8x16 &a, const U8x16 &b) { VECTOR_EXTRACT_GENERATOR_U8(12, U8x16(a.emulated[12], a.emulated[13], a.emulated[14], a.emulated[15], b.emulated[0], b.emulated[1], b.emulated[2], b.emulated[3], b.emulated[4], b.emulated[5], b.emulated[6], b.emulated[7], b.emulated[8], b.emulated[9], b.emulated[10], b.emulated[11])) }
+	U8x16 inline vectorExtract_13(const U8x16 &a, const U8x16 &b) { VECTOR_EXTRACT_GENERATOR_U8(13, U8x16(a.emulated[13], a.emulated[14], a.emulated[15], b.emulated[0], b.emulated[1], b.emulated[2], b.emulated[3], b.emulated[4], b.emulated[5], b.emulated[6], b.emulated[7], b.emulated[8], b.emulated[9], b.emulated[10], b.emulated[11], b.emulated[12])) }
+	U8x16 inline vectorExtract_14(const U8x16 &a, const U8x16 &b) { VECTOR_EXTRACT_GENERATOR_U8(14, U8x16(a.emulated[14], a.emulated[15], b.emulated[0], b.emulated[1], b.emulated[2], b.emulated[3], b.emulated[4], b.emulated[5], b.emulated[6], b.emulated[7], b.emulated[8], b.emulated[9], b.emulated[10], b.emulated[11], b.emulated[12], b.emulated[13])) }
+	U8x16 inline vectorExtract_15(const U8x16 &a, const U8x16 &b) { VECTOR_EXTRACT_GENERATOR_U8(15, U8x16(a.emulated[15], b.emulated[0], b.emulated[1], b.emulated[2], b.emulated[3], b.emulated[4], b.emulated[5], b.emulated[6], b.emulated[7], b.emulated[8], b.emulated[9], b.emulated[10], b.emulated[11], b.emulated[12], b.emulated[13], b.emulated[14])) }
+	U8x16 inline vectorExtract_16(const U8x16 &a, const U8x16 &b) { return b; }
+
+	U16x8 inline vectorExtract_0(const U16x8 &a, const U16x8 &b) { return a; }
+	U16x8 inline vectorExtract_1(const U16x8 &a, const U16x8 &b) { VECTOR_EXTRACT_GENERATOR_U16(1, U16x8(a.emulated[1], a.emulated[2], a.emulated[3], a.emulated[4], a.emulated[5], a.emulated[6], a.emulated[7], b.emulated[0])) }
+	U16x8 inline vectorExtract_2(const U16x8 &a, const U16x8 &b) { VECTOR_EXTRACT_GENERATOR_U16(2, U16x8(a.emulated[2], a.emulated[3], a.emulated[4], a.emulated[5], a.emulated[6], a.emulated[7], b.emulated[0], b.emulated[1])) }
+	U16x8 inline vectorExtract_3(const U16x8 &a, const U16x8 &b) { VECTOR_EXTRACT_GENERATOR_U16(3, U16x8(a.emulated[3], a.emulated[4], a.emulated[5], a.emulated[6], a.emulated[7], b.emulated[0], b.emulated[1], b.emulated[2])) }
+	U16x8 inline vectorExtract_4(const U16x8 &a, const U16x8 &b) { VECTOR_EXTRACT_GENERATOR_U16(4, U16x8(a.emulated[4], a.emulated[5], a.emulated[6], a.emulated[7], b.emulated[0], b.emulated[1], b.emulated[2], b.emulated[3])) }
+	U16x8 inline vectorExtract_5(const U16x8 &a, const U16x8 &b) { VECTOR_EXTRACT_GENERATOR_U16(5, U16x8(a.emulated[5], a.emulated[6], a.emulated[7], b.emulated[0], b.emulated[1], b.emulated[2], b.emulated[3], b.emulated[4])) }
+	U16x8 inline vectorExtract_6(const U16x8 &a, const U16x8 &b) { VECTOR_EXTRACT_GENERATOR_U16(6, U16x8(a.emulated[6], a.emulated[7], b.emulated[0], b.emulated[1], b.emulated[2], b.emulated[3], b.emulated[4], b.emulated[5])) }
+	U16x8 inline vectorExtract_7(const U16x8 &a, const U16x8 &b) { VECTOR_EXTRACT_GENERATOR_U16(7, U16x8(a.emulated[7], b.emulated[0], b.emulated[1], b.emulated[2], b.emulated[3], b.emulated[4], b.emulated[5], b.emulated[6])) }
+	U16x8 inline vectorExtract_8(const U16x8 &a, const U16x8 &b) { return b; }
+
+	U32x4 inline vectorExtract_0(const U32x4 &a, const U32x4 &b) { return a; }
+	U32x4 inline vectorExtract_1(const U32x4 &a, const U32x4 &b) { VECTOR_EXTRACT_GENERATOR_U32(1, U32x4(a.emulated[1], a.emulated[2], a.emulated[3], b.emulated[0])) }
+	U32x4 inline vectorExtract_2(const U32x4 &a, const U32x4 &b) { VECTOR_EXTRACT_GENERATOR_U32(2, U32x4(a.emulated[2], a.emulated[3], b.emulated[0], b.emulated[1])) }
+	U32x4 inline vectorExtract_3(const U32x4 &a, const U32x4 &b) { VECTOR_EXTRACT_GENERATOR_U32(3, U32x4(a.emulated[3], b.emulated[0], b.emulated[1], b.emulated[2])) }
+	U32x4 inline vectorExtract_4(const U32x4 &a, const U32x4 &b) { return b; }
+
+	I32x4 inline vectorExtract_0(const I32x4 &a, const I32x4 &b) { return a; }
+	I32x4 inline vectorExtract_1(const I32x4 &a, const I32x4 &b) { VECTOR_EXTRACT_GENERATOR_I32(1, I32x4(a.emulated[1], a.emulated[2], a.emulated[3], b.emulated[0])) }
+	I32x4 inline vectorExtract_2(const I32x4 &a, const I32x4 &b) { VECTOR_EXTRACT_GENERATOR_I32(2, I32x4(a.emulated[2], a.emulated[3], b.emulated[0], b.emulated[1])) }
+	I32x4 inline vectorExtract_3(const I32x4 &a, const I32x4 &b) { VECTOR_EXTRACT_GENERATOR_I32(3, I32x4(a.emulated[3], b.emulated[0], b.emulated[1], b.emulated[2])) }
+	I32x4 inline vectorExtract_4(const I32x4 &a, const I32x4 &b) { return b; }
+
+	F32x4 inline vectorExtract_0(const F32x4 &a, const F32x4 &b) { return a; }
+	F32x4 inline vectorExtract_1(const F32x4 &a, const F32x4 &b) { VECTOR_EXTRACT_GENERATOR_F32(1, F32x4(a.emulated[1], a.emulated[2], a.emulated[3], b.emulated[0])) }
+	F32x4 inline vectorExtract_2(const F32x4 &a, const F32x4 &b) { VECTOR_EXTRACT_GENERATOR_F32(2, F32x4(a.emulated[2], a.emulated[3], b.emulated[0], b.emulated[1])) }
+	F32x4 inline vectorExtract_3(const F32x4 &a, const F32x4 &b) { VECTOR_EXTRACT_GENERATOR_F32(3, F32x4(a.emulated[3], b.emulated[0], b.emulated[1], b.emulated[2])) }
+	F32x4 inline vectorExtract_4(const F32x4 &a, const F32x4 &b) { return b; }
 
 #endif
 
