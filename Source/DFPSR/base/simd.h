@@ -1629,7 +1629,6 @@
 	#ifdef USE_BASIC_SIMD
 		#ifdef USE_SSE2
 			#ifdef USE_SSSE3
-				// This does not work as expected when compiling with "-mssse3"!
 				#define _MM_ALIGNR_EPI8(A, B, OFFSET) _mm_alignr_epi8(A, B, OFFSET)
 			#else
 				// If SSSE3 is not used, emulate it using stack memory and unaligned reading of data.
