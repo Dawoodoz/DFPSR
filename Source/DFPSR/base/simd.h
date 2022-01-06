@@ -58,7 +58,6 @@
 		#endif
 		#ifdef __AVX2__
 			#include <immintrin.h> // AVX2
-			#define GATHER_U32_AVX2(SOURCE, FOUR_OFFSETS, SCALE) _mm_i32gather_epi32((const int32_t*)(SOURCE), FOUR_OFFSETS, SCALE)
 			// Comment out this line to test without AVX2
 			#define USE_AVX2
 		#endif
@@ -1708,6 +1707,53 @@
 	F32x4 inline vectorExtract_2(const F32x4 &a, const F32x4 &b) { VECTOR_EXTRACT_GENERATOR_F32(2, F32x4(a.emulated[2], a.emulated[3], b.emulated[0], b.emulated[1])) }
 	F32x4 inline vectorExtract_3(const F32x4 &a, const F32x4 &b) { VECTOR_EXTRACT_GENERATOR_F32(3, F32x4(a.emulated[3], b.emulated[0], b.emulated[1], b.emulated[2])) }
 	F32x4 inline vectorExtract_4(const F32x4 &a, const F32x4 &b) { return b; }
+
+	// Gather instructions load memory from a pointer at multiple index offsets at the same time.
+	//   The given pointers should be aligned with 4 bytes, so that the fallback solution works on machines with strict alignment requirements.
+	#ifdef USE_AVX2
+		#define GATHER_I32_AVX2(SOURCE, FOUR_OFFSETS, SCALE) _mm_i32gather_epi32((const int32_t*)(SOURCE), FOUR_OFFSETS, SCALE)
+		#define GATHER_U32_AVX2(SOURCE, FOUR_OFFSETS, SCALE) _mm_i32gather_epi32((const int32_t*)(SOURCE), FOUR_OFFSETS, SCALE)
+		#define GATHER_F32_AVX2(SOURCE, FOUR_OFFSETS, SCALE) _mm_i32gather_ps((const float*)(SOURCE), FOUR_OFFSETS, SCALE)
+	#endif
+	static inline U32x4 gather(const dsr::SafePointer<uint32_t> data, const U32x4 &elementOffset) {
+		#ifdef USE_AVX2
+			return U32x4(GATHER_U32_AVX2(data.getUnsafe(), elementOffset.v, 4));
+		#else
+			dsr::UVector4D elementOffsetS = elementOffset.get();
+			return U32x4(
+			  *(data + elementOffsetS.x),
+			  *(data + elementOffsetS.y),
+			  *(data + elementOffsetS.z),
+			  *(data + elementOffsetS.w)
+			);
+		#endif
+	}
+	static inline I32x4 gather(const dsr::SafePointer<int32_t> data, const U32x4 &elementOffset) {
+		#ifdef USE_AVX2
+			return I32x4(GATHER_U32_AVX2(data.getUnsafe(), elementOffset.v, 4));
+		#else
+			dsr::UVector4D elementOffsetS = elementOffset.get();
+			return I32x4(
+			  *(data + elementOffsetS.x),
+			  *(data + elementOffsetS.y),
+			  *(data + elementOffsetS.z),
+			  *(data + elementOffsetS.w)
+			);
+		#endif
+	}
+	static inline F32x4 gather(const dsr::SafePointer<float> data, const U32x4 &elementOffset) {
+		#ifdef USE_AVX2
+			return F32x4(GATHER_F32_AVX2(data.getUnsafe(), elementOffset.v, 4));
+		#else
+			dsr::UVector4D elementOffsetS = elementOffset.get();
+			return F32x4(
+			  *(data + elementOffsetS.x),
+			  *(data + elementOffsetS.y),
+			  *(data + elementOffsetS.z),
+			  *(data + elementOffsetS.w)
+			);
+		#endif
+	}
 
 #endif
 
