@@ -401,7 +401,6 @@
 					reciRoot = MUL_F32_SIMD(MUL_F32_SIMD(LOAD_SCALAR_F32_SIMD(0.5f), reciRoot), SUB_F32_SIMD(LOAD_SCALAR_F32_SIMD(3.0f), mul));
 					return F32x4(reciRoot);
 				#elif USE_NEON
-					// TODO: Test on ARM
 					// Approximate
 					SIMD_F32x4 reciRoot = vrsqrteq_f32(this->v);
 					// Refine
@@ -427,7 +426,6 @@
 					root = _mm_mul_ps(_mm_add_ps(root, _mm_div_ps(this->v, root)), half);
 					return F32x4(root);
 				#elif USE_NEON
-					// TODO: Test on ARM
 					return F32x4(MUL_F32_SIMD(this->v, this->reciprocalSquareRoot().v));
 				#else
 					assert(false);
