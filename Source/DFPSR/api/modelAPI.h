@@ -303,13 +303,28 @@ namespace dsr {
 	// Occluders may only be placed within solid geometry, because otherwise it may affect the visual result.
 	// Should ideally be used before giving render tasks, so that optimizations can take advantage of early occlusion checks.
 	void renderer_occludeFromBox(Renderer& renderer, const FVector3D& minimum, const FVector3D& maximum, const Transform3D &modelToWorldTransform, const Camera &camera, bool debugSilhouette = false);
+	// If you have drawn the ground in a separate pass and know that lower pixels along the current depth buffer are never further away from the camera,
+	// you can fill the occlusion grid using the furthest distance in the top row of each cell sampled from the depth buffer and know the maximum distance of each cell for occluding models in the next pass.
+	// Make sure to call it after renderer_begin (so that you don't clear your result on start), but before renderer_giveTask (so that whole models can be occluded without filling the buffer with projected triangles).
+	// Pre-condition:
+	//   The renderer must have started a pass with a depth buffer using renderer_begin.
+	void renderer_occludeFromTopRows(Renderer& renderer, const Camera &camera);
+	// After having filled the occlusion grid (using renderer_occludeFromBox, renderer_occludeFromTopRows or renderer_occludeFromExistingTriangles), you can check if a bounding box is visible.
+	//   For a single model, you can use model_getBoundingBox to get the local bound and then provide its model to world transform that would be used to render the specific instance.
+	//   This is already applied automatically in renderer_giveTask, but you might want to know which model may potentially be visible ahead of time
+	//   to bake effects into textures, procedurally generate geometry, skip whole groups of models in a broad-phase or use your own custom rasterizer.
+	// Opposite to when filling the occlusion grid, the tested bound must include the whole drawn content.
+	//   This makes sure that renderer_isBoxVisible will only return false if it cannot be seen, with exception for near clipping and abused occluders.
+	//   False positives from having the bounding box seen is to be expected, because the purpose is to save time by doing less work.
+	bool renderer_isBoxVisible(Renderer& renderer, const FVector3D &minimum, const FVector3D &maximum, const Transform3D &modelToWorldTransform, const Camera &camera);
 	// Once an object passed game-specific occlusion tests, give it to the renderer using renderer_giveTask.
 	// The render job will be performed during the next call to renderer_end.
 	// Pre-condition: renderer must refer to an existing renderer.
 	// An empty model handle will be skipped silently, which can be used instead of an model with zero polygons.
 	// Side-effect: The visible triangles are queued up in the renderer.
 	void renderer_giveTask(Renderer& renderer, const Model& model, const Transform3D &modelToWorldTransform, const Camera &camera);
-	// Use already given triangles as occluders
+	// Use already given triangles as occluders.
+	//   Used after calls to renderer_giveTask have filled the buffer with triangles, but before they are drawn using renderer_end.
 	void renderer_occludeFromExistingTriangles(Renderer& renderer);
 	// Side-effect: Finishes all the jobs in the rendering context so that triangles are rasterized to the targets given to renderer_begin.
 	// Pre-condition: renderer must refer to an existing renderer.

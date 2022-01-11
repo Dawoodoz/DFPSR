@@ -269,7 +269,7 @@ public:
 		// Passed all edge tests
 		return true;
 	}
-	// Returns true iff all cornets of the rectangle are inside of the hull
+	// Returns true iff all corners of the rectangle are inside of the hull
 	bool rectangleInsideOfHull(const ProjectedPoint* convexHullCorners, int cornerCount, const IRect &rectangle) {
 		return pointInsideOfHull(convexHullCorners, cornerCount, LVector2D(rectangle.left(), rectangle.top()))
 		    && pointInsideOfHull(convexHullCorners, cornerCount, LVector2D(rectangle.right(), rectangle.top()))
@@ -359,6 +359,9 @@ public:
 		occludeFromSortedHull(convexHullCorners, cornerCount, getPixelBoundFromProjection(convexHullCorners, cornerCount));
 	}
 	void occludeFromExistingTriangles() {
+		if (!this->receiving) {
+			throwError("Cannot call renderer_occludeFromExistingTriangles without first calling renderer_begin!\n");
+		}
 		prepareForOcclusion();
 		// Generate a depth grid to remove many small triangles behind larger triangles
 		//   This will leave triangles along seams but at least begin to remove the worst unwanted drawing
@@ -424,20 +427,26 @@ public:
 		}
 		return true;
 	}
+	#define GENERATE_BOX_CORNERS(TARGET, MIN, MAX) \
+		TARGET[0] = FVector3D(MIN.x, MIN.y, MIN.z); \
+		TARGET[1] = FVector3D(MIN.x, MIN.y, MAX.z); \
+		TARGET[2] = FVector3D(MIN.x, MAX.y, MIN.z); \
+		TARGET[3] = FVector3D(MIN.x, MAX.y, MAX.z); \
+		TARGET[4] = FVector3D(MAX.x, MIN.y, MIN.z); \
+		TARGET[5] = FVector3D(MAX.x, MIN.y, MAX.z); \
+		TARGET[6] = FVector3D(MAX.x, MAX.y, MIN.z); \
+		TARGET[7] = FVector3D(MAX.x, MAX.y, MAX.z);
+	// Fills the occlusion grid using the box, so that things behind it can skip rendering
 	void occludeFromBox(const FVector3D& minimum, const FVector3D& maximum, const Transform3D &modelToWorldTransform, const Camera &camera, bool debugSilhouette) {
+		if (!this->receiving) {
+			throwError("Cannot call renderer_occludeFromBox without first calling renderer_begin!\n");
+		}
 		prepareForOcclusion();
 		static const int pointCount = 8;
 		FVector3D localPoints[pointCount];
 		ProjectedPoint projections[pointCount];
 		ProjectedPoint edgeCorners[pointCount];
-		localPoints[0] = FVector3D(minimum.x, minimum.y, minimum.z);
-		localPoints[1] = FVector3D(minimum.x, minimum.y, maximum.z);
-		localPoints[2] = FVector3D(minimum.x, maximum.y, minimum.z);
-		localPoints[3] = FVector3D(minimum.x, maximum.y, maximum.z);
-		localPoints[4] = FVector3D(maximum.x, minimum.y, minimum.z);
-		localPoints[5] = FVector3D(maximum.x, minimum.y, maximum.z);
-		localPoints[6] = FVector3D(maximum.x, maximum.y, minimum.z);
-		localPoints[7] = FVector3D(maximum.x, maximum.y, maximum.z);
+		GENERATE_BOX_CORNERS(localPoints, minimum, maximum)
 		if (projectHull(projections, localPoints, 8, modelToWorldTransform, camera)) {
 			// Get a 2D convex hull from the projected corners
 			int edgeCornerCount = 0;
@@ -459,14 +468,14 @@ public:
 		}
 	}
 	// Occlusion test for whole model bounds
-	bool isHullVisible(ProjectedPoint* outputHullCorners, const FVector3D* inputHullCorners, int cornerCount, const Transform3D &modelToWorldTransform, const Camera &camera) {
+	//   Because outerBound gives negative regions when outside of the picture, it can also be used as a rough culling test
+	bool isHullOccluded(ProjectedPoint* outputHullCorners, const FVector3D* inputHullCorners, int cornerCount, const Transform3D &modelToWorldTransform, const Camera &camera) {
 		for (int p = 0; p < cornerCount; p++) {
 			FVector3D worldPoint = modelToWorldTransform.transformPoint(inputHullCorners[p]);
 			FVector3D cameraPoint = camera.worldToCamera(worldPoint);
 			outputHullCorners[p] = camera.cameraToScreen(cameraPoint);
 		}
 		IRect pixelBound = getPixelBoundFromProjection(outputHullCorners, cornerCount);
-		
 		float closestDistance = std::numeric_limits<float>::infinity();
 		for (int c = 0; c < cornerCount; c++) {
 			replaceWithSmaller(closestDistance, outputHullCorners[c].cs.z);
@@ -476,11 +485,22 @@ public:
 		for (int cellY = outerBound.top(); cellY < outerBound.bottom(); cellY++) {
 			for (int cellX = outerBound.left(); cellX < outerBound.right(); cellX++) {
 				if (closestDistance < image_readPixel_clamp(this->depthGrid, cellX, cellY)) {
-					return true;
+					return false;
 				}
 			}
 		}
-		return false;
+		return true;
+	}
+	// Checks if the box from minimum to maximum in object space is fully occluded when seen by the camera
+	// Must be the same camera as when occluders filled the grid with occlusion depth
+	bool isBoxOccluded(const FVector3D &minimum, const FVector3D &maximum, const Transform3D &modelToWorldTransform, const Camera &camera) {
+		if (!this->receiving) {
+			throwError("Cannot call renderer_isBoxVisible without first calling renderer_begin and giving occluder shapes to the pass!\n");
+		}
+		FVector3D corners[8];
+		GENERATE_BOX_CORNERS(corners, minimum, maximum)
+		ProjectedPoint projections[8];
+		return isHullOccluded(projections, corners, 8, modelToWorldTransform, camera);
 	}
 	void giveTask(const Model& model, const Transform3D &modelToWorldTransform, const Camera &camera) {
 		if (!this->receiving) {
@@ -490,17 +510,7 @@ public:
 		if (this->occluded) {
 			FVector3D minimum, maximum;
 			model_getBoundingBox(model, minimum, maximum);
-			FVector3D corners[8];
-			ProjectedPoint projections[8];
-			corners[0] = FVector3D(minimum.x, minimum.y, minimum.z);
-			corners[1] = FVector3D(minimum.x, minimum.y, maximum.z);
-			corners[2] = FVector3D(minimum.x, maximum.y, minimum.z);
-			corners[3] = FVector3D(minimum.x, maximum.y, maximum.z);
-			corners[4] = FVector3D(maximum.x, minimum.y, minimum.z);
-			corners[5] = FVector3D(maximum.x, minimum.y, maximum.z);
-			corners[6] = FVector3D(maximum.x, maximum.y, minimum.z);
-			corners[7] = FVector3D(maximum.x, maximum.y, maximum.z);
-			if (!isHullVisible(projections, corners, 8, modelToWorldTransform, camera)) {
+			if (isBoxOccluded(minimum, maximum, modelToWorldTransform, camera)) {
 				// Skip projection of triangles if the whole bounding box is already behind occluders
 				return;
 			}
@@ -563,6 +573,81 @@ public:
 		}
 		this->commandQueue.clear();
 	}
+	void occludeFromTopRows(const Camera &camera) {
+		// Make sure that the depth grid exists with the correct dimensions.
+		this->prepareForOcclusion();
+		if (!this->receiving) {
+			throwError("Cannot call renderer_occludeFromTopRows without first calling renderer_begin!\n");
+		}
+		if (!image_exists(this->depthBuffer)) {
+			throwError("Cannot call renderer_occludeFromTopRows without having given a depth buffer in renderer_begin!\n");
+		}
+		SafePointer<float> depthRow = image_getSafePointer(this->depthBuffer);
+		int depthStride = image_getStride(this->depthBuffer);
+		SafePointer<float> gridRow = image_getSafePointer(this->depthGrid);
+		int gridStride = image_getStride(this->depthGrid);
+		if (camera.perspective) {
+			// Perspective case using 1/depth for the depth buffer.
+			for (int y = 0; y < this->height; y += cellSize) {
+				SafePointer<float> gridPixel = gridRow;
+				SafePointer<float> depthPixel = depthRow;
+				int x = 0;
+				int right = cellSize - 1;
+				float maxInvDistance;
+				// Scan bottom row of whole cell width
+				for (int gridX = 0; gridX < this->gridWidth; gridX++) {
+					maxInvDistance = std::numeric_limits<float>::infinity();
+					if (right >= this->width) { right = this->width; }
+					while (x < right) {
+						float newInvDistance = *depthPixel;
+						if (newInvDistance < maxInvDistance) { maxInvDistance = newInvDistance; }
+						depthPixel += 1;
+						x += 1;
+					}
+					float maxDistance = 1.0f / maxInvDistance;
+					float oldDistance = *gridPixel;
+					if (maxDistance < oldDistance) {
+						*gridPixel = maxDistance;
+					}
+					gridPixel += 1;
+					right += cellSize;
+				}
+				// Go to the next grid row
+				depthRow.increaseBytes(depthStride * cellSize);
+				gridRow.increaseBytes(gridStride);
+			}
+		} else {
+			// Orthogonal case where linear depth is used for both grid and depth buffer.
+			// TODO: Create test cases for many ways to use occlusion, even these strange cases like isometric occlusion where plain culling does not leave many occluded models.
+			for (int y = 0; y < this->height; y += cellSize) {
+				SafePointer<float> gridPixel = gridRow;
+				SafePointer<float> depthPixel = depthRow;
+				int x = 0;
+				int right = cellSize - 1;
+				float maxDistance;
+				// Scan bottom row of whole cell width
+				for (int gridX = 0; gridX < this->gridWidth; gridX++) {
+					maxDistance = 0.0f;
+					if (right >= this->width) { right = this->width; }
+					while (x < right) {
+						float newDistance = *depthPixel;
+						if (newDistance > maxDistance) { maxDistance = newDistance; }
+						depthPixel += 1;
+						x += 1;
+					}
+					float oldDistance = *gridPixel;
+					if (maxDistance < oldDistance) {
+						*gridPixel = maxDistance;
+					}
+					gridPixel += 1;
+					right += cellSize;
+				}
+				// Go to the next grid row
+				depthRow.increaseBytes(depthStride * cellSize);
+				gridRow.increaseBytes(gridStride);
+			}
+		}
+	}
 };
 
 Renderer renderer_create() {
@@ -601,6 +686,16 @@ void renderer_occludeFromBox(Renderer& renderer, const FVector3D& minimum, const
 void renderer_occludeFromExistingTriangles(Renderer& renderer) {
 	MUST_EXIST(renderer,renderer_optimize);
 	renderer->occludeFromExistingTriangles();
+}
+
+void renderer_occludeFromTopRows(Renderer& renderer, const Camera &camera) {
+	MUST_EXIST(renderer,renderer_occludeFromTopRows);
+	renderer->occludeFromTopRows(camera);
+}
+
+bool renderer_isBoxVisible(Renderer& renderer, const FVector3D &minimum, const FVector3D &maximum, const Transform3D &modelToWorldTransform, const Camera &camera) {
+	MUST_EXIST(renderer,renderer_isBoxVisible);
+	return !(renderer->isBoxOccluded(minimum, maximum, modelToWorldTransform, camera));
 }
 
 void renderer_end(Renderer& renderer, bool debugWireframe) {
