@@ -1,6 +1,6 @@
 ﻿// zlib open source license
 //
-// Copyright (c) 2017 to 2019 David Forsgren Piuva
+// Copyright (c) 2017 to 2022 David Forsgren Piuva
 // 
 // This software is provided 'as-is', without any express or implied
 // warranty. In no event will the authors be held liable for any damages
@@ -40,8 +40,9 @@ namespace dsr {
 class ViewFrustum {
 private:
 	FPlane3D planes[6];
-	const int planeCount;
+	int planeCount;
 public:
+	ViewFrustum() : planeCount(0) {}
 	// Orthogonal view frustum in camera space
 	ViewFrustum(float halfWidth, float halfHeight) : planeCount(4) {
 		// Sides
@@ -77,17 +78,19 @@ static const float clipRatio = 2.0f;
 // Just create a new camera on stack memory every time you need to render something
 class Camera {
 public: // Do not modify individual settings without assigning whole new cameras
-	// TODO: Separate between essential and generated variables so that cameras can be modified and regenerate transforms
 	bool perspective; // When off, widthSlope and heightSlope will be used as halfWidth and halfHeight.
 	Transform3D location; // Only translation and rotation allowed. Scaling and tilting will obviously not work for cameras.
 	float widthSlope, heightSlope, invWidthSlope, invHeightSlope, imageWidth, imageHeight, nearClip, farClip;
 	ViewFrustum cullFrustum, clipFrustum;
+	Camera() :
+	  perspective(true), location(Transform3D()), widthSlope(0.0f), heightSlope(0.0f),
+	  invWidthSlope(0.0f), invHeightSlope(0.0f), imageWidth(0), imageHeight(0),
+	  nearClip(0.0f), farClip(0.0f), cullFrustum(ViewFrustum()), clipFrustum(ViewFrustum()) {}
 	Camera(bool perspective, const Transform3D &location, float imageWidth, float imageHeight, float widthSlope, float heightSlope, float nearClip, float farClip, const ViewFrustum &cullFrustum, const ViewFrustum &clipFrustum) :
 	  perspective(perspective), location(location), widthSlope(widthSlope), heightSlope(heightSlope),
 	  invWidthSlope(0.5f / widthSlope), invHeightSlope(0.5f / heightSlope), imageWidth(imageWidth), imageHeight(imageHeight),
 	  nearClip(nearClip), farClip(farClip), cullFrustum(cullFrustum), clipFrustum(clipFrustum) {}
 public:
-	// TODO: Create a procedural camera API
 	static Camera createPerspective(const Transform3D &location, float imageWidth, float imageHeight, float widthSlope = 1.0f, float nearClip = defaultNearClip, float farClip = defaultFarClip) {
 		float heightSlope = widthSlope * imageHeight / imageWidth;
 		return Camera(true, location, imageWidth, imageHeight, widthSlope, heightSlope, nearClip, farClip,
