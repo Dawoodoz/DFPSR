@@ -1,6 +1,6 @@
 ﻿// zlib open source license
 //
-// Copyright (c) 2017 to 2019 David Forsgren Piuva
+// Copyright (c) 2017 to 2022 David Forsgren Piuva
 // 
 // This software is provided 'as-is', without any express or implied
 // warranty. In no event will the authors be held liable for any damages
@@ -24,19 +24,14 @@
 #include "simd.h"
 #include "../math/FVector.h"
 
-// Linear 3D algebra for operating on 4 unrelated pixels in parallel.
+// Linear algebra of up to three dimensions. For operating on four unrelated vectors in parallel.
 //   Unlike simd.h, this is not a hardware abstraction layer using assembly intrinsics directly.
-//     This module builds on top of simd.h for higher levels of abstraction.
-//   The 4D SIMD vectors are stored as matrix rows, but the 3D math vectors are stored as the columns.
-//     This allow treating each SIMD vector as a separate scalar element when
-//     abstracting away the fact that we're operating on 4 pixels at a time.
-//     Therefore less waste on padding when you only need 3 dimensions.
-//     No need to rely on custom SIMD instructions that doesn't exist in the other set.
-//     The only penalty is having to run all the operations together.
+//   This module builds on top of simd.h for higher levels of abstraction.
 
 #ifndef DFPSR_SIMD_3D
 #define DFPSR_SIMD_3D
 
+// 3D vector in xxxxyyyyzzzz format
 struct F32x4x3 {
 	F32x4 v1, v2, v3;
 	// Direct constructor given 3 rows of length 4
@@ -55,13 +50,13 @@ struct F32x4x3 {
 	// In-place math operations
 	inline F32x4x3& operator+=(const F32x4x3& offset) { this->v1 = this->v1 + offset.v1; this->v2 = this->v2 + offset.v2; this->v3 = this->v3 + offset.v3; return *this; }
 	inline F32x4x3& operator-=(const F32x4x3& offset) { this->v1 = this->v1 - offset.v1; this->v2 = this->v2 - offset.v2; this->v3 = this->v3 - offset.v3; return *this; }
-	inline F32x4x3& operator*=(const F32x4x3& offset) { this->v1 = this->v1 * offset.v1; this->v2 = this->v2 * offset.v2; this->v3 = this->v3 * offset.v3; return *this; }
+	inline F32x4x3& operator*=(const F32x4x3& scale) { this->v1 = this->v1 * scale.v1; this->v2 = this->v2 * scale.v2; this->v3 = this->v3 * scale.v3; return *this; }
 	inline F32x4x3& operator+=(const F32x4& offset) { this->v1 = this->v1 + offset; this->v2 = this->v2 + offset; this->v3 = this->v3 + offset; return *this; }
 	inline F32x4x3& operator-=(const F32x4& offset) { this->v1 = this->v1 - offset; this->v2 = this->v2 - offset; this->v3 = this->v3 - offset; return *this; }
-	inline F32x4x3& operator*=(const F32x4& offset) { this->v1 = this->v1 * offset; this->v2 = this->v2 * offset; this->v3 = this->v3 * offset; return *this; }
+	inline F32x4x3& operator*=(const F32x4& scale) { this->v1 = this->v1 * scale; this->v2 = this->v2 * scale; this->v3 = this->v3 * scale; return *this; }
 	inline F32x4x3& operator+=(const float& offset) { this->v1 = this->v1 + offset; this->v2 = this->v2 + offset; this->v3 = this->v3 + offset; return *this; }
 	inline F32x4x3& operator-=(const float& offset) { this->v1 = this->v1 - offset; this->v2 = this->v2 - offset; this->v3 = this->v3 - offset; return *this; }
-	inline F32x4x3& operator*=(const float& offset) { this->v1 = this->v1 * offset; this->v2 = this->v2 * offset; this->v3 = this->v3 * offset; return *this; }
+	inline F32x4x3& operator*=(const float& scale) { this->v1 = this->v1 * scale; this->v2 = this->v2 * scale; this->v3 = this->v3 * scale; return *this; }
 };
 
 inline F32x4x3 operator+(const F32x4x3 &left, const F32x4x3 &right) {
@@ -107,6 +102,78 @@ inline F32x4 length(const F32x4x3 &v) {
 }
 
 inline F32x4x3 normalize(const F32x4x3 &v) {
+	return v * squareLength(v).reciprocalSquareRoot();
+}
+
+// 2D vector in xxxxyyyy format
+struct F32x4x2 {
+	F32x4 v1, v2;
+	// Direct constructor given 3 rows of length 4
+	F32x4x2(const F32x4& v1, const F32x4& v2)
+	: v1(v1), v2(v2) {}
+	// Transposed constructor given 4 columns of length 3
+	F32x4x2(const dsr::FVector2D& vx, const dsr::FVector2D& vy, const dsr::FVector2D& vz, const dsr::FVector2D& vw)
+	: v1(F32x4(vx.x, vy.x, vz.x, vw.x)),
+	  v2(F32x4(vx.y, vy.y, vz.y, vw.y)) {}
+	// Transposed constructor given a single repeated column
+	F32x4x2(const dsr::FVector2D& v)
+	: v1(F32x4(v.x, v.x, v.x, v.x)),
+	  v2(F32x4(v.y, v.y, v.y, v.y)) {}
+	// In-place math operations
+	inline F32x4x2& operator+=(const F32x4x2& offset) { this->v1 = this->v1 + offset.v1; this->v2 = this->v2 + offset.v2; return *this; }
+	inline F32x4x2& operator-=(const F32x4x2& offset) { this->v1 = this->v1 - offset.v1; this->v2 = this->v2 - offset.v2; return *this; }
+	inline F32x4x2& operator*=(const F32x4x2& scale) { this->v1 = this->v1 * scale.v1; this->v2 = this->v2 * scale.v2; return *this; }
+	inline F32x4x2& operator+=(const F32x4& offset) { this->v1 = this->v1 + offset; this->v2 = this->v2 + offset; return *this; }
+	inline F32x4x2& operator-=(const F32x4& offset) { this->v1 = this->v1 - offset; this->v2 = this->v2 - offset; return *this; }
+	inline F32x4x2& operator*=(const F32x4& scale) { this->v1 = this->v1 * scale; this->v2 = this->v2 * scale; return *this; }
+	inline F32x4x2& operator+=(const float& offset) { this->v1 = this->v1 + offset; this->v2 = this->v2 + offset; return *this; }
+	inline F32x4x2& operator-=(const float& offset) { this->v1 = this->v1 - offset; this->v2 = this->v2 - offset; return *this; }
+	inline F32x4x2& operator*=(const float& scale) { this->v1 = this->v1 * scale; this->v2 = this->v2 * scale; return *this; }
+};
+
+inline F32x4x2 operator+(const F32x4x2 &left, const F32x4x2 &right) {
+	return F32x4x2(left.v1 + right.v1, left.v2 + right.v2);
+}
+inline F32x4x2 operator+(const F32x4x2 &left, const F32x4 &right) {
+	return F32x4x2(left.v1 + right, left.v2 + right);
+}
+inline F32x4x2 operator+(const F32x4x2 &left, const float &right) {
+	return F32x4x2(left.v1 + right, left.v2 + right);
+}
+
+inline F32x4x2 operator-(const F32x4x2 &left, const F32x4x2 &right) {
+	return F32x4x2(left.v1 - right.v1, left.v2 - right.v2);
+}
+inline F32x4x2 operator-(const F32x4x2 &left, const F32x4 &right) {
+	return F32x4x2(left.v1 - right, left.v2 - right);
+}
+inline F32x4x2 operator-(const F32x4x2 &left, const float &right) {
+	return F32x4x2(left.v1 - right, left.v2 - right);
+}
+
+inline F32x4x2 operator*(const F32x4x2 &left, const F32x4x2 &right) {
+	return F32x4x2(left.v1 * right.v1, left.v2 * right.v2);
+}
+inline F32x4x2 operator*(const F32x4x2 &left, const F32x4 &right) {
+	return F32x4x2(left.v1 * right, left.v2 * right);
+}
+inline F32x4x2 operator*(const F32x4x2 &left, const float &right) {
+	return F32x4x2(left.v1 * right, left.v2 * right);
+}
+
+inline F32x4 dotProduct(const F32x4x2 &a, const F32x4x2 &b) {
+	return (a.v1 * b.v1) + (a.v2 * b.v2);
+}
+
+inline F32x4 squareLength(const F32x4x2 &v) {
+	return dotProduct(v, v);
+}
+
+inline F32x4 length(const F32x4x2 &v) {
+	return squareLength(v).squareRoot();
+}
+
+inline F32x4x2 normalize(const F32x4x2 &v) {
 	return v * squareLength(v).reciprocalSquareRoot();
 }
 
