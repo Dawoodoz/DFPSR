@@ -146,6 +146,7 @@
 		// Bitwise
 		#define BITWISE_AND_U32_SIMD(A, B) _mm_and_si128(A, B)
 		#define BITWISE_OR_U32_SIMD(A, B) _mm_or_si128(A, B)
+		#define BITWISE_XOR_U32_SIMD(A, B) _mm_xor_si128(A, B)
 	#endif
 
 	// Everything declared in here handles things specific for NEON.
@@ -255,6 +256,7 @@
 		// Bitwise
 		#define BITWISE_AND_U32_SIMD(A, B) vandq_u32(A, B)
 		#define BITWISE_OR_U32_SIMD(A, B) vorrq_u32(A, B)
+		#define BITWISE_XOR_U32_SIMD(A, B) veorq_u32(A, B)
 	#endif
 
 	/*
@@ -927,6 +929,20 @@
 			return U32x4(BITWISE_OR_U32_SIMD(left.v, LOAD_SCALAR_U32_SIMD(mask)));
 		#else
 			return U32x4(left.emulated[0] | mask, left.emulated[1] | mask, left.emulated[2] | mask, left.emulated[3] | mask);
+		#endif
+	}
+	inline U32x4 operator^(const U32x4& left, const U32x4& right) {
+		#ifdef USE_BASIC_SIMD
+			return U32x4(BITWISE_XOR_U32_SIMD(left.v, right.v));
+		#else
+			return U32x4(left.emulated[0] ^ right.emulated[0], left.emulated[1] ^ right.emulated[1], left.emulated[2] ^ right.emulated[2], left.emulated[3] ^ right.emulated[3]);
+		#endif
+	}
+	inline U32x4 operator^(const U32x4& left, uint32_t mask) {
+		#ifdef USE_BASIC_SIMD
+			return U32x4(BITWISE_XOR_U32_SIMD(left.v, LOAD_SCALAR_U32_SIMD(mask)));
+		#else
+			return U32x4(left.emulated[0] ^ mask, left.emulated[1] ^ mask, left.emulated[2] ^ mask, left.emulated[3] ^ mask);
 		#endif
 	}
 	inline U32x4 operator<<(const U32x4& left, uint32_t bitOffset) {
