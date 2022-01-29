@@ -78,6 +78,9 @@ inline F32x4x3 operator-(const F32x4x3 &left, const F32x4 &right) {
 inline F32x4x3 operator-(const F32x4x3 &left, const float &right) {
 	return F32x4x3(left.v1 - right, left.v2 - right, left.v3 - right);
 }
+inline F32x4x3 operator-(const F32x4x3& value) {
+	return F32x4x3(-value.v1, -value.v2, -value.v3);
+}
 
 inline F32x4x3 operator*(const F32x4x3 &left, const F32x4x3 &right) {
 	return F32x4x3(left.v1 * right.v1, left.v2 * right.v2, left.v3 * right.v3);
@@ -149,6 +152,9 @@ inline F32x4x2 operator-(const F32x4x2 &left, const F32x4 &right) {
 }
 inline F32x4x2 operator-(const F32x4x2 &left, const float &right) {
 	return F32x4x2(left.v1 - right, left.v2 - right);
+}
+inline F32x4x2 operator-(const F32x4x2& value) {
+	return F32x4x2(-value.v1, -value.v2);
 }
 
 inline F32x4x2 operator*(const F32x4x2 &left, const F32x4x2 &right) {
