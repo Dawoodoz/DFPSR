@@ -168,6 +168,7 @@ START_TEST(Simd)
 	ASSERT_EQUAL(2.0f * F32x4(1.0f, 2.0f, 3.0f, 4.0f), F32x4(2.0f, 4.0f, 6.0f, 8.0f));
 	ASSERT_EQUAL(F32x4(1.0f, -2.0f, 3.0f, -4.0f) * -2.0f, F32x4(-2.0f, 4.0f, -6.0f, 8.0f));
 	ASSERT_EQUAL(F32x4(1.0f, -2.0f, 3.0f, -4.0f) * F32x4(1.0f, -2.0f, 3.0f, -4.0f), F32x4(1.0f, 4.0f, 9.0f, 16.0f));
+	ASSERT_EQUAL(-F32x4(1.0f, -2.0f, 3.0f, -4.0f), F32x4(-1.0f, 2.0f, -3.0f, 4.0f));
 
 	// I32x4 operations
 	ASSERT_EQUAL(I32x4(1, 2, -3, 4) + I32x4(-2, 4, 6, 8), I32x4(-1, 6, 3, 12));
@@ -176,6 +177,7 @@ START_TEST(Simd)
 	ASSERT_EQUAL(I32x4(1, 2, 3, 4) + I32x4(4), I32x4(5, 6, 7, 8));
 	ASSERT_EQUAL(I32x4(10) + I32x4(1, 2, 3, 4), I32x4(11, 12, 13, 14));
 	ASSERT_EQUAL(I32x4(-3, 6, -9, 12) * I32x4(1, 2, -3, -4), I32x4(-3, 12, 27, -48));
+	ASSERT_EQUAL(-I32x4(1, -2, 3, -4), I32x4(-1, 2, -3, 4));
 
 	// U32x4 operations
 	ASSERT_EQUAL(U32x4(1, 2, 3, 4) + U32x4(2, 4, 6, 8), U32x4(3, 6, 9, 12));

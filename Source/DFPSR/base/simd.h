@@ -1637,6 +1637,29 @@
 		#endif
 	}
 
+	// Unary negation for convenience and code readability.
+	//   Before using unary negation, always check if:
+	//    * An addition can be turned into a subtraction?
+	//      x = -a + b
+	//      x = b - a
+	//    * A multiplying constant or scalar can be negated instead?
+	//      x = -b * 2
+	//      x = b * -2
+	inline F32x4 operator-(const F32x4& value) {
+		#ifdef USE_BASIC_SIMD
+			return F32x4(0) - value;
+		#else
+			return F32x4(-value.emulated[0], -value.emulated[1], -value.emulated[2], -value.emulated[3]);
+		#endif
+	}
+	inline I32x4 operator-(const I32x4& value) {
+		#ifdef USE_BASIC_SIMD
+			return I32x4(0.0f) - value;
+		#else
+			return I32x4(-value.emulated[0], -value.emulated[1], -value.emulated[2], -value.emulated[3]);
+		#endif
+	}
+
 	// Helper macros for generating the vector extract functions.
 	//   Having one function for each type and offset makes sure that the compiler gets an immediate integer within the valid range.
 	#ifdef USE_BASIC_SIMD
