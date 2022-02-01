@@ -6,7 +6,7 @@ PROJECT_FOLDER=.
 TARGET_FILE=./application
 # The root folder is where DFPSR, SDK and tools are located.
 ROOT_PATH=../..
-# Select where to place temporary files and the generated executable
+# Select where to place temporary files.
 TEMP_DIR=${ROOT_PATH}/../../temporary
 # Select a window manager
 WINDOW_MANAGER=NONE
