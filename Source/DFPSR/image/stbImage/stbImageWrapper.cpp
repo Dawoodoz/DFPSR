@@ -12,7 +12,7 @@ namespace dsr {
 OrderedImageRgbaU8 image_stb_decode_RgbaU8(const SafePointer<uint8_t> data, int size, bool mustParse) {
 	#ifdef SAFE_POINTER_CHECKS
 		// If the safe pointer has debug information, use it to assert that size is within bound.
-		target.assertInside("image_stb_decode_RgbaU8 (data)", data.getUnsafe(), (size_t)size);
+		data.assertInside("image_stb_decode_RgbaU8 (data)", data.getUnsafe(), (size_t)size);
 	#endif
 	int width, height, bpp;
 	uint8_t *rawPixelData = stbi_load_from_memory(data.getUnsafe(), size, &width, &height, &bpp, 4);
