@@ -28,6 +28,7 @@
 #include <cassert>
 #include "imageAPI.h"
 #include "drawAPI.h"
+#include "fileAPI.h"
 #include "../image/draw.h"
 #include "../image/internal/imageInternal.h"
 #include "../image/stbImage/stbImageWrapper.h"
@@ -52,10 +53,23 @@ AlignedImageRgbaU8 dsr::image_create_RgbaU8_native(int32_t width, int32_t height
 	return AlignedImageRgbaU8(std::make_shared<ImageRgbaU8Impl>(width, height, packOrderIndex));
 }
 
-// Loading and saving
-OrderedImageRgbaU8 dsr::image_load_RgbaU8(const String& filename, bool mustExist) {
-	return image_stb_load_RgbaU8(filename, mustExist);
+// Loading from data pointer
+OrderedImageRgbaU8 dsr::image_decode_RgbaU8(const SafePointer<uint8_t> data, int size, bool mustParse) {
+	return image_stb_decode_RgbaU8(data, size, mustParse);
 }
+// Loading from buffer
+OrderedImageRgbaU8 dsr::image_decode_RgbaU8(const Buffer& fileContent, bool mustParse) {
+	return image_decode_RgbaU8(buffer_getSafeData<uint8_t>(fileContent, "image file buffer"), buffer_getSize(fileContent), mustParse);
+}
+// Loading from file
+OrderedImageRgbaU8 dsr::image_load_RgbaU8(const String& filename, bool mustExist) {
+	//return image_stb_load_RgbaU8(filename, mustExist);
+	Buffer fileContent = file_loadBuffer(filename, mustExist);
+	return image_decode_RgbaU8(fileContent, mustExist);
+}
+
+
+
 bool dsr::image_save(const ImageRgbaU8 &image, const String& filename) {
 	return image_stb_save(image, filename);
 }

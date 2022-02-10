@@ -135,8 +135,18 @@ namespace dsr {
 	float image_readPixel_tile(const ImageF32& image, int32_t x, int32_t y);
 	ColorRgbaI32 image_readPixel_tile(const ImageRgbaU8& image, int32_t x, int32_t y);
 
-// Loading and saving
+// Loading
+	// Load an image from a file by giving the filename including folder path and extension.
 	OrderedImageRgbaU8 image_load_RgbaU8(const String& filename, bool mustExist = true);
+	// Load an image from a memory buffer, which can be loaded with file_loadBuffer to get the same result as loading directly from the file.
+	//   A convenient way of loading compressed images from larger files.
+	OrderedImageRgbaU8 image_decode_RgbaU8(const Buffer& fileContent, bool mustParse = true);
+	// A faster and more flexible way to load compressed images from memory.
+	// If you just want to point directly to a memory location to avoid allocating many small buffers, you can use a safe pointer and a size in bytes.
+	OrderedImageRgbaU8 image_decode_RgbaU8(const SafePointer<uint8_t> data, int size, bool mustParse = true);
+
+// Saving
+	// Save the image to the path specified by filename and return true iff the operation was successful.
 	bool image_save(const ImageRgbaU8 &image, const String& filename);
 
 // Fill all pixels with a uniform color
