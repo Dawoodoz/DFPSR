@@ -467,13 +467,30 @@ public:
 			}
 		}
 	}
-	// Occlusion test for whole model bounds
-	//   Because outerBound gives negative regions when outside of the picture, it can also be used as a rough culling test
+	// Occlusion test for whole model bounds.
+	// Returns false if the convex hull of the corners has a chance to be seen from the camera.
 	bool isHullOccluded(ProjectedPoint* outputHullCorners, const FVector3D* inputHullCorners, int cornerCount, const Transform3D &modelToWorldTransform, const Camera &camera) {
+		FVector3D cameraPoints[cornerCount];
 		for (int p = 0; p < cornerCount; p++) {
-			FVector3D worldPoint = modelToWorldTransform.transformPoint(inputHullCorners[p]);
-			FVector3D cameraPoint = camera.worldToCamera(worldPoint);
-			outputHullCorners[p] = camera.cameraToScreen(cameraPoint);
+			cameraPoints[p] = camera.worldToCamera(modelToWorldTransform.transformPoint(inputHullCorners[p]));
+			outputHullCorners[p] = camera.cameraToScreen(cameraPoints[p]);
+		}
+		// Culling test to see if all points are outside of the same plane of the view frustum.
+		for (int s = 0; s < camera.cullFrustum.getPlaneCount(); s++) {
+			bool allOutside = true; // True until prooven false.
+			FPlane3D plane = camera.cullFrustum.getPlane(s);
+			for (int p = 0; p < cornerCount; p++) {
+				if (plane.inside(cameraPoints[p])) {
+					// One point was inside of this plane, so it can not guarantee that all interpolated points between the corners are outside.
+					allOutside = false;
+					break;
+				}
+			}
+			// If all points are outside of the same plane in the view frustum...
+			if (allOutside) {
+				// ...then we know that all interpolated points in between are also outside of this plane.
+				return true; // Occluded due to failing culling test.
+			}
 		}
 		IRect pixelBound = getPixelBoundFromProjection(outputHullCorners, cornerCount);
 		float closestDistance = std::numeric_limits<float>::infinity();
@@ -485,11 +502,11 @@ public:
 		for (int cellY = outerBound.top(); cellY < outerBound.bottom(); cellY++) {
 			for (int cellX = outerBound.left(); cellX < outerBound.right(); cellX++) {
 				if (closestDistance < image_readPixel_clamp(this->depthGrid, cellX, cellY)) {
-					return false;
+					return false; // Visible because one cell had a more distant maximum depth.
 				}
 			}
 		}
-		return true;
+		return true; // Occluded, because none of the cells had a more distant depth.
 	}
 	// Checks if the box from minimum to maximum in object space is fully occluded when seen by the camera
 	// Must be the same camera as when occluders filled the grid with occlusion depth
