@@ -62,15 +62,15 @@ public:
 		void applyLayout();
 
 		// Component getters
-		std::shared_ptr<VisualComponent> findComponentByName(ReadableString name, bool mustExist = true) const;
+		std::shared_ptr<VisualComponent> findComponentByName(ReadableString name) const;
 		template <typename T>
-		std::shared_ptr<T> findComponentByName(ReadableString name, bool mustExist = true) const {
-			return std::dynamic_pointer_cast<T>(this->findComponentByName(name, mustExist));
+		std::shared_ptr<T> findComponentByName(ReadableString name) const {
+			return std::dynamic_pointer_cast<T>(this->findComponentByName(name));
 		}
-		std::shared_ptr<VisualComponent> findComponentByNameAndIndex(ReadableString name, int index, bool mustExist = true) const;
+		std::shared_ptr<VisualComponent> findComponentByNameAndIndex(ReadableString name, int index) const;
 		template <typename T>
-		std::shared_ptr<T> findComponentByNameAndIndex(ReadableString name, int index, bool mustExist = true) const {
-			return std::dynamic_pointer_cast<T>(this->findComponentByNameAndIndex(name, index, mustExist));
+		std::shared_ptr<T> findComponentByNameAndIndex(ReadableString name, int index) const {
+			return std::dynamic_pointer_cast<T>(this->findComponentByNameAndIndex(name, index));
 		}
 
 		// Get the root component that contains all other components in the window

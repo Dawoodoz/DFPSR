@@ -80,12 +80,54 @@ Component dsr::window_getRoot(const Window& window) {
 
 Component dsr::window_findComponentByName(const Window& window, const ReadableString& name, bool mustExist) {
 	MUST_EXIST(window, window_findComponentByName);
-	return window->findComponentByName(name);
+	Component result = window->findComponentByName(name);
+	if (mustExist && result.get() == nullptr) {
+		throwError(U"window_findComponentByName: No child component named ", name, " found!");
+	}
+	return result;
 }
 
 Component dsr::window_findComponentByNameAndIndex(const Window& window, const ReadableString& name, int index, bool mustExist) {
 	MUST_EXIST(window, window_findComponentByNameAndIndex);
-	return window->findComponentByNameAndIndex(name, index);
+	Component result = window->findComponentByNameAndIndex(name, index);
+	if (mustExist && result.get() == nullptr) {
+		throwError(U"window_findComponentByName: No child component named ", name, " with index ", index, " found!");
+	}
+	return result;
+}
+
+int dsr::component_getChildCount(const Component& parent) {
+	if (parent.get()) {
+		return parent->getChildCount();
+	} else {
+		return -1;
+	}
+}
+
+Component dsr::component_getChild(const Component& parent, int childIndex) {
+	if (parent.get()) {
+		return std::dynamic_pointer_cast<VisualComponent>(parent->getChild(childIndex));
+	} else {
+		return std::shared_ptr<VisualComponent>(); // Null handle
+	}
+}
+
+static void findAllComponentsByName(const Component& component, const ReadableString& name, std::function<void(Component, int)> callback) {
+	if (component_exists(component)) {
+		// Check if the current component matches
+		if (string_match(component->getName(), name)) {
+			callback(component, component->getIndex());
+		}
+		// Search among child components
+		int childCount = component_getChildCount(component);
+		for (int childIndex = childCount - 1; childIndex >= 0; childIndex--) {
+			findAllComponentsByName(component_getChild(component, childIndex), name, callback);
+		}
+	}
+}
+void dsr::window_findAllComponentsByName(const Window& window, const ReadableString& name, std::function<void(Component, int)> callback) {
+	MUST_EXIST(window, window_findAllComponentsByName);
+	findAllComponentsByName(window->getRootComponent(), name, callback);
 }
 
 bool dsr::window_executeEvents(const Window& window) {

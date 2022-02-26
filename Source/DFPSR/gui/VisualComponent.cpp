@@ -176,7 +176,11 @@ int VisualComponent::getChildCount() const {
 }
 
 std::shared_ptr<Persistent> VisualComponent::getChild(int index) const {
-	return this->children[index];
+	if (index >= 0 && index < this->children.length()) {
+		return this->children[index];
+	} else {
+		return std::shared_ptr<Persistent>(); // Null handle for out of bound.
+	}
 }
 
 void VisualComponent::detachFromParent() {
@@ -217,13 +221,13 @@ bool VisualComponent::hasChild(std::shared_ptr<VisualComponent> child) const {
 	return this->hasChild(child.get());
 }
 
-std::shared_ptr<VisualComponent> VisualComponent::findChildByName(ReadableString name, bool mustExist) const {
+std::shared_ptr<VisualComponent> VisualComponent::findChildByName(ReadableString name) const {
 	for (int i = 0; i < this->getChildCount(); i++) {
 		std::shared_ptr<VisualComponent> current = this->children[i];
 		if (string_match(current->getName(), name)) {
 			return current; // Found the component
 		} else {
-			std::shared_ptr<VisualComponent> searchResult = current->findChildByName(name, mustExist);
+			std::shared_ptr<VisualComponent> searchResult = current->findChildByName(name);
 			if (searchResult.get() != nullptr) {
 				return searchResult; // Found the component recursively
 			}
@@ -232,13 +236,13 @@ std::shared_ptr<VisualComponent> VisualComponent::findChildByName(ReadableString
 	return std::shared_ptr<VisualComponent>(); // Could not find the component
 }
 
-std::shared_ptr<VisualComponent> VisualComponent::findChildByNameAndIndex(ReadableString name, int index, bool mustExist) const {
+std::shared_ptr<VisualComponent> VisualComponent::findChildByNameAndIndex(ReadableString name, int index) const {
 	for (int i = 0; i < this->getChildCount(); i++) {
 		std::shared_ptr<VisualComponent> current = this->children[i];
 		if (string_match(current->getName(), name) && current->getIndex() == index) {
 			return current; // Found the component
 		} else {
-			std::shared_ptr<VisualComponent> searchResult = current->findChildByNameAndIndex(name, index, mustExist);
+			std::shared_ptr<VisualComponent> searchResult = current->findChildByNameAndIndex(name, index);
 			if (searchResult.get() != nullptr) {
 				return searchResult; // Found the component recursively
 			}

@@ -172,10 +172,9 @@ public:
 	bool hasChild(std::shared_ptr<VisualComponent> child) const;
 
 	// Find the first child component with the requested name using a case sensitive match.
-	//   If mustExist is true, failure will raise an exception directly.
 	//   Returns: A shared pointer to the child or null if not found.
-	std::shared_ptr<VisualComponent> findChildByName(ReadableString name, bool mustExist) const;
-	std::shared_ptr<VisualComponent> findChildByNameAndIndex(ReadableString name, int index, bool mustExist) const;
+	std::shared_ptr<VisualComponent> findChildByName(ReadableString name) const;
+	std::shared_ptr<VisualComponent> findChildByNameAndIndex(ReadableString name, int index) const;
 	// Detach the component from any parent
 	void detachFromParent();
 

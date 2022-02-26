@@ -65,12 +65,25 @@ namespace dsr {
 	//   Raises an exception if window doesn't exist.
 	//   There should always exist a root component where more components can be added recursively
 	Component window_getRoot(const Window& window);
-	// TODO: Document
-	//   Raises an exception if window doesn't exist.
+	// Returns a handle to the first matching component of the name in window.
+	//                 For consistent behavior, make sure that only one component has the name, or use window_findComponentByNameAndIndex after giving each a unique index.
+	// If mustExist is true, not finding any component with the name throws an exception.
+	// Raises an exception if window doesn't exist.
+	// Component names are case sensitive to reduce the risk of accidental naming conflicts among many components.
 	Component window_findComponentByName(const Window& window, const ReadableString& name, bool mustExist = true);
-	// TODO: Document
-	//   Raises an exception if window doesn't exist.
+	// Returns a handle to the first matching component of the name and index in window.
+	// If mustExist is true, not finding any component with the name throws an exception.
+	// Raises an exception if window doesn't exist.
+	// Component names are case sensitive to reduce the risk of accidental naming conflicts among many components.
 	Component window_findComponentByNameAndIndex(const Window& window, const ReadableString& name, int index, bool mustExist = true);
+	// Calls back with the component handle and index for each match of the name.
+	//   Can be used to count the number of components by incrementing a counter for each match.
+	//   Can be used to detach all the matching components and have them automatically garbage collected by reference counting.
+	//   The index can be used as a filter or to look up information.
+	// To allow detaching components while iterating over the list of children, order is reversed for child components.
+	// Raises an exception if window doesn't exist.
+	// Component names are case sensitive to reduce the risk of accidental naming conflicts among many components.
+	void window_findAllComponentsByName(const Window& window, const ReadableString& name, std::function<void(Component, int)> callback);
 
 // The three main events to run in a loop at the end of the main function
 	// If the window's event queue contained any resize of the window, the canvas and the depth buffer will be replaced during this call.
@@ -170,13 +183,21 @@ namespace dsr {
 	bool component_exists(const Component& component);
 	// Removed the component from the parent.
 	//   Does nothing if used against the root component.
-	//   Make sure to erase any other references to the component if you want it erased.
+	//   Make sure to erase any other references to the component if you want it erased, including parent pointers in any child components that may still be attached unless you detach them first.
+	//   There is currently no attach function, because such a function would need runtime checks against cyclic dependencies from attaching a parent to its own child, and still be hard to debug once it happens.
 	void component_detachFromParent(const Component& component);
+	// Returns the number of direct (non-recursive) child components attached to parent, or -1 if parent is a null handle.
+	int component_getChildCount(const Component& parent);
+	// Returns the child at childIndex from parent, or an empty handle if parent does not exist or childIndex is out of bound.
+	//   Child indices go from 0 to count - 1.
+	//   The child index refers to the parent's list of children, not the child's index attribute.
+	Component component_getChild(const Component& parent, int childIndex);
 	// Returns true iff propertyName exists in component.
+	//   Property names are case insensitive, to give more flexibility for the few property names.
 	bool component_hasProperty(const Component& component, const ReadableString& propertyName);
 	// Sets a property found using propertyName in component to the value serialized in value.
 	//   Raises an exception if component doesn't exist.
-	//   Matching of propertyName is case insensitive.
+	//   Matching of propertyName is case insensitive, to give more flexibility for the few property names.
 	//   Returns ReturnCode::Good if assigned.
 	//   Unless mustAssign forces an exception.
 	//     Returns ReturnCode::KeyNotFound if propertyName wasn't found in component.
@@ -198,7 +219,7 @@ namespace dsr {
 	ReturnCode component_setProperty_string(const Component& component, const ReadableString& propertyName, const ReadableString& value, bool mustAssign = true);
 	// Returns a property found using propertyName in component.
 	//   Raises an exception if component doesn't exist.
-	//   Matching of propertyName is case insensitive.
+	//   Matching of propertyName is case insensitive, to give more flexibility for the few property names.
 	//   If mustExist is true
 	//     Raises an exception when propertyName isn't found.
 	//   If mustExist is false
@@ -213,7 +234,8 @@ namespace dsr {
 	//   Returns the result without adding any quote signs or escape characters.
 	String component_getProperty_string(const Component& component, const ReadableString& propertyName, bool mustExist = true);
 
-	// Call a named method in the component using optional text arguments
+	// Call a named method in the component using optional text arguments.
+	//   Matching of methodName is case insensitive, to give more flexibility for the few method names.
 	String component_call(const Component& component, const ReadableString& methodName);
 	String component_call(const Component& component, const ReadableString& methodName, const ReadableString& arguments);
 

@@ -90,19 +90,19 @@ void DsrWindow::applyLayout() {
 	this->mainPanel->applyLayout(IVector2D(this->getCanvasWidth(), this->getCanvasHeight()));
 }
 
-std::shared_ptr<VisualComponent> DsrWindow::findComponentByName(ReadableString name, bool mustExist) const {
+std::shared_ptr<VisualComponent> DsrWindow::findComponentByName(ReadableString name) const {
 	if (string_match(this->mainPanel->getName(), name)) {
 		return this->mainPanel;
 	} else {
-		return this->mainPanel->findChildByName(name, mustExist);
+		return this->mainPanel->findChildByName(name);
 	}
 }
 
-std::shared_ptr<VisualComponent> DsrWindow::findComponentByNameAndIndex(ReadableString name, int index, bool mustExist) const {
+std::shared_ptr<VisualComponent> DsrWindow::findComponentByNameAndIndex(ReadableString name, int index) const {
 	if (string_match(this->mainPanel->getName(), name) && this->mainPanel->getIndex() == index) {
 		return this->mainPanel;
 	} else {
-		return this->mainPanel->findChildByNameAndIndex(name, index, mustExist);
+		return this->mainPanel->findChildByNameAndIndex(name, index);
 	}
 }
 
