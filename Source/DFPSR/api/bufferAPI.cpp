@@ -93,7 +93,7 @@ BufferImpl::~BufferImpl() {
 
 // API
 
-Buffer buffer_clone(Buffer buffer) {
+Buffer buffer_clone(const Buffer &buffer) {
 	if (!buffer_exists(buffer)) {
 		return Buffer();
 	} else {
@@ -121,7 +121,7 @@ Buffer buffer_create(int64_t newSize, uint8_t *newData) {
 	}
 }
 
-void buffer_replaceDestructor(Buffer buffer, const std::function<void(uint8_t *)>& newDestructor) {
+void buffer_replaceDestructor(const Buffer &buffer, const std::function<void(uint8_t *)>& newDestructor) {
 	if (!buffer_exists(buffer)) {
 		throwError(U"buffer_replaceDestructor: Cannot replace destructor for a buffer that don't exist.\n");
 	} else {
@@ -129,7 +129,7 @@ void buffer_replaceDestructor(Buffer buffer, const std::function<void(uint8_t *)
 	}
 }
 
-int64_t buffer_getSize(Buffer buffer) {
+int64_t buffer_getSize(const Buffer &buffer) {
 	if (!buffer_exists(buffer)) {
 		return 0;
 	} else {
@@ -137,7 +137,15 @@ int64_t buffer_getSize(Buffer buffer) {
 	}
 }
 
-uint8_t* buffer_dangerous_getUnsafeData(Buffer buffer) {
+int64_t buffer_getUseCount(const Buffer &buffer) {
+	if (!buffer_exists(buffer)) {
+		return 0;
+	} else {
+		return buffer.use_count();
+	}
+}
+
+uint8_t* buffer_dangerous_getUnsafeData(const Buffer &buffer) {
 	if (!buffer_exists(buffer)) {
 		return nullptr;
 	} else {
@@ -145,7 +153,7 @@ uint8_t* buffer_dangerous_getUnsafeData(Buffer buffer) {
 	}
 }
 
-void buffer_setBytes(Buffer buffer, uint8_t value) {
+void buffer_setBytes(const Buffer &buffer, uint8_t value) {
 	if (!buffer_exists(buffer)) {
 		throwError(U"buffer_setBytes: Cannot set bytes for a buffer that don't exist.\n");
 	} else {

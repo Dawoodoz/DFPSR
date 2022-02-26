@@ -47,7 +47,7 @@ namespace dsr {
 
 	// Sets the allocation's destructor, to be called when there are no more reference counted pointers to the buffer.
 	// Pre-condition: buffer exists
-	void buffer_replaceDestructor(Buffer buffer, const std::function<void(uint8_t *)>& newDestructor);
+	void buffer_replaceDestructor(const Buffer &buffer, const std::function<void(uint8_t *)>& newDestructor);
 
 	// Returns true iff buffer exists
 	inline bool buffer_exists(Buffer buffer) {
@@ -56,22 +56,25 @@ namespace dsr {
 
 	// Returns a clone of the buffer.
 	// Giving an empty handle returns an empty handle
-	Buffer buffer_clone(Buffer buffer);
+	Buffer buffer_clone(const Buffer &buffer);
 
 	// Returns the buffer's size in bytes, as given when allocating it excluding allocation padding
 	// Returns zero if buffer doesn't exist
-	int64_t buffer_getSize(Buffer buffer);
+	int64_t buffer_getSize(const Buffer &buffer);
+
+	// Returns the number of reference counted handles to the buffer, or 0 if the buffer does not exist.
+	int64_t buffer_getUseCount(const Buffer &buffer);
 
 	// Returns a raw pointer to the data.
 	// An empty handle will return nullptr.
-	uint8_t* buffer_dangerous_getUnsafeData(Buffer buffer);
+	uint8_t* buffer_dangerous_getUnsafeData(const Buffer &buffer);
 
 	// A wrapper for getting a bound-checked pointer of the correct element type.
 	//   Only cast to trivially packed types with power of two dimensions so that the compiler does not add padding.
 	// The name must be an ansi encoded constant literal, because each String contains a Buffer which would cause a cyclic dependency.
 	// Returns a safe null pointer if buffer does not exist.
 	template <typename T>
-	SafePointer<T> buffer_getSafeData(Buffer buffer, const char* name) {
+	SafePointer<T> buffer_getSafeData(const Buffer &buffer, const char* name) {
 		if (!buffer_exists(buffer)) {
 			return SafePointer<T>();
 		} else {
@@ -82,7 +85,7 @@ namespace dsr {
 
 	// Set all bytes to the same value
 	// Pre-condition: buffer exists
-	void buffer_setBytes(Buffer buffer, uint8_t value);
+	void buffer_setBytes(const Buffer &buffer, uint8_t value);
 }
 
 #endif
