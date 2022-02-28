@@ -187,7 +187,7 @@ void VisualComponent::detachFromParent() {
 	// Check if there's a parent component
 	VisualComponent *parent = this->parent;
 	if (parent != nullptr) {
-		// If the removed component is focused from the parent, then remove focus
+		// If the removed component is focused from the parent, then remove focus so that the parent is focused instead.
 		if (parent->focusComponent.get() == this) {
 			parent->focusComponent = std::shared_ptr<VisualComponent>();
 		}
@@ -370,4 +370,17 @@ void VisualComponent::changedTheme(VisualTheme newTheme) {}
 String VisualComponent::call(const ReadableString &methodName, const ReadableString &arguments) {
 	throwError("Unimplemented custom call received");
 	return U"";
+}
+
+bool VisualComponent::isFocused() {
+	if (this->parent != nullptr) {
+		// For child component, go back to the root and then follow the focus pointers to find out which component is focused within the whole tree.
+		//   One cannot just check if the parent points back directly, because old pointers may be left from a previous route.
+		VisualComponent *root = this; while (root->parent != nullptr) { root = root->parent; }
+		VisualComponent *leaf = root; while (leaf->focusComponent.get() != nullptr) { leaf = leaf->focusComponent.get(); }
+		return leaf == this; // Focused if the root component points back to this component.
+	} else {
+		// Root component is focused if it does not redirect its focus to a child component.
+		return this->focusComponent.get() == nullptr; // Focused if no child is focused.
+	}
 }

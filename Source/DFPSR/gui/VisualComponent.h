@@ -191,7 +191,7 @@ public:
 	// A rectangular bound check with location is used by default.
 	// The caller is responsible for checking if the component is visible when needed.
 	virtual bool pointIsInside(const IVector2D& pixelPosition);
-	// Get a reference to the topmost child
+	// Get a pointer to the topmost child
 	// Invisible components are ignored by default, but includeInvisible can be enabled to change that.
 	// Returns an empty reference if the pixel position didn't hit anything inside.
 	// Since the root component might not be heap allocated, it cannot return itself by reference.
@@ -215,6 +215,9 @@ public:
 	virtual void changedLocation(const IRect &oldLocation, const IRect &newLocation) {};
 	// Custom call handler to manipulate components across a generic API
 	virtual String call(const ReadableString &methodName, const ReadableString &arguments);
+	// Returns true iff the component is focused.
+	//   The root component is considered focused if none of its children are focused.
+	bool isFocused();
 };
 
 }
