@@ -21,6 +21,8 @@
 //    3. This notice may not be removed or altered from any source
 //    distribution.
 
+#define DFPSR_INTERNAL_ACCESS
+
 #include "modelAPI.h"
 #include "imageAPI.h"
 #include "drawAPI.h"
@@ -216,9 +218,8 @@ struct DebugLine {
 	: x1(x1), y1(y1), x2(x2), y2(y2), color(color) {}
 };
 
-// Context for rendering multiple models at the same time for improved speed
-class RendererImpl {
-private:
+// Context for multi-threaded rendering of triangles in a command queue
+struct RendererImpl {
 	bool receiving = false; // Preventing version dependency by only allowing calls in the expected order
 	ImageRgbaU8 colorBuffer; // The color image being rendered to
 	ImageF32 depthBuffer; // Linear depth for isometric cameras, 1 / depth for perspective cameras
@@ -227,7 +228,6 @@ private:
 	List<DebugLine> debugLines; // Additional lines to be drawn as an overlay for debugging occlusion
 	int width = 0, height = 0, gridWidth = 0, gridHeight = 0;
 	bool occluded = false;
-public:
 	RendererImpl() {}
 	void beginFrame(ImageRgbaU8& colorBuffer, ImageF32& depthBuffer) {
 		if (this->receiving) {
@@ -693,6 +693,30 @@ void renderer_giveTask(Renderer& renderer, const Model& model, const Transform3D
 	if (model.get() != nullptr) {
 		renderer->giveTask(model, modelToWorldTransform, camera);
 	}
+}
+
+void renderer_giveTask_triangle(Renderer& renderer,
+  const ProjectedPoint &posA, const ProjectedPoint &posB, const ProjectedPoint &posC,
+  const FVector4D &colorA, const FVector4D &colorB, const FVector4D &colorC,
+  const FVector4D &texCoordA, const FVector4D &texCoordB, const FVector4D &texCoordC,
+  const ImageRgbaU8& diffuseMap, const ImageRgbaU8& lightMap,
+  Filter filter, const Camera &camera) {
+	#ifndef NDEBUG
+		if (image_exists(diffuseMap) && !image_isTexture(diffuseMap)) {
+			throwError("If renderer_addTriangle is given a diffuse map, it must be a valid texture according to the criterias of image_isTexture!");
+		}
+		if (image_exists(lightMap) && !image_isTexture(lightMap)) {
+			throwError("If renderer_addTriangle is given a light map, it must be a valid texture according to the criterias of image_isTexture!");
+		}
+		MUST_EXIST(renderer,renderer_addTriangle);
+	#endif
+	renderTriangleFromData(
+	  &(renderer->commandQueue), renderer->colorBuffer.get(), renderer->depthBuffer.get(), camera,
+	  posA, posB, posC,
+	  filter, diffuseMap.get(), lightMap.get(),
+	  TriangleTexCoords(texCoordA, texCoordB, texCoordC),
+	  TriangleColors(colorA, colorB, colorC)
+	);
 }
 
 void renderer_occludeFromBox(Renderer& renderer, const FVector3D& minimum, const FVector3D& maximum, const Transform3D &modelToWorldTransform, const Camera &camera, bool debugSilhouette) {

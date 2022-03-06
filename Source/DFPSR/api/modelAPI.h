@@ -323,6 +323,41 @@ namespace dsr {
 	// An empty model handle will be skipped silently, which can be used instead of an model with zero polygons.
 	// Side-effect: The visible triangles are queued up in the renderer.
 	void renderer_giveTask(Renderer& renderer, const Model& model, const Transform3D &modelToWorldTransform, const Camera &camera);
+	// A move powerful alternative to renderer_giveTask, sending one triangle at a time without occlusion tests.
+	//   Call renderer_isBoxVisible for the whole model's bounding box to check if the triangles in your own representation should be drawn.
+	// Useful for engine specific model formats allowing vertex animation, vertex shading and texture shading.
+	//   Positions can be transformed to implement bone animation, or interpolated from key frames for vertex animation.
+	//   Vertex colors can be modified to implement dynamic vertex light, which is useful for animated geometry.
+	//   Having one texture per instances using the same geometry, makes it easy to apply shading in texture space for sub-surface scattering and soft shadows.
+	//     Simply transform each light source into object space and generate a normal map in object space instead of tangent space, to make fast texture space shading of rigid models.
+	// Side-effect:
+	//   Adds the triangle to the renderer's list of things to do when multi-threaded rasterization starts.
+	//   Vertex data is cloned by value and you may therefore generate vertex data dynamically and reuse buffers for multiple instances.
+	//   Textures are however taken as raw pointers.
+	//     Reference counting shared resources with multi-threading would be super slow and most textures are loaded from pools anyway.
+	//     Cloning whole textures would always be slower and take more memory than just storing one texture for each variation of shading.
+	//     Just don't delete the last handle to a texture while it is being rendered using multiple threads, and you get decent performance without crashes.
+	// Inputs:
+	//   The renderer must exist, because otherwise it does not know where to draw the result.
+	//     Safety checks are only performed in debug mode, so that rendering of triangles will not be slowed down too much in the final release.
+	//   posA, posB and posC are pre-projected screen coordinates containing camera space coordinates for clipping.
+	//     These are supposed to be projected once per position using the camera and then reused for all vertices that share the position.
+	//   By rounding projected coordinates to sub-pixel integers in advance, the rasterization algorithm can perform exact comparisons along the line between two triangles.
+	//     This guarantees that triangles that are not clipped against the view frustum will not leak pixels between triangles who had two share two projected positions.
+	//   colorA, colorB and colorC are the vertex colors.
+	//     If assigned to nearly identical values, a faster shader will be used to fill everything in a solid color.
+	//   texCoordA, texCoordB and texCoordC are the texture coordinates.
+	//     x and y elements contain UV1 for the diffuse map.
+	//     z and w elements contain UV2 for the light map.
+	//   Both diffuseMap and lightMap must be a valid texture or not exist.
+	//   See model_setFilter for an explanation of the available filters.
+	//   The camera should be the same that was used for projecting posA, posB and posC, so that new vertices from clipping can be projected again.
+	void renderer_giveTask_triangle(Renderer& renderer,
+	  const ProjectedPoint &posA, const ProjectedPoint &posB, const ProjectedPoint &posC,
+	  const FVector4D &colorA, const FVector4D &colorB, const FVector4D &colorC,
+	  const FVector4D &texCoordA, const FVector4D &texCoordB, const FVector4D &texCoordC,
+	  const ImageRgbaU8& diffuseMap, const ImageRgbaU8& lightMap,
+	  Filter filter, const Camera &camera);
 	// Use already given triangles as occluders.
 	//   Used after calls to renderer_giveTask have filled the buffer with triangles, but before they are drawn using renderer_end.
 	void renderer_occludeFromExistingTriangles(Renderer& renderer);
