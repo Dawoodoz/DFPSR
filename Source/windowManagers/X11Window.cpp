@@ -466,6 +466,7 @@ void X11Window::prefetchEvents() {
 	// Only prefetch new events if nothing else is using the communication link
 	if (windowLock.try_lock()) {
 		if (this->display) {
+			bool hasScrolled = false;
 			while (XPending(this->display)) {
 				// Ensure that full-screen applications have keyboard focus if interacted with in any way
 				if (this->windowState == 2) {
@@ -509,16 +510,17 @@ void X11Window::prefetchEvents() {
 							this->queueInputEvent(new dsr::KeyboardEvent(dsr::KeyboardEventType::KeyUp, character, dsrKey));
 						}
 					}
-				} else if (currentEvent.type == ButtonPress) {
-					// Mouse down
+				} else if (currentEvent.type == ButtonPress || currentEvent.type == ButtonRelease) {
 					dsr::MouseKeyEnum key = getMouseKey(currentEvent.xbutton.button);
-					this->queueInputEvent(new dsr::MouseEvent(isVerticalScrollKey(key) ? dsr::MouseEventType::Scroll : dsr::MouseEventType::MouseDown, key, dsr::IVector2D(currentEvent.xbutton.x, currentEvent.xbutton.y)));
-				} else if (currentEvent.type == ButtonRelease) {
-					// Mouse up
-					dsr::MouseKeyEnum key = getMouseKey(currentEvent.xbutton.button);
-					// Scroll events are already captured from the mouse down signal
-					if (!isVerticalScrollKey(key)) {
-						this->queueInputEvent(new dsr::MouseEvent(dsr::MouseEventType::MouseUp, key, dsr::IVector2D(currentEvent.xbutton.x, currentEvent.xbutton.y)));
+					if (isVerticalScrollKey(key)) {
+						// Scroll down/up
+						if (!hasScrolled) {
+							this->queueInputEvent(new dsr::MouseEvent(dsr::MouseEventType::Scroll, key, dsr::IVector2D(currentEvent.xbutton.x, currentEvent.xbutton.y)));
+						}
+						hasScrolled = true;
+					} else {
+						// Mouse down/up
+						this->queueInputEvent(new dsr::MouseEvent(currentEvent.type == ButtonPress ? dsr::MouseEventType::MouseDown : dsr::MouseEventType::MouseUp, key, dsr::IVector2D(currentEvent.xbutton.x, currentEvent.xbutton.y)));
 					}
 				} else if (currentEvent.type == MotionNotify) {
 					// Mouse move

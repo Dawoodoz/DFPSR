@@ -314,9 +314,9 @@ void VisualComponent::sendMouseEvent(const MouseEvent& event) {
 	}
 	// Release a component on mouse up
 	if (event.mouseEventType == MouseEventType::MouseUp) {
-		this->dragComponent = std::shared_ptr<VisualComponent>(); // Abort drag
 		this->holdCount--;
-		if (this->holdCount < 0) {
+		if (this->holdCount <= 0) {
+			this->dragComponent = std::shared_ptr<VisualComponent>(); // Abort drag
 			this->holdCount = 0;
 		}
 	}
