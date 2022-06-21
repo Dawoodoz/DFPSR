@@ -6,6 +6,7 @@
 #include <X11/Xatom.h>
 
 #include "../DFPSR/api/imageAPI.h"
+#include "../DFPSR/api/drawAPI.h"
 #include "../DFPSR/gui/BackendWindow.h"
 
 // According to this documentation, XInitThreads doesn't have to be used if a mutex is wrapped around all the calls to XLib.
@@ -38,6 +39,7 @@ private:
 	XImage *canvasX[bufferCount] = {};
 	int drawIndex = 0 % bufferCount;
 	int showIndex = 1 % bufferCount;
+	bool firstFrame = true;
 
 	#ifndef DISABLE_MULTI_THREADING
 		// The background worker for displaying the result using a separate thread protected by a mutex
@@ -220,6 +222,7 @@ void X11Window::createWindowed_locked(const dsr::String& title, int width, int h
 		XMapRaised(this->display, this->window);
 
 		this->windowState = 1;
+		this->firstFrame = true;
 	windowLock.unlock();
 	this->prepareWindow_locked();
 }
@@ -263,6 +266,7 @@ void X11Window::createFullscreen_locked() {
 		XSetInputFocus(this->display, this->window, RevertToNone, CurrentTime);
 
 		this->windowState = 2;
+		this->firstFrame = true;
 	windowLock.unlock();
 	this->prepareWindow_locked();
 }
@@ -610,8 +614,18 @@ void X11Window::showCanvas() {
 			// Perform instantly
 			task();
 		#else
-			// Run in the background while doing other things
-			this->displayFuture = std::async(std::launch::async, task);
+			if (this->firstFrame) {
+				// The first frame will be cloned when double buffering.
+				if (bufferCount == 2) {
+					dsr::draw_copy(this->canvas[this->drawIndex], this->canvas[this->showIndex]);
+				}
+				// Single-thread the first frame to keep it safe.
+				task();
+				this->firstFrame = false;
+			} else {
+				// Run in the background while doing other things
+				this->displayFuture = std::async(std::launch::async, task);
+			}
 		#endif
 	}
 }
