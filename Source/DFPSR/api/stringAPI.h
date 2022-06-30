@@ -143,7 +143,7 @@ String& string_toStreamIndented(String& target, const int8_t& value, const Reada
 String& string_toStreamIndented(String& target, const uint8_t& value, const ReadableString& indentation);
 
 // Templates reused for all types
-// The source must inherit from Printable or have its own string_feedIndented overload
+// The source must inherit from Printable or have its own string_toStreamIndented overload
 template<typename T>
 String& string_toStream(String& target, const T& source) {
 	return string_toStreamIndented(target, source, U"");
