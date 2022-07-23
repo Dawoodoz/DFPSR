@@ -41,7 +41,7 @@ namespace dsr {
 	static const char32_t* pathSeparator = U"/";
 #endif
 
-#define GET_PATH_BUFFER(FILENAME) Buffer pathBuffer = string_saveToMemory(FILENAME, NativePathEncoding, LineEncoding::CrLf, false);
+#define GET_PATH_BUFFER(FILENAME) Buffer pathBuffer = string_saveToMemory(FILENAME, NativePathEncoding, LineEncoding::CrLf, false, true);
 #define NATIVE_PATH_FROM_BUFFER (NativePathChar*)buffer_dangerous_getUnsafeData(pathBuffer)
 
 Buffer file_loadBuffer(const ReadableString& filename, bool mustExist) {

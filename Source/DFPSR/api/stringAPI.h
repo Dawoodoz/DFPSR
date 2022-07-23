@@ -291,10 +291,12 @@ void string_save(const ReadableString& filename, const ReadableString& content,
 );
 // Encode the string and keep the raw buffer instead of saving it to a file.
 // Disabling writeByteOrderMark can be done when the result is casted to a native string for platform specific APIs, where a BOM is not allowed.
+// Enabling writeNullTerminator should be done when using the result as a pointer, so that the length is known when the buffer does not have padding.
 Buffer string_saveToMemory(const ReadableString& content,
   CharacterEncoding characterEncoding = CharacterEncoding::BOM_UTF8,
   LineEncoding lineEncoding = LineEncoding::CrLf,
-  bool writeByteOrderMark = true
+  bool writeByteOrderMark = true,
+  bool writeNullTerminator = false
 );
 
 // Post-condition: Returns true iff strings a and b are exactly equal.

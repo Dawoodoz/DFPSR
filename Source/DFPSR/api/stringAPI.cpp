@@ -619,8 +619,8 @@ static void encodeCharacter(const ByteWriterFunction &receiver, DsrChar characte
 }
 
 // Template for encoding a whole string
-template <CharacterEncoding characterEncoding, LineEncoding lineEncoding, bool writeBOM>
-static void encodeText(const ByteWriterFunction &receiver, String content) {
+template <CharacterEncoding characterEncoding, LineEncoding lineEncoding>
+static void encodeText(const ByteWriterFunction &receiver, String content, bool writeBOM, bool writeNullTerminator) {
 	if (writeBOM) {
 		// Write byte order marks
 		if (characterEncoding == CharacterEncoding::BOM_UTF8) {
@@ -649,57 +649,42 @@ static void encodeText(const ByteWriterFunction &receiver, String content) {
 			encodeCharacter<characterEncoding>(receiver, character);
 		}
 	}
+	if (writeNullTerminator) {
+		// Terminate internal strings with \0 to prevent getting garbage data after unpadded buffers
+		if (characterEncoding == CharacterEncoding::BOM_UTF16BE || characterEncoding == CharacterEncoding::BOM_UTF16LE) {
+			receiver(0);
+			receiver(0);
+		} else {
+			receiver(0);
+		}
+	}
 }
 
 // Macro for converting run-time arguments into template arguments for encodeText
-#define ENCODE_TEXT(RECEIVER, CONTENT, CHAR_ENCODING, LINE_ENCODING, WRITE_BOM) \
+#define ENCODE_TEXT(RECEIVER, CONTENT, CHAR_ENCODING, LINE_ENCODING, WRITE_BOM, WRITE_NULL_TERMINATOR) \
 	if (CHAR_ENCODING == CharacterEncoding::Raw_Latin1) { \
 		if (LINE_ENCODING == LineEncoding::CrLf) { \
-			encodeText<CharacterEncoding::Raw_Latin1, LineEncoding::CrLf, false>(RECEIVER, CONTENT); \
+			encodeText<CharacterEncoding::Raw_Latin1, LineEncoding::CrLf>(RECEIVER, CONTENT, false, WRITE_NULL_TERMINATOR); \
 		} else if (LINE_ENCODING == LineEncoding::Lf) { \
-			encodeText<CharacterEncoding::Raw_Latin1, LineEncoding::Lf, false>(RECEIVER, CONTENT); \
+			encodeText<CharacterEncoding::Raw_Latin1, LineEncoding::Lf>(RECEIVER, CONTENT, false, WRITE_NULL_TERMINATOR); \
 		} \
 	} else if (CHAR_ENCODING == CharacterEncoding::BOM_UTF8) { \
-		if (WRITE_BOM) { \
-			if (LINE_ENCODING == LineEncoding::CrLf) { \
-				encodeText<CharacterEncoding::BOM_UTF8, LineEncoding::CrLf, true>(RECEIVER, CONTENT); \
-			} else if (LINE_ENCODING == LineEncoding::Lf) { \
-				encodeText<CharacterEncoding::BOM_UTF8, LineEncoding::Lf, true>(RECEIVER, CONTENT); \
-			} \
-		} else { \
-			if (LINE_ENCODING == LineEncoding::CrLf) { \
-				encodeText<CharacterEncoding::BOM_UTF8, LineEncoding::CrLf, false>(RECEIVER, CONTENT); \
-			} else if (LINE_ENCODING == LineEncoding::Lf) { \
-				encodeText<CharacterEncoding::BOM_UTF8, LineEncoding::Lf, false>(RECEIVER, CONTENT); \
-			} \
+		if (LINE_ENCODING == LineEncoding::CrLf) { \
+			encodeText<CharacterEncoding::BOM_UTF8, LineEncoding::CrLf>(RECEIVER, CONTENT, WRITE_BOM, WRITE_NULL_TERMINATOR); \
+		} else if (LINE_ENCODING == LineEncoding::Lf) { \
+			encodeText<CharacterEncoding::BOM_UTF8, LineEncoding::Lf>(RECEIVER, CONTENT, WRITE_BOM, WRITE_NULL_TERMINATOR); \
 		} \
 	} else if (CHAR_ENCODING == CharacterEncoding::BOM_UTF16BE) { \
-		if (WRITE_BOM) { \
-			if (LINE_ENCODING == LineEncoding::CrLf) { \
-				encodeText<CharacterEncoding::BOM_UTF16BE, LineEncoding::CrLf, true>(RECEIVER, CONTENT); \
-			} else if (LINE_ENCODING == LineEncoding::Lf) { \
-				encodeText<CharacterEncoding::BOM_UTF16BE, LineEncoding::Lf, true>(RECEIVER, CONTENT); \
-			} \
-		} else { \
-			if (LINE_ENCODING == LineEncoding::CrLf) { \
-				encodeText<CharacterEncoding::BOM_UTF16BE, LineEncoding::CrLf, false>(RECEIVER, CONTENT); \
-			} else if (LINE_ENCODING == LineEncoding::Lf) { \
-				encodeText<CharacterEncoding::BOM_UTF16BE, LineEncoding::Lf, false>(RECEIVER, CONTENT); \
-			} \
+		if (LINE_ENCODING == LineEncoding::CrLf) { \
+			encodeText<CharacterEncoding::BOM_UTF16BE, LineEncoding::CrLf>(RECEIVER, CONTENT, WRITE_BOM, WRITE_NULL_TERMINATOR); \
+		} else if (LINE_ENCODING == LineEncoding::Lf) { \
+			encodeText<CharacterEncoding::BOM_UTF16BE, LineEncoding::Lf>(RECEIVER, CONTENT, WRITE_BOM, WRITE_NULL_TERMINATOR); \
 		} \
 	} else if (CHAR_ENCODING == CharacterEncoding::BOM_UTF16LE) { \
-		if (WRITE_BOM) { \
-			if (LINE_ENCODING == LineEncoding::CrLf) { \
-				encodeText<CharacterEncoding::BOM_UTF16LE, LineEncoding::CrLf, true>(RECEIVER, CONTENT); \
-			} else if (LINE_ENCODING == LineEncoding::Lf) { \
-				encodeText<CharacterEncoding::BOM_UTF16LE, LineEncoding::Lf, true>(RECEIVER, CONTENT); \
-			} \
-		} else { \
-			if (LINE_ENCODING == LineEncoding::CrLf) { \
-				encodeText<CharacterEncoding::BOM_UTF16LE, LineEncoding::CrLf, false>(RECEIVER, CONTENT); \
-			} else if (LINE_ENCODING == LineEncoding::Lf) { \
-				encodeText<CharacterEncoding::BOM_UTF16LE, LineEncoding::Lf, false>(RECEIVER, CONTENT); \
-			} \
+		if (LINE_ENCODING == LineEncoding::CrLf) { \
+			encodeText<CharacterEncoding::BOM_UTF16LE, LineEncoding::CrLf>(RECEIVER, CONTENT, WRITE_BOM, WRITE_NULL_TERMINATOR); \
+		} else if (LINE_ENCODING == LineEncoding::Lf) { \
+			encodeText<CharacterEncoding::BOM_UTF16LE, LineEncoding::Lf>(RECEIVER, CONTENT, WRITE_BOM, WRITE_NULL_TERMINATOR); \
 		} \
 	}
 
@@ -712,19 +697,19 @@ void dsr::string_save(const ReadableString& filename, const ReadableString& cont
 	}
 }
 
-Buffer dsr::string_saveToMemory(const ReadableString& content, CharacterEncoding characterEncoding, LineEncoding lineEncoding, bool writeByteOrderMark) {
+Buffer dsr::string_saveToMemory(const ReadableString& content, CharacterEncoding characterEncoding, LineEncoding lineEncoding, bool writeByteOrderMark, bool writeNullTerminator) {
 	int64_t byteCount = 0;
 	ByteWriterFunction counter = [&byteCount](uint8_t value) {
 		byteCount++;
 	};
-	ENCODE_TEXT(counter, content, characterEncoding, lineEncoding, writeByteOrderMark);
+	ENCODE_TEXT(counter, content, characterEncoding, lineEncoding, writeByteOrderMark, writeNullTerminator);
 	Buffer result = buffer_create(byteCount);
 	SafePointer<uint8_t> byteWriter = buffer_getSafeData<uint8_t>(result, "Buffer for string encoding");
 	ByteWriterFunction receiver = [&byteWriter](uint8_t value) {
 		*byteWriter = value;
 		byteWriter += 1;
 	};
-	ENCODE_TEXT(receiver, content, characterEncoding, lineEncoding, writeByteOrderMark);
+	ENCODE_TEXT(receiver, content, characterEncoding, lineEncoding, writeByteOrderMark, writeNullTerminator);
 	return result;
 }
 
