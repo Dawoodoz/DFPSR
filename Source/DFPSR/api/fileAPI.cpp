@@ -1,6 +1,6 @@
 ﻿// zlib open source license
 //
-// Copyright (c) 2020 David Forsgren Piuva
+// Copyright (c) 2020 to 2022 David Forsgren Piuva
 // 
 // This software is provided 'as-is', without any express or implied
 // warranty. In no event will the authors be held liable for any damages
@@ -28,25 +28,27 @@
 
 namespace dsr {
 
-// TODO: Try converting to UTF-8 for file names, which would only have another chance at working
-static char toAscii(DsrChar c) {
-	if (c > 127) {
-		return '?';
-	} else {
-		return c;
-	}
-}
-#define TO_RAW_ASCII(TARGET, SOURCE) \
-	char TARGET[string_length(SOURCE) + 1]; \
-	for (int i = 0; i < string_length(SOURCE); i++) { \
-		TARGET[i] = toAscii(SOURCE[i]); \
-	} \
-	TARGET[string_length(SOURCE)] = '\0';
+// If porting to a new operating system that is not following Posix standard, list how the file system works here.
+#if defined(WIN32) || defined(_WIN32)
+	// How the file system works on Microsoft Windows.
+	using NativePathChar = wchar_t;
+	static const CharacterEncoding NativePathEncoding = CharacterEncoding::BOM_UTF16LE;
+	static const char32_t* pathSeparator = U"\\";
+#else
+	// How the file system is assumed to work on most other systems.
+	using NativePathChar = char;
+	static const CharacterEncoding NativePathEncoding = CharacterEncoding::BOM_UTF8;
+	static const char32_t* pathSeparator = U"/";
+#endif
+
+#define GET_PATH_BUFFER(FILENAME) Buffer pathBuffer = string_saveToMemory(FILENAME, NativePathEncoding, LineEncoding::CrLf, false);
+#define NATIVE_PATH_FROM_BUFFER (NativePathChar*)buffer_dangerous_getUnsafeData(pathBuffer)
 
 Buffer file_loadBuffer(const ReadableString& filename, bool mustExist) {
-	// TODO: Load files using Unicode filenames when available
-	TO_RAW_ASCII(asciiFilename, filename);
-	std::ifstream fileStream(asciiFilename, std::ios_base::in | std::ios_base::binary);
+	// Convert the filename into a the system's expected path encoding.
+	GET_PATH_BUFFER(filename);
+	// Use the native path to open the file for reading.
+	std::ifstream fileStream(NATIVE_PATH_FROM_BUFFER, std::ios_base::in | std::ios_base::binary);
 	if (fileStream.is_open()) {
 		// Get the file's length and allocate an array for the raw encoding
 		fileStream.seekg (0, fileStream.end);
@@ -65,12 +67,13 @@ Buffer file_loadBuffer(const ReadableString& filename, bool mustExist) {
 }
 
 void file_saveBuffer(const ReadableString& filename, Buffer buffer) {
-	// TODO: Save files using Unicode filenames
 	if (!buffer_exists(buffer)) {
 		throwError(U"buffer_save: Cannot save a buffer that don't exist to a file.\n");
 	} else {
-		TO_RAW_ASCII(asciiFilename, filename);
-		std::ofstream fileStream(asciiFilename, std::ios_base::out | std::ios_base::binary);
+		// Convert the filename into a the system's expected path encoding.
+		GET_PATH_BUFFER(filename);
+		// Use the native path to open the file for writing.
+		std::ofstream fileStream(NATIVE_PATH_FROM_BUFFER, std::ios_base::out | std::ios_base::binary);
 		if (fileStream.is_open()) {
 			fileStream.write((char*)buffer_dangerous_getUnsafeData(buffer), buffer_getSize(buffer));
 			fileStream.close();
@@ -81,11 +84,7 @@ void file_saveBuffer(const ReadableString& filename, Buffer buffer) {
 }
 
 const char32_t* file_separator() {
-	#if defined(WIN32) || defined(_WIN32)
-		return U"\\";
-	#else
-		return U"/";
-	#endif
+	return pathSeparator;
 }
 
 }

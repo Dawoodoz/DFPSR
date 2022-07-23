@@ -290,9 +290,11 @@ void string_save(const ReadableString& filename, const ReadableString& content,
   LineEncoding lineEncoding = LineEncoding::CrLf
 );
 // Encode the string and keep the raw buffer instead of saving it to a file.
+// Disabling writeByteOrderMark can be done when the result is casted to a native string for platform specific APIs, where a BOM is not allowed.
 Buffer string_saveToMemory(const ReadableString& content,
   CharacterEncoding characterEncoding = CharacterEncoding::BOM_UTF8,
-  LineEncoding lineEncoding = LineEncoding::CrLf
+  LineEncoding lineEncoding = LineEncoding::CrLf,
+  bool writeByteOrderMark = true
 );
 
 // Post-condition: Returns true iff strings a and b are exactly equal.

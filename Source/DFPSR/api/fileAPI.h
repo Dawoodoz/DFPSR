@@ -1,6 +1,6 @@
 ﻿// zlib open source license
 //
-// Copyright (c) 2020 David Forsgren Piuva
+// Copyright (c) 2020 to 2022 David Forsgren Piuva
 // 
 // This software is provided 'as-is', without any express or implied
 // warranty. In no event will the authors be held liable for any damages
@@ -42,6 +42,7 @@ namespace dsr {
 	void file_saveBuffer(const ReadableString& filename, Buffer buffer);
 
 	// Get a path separator for the target operating system.
+	//   Can be used to construct a file path that works for both forward and backward slash separators.
 	const char32_t* file_separator();
 }
 
