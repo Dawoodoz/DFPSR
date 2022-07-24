@@ -1,6 +1,6 @@
 ﻿// zlib open source license
 //
-// Copyright (c) 2020 David Forsgren Piuva
+// Copyright (c) 2020 to 2022 David Forsgren Piuva
 // 
 // This software is provided 'as-is', without any express or implied
 // warranty. In no event will the authors be held liable for any damages
@@ -28,32 +28,36 @@
 
 namespace dsr {
 
-// TODO: Try converting to UTF-8 for file names, which would only have another chance at working
-static char toAscii(DsrChar c) {
-	if (c > 127) {
-		return '?';
-	} else {
-		return c;
+// If porting to a new operating system that is not following Posix standard, list how the file system works here.
+// * pathSeparator is the token used to separate folders in the system, expressed as a UTF-32 string literal.
+// * accessFile is the function for opening a file using the UTF-32 filename, for reading or writing.
+//   The C API is used for access, because some C++ standard library implementations don't support wide strings for MS-Windows.
+#if defined(WIN32) || defined(_WIN32)
+	#include <windows.h>
+	static const char32_t* pathSeparator = U"\\";
+	static FILE* accessFile(const ReadableString &filename, bool write) {
+		Buffer pathBuffer = string_saveToMemory(filename, CharacterEncoding::BOM_UTF16LE, LineEncoding::CrLf, false, true);
+		return _wfopen((const wchar_t*)buffer_dangerous_getUnsafeData(pathBuffer), write ? L"wb" : L"rb");
 	}
-}
-#define TO_RAW_ASCII(TARGET, SOURCE) \
-	char TARGET[string_length(SOURCE) + 1]; \
-	for (int i = 0; i < string_length(SOURCE); i++) { \
-		TARGET[i] = toAscii(SOURCE[i]); \
-	} \
-	TARGET[string_length(SOURCE)] = '\0';
+#else
+	static const char32_t* pathSeparator = U"/";
+	static FILE* accessFile(const ReadableString &filename, bool write) {
+		Buffer pathBuffer = string_saveToMemory(filename, CharacterEncoding::BOM_UTF8, LineEncoding::CrLf, false, true);
+		return fopen((const char*)buffer_dangerous_getUnsafeData(pathBuffer), write ? "wb" : "rb");
+	}
+#endif
 
 Buffer file_loadBuffer(const ReadableString& filename, bool mustExist) {
-	// TODO: Load files using Unicode filenames when available
-	TO_RAW_ASCII(asciiFilename, filename);
-	std::ifstream fileStream(asciiFilename, std::ios_base::in | std::ios_base::binary);
-	if (fileStream.is_open()) {
-		// Get the file's length and allocate an array for the raw encoding
-		fileStream.seekg (0, fileStream.end);
-		int64_t fileLength = fileStream.tellg();
-		fileStream.seekg (0, fileStream.beg);
-		Buffer buffer = buffer_create(fileLength);
-		fileStream.read((char*)buffer_dangerous_getUnsafeData(buffer), fileLength);
+	FILE *file = accessFile(filename, false);
+	if (file != nullptr) {
+		// Get the file's size by going to the end, measuring, and going back
+		fseek(file, 0L, SEEK_END);
+		int64_t fileSize = ftell(file);
+		rewind(file);
+		// Allocate a buffer of the file's size
+		Buffer buffer = buffer_create(fileSize);
+		fread((void*)buffer_dangerous_getUnsafeData(buffer), fileSize, 1, file);
+		fclose(file);
 		return buffer;
 	} else {
 		if (mustExist) {
@@ -65,27 +69,21 @@ Buffer file_loadBuffer(const ReadableString& filename, bool mustExist) {
 }
 
 void file_saveBuffer(const ReadableString& filename, Buffer buffer) {
-	// TODO: Save files using Unicode filenames
 	if (!buffer_exists(buffer)) {
 		throwError(U"buffer_save: Cannot save a buffer that don't exist to a file.\n");
 	} else {
-		TO_RAW_ASCII(asciiFilename, filename);
-		std::ofstream fileStream(asciiFilename, std::ios_base::out | std::ios_base::binary);
-		if (fileStream.is_open()) {
-			fileStream.write((char*)buffer_dangerous_getUnsafeData(buffer), buffer_getSize(buffer));
-			fileStream.close();
+		FILE *file = accessFile(filename, true);
+		if (file != nullptr) {
+			fwrite((void*)buffer_dangerous_getUnsafeData(buffer), buffer_getSize(buffer), 1, file);
+			fclose(file);
 		} else {
-			throwError("Failed to save ", filename, "\n");
+			throwError("Failed to save ", filename, ".\n");
 		}
 	}
 }
 
 const char32_t* file_separator() {
-	#if defined(WIN32) || defined(_WIN32)
-		return U"\\";
-	#else
-		return U"/";
-	#endif
+	return pathSeparator;
 }
 
 }
