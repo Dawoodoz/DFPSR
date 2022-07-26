@@ -414,10 +414,14 @@ static LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT message, WPARAM wParam, 
 		{
 			char character = wParam; // System specific key-code
 			dsr::DsrKey dsrKey = getDsrKey(wParam); // Portable key-code
+			bool previouslyPressed = lParam & (1 << 30);
 			if (message == WM_KEYDOWN) {
-				// Physical key down
-				parent->queueInputEvent(new dsr::KeyboardEvent(dsr::KeyboardEventType::KeyDown, character, dsrKey));
-				// First press typing
+				// If not repeated
+				if (!previouslyPressed) {
+					// Physical key down
+					parent->queueInputEvent(new dsr::KeyboardEvent(dsr::KeyboardEventType::KeyDown, character, dsrKey));
+				}
+				// Press typing with repeat
 				parent->queueInputEvent(new dsr::KeyboardEvent(dsr::KeyboardEventType::KeyType, character, dsrKey));
 			} else { // message == WM_KEYUP
 				// Physical key up
