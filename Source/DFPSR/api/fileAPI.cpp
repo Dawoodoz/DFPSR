@@ -25,6 +25,9 @@
 #include <cstdlib>
 #include "fileAPI.h"
 #include "bufferAPI.h"
+#ifdef __cpp_lib_filesystem
+	#include <filesystem>
+#endif
 
 namespace dsr {
 
@@ -35,17 +38,29 @@ namespace dsr {
 #if defined(WIN32) || defined(_WIN32)
 	#include <windows.h>
 	static const char32_t* pathSeparator = U"\\";
-	static FILE* accessFile(const ReadableString &filename, bool write) {
-		Buffer pathBuffer = string_saveToMemory(filename, CharacterEncoding::BOM_UTF16LE, LineEncoding::CrLf, false, true);
-		return _wfopen((const wchar_t*)buffer_dangerous_getUnsafeData(pathBuffer), write ? L"wb" : L"rb");
-	}
+	static const CharacterEncoding nativeEncoding = CharacterEncoding::BOM_UTF16LE;
+	#define FILE_ACCESS_FUNCTION _wfopen
+	#define FILE_ACCESS_SELECTION (write ? L"wb" : L"rb")
 #else
 	static const char32_t* pathSeparator = U"/";
-	static FILE* accessFile(const ReadableString &filename, bool write) {
-		Buffer pathBuffer = string_saveToMemory(filename, CharacterEncoding::BOM_UTF8, LineEncoding::CrLf, false, true);
-		return fopen((const char*)buffer_dangerous_getUnsafeData(pathBuffer), write ? "wb" : "rb");
-	}
+	static const CharacterEncoding nativeEncoding = CharacterEncoding::BOM_UTF8;
+	#define FILE_ACCESS_FUNCTION fopen
+	#define FILE_ACCESS_SELECTION (write ? "wb" : "rb")
 #endif
+
+static const NativeChar* toNativeString(const ReadableString &filename, Buffer &buffer) {
+	buffer = string_saveToMemory(filename, nativeEncoding, LineEncoding::CrLf, false, true);
+	return (const NativeChar*)buffer_dangerous_getUnsafeData(buffer);
+}
+
+static String fromNativeString(NativeChar *text) {
+	return string_dangerous_decodeFromData(text, nativeEncoding);
+}
+
+static FILE* accessFile(const ReadableString &filename, bool write) {
+	Buffer buffer;
+	return FILE_ACCESS_FUNCTION(toNativeString(filename, buffer), FILE_ACCESS_SELECTION);
+}
 
 Buffer file_loadBuffer(const ReadableString& filename, bool mustExist) {
 	FILE *file = accessFile(filename, false);
@@ -85,5 +100,78 @@ void file_saveBuffer(const ReadableString& filename, Buffer buffer) {
 const char32_t* file_separator() {
 	return pathSeparator;
 }
+
+ReadableString file_getPathlessName(const ReadableString &path) {
+	int lastSeparator = -1;
+	for (int64_t i = string_length(path) - 1; i >= 0; i--) {
+		DsrChar c = path[i];
+		if (c == U'\\' || c == U'/') {
+			lastSeparator = i;
+			break;
+		}
+	}
+	return string_after(path, lastSeparator);
+}
+
+List<String> file_convertInputArguments(int argn, NativeChar **argv) {
+	List<String> result;
+	result.reserve(argn);
+	for (int a = 0; a < argn; a++) {
+		result.push(fromNativeString(argv[a]));
+	}
+	return result;
+}
+
+#ifdef __cpp_lib_filesystem
+
+static String fromU32String(std::u32string text) {
+	dsr::String result;
+	string_reserve(result, text.length());
+	int i = 0;
+	while (true) {
+		DsrChar c = text[i];
+		if (c == '\0') {
+			break;
+		} else {
+			string_appendChar(result, c);
+		}
+		i++;
+	}
+	return result;
+}
+
+#define FROM_PATH(CONTENT) fromU32String((CONTENT).generic_u32string())
+
+// Macros for creating wrapper functions
+#define DEF_FUNC_VOID_TO_STRING(FUNC_NAME, CALL_NAME) String FUNC_NAME() { return FROM_PATH(CALL_NAME()); }
+#define DEF_FUNC_STRING_TO_STRING(FUNC_NAME, ARG_NAME, CALL_NAME) String FUNC_NAME(const ReadableString& ARG_NAME) { Buffer buffer; return FROM_PATH(CALL_NAME(toNativeString(ARG_NAME, buffer))); }
+#define DEF_FUNC_STRING_TO_OTHER(FUNC_NAME, RETURN_TYPE, ARG_NAME, CALL_NAME) RETURN_TYPE FUNC_NAME(const ReadableString& ARG_NAME) { Buffer buffer; return CALL_NAME(toNativeString(ARG_NAME, buffer)); }
+
+// Wrapper function implementations
+DEF_FUNC_VOID_TO_STRING(file_getCurrentPath, std::filesystem::current_path)
+DEF_FUNC_STRING_TO_STRING(file_getAbsolutePath, path, std::filesystem::absolute)
+DEF_FUNC_STRING_TO_STRING(file_getCanonicalPath, path, std::filesystem::canonical)
+DEF_FUNC_STRING_TO_OTHER(file_exists, bool, path, std::filesystem::exists)
+DEF_FUNC_STRING_TO_OTHER(file_getSize, int64_t, path, std::filesystem::file_size)
+DEF_FUNC_STRING_TO_OTHER(file_remove, bool, path, std::filesystem::remove)
+DEF_FUNC_STRING_TO_OTHER(file_removeRecursively, bool, path, std::filesystem::remove_all)
+DEF_FUNC_STRING_TO_OTHER(file_createFolder, bool, path, std::filesystem::create_directory)
+
+void file_getFolderContent(const ReadableString& folderPath, std::function<void(ReadableString, EntryType)> action) {
+	Buffer buffer;
+	for (auto const& entry : std::filesystem::directory_iterator{toNativeString(folderPath, buffer)}) {
+		EntryType entryType = EntryType::Unknown;
+		if (entry.is_directory()) {
+			entryType = EntryType::Folder;
+		} else if (entry.is_regular_file()) {
+			entryType = EntryType::File;
+		} else if (entry.is_symlink()) {
+			entryType = EntryType::SymbolicLink;
+		}
+		action(FROM_PATH(entry.path()), entryType);
+	}
+}
+
+#endif
 
 }

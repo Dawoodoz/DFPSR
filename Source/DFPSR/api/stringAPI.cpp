@@ -416,18 +416,24 @@ static void feedCharacter(const UTF32WriterFunction &reciever, DsrChar character
 }
 
 // Appends the content of buffer as a BOM-free Latin-1 file into target
-static void feedStringFromFileBuffer_Latin1(const UTF32WriterFunction &reciever, const uint8_t* buffer, int64_t fileLength) {
-	for (int64_t i = 0; i < fileLength; i++) {
+// fileLength is ignored when nullTerminated is true
+template <bool nullTerminated>
+static void feedStringFromFileBuffer_Latin1(const UTF32WriterFunction &reciever, const uint8_t* buffer, int64_t fileLength = 0) {
+	for (int64_t i = 0; i < fileLength || nullTerminated; i++) {
 		DsrChar character = (DsrChar)(buffer[i]);
+		if (nullTerminated && character == 0) { return; }
 		feedCharacter(reciever, character);
 	}
 }
 // Appends the content of buffer as a BOM-free UTF-8 file into target
-static void feedStringFromFileBuffer_UTF8(const UTF32WriterFunction &reciever, const uint8_t* buffer, int64_t fileLength) {
-	for (int64_t i = 0; i < fileLength; i++) {
+// fileLength is ignored when nullTerminated is true
+template <bool nullTerminated>
+static void feedStringFromFileBuffer_UTF8(const UTF32WriterFunction &reciever, const uint8_t* buffer, int64_t fileLength = 0) {
+	for (int64_t i = 0; i < fileLength || nullTerminated; i++) {
 		uint8_t byteA = buffer[i];
 		if (byteA < (uint32_t)0b10000000) {
 			// Single byte (1xxxxxxx)
+			if (nullTerminated && byteA == 0) { return; }
 			feedCharacter(reciever, (DsrChar)byteA);
 		} else {
 			uint32_t character = 0;
@@ -455,6 +461,7 @@ static void feedStringFromFileBuffer_UTF8(const UTF32WriterFunction &reciever, c
 				character = (character << 6) | (nextByte & 0b00111111);
 				extraBytes--;
 			}
+			if (nullTerminated && character == 0) { return; }
 			feedCharacter(reciever, (DsrChar)character);
 		}
 	}
@@ -471,10 +478,11 @@ uint16_t read16bits(const uint8_t* buffer, int64_t startOffset) {
 	}
 }
 
-// Appends the content of buffer as a BOM-free UTF-16 file into target
-template <bool LittleEndian>
-static void feedStringFromFileBuffer_UTF16(const UTF32WriterFunction &reciever, const uint8_t* buffer, int64_t fileLength) {
-	for (int64_t i = 0; i < fileLength; i += 2) {
+// Appends the content of buffer as a BOM-free UTF-16 file into target as UTF-32
+// fileLength is ignored when nullTerminated is true
+template <bool LittleEndian, bool nullTerminated>
+static void feedStringFromFileBuffer_UTF16(const UTF32WriterFunction &reciever, const uint8_t* buffer, int64_t fileLength = 0) {
+	for (int64_t i = 0; i < fileLength || nullTerminated; i += 2) {
 		// Read the first 16-bit word
 		uint16_t wordA = read16bits<LittleEndian>(buffer, i);
 		// Check if another word is needed
@@ -482,6 +490,7 @@ static void feedStringFromFileBuffer_UTF16(const UTF32WriterFunction &reciever, 
 		//   we can just check if it's within the range reserved for 32-bit encoding
 		if (wordA <= 0xD7FF || wordA >= 0xE000) {
 			// Not in the reserved range, just a single 16-bit character
+			if (nullTerminated && wordA == 0) { return; }
 			feedCharacter(reciever, (DsrChar)wordA);
 		} else {
 			// The given range was reserved and therefore using 32 bits
@@ -489,19 +498,22 @@ static void feedStringFromFileBuffer_UTF16(const UTF32WriterFunction &reciever, 
 			uint16_t wordB = read16bits<LittleEndian>(buffer, i);
 			uint32_t higher10Bits = wordA & (uint32_t)0b1111111111;
 			uint32_t lower10Bits  = wordB & (uint32_t)0b1111111111;
-			feedCharacter(reciever, (DsrChar)(((higher10Bits << 10) | lower10Bits) + (uint32_t)0x10000));
+			DsrChar finalChar = (DsrChar)(((higher10Bits << 10) | lower10Bits) + (uint32_t)0x10000);
+			if (nullTerminated && finalChar == 0) { return; }
+			feedCharacter(reciever, finalChar);
 		}
 	}
 }
-// Appends the content of buffer as a text file of unknown format into target
+// Sends the decoded UTF-32 characters from the encoded buffer into target.
+// The text encoding should be specified using a BOM at the start of buffer, otherwise Latin-1 is assumed.
 static void feedStringFromFileBuffer(const UTF32WriterFunction &reciever, const uint8_t* buffer, int64_t fileLength) {
 	// After removing the BOM bytes, the rest can be seen as a BOM-free text file with a known format
 	if (fileLength >= 3 && buffer[0] == 0xEF && buffer[1] == 0xBB && buffer[2] == 0xBF) { // UTF-8
-		feedStringFromFileBuffer_UTF8(reciever, buffer + 3, fileLength - 3);
+		feedStringFromFileBuffer_UTF8<false>(reciever, buffer + 3, fileLength - 3);
 	} else if (fileLength >= 2 && buffer[0] == 0xFE && buffer[1] == 0xFF) { // UTF-16 BE
-		feedStringFromFileBuffer_UTF16<false>(reciever, buffer + 2, fileLength - 2);
+		feedStringFromFileBuffer_UTF16<false, false>(reciever, buffer + 2, fileLength - 2);
 	} else if (fileLength >= 2 && buffer[0] == 0xFF && buffer[1] == 0xFE) { // UTF-16 LE
-		feedStringFromFileBuffer_UTF16<true>(reciever, buffer + 2, fileLength - 2);
+		feedStringFromFileBuffer_UTF16<true, false>(reciever, buffer + 2, fileLength - 2);
 	} else if (fileLength >= 4 && buffer[0] == 0x00 && buffer[1] == 0x00 && buffer[2] == 0xFE && buffer[3] == 0xFF) { // UTF-32 BE
 		//feedStringFromFileBuffer_UTF32BE(receiver, buffer + 4, fileLength - 4);
 		throwError(U"UTF-32 BE format is not yet supported!\n");
@@ -522,8 +534,42 @@ static void feedStringFromFileBuffer(const UTF32WriterFunction &reciever, const 
 		throwError(U"UTF-7 format is not yet supported!\n");
 	} else {
 		// No BOM detected, assuming Latin-1 (because it directly corresponds to a unicode sub-set)
-		feedStringFromFileBuffer_Latin1(reciever, buffer, fileLength);
+		feedStringFromFileBuffer_Latin1<false>(reciever, buffer, fileLength);
 	}
+}
+
+// Sends the decoded UTF-32 characters from the encoded null terminated buffer into target.
+// buffer may not contain any BOM, and must be null terminated in the specified encoding.
+static void feedStringFromRawData(const UTF32WriterFunction &reciever, const uint8_t* buffer, CharacterEncoding encoding) {
+	if (encoding == CharacterEncoding::Raw_Latin1) {
+		feedStringFromFileBuffer_Latin1<true>(reciever, buffer);
+	} else if (encoding == CharacterEncoding::BOM_UTF8) {
+		feedStringFromFileBuffer_UTF8<true>(reciever, buffer);
+	} else if (encoding == CharacterEncoding::BOM_UTF16BE) {
+		feedStringFromFileBuffer_UTF16<false, true>(reciever, buffer);
+	} else if (encoding == CharacterEncoding::BOM_UTF16LE) {
+		feedStringFromFileBuffer_UTF16<true, true>(reciever, buffer);
+	} else {
+		throwError("Unhandled encoding in feedStringFromRawData!\n");
+	}
+}
+
+String dsr::string_dangerous_decodeFromData(const void* data, CharacterEncoding encoding) {
+	String result;
+	// Measure the size of the result by scanning the content in advance
+	int64_t characterCount = 0;
+	UTF32WriterFunction measurer = [&characterCount](DsrChar character) {
+		characterCount++;
+	};
+	feedStringFromRawData(measurer, (const uint8_t*)data, encoding);
+	// Pre-allocate the correct amount of memory based on the simulation
+	string_reserve(result, characterCount);
+	// Stream output to the result string
+	UTF32WriterFunction reciever = [&result](DsrChar character) {
+		string_appendChar(result, character);
+	};
+	feedStringFromRawData(reciever, (const uint8_t*)data, encoding);
+	return result;
 }
 
 String dsr::string_loadFromMemory(Buffer fileContent) {
