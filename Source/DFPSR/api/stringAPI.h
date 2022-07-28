@@ -279,6 +279,13 @@ double string_toDouble(const ReadableString& source);
 String string_load(const ReadableString& filename, bool mustExist = true);
 // Decode a text file from a buffer, which can be loaded using buffer_load.
 String string_loadFromMemory(Buffer fileContent);
+// Decode a null terminated string without BOM, by specifying which format it was encoded in.
+// Pre-conditions:
+//   data does not start with any byte-order-mark (BOM).
+//   data must be null terminated with '\0' in whatever format is being used. Otherwise you may have random crashes
+// Post-condition:
+//   Returns a string decoded from the raw data.
+String string_dangerous_decodeFromData(const void* data, CharacterEncoding encoding);
 
 // Side-effect: Saves content to filename using the selected character and line encodings.
 // Do not add carriage return characters yourself into strings, for these will be added automatically in the CrLf mode.

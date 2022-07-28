@@ -20,4 +20,6 @@ LINKER_FLAGS=""
 # Give execution permission
 chmod +x ${ROOT_PATH}/tools/buildAndRun.sh;
 # Compile everything
-${ROOT_PATH}/tools/buildAndRun.sh "${PROJECT_FOLDER}" "${TARGET_FILE}" "${ROOT_PATH}" "${TEMP_DIR}" "${WINDOW_MANAGER}" "${COMPILER_FLAGS}" "${LINKER_FLAGS}";
+${ROOT_PATH}/tools/build.sh "${PROJECT_FOLDER}" "${TARGET_FILE}" "${ROOT_PATH}" "${TEMP_DIR}" "${WINDOW_MANAGER}" "${COMPILER_FLAGS}" "${LINKER_FLAGS}";
+# Run the application
+${TARGET_FILE} ./পরীক্ষা;
