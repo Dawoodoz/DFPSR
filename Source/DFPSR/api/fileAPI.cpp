@@ -148,8 +148,8 @@ ReadableString file_getPathlessName(const ReadableString &path) {
 	return string_after(path, getLastSeparator(path, -1));
 }
 
-ReadableString file_getFolderPath(const ReadableString &path) {
-	return string_before(path, getLastSeparator(path, string_length(path)));
+ReadableString file_getParentFolder(const ReadableString &path) {
+	return string_before(path, getLastSeparator(path, 0));
 }
 
 bool file_hasRoot(const ReadableString &path) {
@@ -184,16 +184,15 @@ static String file_getApplicationFilePath() {
 
 String file_getApplicationFolder(bool allowFallback) {
 	#ifdef USE_MICROSOFT_WINDOWS
-		return file_getFolderPath(file_getApplicationFilePath());
+		return file_getParentFolder(file_getApplicationFilePath());
 	#else
 		#ifdef USE_LINUX
-			// TODO: Implement using "/proc/self/exe" on Linux
 			//       https://www.wikitechy.com/tutorials/linux/how-to-find-the-location-of-the-executable-in-c
 			NativeChar resultBuffer[maxLength + 1] = {0};
 			//"/proc/curproc/file" on FreeBSD, which is not yet supported
     		//"/proc/self/path/a.out" on Solaris, which is not yet supported
 			readlink("/proc/self/exe", resultBuffer, maxLength);
-			return file_getFolderPath(fromNativeString(resultBuffer));
+			return file_getParentFolder(fromNativeString(resultBuffer));
 		#else
 			if (allowFallback) {
 				return file_getCurrentPath();
