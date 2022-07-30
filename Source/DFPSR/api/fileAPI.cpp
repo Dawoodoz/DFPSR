@@ -201,17 +201,11 @@ String file_getCurrentPath() {
 	#endif
 }
 
-#ifdef USE_MICROSOFT_WINDOWS
-static String file_getApplicationFilePath() {
-	NativeChar resultBuffer[maxLength + 1] = {0};
-	GetModuleFileNameW(nullptr, resultBuffer, maxLength);
-	return fromNativeString(resultBuffer);
-}
-#endif
-
 String file_getApplicationFolder(bool allowFallback) {
 	#ifdef USE_MICROSOFT_WINDOWS
-		return file_getParentFolder(file_getApplicationFilePath());
+		NativeChar resultBuffer[maxLength + 1] = {0};
+		GetModuleFileNameW(nullptr, resultBuffer, maxLength);
+		return file_getParentFolder(fromNativeString(resultBuffer));
 	#else
 		NativeChar resultBuffer[maxLength + 1] = {0};
 		if (readlink("/proc/self/exe", resultBuffer, maxLength) != -1) {
