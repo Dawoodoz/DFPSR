@@ -203,20 +203,22 @@ String file_getApplicationFolder(bool allowFallback) {
 	#ifdef USE_MICROSOFT_WINDOWS
 		return file_getParentFolder(file_getApplicationFilePath());
 	#else
-		#ifdef USE_LINUX
-			//       https://www.wikitechy.com/tutorials/linux/how-to-find-the-location-of-the-executable-in-c
-			NativeChar resultBuffer[maxLength + 1] = {0};
-			//"/proc/curproc/file" on FreeBSD, which is not yet supported
-    		//"/proc/self/path/a.out" on Solaris, which is not yet supported
-			readlink("/proc/self/exe", resultBuffer, maxLength);
+		NativeChar resultBuffer[maxLength + 1] = {0};
+		if (readlink("/proc/self/exe", resultBuffer, maxLength) != -1) {
+			// Linux detected
 			return file_getParentFolder(fromNativeString(resultBuffer));
-		#else
-			if (allowFallback) {
-				return file_getCurrentPath();
-			} else {
-				throwError("file_getApplicationFolder is not implemented!\n");
-			}
-		#endif
+		} else if (readlink("/proc/curproc/file", resultBuffer, maxLength) != -1) {
+			// BSD detected
+			return file_getParentFolder(fromNativeString(resultBuffer));
+		} else if (readlink("/proc/self/path/a.out", resultBuffer, maxLength) != -1) {
+			// Solaris detected
+			return file_getParentFolder(fromNativeString(resultBuffer));
+		} else if (allowFallback) {
+			return file_getCurrentPath();
+		} else {
+			throwError("file_getApplicationFolder is not implemented for the current system!\n");
+			return U"";
+		}
 	#endif
 }
 
