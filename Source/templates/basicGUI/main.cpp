@@ -20,7 +20,8 @@ bool running = true;
 // GUI handles
 Window window;
 
-int main(int argn, char **argv) {
+DSR_MAIN_CALLER(dsrMain)
+int dsrMain(List<String> args) {
 	// Create a window
 	window = window_create(U"GUI template", 1000, 700);
 
@@ -53,4 +54,7 @@ int main(int argn, char **argv) {
 		// Show the final image
 		window_showCanvas(window);
 	}
+
+	// When the DSR_MAIN_CALLER wrapper is used over the real main function, returning zero is no longer implicit.
+	return 0;
 }

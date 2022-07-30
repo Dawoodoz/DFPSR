@@ -13,7 +13,7 @@ WINDOW_MANAGER=NONE
 # Select safe debug mode or fast release mode
 #MODE=-DDEBUG #Debug mode
 MODE=-DNDEBUG #Release mode
-COMPILER_FLAGS="${MODE} -std=c++17 -O2"
+COMPILER_FLAGS="${MODE} -std=c++14 -O2"
 # Select external libraries
 LINKER_FLAGS=""
 

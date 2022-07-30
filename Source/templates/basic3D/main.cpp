@@ -4,16 +4,6 @@
 
 using namespace dsr;
 
-// Having a media folder requires keeping track of its location.
-// * You can start the program from its own folder and use a relative path. (Simple and works when developing)
-// * You can give a command line argument with the media folder's location. (Good for modifications using multiple folders)
-// * You can try to find the application's relative path using argv[0]. (Often works but not guaranteed by the C++ standard)
-// * You can use system specific API calls to find the applications location. (Increases long-term maintenance)
-// * You can link binary files into your application. (Hard to create modifications without access to source code)
-
-//const String mediaPath = string_combine(U"media", file_separator());
-//static BasicResourcePool pool(mediaPath);
-
 // Global variables
 bool running = true;
 
@@ -70,7 +60,8 @@ Model createCubeModel(const FVector3D &min, const FVector3D &max) {
 	return result;
 }
 
-int main(int argn, char **argv) {
+DSR_MAIN_CALLER(dsrMain)
+int dsrMain(List<String> args) {
 	// Create a window
 	window = window_create(U"Basic 3D template", 1600, 900);
 
@@ -130,4 +121,7 @@ int main(int argn, char **argv) {
 
 		window_showCanvas(window);
 	}
+
+	// When the DSR_MAIN_CALLER wrapper is used over the real main function, returning zero is no longer implicit.
+	return 0;
 }
