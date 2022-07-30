@@ -78,13 +78,13 @@ namespace dsr {
 	//   file_getFolderPath(U"MyFolder/Folder2")  == U"Folder2"
 	ReadableString file_getPathlessName(const ReadableString &path);
 
-	// Returns the file's folder path with the file removed, or path unchanged if it was already a path.
-	// Does not include the last slash.
+	// Returns the parent folder path with anything after the last slash removed, or empty if there was no slash left.
 	// Examples with / as the path separator:
 	//   file_getFolderPath(U"MyFolder/Documents/Cars.txt") == U"MyFolder/Documents"
 	//   file_getFolderPath(U"MyFolder/Documents/")         == U"MyFolder/Documents"
-	//   file_getFolderPath(U"MyFolder/Documents")          == U"MyFolder/Documents"
-	ReadableString file_getFolderPath(const ReadableString &path);
+	//   file_getFolderPath(U"MyFolder/Documents")          == U"MyFolder"
+	//   file_getFolderPath(U"MyFolder")                    == U""
+	ReadableString file_getParentFolder(const ReadableString &path);
 
 	// Combines two parts into a path and automatically adding a local separator when needed.
 	// Can be used to get the full path of a file in a folder or add another folder to the path.
