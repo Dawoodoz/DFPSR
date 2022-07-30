@@ -47,9 +47,6 @@ TODO:
 #if defined(WIN32) || defined(_WIN32)
 	#define USE_MICROSOFT_WINDOWS
 #endif
-#if defined(__linux__)
-	#define USE_LINUX
-#endif
 
 // A module for file access that exists to prevent cyclic dependencies between strings and buffers.
 //   Buffers need a filename to be saved or loaded while strings use buffers to store their characters.
