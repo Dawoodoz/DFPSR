@@ -16,7 +16,7 @@ TODO:
 using namespace dsr;
 
 void exploreFolder(const ReadableString& folderPath, const ReadableString& indentation) {
-	file_getFolderContent(folderPath, [indentation](ReadableString entryPath, EntryType entryType) {
+	/*file_getFolderContent(folderPath, [indentation](ReadableString entryPath, EntryType entryType) {
 		ReadableString shortName = file_getPathlessName(entryPath);
 		if (entryType == EntryType::Folder) {
 			printText(indentation, " Folder(", shortName, ")\n");
@@ -24,15 +24,16 @@ void exploreFolder(const ReadableString& folderPath, const ReadableString& inden
 		} else if (entryType == EntryType::File) {
 			printText(indentation, " File(", shortName, ") of ", file_getSize(entryPath), " bytes\n");
 		}
-	});
+	});*/
 }
 
-int main(int argn, NativeChar **argv) {
-	List<String> args = file_convertInputArguments(argn, argv);
+DSR_MAIN_CALLER(dsrMain)
+int dsrMain(List<String> args) {
 	printText("Input arguments:\n");
 	for (int a = 0; a < args.length(); a++) {
 		printText("  args[", a, "] = ", args[a], "\n");
 	}
+	/*
 	String absolutePath = file_getCanonicalPath(args[0]);
 	printText("Absolute path = ", absolutePath, "\n");
 	if (args.length() > 1) {
@@ -47,4 +48,7 @@ int main(int argn, NativeChar **argv) {
 		printText("Exploring ", currentPath, " because no folders were given.\n");
 		exploreFolder(currentPath, U"");
 	}
+	*/
+	// When the DSR_MAIN_CALLER wrapper is used over the real main function, returning zero is no longer implicit.
+	return 0;
 }

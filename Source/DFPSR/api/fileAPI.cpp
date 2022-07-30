@@ -91,7 +91,8 @@ static FILE* accessFile(const ReadableString &filename, bool write) {
 }
 
 Buffer file_loadBuffer(const ReadableString& filename, bool mustExist) {
-	FILE *file = accessFile(filename, false);
+	String modifiedFilename = file_optimizePath(filename);
+	FILE *file = accessFile(modifiedFilename, false);
 	if (file != nullptr) {
 		// Get the file's size by going to the end, measuring, and going back
 		fseek(file, 0L, SEEK_END);
@@ -104,7 +105,7 @@ Buffer file_loadBuffer(const ReadableString& filename, bool mustExist) {
 		return buffer;
 	} else {
 		if (mustExist) {
-			throwError(U"The file ", filename, U" could not be opened for reading.\n");
+			throwError(U"Failed to load ", filename, " which was optimized into ", modifiedFilename, ".\n");
 		}
 		// If the file cound not be found and opened, an empty buffer is returned
 		return Buffer();
@@ -112,15 +113,16 @@ Buffer file_loadBuffer(const ReadableString& filename, bool mustExist) {
 }
 
 void file_saveBuffer(const ReadableString& filename, Buffer buffer) {
+	String modifiedFilename = file_optimizePath(filename);
 	if (!buffer_exists(buffer)) {
 		throwError(U"buffer_save: Cannot save a buffer that don't exist to a file.\n");
 	} else {
-		FILE *file = accessFile(filename, true);
+		FILE *file = accessFile(modifiedFilename, true);
 		if (file != nullptr) {
 			fwrite((void*)buffer_dangerous_getUnsafeData(buffer), buffer_getSize(buffer), 1, file);
 			fclose(file);
 		} else {
-			throwError("Failed to save ", filename, ".\n");
+			throwError("Failed to save ", filename, " which was optimized into ", modifiedFilename, ".\n");
 		}
 	}
 }
@@ -142,6 +144,21 @@ static int64_t getLastSeparator(const ReadableString &path, int defaultIndex) {
 		}
 	}
 	return defaultIndex;
+}
+
+String file_optimizePath(const ReadableString &path) {
+	String result;
+	int inputLength = string_length(path);
+	string_reserve(result, inputLength);
+	for (int i = 0; i < inputLength; i++) {
+		DsrChar c = path[i];
+		if (isSeparator(c)) {
+			string_append(result, pathSeparator);
+		} else {
+			string_appendChar(result, c);
+		}
+	}
+	return result;
 }
 
 ReadableString file_getPathlessName(const ReadableString &path) {

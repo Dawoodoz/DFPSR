@@ -3,8 +3,6 @@
 
 using namespace dsr;
 
-// Global
-const String mediaPath = string_combine(U"media", file_separator());
 bool running = true;
 
 // GUI handles
@@ -13,13 +11,18 @@ Component buttonClear;
 Component buttonAdd;
 Component myListBox;
 
-int main(int argn, char **argv) {
+DSR_MAIN_CALLER(dsrMain)
+int dsrMain(List<String> args) {
+	// Set current path to the application folder, so that it's safe to use relative paths for loading GUI resources.
+	// Loading and saving files will automatically convert / and \ to the local format using file_optimizePath, so that you can use them directly in relative paths.
+	//file_setCurrentPath(file_getApplicationFolder());
+
 	// Create a window
 	window = window_create(U"GUI example", 1000, 700);
 	// Register your custom components here
 	//REGISTER_PERSISTENT_CLASS(className);
 	// Load an interface to the window
-	window_loadInterfaceFromFile(window, mediaPath + U"interface.lof");
+	window_loadInterfaceFromFile(window, U"media/interface.lof");
 
 	// Bind methods to events
 	window_setCloseEvent(window, []() {
@@ -75,4 +78,7 @@ int main(int argn, char **argv) {
 		// Show the final image
 		window_showCanvas(window);
 	}
+
+	// When the DSR_MAIN_CALLER wrapper is used over the real main function, returning zero is no longer implicit.
+	return 0;
 }

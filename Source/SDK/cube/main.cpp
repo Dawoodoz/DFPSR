@@ -4,8 +4,10 @@
 
 using namespace dsr;
 
-const String mediaPath = string_combine(U"media", file_separator());
-static BasicResourcePool pool(mediaPath);
+// Get the application folder when possible, falling back on current directory on systems not offering the feature.
+const String applicationFolder = file_getApplicationFolder();
+const String mediaFolder = file_combinePaths(applicationFolder, U"media");
+static BasicResourcePool pool(mediaFolder);
 
 // Global variables
 float distance = 4.0f;
@@ -46,11 +48,12 @@ Model createCubeModel(const FVector3D &min, const FVector3D &max) {
 	return result;
 }
 
-int main(int argn, char **argv) {
+DSR_MAIN_CALLER(dsrMain)
+int dsrMain(List<String> args) {
 	// Create a window
 	window = window_create(U"David Piuva's Software Renderer - Cube example", 1600, 900);
 	// Load an interface to the window
-	window_loadInterfaceFromFile(window, mediaPath + U"interface.lof");
+	window_loadInterfaceFromFile(window, file_combinePaths(mediaFolder, U"interface.lof"));
 
 	// Tell the application to terminate when the window is closed
 	window_setCloseEvent(window, []() {
@@ -102,9 +105,9 @@ int main(int argn, char **argv) {
 
 	// Import models
 	// TODO: Load write protected models from a resource pool
-	Model crateModel = importFromContent_DMF1(string_load(mediaPath + U"Model_Crate.dmf"), pool);
-	Model barrelModel = importFromContent_DMF1(string_load(mediaPath + U"Model_Barrel.dmf"), pool);
-	Model testModel = importFromContent_DMF1(string_load(mediaPath + U"Model_Test.dmf"), pool);
+	Model crateModel = importFromContent_DMF1(string_load(file_combinePaths(mediaFolder, U"Model_Crate.dmf")), pool);
+	Model barrelModel = importFromContent_DMF1(string_load(file_combinePaths(mediaFolder, U"Model_Barrel.dmf")), pool);
+	Model testModel = importFromContent_DMF1(string_load(file_combinePaths(mediaFolder, U"Model_Test.dmf")), pool);
 
 	// Create a renderer for multi-threading
 	Renderer worker = renderer_create();
@@ -179,5 +182,7 @@ int main(int argn, char **argv) {
 
 		window_showCanvas(window);
 	}
-}
 
+	// When the DSR_MAIN_CALLER wrapper is used over the real main function, returning zero is no longer implicit.
+	return 0;
+}
