@@ -100,28 +100,22 @@ namespace dsr {
 
 	// DSR_MAIN_CALLER is a convenient wrapper for getting input arguments as a list of portable Unicode strings.
 	//   The actual main function gets placed in DSR_MAIN_CALLER, which calls the given function.
-	// When a regular function replaces the main function, it will not return zero by default.
-	//   Returning something else than zero tells that something went wrong and it must skip cleanup in order to get out.
-	//   Then the window and other resources held as global variables might not close.
 	// Example:
 	//   DSR_MAIN_CALLER(dsrMain)
-	//   int dsrMain(List<String> args) {
+	//   void dsrMain(List<String> args) {
 	//       printText("Input arguments:\n");
 	//       for (int a = 0; a < args.length(); a++) {
 	//           printText("  args[", a, "] = ", args[a], "\n");
 	//       }
-	//       return 0;
 	//   }
 	#ifdef USE_MICROSOFT_WINDOWS
 		#define DSR_MAIN_CALLER(MAIN_NAME) \
-			int MAIN_NAME(List<String> args); \
-			int main() { \
-				return MAIN_NAME(file_impl_getInputArguments()); \
-			}
+			void MAIN_NAME(List<String> args); \
+			int main() { MAIN_NAME(file_impl_getInputArguments()); return 0; }
 	#else
 		#define DSR_MAIN_CALLER(MAIN_NAME) \
-			int MAIN_NAME(List<String> args); \
-			int main(int argc, char **argv) { return MAIN_NAME(file_impl_convertInputArguments(argc, (void**)argv)); }
+			void MAIN_NAME(List<String> args); \
+			int main(int argc, char **argv) { MAIN_NAME(file_impl_convertInputArguments(argc, (void**)argv)); return 0; }
 	#endif
 	// Helper functions have to be exposed for the macro handle your input arguments.
 	//   Do not call these yourself.
