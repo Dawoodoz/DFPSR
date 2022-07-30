@@ -75,7 +75,8 @@
 
 using namespace dsr;
 
-const String mediaPath = string_combine(U"media", file_separator());
+const String applicationFolder = file_getApplicationFolder();
+const String mediaFolder = file_combinePaths(applicationFolder, U"media");
 
 // A real point (x, y, z) may touch a certain tile at integer indices (tileU, tileV) when:
 //   tileU <= x <= tileU + 1.0
@@ -313,7 +314,8 @@ bool showBuffers = false;
 // The window handle
 Window window;
 
-int main(int argn, char **argv) {
+DSR_MAIN_CALLER(dsrMain)
+int dsrMain(List<String> args) {
 	// Create a window
 	window = window_create(U"David Piuva's Software Renderer - Terrain example", 1600, 900);
 
@@ -338,11 +340,11 @@ int main(int argn, char **argv) {
 	});
 
 	// Load height map
-	ImageU8 heightMap = image_get_red(image_load_RgbaU8(mediaPath + U"HeightMap.png"));
+	ImageU8 heightMap = image_get_red(image_load_RgbaU8(file_combinePaths(mediaFolder, U"HeightMap.png")));
 	// Load generic cloud pattern
-	ImageU8 genericCloudPattern = image_get_red(image_load_RgbaU8(mediaPath + U"Cloud.png"));
+	ImageU8 genericCloudPattern = image_get_red(image_load_RgbaU8(file_combinePaths(mediaFolder, U"Cloud.png")));
 	// Load height ramp
-	ImageRgbaU8 heightRamp = image_load_RgbaU8(mediaPath + U"RampIsland.png");
+	ImageRgbaU8 heightRamp = image_load_RgbaU8(file_combinePaths(mediaFolder, U"RampIsland.png"));
 
 	// Get dimensions
 	const int heighMapWidth = image_getWidth(heightMap);
@@ -430,5 +432,7 @@ int main(int argn, char **argv) {
 	}
 
 	printText("\nTerminating the application.\n");
-}
 
+	// When the DSR_MAIN_CALLER wrapper is used over the real main function, returning zero is no longer implicit.
+	return 0;
+}

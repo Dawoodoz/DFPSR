@@ -55,18 +55,22 @@ TODO:
 //   Buffers need a filename to be saved or loaded while strings use buffers to store their characters.
 namespace dsr {
 	// Post-condition:
-	//   Returns the content of the file referred to be filename.
+	//   Returns the content of the file referred to by file_optimizePath(filename).
 	//   If mustExist is true, then failure to load will throw an exception.
 	//   If mustExist is false, then failure to load will return an empty handle (returning false for buffer_exists).
 	Buffer file_loadBuffer(const ReadableString& filename, bool mustExist = true);
 
-	// Side-effect: Saves buffer to filename as a binary file.
+	// Side-effect: Saves buffer to file_optimizePath(filename) as a binary file.
 	// Pre-condition: buffer exists
 	void file_saveBuffer(const ReadableString& filename, Buffer buffer);
 
 	// Get a path separator for the target operating system.
 	//   Can be used to construct a file path that works for both forward and backward slash separators.
 	const char32_t* file_separator();
+
+	// Turns / and \ into the local system's convention, so that loading and saving files can use either one of them automatically.
+	// TODO: Remove redundant . and .. to reduce the risk of running out of buffer space.
+	String file_optimizePath(const ReadableString &path);
 
 	// TODO: Create regression tests for the file system.
 

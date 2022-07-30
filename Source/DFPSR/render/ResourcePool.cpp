@@ -23,6 +23,7 @@
 
 #include "ResourcePool.h"
 #include "../image/stbImage/stbImageWrapper.h"
+#include "../api/fileAPI.h"
 
 using namespace dsr;
 
@@ -51,7 +52,7 @@ const ImageRgbaU8 BasicResourcePool::fetchImageRgba(const String& name) {
 			throwError("The image \"", name, "\" contained a path separator, which is not allowed because of ambiguity. The same file can have multiple paths to the same folder and multiple files can have the same name in different folders.\n");
 		} else {
 			// Look for a png image
-			const String extensionless = this->path + name;
+			const String extensionless = file_combinePaths(this->path, name);
 			result = image_load_RgbaU8(extensionless + ".png", false);
 			// Look for gif
 			if (!image_exists(result)) {
