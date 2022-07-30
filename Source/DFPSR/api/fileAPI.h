@@ -97,8 +97,11 @@ namespace dsr {
 	// Returns true iff path contains a root, according to the local path syntax.
 	bool file_hasRoot(const ReadableString &path);
 
-	// A convenient wrapper for getting input arguments as a list of portable Unicode strings.
+	// DSR_MAIN_CALLER is a convenient wrapper for getting input arguments as a list of portable Unicode strings.
 	//   The actual main function gets placed in DSR_MAIN_CALLER, which calls the given function.
+	// When a regular function replaces the main function, it will not return zero by default.
+	//   Returning something else than zero tells that something went wrong and it must skip cleanup in order to get out.
+	//   Then the window and other resources held as global variables might not close.
 	// Example:
 	//   DSR_MAIN_CALLER(dsrMain)
 	//   int dsrMain(List<String> args) {
