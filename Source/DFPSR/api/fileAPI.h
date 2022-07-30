@@ -130,14 +130,15 @@ namespace dsr {
 
 	// Get the current path, from where the application was called and relative paths start.
 	String file_getCurrentPath();
+	// Sets the current path to file_optimizePath(path).
+	// Returns true on success and false on failure.
+	bool file_setCurrentPath(const ReadableString &path);
 	// Get the application's folder path, from where the application is stored.
 	// If not implemented and allowFallback is true,
 	//   the current path is returned instead as a qualified guess instead of raising an exception.
 	String file_getApplicationFolder(bool allowFallback = true);
 	// Gets an absolute version of the path, quickly without removing redundancy.
 	String file_getAbsolutePath(const ReadableString &path);
-	// Returns true iff path refers to a valid file or folder.
-	bool file_exists(const ReadableString& path);
 }
 
 #endif

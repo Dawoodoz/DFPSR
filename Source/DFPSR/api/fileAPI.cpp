@@ -179,6 +179,16 @@ bool file_hasRoot(const ReadableString &path) {
 	#endif
 }
 
+bool file_setCurrentPath(const ReadableString &path) {
+	Buffer buffer;
+	const NativeChar *nativePath = toNativeString(file_optimizePath(path), buffer);
+	#ifdef USE_MICROSOFT_WINDOWS
+		return SetCurrentDirectoryW(nativePath);
+	#else
+		return chdir(nativePath) == 0;
+	#endif
+}
+
 String file_getCurrentPath() {
 	#ifdef USE_MICROSOFT_WINDOWS
 		NativeChar resultBuffer[maxLength + 1] = {0};
