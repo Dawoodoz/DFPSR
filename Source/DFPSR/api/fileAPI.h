@@ -23,20 +23,12 @@
 
 /*
 TODO:
-* bool file_setCurrentPath(const ReadableString& path);
-	WINBASEAPI WINBOOL WINAPI SetCurrentDirectoryW(LPCWSTR lpPathName);
-	chdir on Posix
+* Test that overwriting a large file with a smaller file does not leave anything from the overwritten file on any system.
 * bool file_createFolder(const ReadableString& path);
 	WINBASEAPI WINBOOL WINAPI CreateDirectoryW (LPCWSTR lpPathName, LPSECURITY_ATTRIBUTES lpSecurityAttributes);
 	mkdir on Posix
-* int64_t file_getSize(const ReadableString& path);
-	WINBASEAPI WINBOOL WINAPI GetFileSizeEx (HANDLE hFile, PLARGE_INTEGER lpFileSize);
 * bool file_remove(const ReadableString& path);
 	WINBASEAPI WINBOOL WINAPI DeleteFileW (LPCWSTR lpFileName);
-* bool file_exists(const ReadableString& path);
-	Can open a file without permissions and see if it works.
-* void file_getFolderContent(const ReadableString& folderPath, std::function<void(ReadableString, EntryType)> action)
-	How to do this the safest way with Unicode as a minimum requirement?
 */
 
 #ifndef DFPSR_API_FILE
@@ -48,11 +40,13 @@ TODO:
 	#define USE_MICROSOFT_WINDOWS
 #endif
 
+// TODO: Create regression tests for the file system.
+
 // A module for file access that exists to prevent cyclic dependencies between strings and buffers.
 //   Buffers need a filename to be saved or loaded while strings use buffers to store their characters.
 namespace dsr {
 	// Post-condition:
-	//   Returns the content of the file referred to by file_optimizePath(filename).
+	//   Returns the content of the readable file referred to by file_optimizePath(filename).
 	//   If mustExist is true, then failure to load will throw an exception.
 	//   If mustExist is false, then failure to load will return an empty handle (returning false for buffer_exists).
 	Buffer file_loadBuffer(const ReadableString& filename, bool mustExist = true);
@@ -68,8 +62,6 @@ namespace dsr {
 	// Turns / and \ into the local system's convention, so that loading and saving files can use either one of them automatically.
 	// TODO: Remove redundant . and .. to reduce the risk of running out of buffer space.
 	String file_optimizePath(const ReadableString &path);
-
-	// TODO: Create regression tests for the file system.
 
 	// Returns the local name of the file or folder after the last path separator, or the whole path if no separator was found.
 	// Examples with / as the path separator:
@@ -125,15 +117,36 @@ namespace dsr {
 
 	// Get the current path, from where the application was called and relative paths start.
 	String file_getCurrentPath();
-	// Sets the current path to file_optimizePath(path).
-	// Returns true on success and false on failure.
+	// Side-effects: Sets the current path to file_optimizePath(path).
+	// Post-condition: Returns Returns true on success and false on failure.
 	bool file_setCurrentPath(const ReadableString &path);
-	// Get the application's folder path, from where the application is stored.
+	// Post-condition: Returns  the application's folder path, from where the application is stored.
 	// If not implemented and allowFallback is true,
 	//   the current path is returned instead as a qualified guess instead of raising an exception.
 	String file_getApplicationFolder(bool allowFallback = true);
 	// Gets an absolute version of the path, quickly without removing redundancy.
 	String file_getAbsolutePath(const ReadableString &path);
+	// Pre-condition: filename must refer to a file so that file_getEntryType(filename) == EntryType::File.
+	// Post-condition: Returns a structure with information about the file at file_optimizePath(filename), or -1 if no such file exists.
+	int64_t file_getFileSize(const ReadableString& filename);
+
+	// Entry types distinguish between files folders and other things in the file system.
+	enum class EntryType { NotFound, UnhandledType, File, Folder, SymbolicLink };
+	String& string_toStreamIndented(String& target, const EntryType& source, const ReadableString& indentation);
+
+	// Post-condition: Returns what the file_optimizePath(path) points to in the filesystem.
+	// Different comparisons on the result can be used to check if something exists.
+	//   Use file_getEntryType(filename) == EntryType::File to check if a file exists.
+	//   Use file_getEntryType(folderPath) == EntryType::Folder to check if a folder exists.
+	//   Use file_getEntryType(path) != EntryType::NotFound to check if the path leads to anything.
+	EntryType file_getEntryType(const ReadableString &path);
+
+	// Side-effects: Calls action with the entry's path, name and type for everything detected in folderPath.
+	//               entryPath equals file_combinePaths(folderPath, entryName), and is used for recursive calls when entryType == EntryType::Folder.
+	//               entryName equals file_getPathlessName(entryPath).
+	//               entryType equals file_getEntryType(entryPath).
+	// Post-condition: Returns true iff the folder could be found.
+	bool file_getFolderContent(const ReadableString& folderPath, std::function<void(const ReadableString& entryPath, const ReadableString& entryName, EntryType entryType)> action);
 }
 
 #endif

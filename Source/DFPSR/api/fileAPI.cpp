@@ -26,6 +26,8 @@
 	#include <windows.h>
 #else
 	#include <unistd.h>
+	#include <sys/stat.h>
+	#include <dirent.h>
 #endif
 #include <fstream>
 #include <cstdlib>
@@ -33,10 +35,6 @@
 
 namespace dsr {
 
-// If porting to a new operating system that is not following Posix standard, list how the file system works here.
-// * pathSeparator is the token used to separate folders in the system, expressed as a UTF-32 string literal.
-// * accessFile is the function for opening a file using the UTF-32 filename, for reading or writing.
-//   The C API is used for access, because some C++ standard library implementations don't support wide strings for MS-Windows.
 #ifdef USE_MICROSOFT_WINDOWS
 	using NativeChar = wchar_t; // UTF-16
 	static const char32_t* pathSeparator = U"\\";
@@ -229,12 +227,16 @@ String file_getApplicationFolder(bool allowFallback) {
 }
 
 String file_combinePaths(const ReadableString &a, const ReadableString &b) {
-	if (isSeparator(a[string_length(a) - 1])) {
-		// Already ending with a separator.
-		return string_combine(a, b);
+	if (file_hasRoot(b)) {
+		return b;
 	} else {
-		// Combine using a separator.
-		return string_combine(a, pathSeparator, b);
+		if (isSeparator(a[string_length(a) - 1])) {
+			// Already ending with a separator.
+			return string_combine(a, b);
+		} else {
+			// Combine using a separator.
+			return string_combine(a, pathSeparator, b);
+		}
 	}
 }
 
@@ -244,6 +246,130 @@ String file_getAbsolutePath(const ReadableString &path) {
 	} else {
 		return file_combinePaths(file_getCurrentPath(), path);
 	}
+}
+
+int64_t file_getFileSize(const ReadableString& filename) {
+	int64_t result = -1;
+	String modifiedFilename = file_optimizePath(filename);
+	Buffer buffer;
+	const NativeChar *nativePath = toNativeString(modifiedFilename, buffer);
+	#ifdef USE_MICROSOFT_WINDOWS
+		LARGE_INTEGER fileSize;
+		HANDLE fileHandle = CreateFileW(nativePath, 0, 0, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+		if (fileHandle != INVALID_HANDLE_VALUE) {
+			if (GetFileSizeEx(fileHandle, &fileSize)) {
+				result = fileSize.QuadPart;
+			}
+			CloseHandle(fileHandle);
+		}
+	#else
+		struct stat info;
+		if (stat(nativePath, &info) == 0) {
+			result = info.st_size;
+		}
+	#endif
+	return result;
+}
+
+String& string_toStreamIndented(String& target, const EntryType& source, const ReadableString& indentation) {
+	string_append(target, indentation);
+	if (source == EntryType::NotFound) {
+		string_append(target, U"not found");
+	} else if (source == EntryType::File) {
+		string_append(target, U"a file");
+	} else if (source == EntryType::Folder) {
+		string_append(target, U"a folder");
+	} else if (source == EntryType::SymbolicLink) {
+		string_append(target, U"a symbolic link");
+	} else {
+		string_append(target, U"unhandled");
+	}
+	return target;
+}
+
+EntryType file_getEntryType(const ReadableString &path) {
+	EntryType result = EntryType::NotFound;
+	String modifiedPath = file_optimizePath(path);
+	Buffer buffer;
+	const NativeChar *nativePath = toNativeString(modifiedPath, buffer);
+	#ifdef USE_MICROSOFT_WINDOWS
+		DWORD dwAttrib = GetFileAttributesW(nativePath);
+		if (dwAttrib != INVALID_FILE_ATTRIBUTES) {
+			if (dwAttrib & FILE_ATTRIBUTE_DIRECTORY) {
+				result = EntryType::Folder;
+			} else {
+				result = EntryType::File;
+			}
+		}
+	#else
+		struct stat info;
+		int errorCode = stat(nativePath, &info);
+		if (errorCode == 0) {
+			if (S_ISDIR(info.st_mode)) {
+				result = EntryType::Folder;
+			} else if (S_ISREG(info.st_mode)) {
+				result = EntryType::File;
+			} else if (S_ISLNK(info.st_mode)) {
+				result = EntryType::SymbolicLink;
+			} else {
+				result = EntryType::UnhandledType;
+			}
+		}
+	#endif
+	return result;
+}
+
+bool file_getFolderContent(const ReadableString& folderPath, std::function<void(const ReadableString& entryPath, const ReadableString& entryName, EntryType entryType)> action) {
+	String modifiedPath = file_optimizePath(folderPath);
+	#ifdef USE_MICROSOFT_WINDOWS
+		String pattern = file_combinePaths(modifiedPath, U"*.*");
+		Buffer buffer;
+		const NativeChar *nativePattern = toNativeString(pattern, buffer);
+		WIN32_FIND_DATAW findData;
+		HANDLE findHandle = FindFirstFileW(nativePattern, &findData);
+		if (findHandle == INVALID_HANDLE_VALUE) {
+			return false;
+		} else {
+			while (true) {
+				String entryName = fromNativeString(findData.cFileName);
+				if (!string_match(entryName, U".") && !string_match(entryName, U"..")) {
+					String entryPath = file_combinePaths(modifiedPath, entryName);
+					EntryType entryType = EntryType::UnhandledType;
+					if(findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
+						entryType = EntryType::Folder;
+					} else {
+						entryType = EntryType::File;
+					}
+					action(entryPath, entryName, entryType);
+				}
+				if (!FindNextFileW(findHandle, &findData)) { break; }
+			}
+			FindClose(findHandle);
+		}
+	#else
+		Buffer buffer;
+		const NativeChar *nativePath = toNativeString(modifiedPath, buffer);
+		DIR *directory = opendir(nativePath);
+		if (directory == nullptr) {
+			return false;
+		} else {
+			while (true) {
+				dirent *entry = readdir(directory);
+				if (entry != nullptr) {
+					String entryName = fromNativeString(entry->d_name);
+					if (!string_match(entryName, U".") && !string_match(entryName, U"..")) {
+						String entryPath = file_combinePaths(modifiedPath, entryName);
+						EntryType entryType = file_getEntryType(entryPath);
+						action(entryPath, entryName, entryType);
+					}
+				} else {
+					break;
+				}
+			}
+		}
+		closedir(directory);
+	#endif
+	return true;
 }
 
 }
