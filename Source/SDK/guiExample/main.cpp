@@ -15,7 +15,7 @@ DSR_MAIN_CALLER(dsrMain)
 int dsrMain(List<String> args) {
 	// Set current path to the application folder, so that it's safe to use relative paths for loading GUI resources.
 	// Loading and saving files will automatically convert / and \ to the local format using file_optimizePath, so that you can use them directly in relative paths.
-	//file_setCurrentPath(file_getApplicationFolder());
+	file_setCurrentPath(file_getApplicationFolder());
 
 	// Create a window
 	window = window_create(U"GUI example", 1000, 700);
