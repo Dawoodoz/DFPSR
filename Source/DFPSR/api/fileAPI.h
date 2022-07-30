@@ -96,7 +96,8 @@ namespace dsr {
 	String file_combinePaths(const ReadableString &a, const ReadableString &b);
 
 	// Returns true iff path contains a root, according to the local path syntax.
-	bool file_hasRoot(const ReadableString &path);
+	// If treatHomeFolderAsRoot is true, starting from the home folder using the Posix ~ alias will be allowed.
+	bool file_hasRoot(const ReadableString &path, bool treatHomeFolderAsRoot = true);
 
 	// DSR_MAIN_CALLER is a convenient wrapper for getting input arguments as a list of portable Unicode strings.
 	//   The actual main function gets placed in DSR_MAIN_CALLER, which calls the given function.

@@ -169,13 +169,15 @@ ReadableString file_getParentFolder(const ReadableString &path) {
 	return string_before(path, getLastSeparator(path, 0));
 }
 
-bool file_hasRoot(const ReadableString &path) {
+bool file_hasRoot(const ReadableString &path, bool treatHomeFolderAsRoot) {
 	#ifdef USE_MICROSOFT_WINDOWS
 		// If a colon is found, it is a root path.
 		return string_findFirst(path, U':') > -1;
 	#else
 		// If the path begins with a separator, it is the root folder in Posix systems.
-		return path[0] == U'/';
+		// If the path begins with a tilde (~), it is a home folder.
+		DsrChar firstC = path[0];
+		return firstC == U'/' || (treatHomeFolderAsRoot && firstC == U'~');
 	#endif
 }
 
