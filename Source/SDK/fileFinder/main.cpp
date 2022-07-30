@@ -28,7 +28,7 @@ void exploreFolder(const ReadableString& folderPath, const ReadableString& inden
 }
 
 DSR_MAIN_CALLER(dsrMain)
-int dsrMain(List<String> args) {
+void dsrMain(List<String> args) {
 	printText("Input arguments:\n");
 	for (int a = 0; a < args.length(); a++) {
 		printText("  args[", a, "] = ", args[a], "\n");
@@ -49,6 +49,4 @@ int dsrMain(List<String> args) {
 		exploreFolder(currentPath, U"");
 	}
 	*/
-	// When the DSR_MAIN_CALLER wrapper is used over the real main function, returning zero is no longer implicit.
-	return 0;
 }

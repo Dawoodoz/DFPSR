@@ -315,7 +315,7 @@ bool showBuffers = false;
 Window window;
 
 DSR_MAIN_CALLER(dsrMain)
-int dsrMain(List<String> args) {
+void dsrMain(List<String> args) {
 	// Create a window
 	window = window_create(U"David Piuva's Software Renderer - Terrain example", 1600, 900);
 
@@ -432,7 +432,4 @@ int dsrMain(List<String> args) {
 	}
 
 	printText("\nTerminating the application.\n");
-
-	// When the DSR_MAIN_CALLER wrapper is used over the real main function, returning zero is no longer implicit.
-	return 0;
 }

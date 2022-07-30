@@ -49,7 +49,7 @@ Model createCubeModel(const FVector3D &min, const FVector3D &max) {
 }
 
 DSR_MAIN_CALLER(dsrMain)
-int dsrMain(List<String> args) {
+void dsrMain(List<String> args) {
 	// Create a window
 	window = window_create(U"David Piuva's Software Renderer - Cube example", 1600, 900);
 	// Load an interface to the window
@@ -182,7 +182,4 @@ int dsrMain(List<String> args) {
 
 		window_showCanvas(window);
 	}
-
-	// When the DSR_MAIN_CALLER wrapper is used over the real main function, returning zero is no longer implicit.
-	return 0;
 }

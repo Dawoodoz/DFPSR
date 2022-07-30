@@ -12,7 +12,7 @@ Component buttonAdd;
 Component myListBox;
 
 DSR_MAIN_CALLER(dsrMain)
-int dsrMain(List<String> args) {
+void dsrMain(List<String> args) {
 	// Set current path to the application folder, so that it's safe to use relative paths for loading GUI resources.
 	// Loading and saving files will automatically convert / and \ to the local format using file_optimizePath, so that you can use them directly in relative paths.
 	file_setCurrentPath(file_getApplicationFolder());
@@ -78,7 +78,4 @@ int dsrMain(List<String> args) {
 		// Show the final image
 		window_showCanvas(window);
 	}
-
-	// When the DSR_MAIN_CALLER wrapper is used over the real main function, returning zero is no longer implicit.
-	return 0;
 }
