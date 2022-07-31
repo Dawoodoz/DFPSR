@@ -40,56 +40,74 @@ TODO:
 	#define USE_MICROSOFT_WINDOWS
 #endif
 
-// TODO: Create regression tests for the file system.
-
 // A module for file access that exists to prevent cyclic dependencies between strings and buffers.
 //   Buffers need a filename to be saved or loaded while strings use buffers to store their characters.
 namespace dsr {
+	// The PathSyntax enum allow processing theoreical paths for other operating systems than the local.
+	enum class PathSyntax { Windows, Posix };
+	#ifdef USE_MICROSOFT_WINDOWS
+		// Let the local syntax be for Windows.
+		#define LOCAL_PATH_SYNTAX PathSyntax::Windows
+	#else
+		// Let the local syntax be for Posix.
+		#define LOCAL_PATH_SYNTAX PathSyntax::Posix
+	#endif
+
+	// Define NO_IMPLICIT_PATH_SYNTAX before including the header if you want all PathSyntax arguments to be explicit.
+	// If a function you are calling adds a new pathSyntax argument, defining NO_IMPLICIT_PATH_SYNTAX will make sure that you get a warning from the compiler after upgrading the library.
+	#ifdef NO_IMPLICIT_PATH_SYNTAX
+		// No deafult argument for PathSyntax input.
+		#define IMPLICIT_PATH_SYNTAX
+	#else
+		// Local deafult argument for PathSyntax input.
+		#define IMPLICIT_PATH_SYNTAX = LOCAL_PATH_SYNTAX
+	#endif
+
+	// Path-syntax: According to the local computer.
 	// Post-condition:
 	//   Returns the content of the readable file referred to by file_optimizePath(filename).
 	//   If mustExist is true, then failure to load will throw an exception.
 	//   If mustExist is false, then failure to load will return an empty handle (returning false for buffer_exists).
 	Buffer file_loadBuffer(const ReadableString& filename, bool mustExist = true);
 
+	// Path-syntax: According to the local computer.
 	// Side-effect: Saves buffer to file_optimizePath(filename) as a binary file.
 	// Pre-condition: buffer exists
 	void file_saveBuffer(const ReadableString& filename, Buffer buffer);
 
+	// Path-syntax: According to the local computer.
+	// Pre-condition: file_getEntryType(path) == EntryType::SymbolicLink
+	// Post-condition: Returns the destination of a symbolic link as an absolute path.
+	// Shortcuts with file extensions are counted as files, not links.
+	// TODO: Should shortcuts of known formats be supported anyway by parsing them?
+	String file_followSymbolicLink(const ReadableString &path, bool mustExist = true);
+
+	// Path-syntax: According to the local computer.
 	// Get a path separator for the target operating system.
 	//   Can be used to construct a file path that works for both forward and backward slash separators.
 	const char32_t* file_separator();
 
-	// Turns / and \ into the local system's convention, so that loading and saving files can use either one of them automatically.
-	// TODO: Remove redundant . and .. to reduce the risk of running out of buffer space.
-	String file_optimizePath(const ReadableString &path);
+	// Path-syntax: Depends on pathSyntax argument.
+	// Turns / and \ into the path convention specified by pathSyntax, which is the local system's by default.
+	// Removes redundant . and .. to reduce the risk of running out of buffer space when calling the system.
+	String file_optimizePath(const ReadableString &path, PathSyntax pathSyntax IMPLICIT_PATH_SYNTAX);
 
-	// Returns the local name of the file or folder after the last path separator, or the whole path if no separator was found.
-	// Examples with / as the path separator:
-	//   file_getFolderPath(U"MyFolder/Cars.txt") == U"Cars.txt"
-	//   file_getFolderPath(U"MyFolder/")         == U""
-	//   file_getFolderPath(U"MyFolder")          == U"MyFolder"
-	//   file_getFolderPath(U"MyFolder/Folder2")  == U"Folder2"
-	ReadableString file_getPathlessName(const ReadableString &path);
-
-	// Returns the parent folder path with anything after the last slash removed, or empty if there was no slash left.
-	// Examples with / as the path separator:
-	//   file_getFolderPath(U"MyFolder/Documents/Cars.txt") == U"MyFolder/Documents"
-	//   file_getFolderPath(U"MyFolder/Documents/")         == U"MyFolder/Documents"
-	//   file_getFolderPath(U"MyFolder/Documents")          == U"MyFolder"
-	//   file_getFolderPath(U"MyFolder")                    == U""
-	ReadableString file_getParentFolder(const ReadableString &path);
-
+	// Path-syntax: Depends on pathSyntax argument.
 	// Combines two parts into a path and automatically adding a local separator when needed.
 	// Can be used to get the full path of a file in a folder or add another folder to the path.
 	// b may not begin with a separator, because only a is allowed to contain the root.
-	// Examples with / as the path separator:
-	//   file_combinePaths(U"Folder", U"Document.txt") == U"Folder/Document.txt"
-	//   file_combinePaths(U"Folder/", U"Document.txt") == U"Folder/Document.txt"
-	String file_combinePaths(const ReadableString &a, const ReadableString &b);
+	String file_combinePaths(const ReadableString &a, const ReadableString &b, PathSyntax pathSyntax IMPLICIT_PATH_SYNTAX);
 
-	// Returns true iff path contains a root, according to the local path syntax.
-	// If treatHomeFolderAsRoot is true, starting from the home folder using the Posix ~ alias will be allowed.
-	bool file_hasRoot(const ReadableString &path, bool treatHomeFolderAsRoot = true);
+	// Path-syntax: Depends on pathSyntax argument.
+	// Post-condition: Returns true for relative paths true iff path contains a root, according to the path syntax.
+	//                 Implicit drives on Windows using \ are treated as roots because we know that there is nothing above them.
+	// If treatHomeFolderAsRoot is true, starting from the /home/username folder using the Posix ~ alias will be allowed as a root as well, because we can't append it behind another path.
+	bool file_hasRoot(const ReadableString &path, bool treatHomeFolderAsRoot, PathSyntax pathSyntax IMPLICIT_PATH_SYNTAX);
+
+	// Path-syntax: Depends on pathSyntax argument.
+	// Returns true iff path is a root without any files nor folder names following.
+	//   Does not check if it actually exists, so use file_getEntryType on the actual folders and files for verifying existence.
+	bool file_isRoot(const ReadableString &path, bool treatHomeFolderAsRoot, PathSyntax pathSyntax IMPLICIT_PATH_SYNTAX);
 
 	// DSR_MAIN_CALLER is a convenient wrapper for getting input arguments as a list of portable Unicode strings.
 	//   The actual main function gets placed in DSR_MAIN_CALLER, which calls the given function.
@@ -115,17 +133,52 @@ namespace dsr {
 	List<String> file_impl_convertInputArguments(int argn, void **argv);
 	List<String> file_impl_getInputArguments();
 
-	// Get the current path, from where the application was called and relative paths start.
+	// Path-syntax: According to the local computer.
+	// Post-condition: Returns the current path, from where the application was called and relative paths start.
 	String file_getCurrentPath();
+
+	// Path-syntax: According to the local computer.
 	// Side-effects: Sets the current path to file_optimizePath(path).
 	// Post-condition: Returns Returns true on success and false on failure.
 	bool file_setCurrentPath(const ReadableString &path);
+
+	// Path-syntax: According to the local computer.
 	// Post-condition: Returns  the application's folder path, from where the application is stored.
 	// If not implemented and allowFallback is true,
 	//   the current path is returned instead as a qualified guess instead of raising an exception.
 	String file_getApplicationFolder(bool allowFallback = true);
-	// Gets an absolute version of the path, quickly without removing redundancy.
+
+	// Path-syntax: This trivial operation should work the same independent of operating system.
+	//              Otherwise you just have to add a new argument after upgrading the static library.
+	// Returns the local name of the file or folder after the last path separator, or the whole path if no separator was found.
+	ReadableString file_getPathlessName(const ReadableString &path);
+
+	// Quickly gets the relative parent folder by removing the last entry from the string or appending .. at the end.
+	// Path-syntax: Depends on pathSyntax argument.
+	// This pure syntax function getting the parent folder does not access the system in any way.
+	// Does not guarantee that the resulting path is usable on the system.
+	// It allows using ~ as the root, for writing paths compatible across different user accounts pointing to different but corresponding files.
+	// Going outside of a relative start will add .. to the path.
+	//   Depending on which current directory the result is applied to, the absolute path may end up as a root followed by multiple .. going nowhere.
+	// Going outside of the absolute root returns U"?" as an error code.
+	String file_getRelativeParentFolder(const ReadableString &path, PathSyntax pathSyntax IMPLICIT_PATH_SYNTAX);
+
+	// Gets the canonical parent folder using the current directory.
+	// This function for getting the parent folder treats path relative to the current directory and expands the result into an absolute path.
+	// Make sure that current directory is where you want it when calling this function, because the current directory may change over time when calling file_setCurrentPath.
+	// Path-syntax: According to the local computer.
+	// Pre-conditions:
+	//   path must be valid on the local system, such that you given full permissions could read or create files there relative to the current directory when this function is called.
+	//   ~ is not allowed as the root, because the point of using ~ is to reuse the same path across different user accounts, which does not refer to an absolute home directory.
+	// Post-condition: Returns the absolute parent to the given path, or U"?" if trying to leave the root or use a tilde home alias.
+	String file_getAbsoluteParentFolder(const ReadableString &path);
+
+	// Gets the canonical absolute version of the path.
+	// Path-syntax: According to the local computer.
+	// Post-condition: Returns an absolute version of the path, quickly without removing redundancy.
 	String file_getAbsolutePath(const ReadableString &path);
+
+	// Path-syntax: According to the local computer.
 	// Pre-condition: filename must refer to a file so that file_getEntryType(filename) == EntryType::File.
 	// Post-condition: Returns a structure with information about the file at file_optimizePath(filename), or -1 if no such file exists.
 	int64_t file_getFileSize(const ReadableString& filename);
@@ -134,6 +187,7 @@ namespace dsr {
 	enum class EntryType { NotFound, UnhandledType, File, Folder, SymbolicLink };
 	String& string_toStreamIndented(String& target, const EntryType& source, const ReadableString& indentation);
 
+	// Path-syntax: According to the local computer.
 	// Post-condition: Returns what the file_optimizePath(path) points to in the filesystem.
 	// Different comparisons on the result can be used to check if something exists.
 	//   Use file_getEntryType(filename) == EntryType::File to check if a file exists.
@@ -141,12 +195,27 @@ namespace dsr {
 	//   Use file_getEntryType(path) != EntryType::NotFound to check if the path leads to anything.
 	EntryType file_getEntryType(const ReadableString &path);
 
+	// Path-syntax: According to the local computer.
 	// Side-effects: Calls action with the entry's path, name and type for everything detected in folderPath.
 	//               entryPath equals file_combinePaths(folderPath, entryName), and is used for recursive calls when entryType == EntryType::Folder.
 	//               entryName equals file_getPathlessName(entryPath).
 	//               entryType equals file_getEntryType(entryPath).
 	// Post-condition: Returns true iff the folder could be found.
 	bool file_getFolderContent(const ReadableString& folderPath, std::function<void(const ReadableString& entryPath, const ReadableString& entryName, EntryType entryType)> action);
+
+
+
+	// Functions below are for testing and simulation of other systems by substituting the current directory and operating system with manual settings.
+
+	// A theoretical version of file_getParentFolder for evaluation on a theoretical system without actually calling file_getCurrentPath or running on the given system.
+	// Path-syntax: Depends on pathSyntax argument.
+	// Post-condition: Returns the absolute parent to the given path, or U"?" if trying to leave the root or use a tilde home alias.
+	String file_getTheoreticalAbsoluteParentFolder(const ReadableString &path, const ReadableString &currentPath, PathSyntax pathSyntax);
+
+	// A theoretical version of for evaluation on a theoretical system without actually calling file_getCurrentPath or running on the given system.
+	// Path-syntax: Depends on pathSyntax argument.
+	// Post-condition: Returns an absolute version of the path, quickly without removing redundancy.
+	String file_getTheoreticalAbsolutePath(const ReadableString &path, const ReadableString &currentPath, PathSyntax pathSyntax IMPLICIT_PATH_SYNTAX);
 }
 
 #endif
