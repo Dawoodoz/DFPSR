@@ -22,51 +22,28 @@ A:active { color: #FFFFFF; background: #444444; }
 </STYLE> </HEAD> <BODY>
 <IMG SRC="Images/Title.png" ALT="Images/Title.png">
 <P>
-</P><H1> David Piuva's software renderer</H1><P>
+<A href="Manual.html">Back to main page</A>
 </P><P>
-When you just want to code in your own pace without worrying about API deprecation.
+</P><H1> Buffers</H1><P>Every file that is saved or loaded in the framework will pass through a Buffer.
+Buffers can not refer to each other in cycles and are automatically reference counted and deleted, so that you don't have to worry about memory leaks from them unless you explicitly call buffer_replaceDestructor.
+They store a fixed size allocation of 128-bit padded and aligned memory to work well with 128-bit SIMD intrinsics for realtime software rendering.
 
 </P><P>
-<IMG SRC="Images/SmallDot.png">
-<A href="Starting.html">Getting started</A>
-</P><P>
-<IMG SRC="Images/SmallDot.png">
-<A href="Troubleshooting.html">Troubleshooting</A>
-</P><P>
 </P><IMG SRC="Images/Border.png"><P>
-</P><H2> APIs</H2><P>
+</P><H2> Construction</H2><P>
 </P><P>
-<IMG SRC="Images/SmallDot.png">
-<A href="Strings.html">String API</A>
+The default constructor creates an empty handle, so dsr::Buffer() can be treated as null and checked using the buffer_exists function.
+Returning an empty buffer handle is common when something went wrong with an operation.
+
 </P><P>
-<IMG SRC="Images/SmallDot.png">
-<A href="Buffers.html">Buffer API</A>
-</P><P>
-<IMG SRC="Images/SmallDot.png">
-<A href="Files.html">File API</A>
-</P><P>
-<IMG SRC="Images/SmallDot.png">
-<A href="Images.html">Image API</A>
-</P><P>
+To create a buffer that actually stores something, call buffer_create with the number of bytes to contain as the only argument.
+The memory always start initialized to zero, which prevents random bugs.
 </P><IMG SRC="Images/Border.png"><P>
-</P><H2> Techniques</H2><P>
+</P><H2> Read and write data access</H2><P>
 </P><P>
-<IMG SRC="Images/SmallDot.png">
-<A href="ImageProcessing.html">Image processing</A>
-</P><P>
+Trying to get the pointer of a non-existing Buffer will safely return a null pointer, no matter if you use buffer_getSafeData<type>(buffer, "Buffer name") or buffer_dangerous_getUnsafeData(buffer).
+You access the data by getting a SafePointer, which can later be sliced into smaller parts.
+Sometimes you can't use the SafePointer because an operating system wants a regular C pointer.
 </P><IMG SRC="Images/Border.png"><P>
-</P><H2> Modifying the library</H2><P>
-</P><P>
-<IMG SRC="Images/SmallDot.png">
-<A href="StyleGuide.html">Style guide</A>
-</P><P>
-</P><IMG SRC="Images/Border.png"><P>
-</P><H2> Technical details</H2><P>
-</P><P>
-<IMG SRC="Images/SmallDot.png">
-<A href="License.html">License</A>
-</P><P>
-<IMG SRC="Images/SmallDot.png">
-<A href="Security.html">Security</A></P><IMG SRC="Images/Border.png"><P>
 </P>
 </BODY> </HTML>

@@ -106,7 +106,10 @@ Icon=theProgramsIcon
 Path=/pathToProgram
 Terminal=false
 StartupNotify=false
-</BLOCKQUOTE></PRE></P><IMG SRC="Images/Border.png"><P>
+</BLOCKQUOTE></PRE>
+</P><P>
+You can also begin your main function with file_setCurrentPath(file_getApplicationFolder()); to move into the application's folder automatically, which is supported on both Windows and Linux, but not guaranteed to work on all Posix systems because the symbolic link /proc/self/exe is not a part of the Posix standard.
+</P><IMG SRC="Images/Border.png"><P>
 </P><H2> Compiling a project on Microsoft Windows</H2><P>
 </P><P>
 Create a project from existing code:

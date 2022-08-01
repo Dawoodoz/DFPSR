@@ -71,6 +71,8 @@ Path=/pathToProgram
 Terminal=false
 StartupNotify=false
 CodeEnd:
+
+You can also begin your main function with file_setCurrentPath(file_getApplicationFolder()); to move into the application's folder automatically, which is supported on both Windows and Linux, but not guaranteed to work on all Posix systems because the symbolic link /proc/self/exe is not a part of the Posix standard.
 ---
 Title2: Compiling a project on Microsoft Windows
 

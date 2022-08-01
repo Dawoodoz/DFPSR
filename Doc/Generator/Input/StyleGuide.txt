@@ -22,7 +22,7 @@ C++ style is for things that are abstracted on a higher level.
 C style is for when a byte is just a byte and you just want to manipulate it in a specific way.
 ---
 7. Don't call member methods with "this" set to nullptr.
-This would be undefined behaviour and may randomly crash.
+This would be undefined behavior and may randomly crash.
 Use global functions instead. They allow checking pointers for null
 because they are explicit arguments declared by the programmer.
 ---
