@@ -1,7 +1,7 @@
 ﻿
 // zlib open source license
 //
-// Copyright (c) 2017 to 2019 David Forsgren Piuva
+// Copyright (c) 2017 to 2022 David Forsgren Piuva
 // 
 // This software is provided 'as-is', without any express or implied
 // warranty. In no event will the authors be held liable for any damages
@@ -137,17 +137,35 @@ namespace dsr {
 
 // Loading
 	// Load an image from a file by giving the filename including folder path and extension.
+	// If mustExist is true, an exception will be raised on failure.
+	// If mustExist is false, failure will return an empty handle.
 	OrderedImageRgbaU8 image_load_RgbaU8(const String& filename, bool mustExist = true);
 	// Load an image from a memory buffer, which can be loaded with file_loadBuffer to get the same result as loading directly from the file.
-	//   A convenient way of loading compressed images from larger files.
-	OrderedImageRgbaU8 image_decode_RgbaU8(const Buffer& fileContent, bool mustParse = true);
+	// A convenient way of loading compressed images from larger files.
+	// Failure will return an empty handle.
+	OrderedImageRgbaU8 image_decode_RgbaU8(const Buffer& fileContent);
 	// A faster and more flexible way to load compressed images from memory.
 	// If you just want to point directly to a memory location to avoid allocating many small buffers, you can use a safe pointer and a size in bytes.
-	OrderedImageRgbaU8 image_decode_RgbaU8(const SafePointer<uint8_t> data, int size, bool mustParse = true);
+	// Failure will return an empty handle.
+	OrderedImageRgbaU8 image_decode_RgbaU8(const SafePointer<uint8_t> data, int size);
 
 // Saving
 	// Save the image to the path specified by filename and return true iff the operation was successful.
-	bool image_save(const ImageRgbaU8 &image, const String& filename);
+	// The file extension is case insensitive after the last dot in filename.
+	//   Accepted file extensions:
+	//     *.jpg or *.jpeg
+	//     *.png
+	//     *.tga or *.targa
+	//     *.bmp
+	// If mustWork is true, an exception will be raised on failure.
+	// If mustWork is false, failure will return false.
+	// The optional quality setting goes from 1% to 100% and is at the maximum by default.
+	bool image_save(const ImageRgbaU8 &image, const String& filename, bool mustWork = true, int quality = 100);
+	// Save the image to a memory buffer.
+	// Post-condition: Returns a buffer with the encoded image format as it would be saved to a file, or empty on failure.
+	//                 No exceptions will be raised on failure, because an error message without a filename would not explain much.
+	// The optional quality setting goes from 1% to 100% and is at the maximum by default.
+	Buffer image_encode(const ImageRgbaU8 &image, ImageFileFormat format, int quality = 90);
 
 // Fill all pixels with a uniform color
 	void image_fill(ImageU8& image, int32_t color);
@@ -156,13 +174,15 @@ namespace dsr {
 	void image_fill(ImageRgbaU8& image, const ColorRgbaI32& color);
 
 // Clone
-	// Get a deep clone of an image's content while discarding any pack order, padding and texture pyramids
+	// Get a deep clone of an image's content while discarding any pack order, padding and texture pyramids.
+	// If the input image had a different pack order, it will automatically be converted into RGBA to preserve the colors.
 	AlignedImageU8 image_clone(const ImageU8& image);
 	AlignedImageU16 image_clone(const ImageU16& image);
 	AlignedImageF32 image_clone(const ImageF32& image);
 	OrderedImageRgbaU8 image_clone(const ImageRgbaU8& image);
-	// Returns a copy of the image without any padding, which means that alignment cannot be guaranteed
-	//   Used when external image libraries don't allow it
+	// Returns a copy of the image without any padding, which means that alignment cannot be guaranteed.
+	// The pack order is the same as the input, becuase it just copies the memory one row at a time to be fast.
+	// Used when external image libraries don't allow giving stride as a separate argument.
 	ImageRgbaU8 image_removePadding(const ImageRgbaU8& image);
 
 // Channel packing

@@ -72,8 +72,11 @@ namespace dsr {
 
 	// Path-syntax: According to the local computer.
 	// Side-effect: Saves buffer to file_optimizePath(filename) as a binary file.
-	// Pre-condition: buffer exists
-	void file_saveBuffer(const ReadableString& filename, Buffer buffer);
+	// Pre-condition: buffer exists.
+	//   If mustWork is true, then failure to load will throw an exception.
+	//   If mustWork is false, then failure to load will return false.
+	// Post-condition: Returns true iff the buffer could be saved as a file.
+	bool file_saveBuffer(const ReadableString& filename, Buffer buffer, bool mustWork = true);
 
 	// Path-syntax: According to the local computer.
 	// Pre-condition: file_getEntryType(path) == EntryType::SymbolicLink

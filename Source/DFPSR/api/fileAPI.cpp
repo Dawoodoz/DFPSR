@@ -122,19 +122,27 @@ Buffer file_loadBuffer(const ReadableString& filename, bool mustExist) {
 	}
 }
 
-void file_saveBuffer(const ReadableString& filename, Buffer buffer) {
+bool file_saveBuffer(const ReadableString& filename, Buffer buffer, bool mustWork) {
 	String modifiedFilename = file_optimizePath(filename, LOCAL_PATH_SYNTAX);
 	if (!buffer_exists(buffer)) {
-		throwError(U"buffer_save: Can't save a buffer that don't exist to a file.\n");
+		if (mustWork) {
+			throwError(U"buffer_save: Can't save a buffer that don't exist to a file.\n");
+		}
+		return false;
 	} else {
 		FILE *file = accessFile(modifiedFilename, true);
 		if (file != nullptr) {
 			fwrite((void*)buffer_dangerous_getUnsafeData(buffer), buffer_getSize(buffer), 1, file);
 			fclose(file);
 		} else {
-			throwError("Failed to save ", modifiedFilename, ".\n");
+			if (mustWork) {
+				throwError("Failed to save ", modifiedFilename, ".\n");
+			}
+			return false;
 		}
 	}
+	// Success if there are no errors.
+	return true;
 }
 
 const char32_t* file_separator() {
