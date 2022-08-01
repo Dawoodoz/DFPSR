@@ -1,7 +1,7 @@
 ﻿
 // zlib open source license
 //
-// Copyright (c) 2017 to 2019 David Forsgren Piuva
+// Copyright (c) 2017 to 2022 David Forsgren Piuva
 // 
 // This software is provided 'as-is', without any express or implied
 // warranty. In no event will the authors be held liable for any damages
@@ -54,24 +54,101 @@ AlignedImageRgbaU8 dsr::image_create_RgbaU8_native(int32_t width, int32_t height
 }
 
 // Loading from data pointer
-OrderedImageRgbaU8 dsr::image_decode_RgbaU8(const SafePointer<uint8_t> data, int size, bool mustParse) {
-	return image_stb_decode_RgbaU8(data, size, mustParse);
+OrderedImageRgbaU8 dsr::image_decode_RgbaU8(const SafePointer<uint8_t> data, int size) {
+	if (data.isNotNull()) {
+		return image_stb_decode_RgbaU8(data, size);
+	} else {
+		return OrderedImageRgbaU8();
+	}
 }
 // Loading from buffer
-OrderedImageRgbaU8 dsr::image_decode_RgbaU8(const Buffer& fileContent, bool mustParse) {
-	return image_decode_RgbaU8(buffer_getSafeData<uint8_t>(fileContent, "image file buffer"), buffer_getSize(fileContent), mustParse);
+OrderedImageRgbaU8 dsr::image_decode_RgbaU8(const Buffer& fileContent) {
+	return image_decode_RgbaU8(buffer_getSafeData<uint8_t>(fileContent, "image file buffer"), buffer_getSize(fileContent));
 }
 // Loading from file
 OrderedImageRgbaU8 dsr::image_load_RgbaU8(const String& filename, bool mustExist) {
-	//return image_stb_load_RgbaU8(filename, mustExist);
+	OrderedImageRgbaU8 result;
 	Buffer fileContent = file_loadBuffer(filename, mustExist);
-	return image_decode_RgbaU8(fileContent, mustExist);
+	if (buffer_exists(fileContent)) {
+		result = image_decode_RgbaU8(fileContent);
+		if (mustExist && !image_exists(result)) {
+			throwError(U"buffer_save: Can't save a buffer that don't exist to a file.\n");
+		}
+	}
+	return result;
 }
 
+// Pre-condition: image exists.
+// Post-condition: Returns true if the stride is larger than the image's width.
+static bool imageIsPadded(const ImageRgbaU8 &image) {
+	return image_getWidth(image) * 4 < image_getStride(image);
+}
 
+Buffer dsr::image_encode(const ImageRgbaU8 &image, ImageFileFormat format, int quality) {
+	if (buffer_exists) {
+		ImageRgbaU8 orderedImage;
+		if (image_getPackOrderIndex(image) != PackOrderIndex::RGBA) {
+			// Repack into RGBA.
+			orderedImage = image_clone(image);
+		} else {
+			// Take the image handle as is.
+			orderedImage = image;
+		}
+		if (imageIsPadded(orderedImage) && format != ImageFileFormat::PNG) {
+			// If orderedImage is padded and it's not requested as PNG, the padding has to be removed first.
+			return image_stb_encode(image_removePadding(orderedImage), format, quality);
+		} else {
+			// Send orderedImage directly to encoding.
+			return image_stb_encode(orderedImage, format, quality);
+		}
+	} else {
+		return Buffer();
+	}
+}
 
-bool dsr::image_save(const ImageRgbaU8 &image, const String& filename) {
-	return image_stb_save(image, filename);
+static ReadableString getFileExtension(const String& filename) {
+	int lastDotIndex = string_findLast(filename, U'.');
+	if (lastDotIndex != -1) {
+		return string_removeOuterWhiteSpace(string_after(filename, lastDotIndex));
+	} else {
+		return U"?";
+	}
+}
+
+static ImageFileFormat detectImageFileExtension(const String& filename) {
+	ImageFileFormat result = ImageFileFormat::Unknown;
+	int lastDotIndex = string_findLast(filename, U'.');
+	if (lastDotIndex != -1) {
+		ReadableString extension = string_upperCase(getFileExtension(filename));
+		if (string_match(extension, U"JPG") || string_match(extension, U"JPEG")) {
+			result = ImageFileFormat::JPG;
+		} else if (string_match(extension, U"PNG")) {
+			result = ImageFileFormat::PNG;
+		} else if (string_match(extension, U"TARGA") || string_match(extension, U"TGA")) {
+			result = ImageFileFormat::TGA;
+		} else if (string_match(extension, U"BMP")) {
+			result = ImageFileFormat::BMP;
+		}
+	}
+	return result;
+}
+
+bool dsr::image_save(const ImageRgbaU8 &image, const String& filename, bool mustWork, int quality) {
+	ImageFileFormat extension = detectImageFileExtension(filename);
+	Buffer buffer;
+	if (extension == ImageFileFormat::Unknown) {
+		ReadableString extension = getFileExtension(filename);
+		if (mustWork) { throwError(U"The extension *.", extension, " in ", filename, " is not a supported image format.\n"); }
+		return false;
+	} else {
+		buffer = image_encode(image, extension, quality);
+	}
+	if (buffer_exists(buffer)) {
+		return file_saveBuffer(filename, buffer, mustWork);
+	} else {
+		if (mustWork) { throwError(U"Failed to encode an image that was going to be saved as ", filename, "\n"); }
+		return false;
+	}
 }
 
 #define GET_OPTIONAL(SOURCE,DEFAULT) \

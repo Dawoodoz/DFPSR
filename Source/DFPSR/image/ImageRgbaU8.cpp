@@ -62,7 +62,7 @@ ImageRgbaU8Impl ImageRgbaU8Impl::getWithoutPadding() const {
 		return *this;
 	} else {
 		// Copy each row without padding
-		ImageRgbaU8Impl result(this->width, this->height, 1);
+		ImageRgbaU8Impl result = ImageRgbaU8Impl(this->width, this->height, this->packOrder.packOrderIndex);
 		const SafePointer<uint8_t> sourceRow = imageInternal::getSafeData<uint8_t>(*this);
 		int32_t sourceStride = this->stride;
 		SafePointer<uint8_t> targetRow = imageInternal::getSafeData<uint8_t>(result);

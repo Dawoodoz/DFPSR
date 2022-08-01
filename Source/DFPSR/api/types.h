@@ -1,7 +1,7 @@
 ﻿
 // zlib open source license
 //
-// Copyright (c) 2019 David Forsgren Piuva
+// Copyright (c) 2019 to 2022 David Forsgren Piuva
 // 
 // This software is provided 'as-is', without any express or implied
 // warranty. In no event will the authors be held liable for any damages
@@ -39,6 +39,14 @@
 #endif
 
 namespace dsr {
+
+enum class ImageFileFormat {
+	Unknown, // Used as an error code for unidentified formats.
+	JPG, // Lossy compressed image format storing brightness separated from red and blue offsets using the discrete cosine transform of each block.
+	PNG, // Lossless compressed image format. Some image editors don't save RGB values where alpha is zero, which will bleed through black edges in bi-linear interpolation when the interpolated alpha is not zero.
+	TGA, // Lossless compressed format. Applications usually give Targa better control over the alpha channel than PNG, but it's more common that the Targa specification is interpreted in incompatible ways.
+	BMP // Uncompressed image format for storing data that does not really represent an image and you just want it to be exact.
+};
 
 enum class PackOrderIndex {
 	RGBA, // Windows

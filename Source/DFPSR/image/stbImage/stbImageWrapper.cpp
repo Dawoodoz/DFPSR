@@ -9,7 +9,7 @@
 
 namespace dsr {
 
-OrderedImageRgbaU8 image_stb_decode_RgbaU8(const SafePointer<uint8_t> data, int size, bool mustParse) {
+OrderedImageRgbaU8 image_stb_decode_RgbaU8(const SafePointer<uint8_t> data, int size) {
 	#ifdef SAFE_POINTER_CHECKS
 		// If the safe pointer has debug information, use it to assert that size is within bound.
 		data.assertInside("image_stb_decode_RgbaU8 (data)", data.getUnsafe(), (size_t)size);
@@ -17,9 +17,6 @@ OrderedImageRgbaU8 image_stb_decode_RgbaU8(const SafePointer<uint8_t> data, int 
 	int width, height, bpp;
 	uint8_t *rawPixelData = stbi_load_from_memory(data.getUnsafe(), size, &width, &height, &bpp, 4);
 	if (rawPixelData == nullptr) {
-		if (mustParse) {
-			throwError("An image could not be parsed!\n");
-		}
 		return OrderedImageRgbaU8(); // Return null
 	}
 	// Create a padded buffer
@@ -41,10 +38,38 @@ OrderedImageRgbaU8 image_stb_decode_RgbaU8(const SafePointer<uint8_t> data, int 
 	return result;
 }
 
-bool image_stb_save(const ImageRgbaU8 &image, const String& filename) {
-	// Remove all padding before saving to avoid crashing
-	ImageRgbaU8 unpadded = ImageRgbaU8(image_removePadding(image));
-	return stbi_write_png(filename.toStdString().c_str(), image_getWidth(unpadded), image_getHeight(unpadded), 4, image_dangerous_getData(unpadded), image_getStride(unpadded)) != 0;
+// Pre-condition: Images that STB image don't have stride implementations for must be given unpadded images.
+Buffer image_stb_encode(const ImageRgbaU8 &image, ImageFileFormat format, int quality) {
+	int width = image_getWidth(image);
+	int height = image_getHeight(image);
+	List<uint8_t> targetList;
+	// Reserve enough memory for an uncompressed file to reduce the need for reallcation.
+	targetList.reserve(width * height * 4 + 2048);
+	stbi_write_func* writer = [](void* context, void* data, int size) {
+		List<uint8_t>* target = (List<uint8_t>*)context;
+		for (int i = 0; i < size; i++) {
+			target->push(((uint8_t*)data)[i]);
+		}
+	};
+	bool success = false;
+	if (format == ImageFileFormat::JPG) {
+		success = stbi_write_jpg_to_func(writer, &targetList, width, height, 4, image_dangerous_getData(image), quality);
+	} else if (format == ImageFileFormat::PNG) {
+		success = stbi_write_png_to_func(writer, &targetList, width, height, 4, image_dangerous_getData(image), image_getStride(image));
+	} else if (format == ImageFileFormat::TGA) {
+		success = stbi_write_tga_to_func(writer, &targetList, width, height, 4, image_dangerous_getData(image));
+	} else if (format == ImageFileFormat::BMP) {
+		success = stbi_write_bmp_to_func(writer, &targetList, width, height, 4, image_dangerous_getData(image));
+	}
+	if (success) {
+		// Copy data to a new buffer once the total size is known.
+		Buffer result = buffer_create(targetList.length());
+		uint8_t* targetData = buffer_dangerous_getUnsafeData(result);
+		memcpy(targetData, &targetList[0], targetList.length());
+		return result; // Return the buffer on success.
+	} else {
+		return Buffer(); // Return a null handle on failure.
+	}
 }
 
 }
