@@ -458,10 +458,16 @@ static dsr::DsrKey getDsrKey(KeySym keyCode) {
 	return result;
 }
 
-// TODO: Implement support for typing in UNICODE. How can this be tested when even Chinese keyboards use phonetic typing?
-static uint32_t getNativeCharacterCode(XEvent& event) {
-	KeySym key; char text[255]; uint32_t character = '\0';
-	if (XLookupString(&event.xkey, text, 255, &key, 0) == 1) { character = text[0]; }
+static dsr::DsrChar getCharacterCode(XEvent& event) {
+	const int buffersize = 8;
+	KeySym key; char codePoints[buffersize]; dsr::DsrChar character = '\0';
+	if (XLookupString(&event.xkey, codePoints, buffersize, &key, 0) == 1) {
+		// X11 does not specify any encoding, but BOM_UTF16LE seems to work on Linux.
+		// TODO: See if there is a list of X11 character encodings for different platforms.
+		dsr::CharacterEncoding encoding = dsr::CharacterEncoding::BOM_UTF16LE;
+		dsr::String characterString = string_dangerous_decodeFromData(codePoints, encoding);
+		character = characterString[0];
+	}
 	return character;
 }
 
@@ -490,7 +496,7 @@ void X11Window::prefetchEvents() {
 					this->queueInputEvent(new dsr::WindowEvent(dsr::WindowEventType::Redraw, this->windowWidth, this->windowHeight));
 				} else if (currentEvent.type == KeyPress || currentEvent.type == KeyRelease) {
 					// Key down/up
-					uint32_t character = getNativeCharacterCode(currentEvent);
+					dsr::DsrChar character = getCharacterCode(currentEvent);
 					KeySym nativeKey = XLookupKeysym(&currentEvent.xkey, 0);
 					dsr::DsrKey dsrKey = getDsrKey(nativeKey);
 					KeySym nextNativeKey = hasNextEvent ? XLookupKeysym(&nextEvent.xkey, 0) : 0;
@@ -636,7 +642,7 @@ std::shared_ptr<dsr::BackendWindow> createBackendWindow(const dsr::String& title
 		auto backend = std::make_shared<X11Window>(title, width, height);
 		return std::dynamic_pointer_cast<dsr::BackendWindow>(backend);
 	} else {
-		printf("No display detected. Aborting X11 window creation.\n");
+		dsr::printText("No display detected. Aborting X11 window creation.\n");
 		return std::shared_ptr<dsr::BackendWindow>();
 	}
 }

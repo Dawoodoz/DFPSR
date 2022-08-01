@@ -412,7 +412,14 @@ static LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT message, WPARAM wParam, 
 		break;
 	case WM_KEYDOWN: case WM_KEYUP:
 		{
-			char character = wParam; // System specific key-code
+			dsr::DsrChar character;
+			if (IsWindowUnicode(hwnd)) {
+				dsr::CharacterEncoding encoding = dsr::CharacterEncoding::BOM_UTF16LE;
+				dsr::String characterString = dsr::string_dangerous_decodeFromData((const void*)&wParam, encoding);
+				character = characterString[0]; // Convert from UTF-16 surrogate to UTF-32 Unicode character
+			} else {
+				character = wParam; // Raw ansi character
+			}
 			dsr::DsrKey dsrKey = getDsrKey(wParam); // Portable key-code
 			bool previouslyPressed = lParam & (1 << 30);
 			if (message == WM_KEYDOWN) {
@@ -422,7 +429,11 @@ static LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT message, WPARAM wParam, 
 					parent->queueInputEvent(new dsr::KeyboardEvent(dsr::KeyboardEventType::KeyDown, character, dsrKey));
 				}
 				// Press typing with repeat
-				parent->queueInputEvent(new dsr::KeyboardEvent(dsr::KeyboardEventType::KeyType, character, dsrKey));
+				// Caps lock, shift, control and insert is not something you type characters with
+				// TODO: Add more characters to the exclusion list or find a function for this filter somewhere
+				if (character != 16 && character != 17 && character != 20 && character != 37 && character != 45) {
+					parent->queueInputEvent(new dsr::KeyboardEvent(dsr::KeyboardEventType::KeyType, character, dsrKey));
+				}
 			} else { // message == WM_KEYUP
 				// Physical key up
 				parent->queueInputEvent(new dsr::KeyboardEvent(dsr::KeyboardEventType::KeyUp, character, dsrKey));
@@ -449,7 +460,6 @@ static LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT message, WPARAM wParam, 
 		// Resize the window as requested
 		result = DefWindowProc(hwnd, message, wParam, lParam);
 		break;
-	// TODO: Keyboard presses & typing
 	default:
 		result = DefWindowProc(hwnd, message, wParam, lParam);
 	}
@@ -458,11 +468,10 @@ static LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT message, WPARAM wParam, 
 
 void Win32Window::prefetchEvents() {
 	MSG messages;
-	// Windows hangs unless we process application events for each window
-	while (PeekMessage(&messages, NULL, 0, 0, PM_REMOVE)) {
-		//dsr::printText("Received an event ", messages.message, "(", messages.wParam, ", ", (intptr_t)messages.lParam, ")\n");
-		TranslateMessage(&messages);
-		DispatchMessage(&messages); // Calling WindowProcedure for each window instance
+	if (IsWindowUnicode(this->hwnd)) {
+		while (PeekMessageW(&messages, NULL, 0, 0, PM_REMOVE)) { TranslateMessage(&messages); DispatchMessage(&messages); }
+	} else {
+		while (PeekMessage(&messages, NULL, 0, 0, PM_REMOVE)) { TranslateMessage(&messages); DispatchMessage(&messages); }
 	}
 }
 
