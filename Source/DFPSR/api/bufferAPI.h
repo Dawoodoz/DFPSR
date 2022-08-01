@@ -55,11 +55,11 @@ namespace dsr {
 	}
 
 	// Returns a clone of the buffer.
-	// Giving an empty handle returns an empty handle
+	// Giving an empty handle returns an empty handle.
 	Buffer buffer_clone(const Buffer &buffer);
 
-	// Returns the buffer's size in bytes, as given when allocating it excluding allocation padding
-	// Returns zero if buffer doesn't exist
+	// Returns the buffer's size in bytes, as given when allocating it excluding allocation padding.
+	// Returns zero if buffer doesn't exist.
 	int64_t buffer_getSize(const Buffer &buffer);
 
 	// Returns the number of reference counted handles to the buffer, or 0 if the buffer does not exist.
@@ -83,8 +83,8 @@ namespace dsr {
 		}
 	}
 
-	// Set all bytes to the same value
-	// Pre-condition: buffer exists
+	// Set all bytes to the same value.
+	// Pre-condition: buffer exists, or else an exception is thrown to warn you.
 	void buffer_setBytes(const Buffer &buffer, uint8_t value);
 }
 

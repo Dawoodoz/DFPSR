@@ -15,6 +15,12 @@ Title2: APIs
 <- Strings.html | String API
 
 *
+<- Buffers.html | Buffer API
+
+*
+<- Files.html | File API
+
+*
 <- Images.html | Image API
 
 ---

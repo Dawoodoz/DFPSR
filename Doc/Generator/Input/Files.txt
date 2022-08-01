@@ -1,0 +1,51 @@
+﻿<- Manual.html | Back to main page
+
+Title: Files
+The file API handles all saving and loading of data in the framework using Buffer objects.
+This makes sure that anything that can be saved to a file can be embedded into the application's binary, encrypted, compressed, sent over a network, merged into an archive with other assets, or whatever you want to do with it.
+
+---
+Title2: Paths and current directory
+All file operations that send a file path to the operating system have the file_optimizePath function cleaning up the path for you, so it might accept a path that is actually invalid on the system if entered outside of the framework.
+Before saving a path to a file, make sure to apply file_optimizePath on the path yourself to get the absolute path that is actually used by the operating system based on the current path.
+file_optimizePath will remove following ./, collapse folder/../, reduce redundant separators and replace incorrect separators with the local system's standard, so that you can write a hardcoded relative path that works on both Windows and Posix systems.
+It can however not add or remove drive letters, so relative paths are portable paths.
+file_optimizePath can also be used to reformat slashes for another system by specifying the platform using the pathSyntax argument.
+
+On Windows, you can have a path beginning with:
+
+* A drive letter, such as C:\
+
+* An implicit current drive root, written as \
+
+* A relative path beginning from the current directory, such as folder\files\document.txt
+
+On Posix, you can have a path beginning with:
+
+* The logical system root on top of all physical drives and partitions, written as /
+
+* The current user's home directory using ~ to replace /home/username
+
+* A relative path beginning from the current directory, such as folder/files/document.txt
+---
+Title2: Saving and loading
+
+file_loadBuffer and file_saveBuffer are the main functions for saving and loading buffers of binary data.
+
+Both the string API and the image API calls these for the functions saving and loading to string, and offer alternatives directly against the Buffer objects.
+string_save also has string_saveToMemory for saving the encoded string with byte order marks and unicode code points into a Buffer.
+string_load also has string_loadFromMemory for loading a text document as if the Buffer was a file.
+image_save also has image_encode to store a PNG, Jpeg, Targa or BMP image into a Buffer.
+image_load_RgbaU8 also has image_decode_RgbaU8 to decompress the image back from the buffer.
+
+---
+Title2: An easier alternative to std::filesystem
+
+* Instead of exposing each platform's native string encoding, DSR's file API has one unified UTF-32 string format for cross-platform Unicode support in filenames.
+
+* Instead of demanding the use of C++17, the static library calls the system's C API directly when needed to support C++14.
+
+* Instead of using dangerous iterators (which are unprotected raw pointers) to seek through a folder, file_getFolderContent will give safe lambda callbacks for each entry.
+
+Maybe std::filesystem will live longer than the Posix standard, but in that case it would be relatively easy to wrap this API on top of STD, because they have very similar functionality.
+---
