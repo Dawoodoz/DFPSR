@@ -21,6 +21,11 @@
 //    3. This notice may not be removed or altered from any source
 //    distribution.
 
+// Include fileAPI without falling back on local syntax implicitly.
+//   This prevents any local syntax from being implied in functions that are supposed to use variable pathSyntax.
+#define NO_IMPLICIT_PATH_SYNTAX
+#include "fileAPI.h"
+
 #ifdef USE_MICROSOFT_WINDOWS
 	#include <windows.h>
 #else
@@ -31,11 +36,6 @@
 #include <fstream>
 #include <cstdlib>
 #include "bufferAPI.h"
-
-// Include fileAPI without falling back on local syntax implicitly.
-//   This prevents any local syntax from being implied in functions that are supposed to use variable pathSyntax.
-#define NO_IMPLICIT_PATH_SYNTAX
-#include "fileAPI.h"
 
 namespace dsr {
 
@@ -362,7 +362,7 @@ String file_getApplicationFolder(bool allowFallback) {
 	#ifdef USE_MICROSOFT_WINDOWS
 		NativeChar resultBuffer[maxLength + 1] = {0};
 		GetModuleFileNameW(nullptr, resultBuffer, maxLength);
-		return file_getParentFolder(fromNativeString(resultBuffer));
+		return file_getRelativeParentFolder(fromNativeString(resultBuffer), LOCAL_PATH_SYNTAX);
 	#else
 		NativeChar resultBuffer[maxLength + 1] = {0};
 		if (readlink("/proc/self/exe", resultBuffer, maxLength) != -1) {
@@ -525,7 +525,7 @@ EntryType file_getEntryType(const ReadableString &path) {
 bool file_getFolderContent(const ReadableString& folderPath, std::function<void(const ReadableString& entryPath, const ReadableString& entryName, EntryType entryType)> action) {
 	String optimizedPath = file_optimizePath(folderPath, LOCAL_PATH_SYNTAX);
 	#ifdef USE_MICROSOFT_WINDOWS
-		String pattern = file_combinePaths(optimizedPath, U"*.*");
+		String pattern = file_combinePaths(optimizedPath, U"*.*", LOCAL_PATH_SYNTAX);
 		Buffer buffer;
 		const NativeChar *nativePattern = toNativeString(pattern, buffer);
 		WIN32_FIND_DATAW findData;
@@ -536,7 +536,7 @@ bool file_getFolderContent(const ReadableString& folderPath, std::function<void(
 			while (true) {
 				String entryName = fromNativeString(findData.cFileName);
 				if (!string_match(entryName, U".") && !string_match(entryName, U"..")) {
-					String entryPath = file_combinePaths(optimizedPath, entryName);
+					String entryPath = file_combinePaths(optimizedPath, entryName, LOCAL_PATH_SYNTAX);
 					EntryType entryType = EntryType::UnhandledType;
 					if(findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
 						entryType = EntryType::Folder;

@@ -61,11 +61,11 @@ class KeyboardEvent : public InputEvent {
 public:
 	// What the user did to the key
 	KeyboardEventType keyboardEventType;
-	// Actual characters for non-latin characters
-	char character;
+	// The raw unicode value without any encoding
+	DsrChar character;
 	// Minimal set of keys for portability
 	DsrKey dsrKey;
-	KeyboardEvent(KeyboardEventType keyboardEventType, char character, DsrKey dsrKey)
+	KeyboardEvent(KeyboardEventType keyboardEventType, DsrChar character, DsrKey dsrKey)
 	 : keyboardEventType(keyboardEventType), character(character), dsrKey(dsrKey) {}
 };
 
