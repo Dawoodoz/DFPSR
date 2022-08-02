@@ -5,12 +5,16 @@
   Follow include "", but not include <> when listing types.
 */
 
-#include "../../Source/DFPSR/includeFramework.h"
+// Only fileAPI.h is needed to also get stringAPI, bufferAPI, SafePointer.h and List.h.
+// Needs to compile and link with:
+//   DFPSR/collection/collections.cpp
+//   DFPSR/api/fileAPI.cpp
+//   DFPSR/api/bufferAPI.cpp
+//   DFPSR/api/stringAPI.cpp
+//   DFPSR/base/SafePointer.cpp
+#include "../../Source/DFPSR/api/fileAPI.h"
 
 using namespace dsr;
-
-// This program is only for maintaining the library's documentation,
-//   so it's okay to use features specific to the Linux operating system.
 
 String resourceFolderPath;
 
