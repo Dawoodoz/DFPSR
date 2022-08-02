@@ -25,15 +25,12 @@
 #ifndef DFPSR_COLLECTION_LIST
 #define DFPSR_COLLECTION_LIST
 
+#include "collections.h"
 #include <stdint.h>
 #include <vector>
 #include <algorithm>
 
 namespace dsr {
-
-// Inlined Boundchecks.h
-void nonZeroLengthCheck(int64_t length, const char* property);
-void baseZeroBoundCheck(int64_t index, int64_t length, const char* property);
 
 // TODO: Remove the std::vector dependency by reimplementing the basic features.
 
@@ -59,32 +56,32 @@ public:
 	}
 	// Post-condition: Returns the element at index from the range 0..length-1
 	T& operator[] (int64_t index) {
-		baseZeroBoundCheck(index, this->length(), "List index");
+		impl_baseZeroBoundCheck(index, this->length(), "List index");
 		return this->backend[index];
 	}
 	// Post-condition: Returns the write-protected element at index from the range 0..length-1
 	const T& operator[] (int64_t index) const {
-		baseZeroBoundCheck(index, this->length(), "List index");
+		impl_baseZeroBoundCheck(index, this->length(), "List index");
 		return this->backend[index];
 	}
 	// Post-condition: Returns a reference to the first element
 	T& first() {
-		nonZeroLengthCheck(this->length(), "Length");
+		impl_nonZeroLengthCheck(this->length(), "Length");
 		return this->backend[0];
 	}
 	// Post-condition: Returns a reference to the first element from a write protected array list
 	const T& first() const {
-		nonZeroLengthCheck(this->length(), "Length");
+		impl_nonZeroLengthCheck(this->length(), "Length");
 		return this->backend[0];
 	}
 	// Post-condition: Returns a reference to the last element
 	T& last() {
-		nonZeroLengthCheck(this->length(), "Length");
+		impl_nonZeroLengthCheck(this->length(), "Length");
 		return this->backend[this->length() - 1];
 	}
 	// Post-condition: Returns a reference to the last element from a write protected array list
 	const T& last() const {
-		nonZeroLengthCheck(this->length(), "Length");
+		impl_nonZeroLengthCheck(this->length(), "Length");
 		return this->backend[this->length() - 1];
 	}
 	// Side-effect: Removes all elements by setting the count to zero
@@ -99,8 +96,8 @@ public:
 	// Side-effect: Swap the order of two elements
 	//   Useful for moving and sorting elements
 	void swap(int64_t indexA, int64_t indexB) {
-		baseZeroBoundCheck(indexA, this->length(), "Swap index A");
-		baseZeroBoundCheck(indexB, this->length(), "Swap index B");
+		impl_baseZeroBoundCheck(indexA, this->length(), "Swap index A");
+		impl_baseZeroBoundCheck(indexB, this->length(), "Swap index B");
 		std::swap(this->backend[indexA], this->backend[indexB]);
 	}
 	// Side-effect: Adds a new element at the end

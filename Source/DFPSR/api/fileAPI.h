@@ -34,7 +34,7 @@ TODO:
 #ifndef DFPSR_API_FILE
 #define DFPSR_API_FILE
 
-#include "../api/stringAPI.h"
+#include "stringAPI.h"
 #include "bufferAPI.h"
 #if defined(WIN32) || defined(_WIN32)
 	#define USE_MICROSOFT_WINDOWS

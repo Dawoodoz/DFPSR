@@ -25,13 +25,9 @@
 #ifndef DFPSR_COLLECTION_ARRAY
 #define DFPSR_COLLECTION_ARRAY
 
-#include <stdint.h>
+#include "collections.h"
 
 namespace dsr {
-
-// Inlined Boundchecks.h
-void nonZeroLengthCheck(int64_t length, const char* property);
-void baseZeroBoundCheck(int64_t index, int64_t length, const char* property);
 
 // The simplest possible automatically deallocating array with bound checks.
 //   Indices use signed indices, which can be used directly from high-level algorithms.
@@ -48,7 +44,7 @@ public:
 	// Constructor
 	Array(const int32_t newLength, const T& defaultValue)
 	  : elementCount(newLength) {
-  		nonZeroLengthCheck(newLength, "New array length");
+  		impl_nonZeroLengthCheck(newLength, "New array length");
 		this->elements = new T[newLength];
 		for (int32_t index = 0; index < newLength; index++) {
 			this->elements[index] = defaultValue;
@@ -61,11 +57,11 @@ public:
 	~Array() { delete[] this->elements; }
 	// Element access
 	T& operator[] (const int32_t index) {
-		baseZeroBoundCheck(index, this->length(), "Array index");
+		impl_baseZeroBoundCheck(index, this->length(), "Array index");
 		return this->elements[index];
 	}
 	const T& operator[] (const int32_t index) const {
-		baseZeroBoundCheck(index, this->length(), "Array index");
+		impl_baseZeroBoundCheck(index, this->length(), "Array index");
 		return this->elements[index];
 	}
 	int32_t length() const {
