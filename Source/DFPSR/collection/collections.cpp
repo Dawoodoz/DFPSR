@@ -1,7 +1,7 @@
 ﻿
 // zlib open source license
 //
-// Copyright (c) 2019 David Forsgren Piuva
+// Copyright (c) 2019 to 2022 David Forsgren Piuva
 // 
 // This software is provided 'as-is', without any express or implied
 // warranty. In no event will the authors be held liable for any damages
@@ -26,13 +26,13 @@
 
 namespace dsr {
 
-void nonZeroLengthCheck(int64_t length, const char* property) {
+void impl_nonZeroLengthCheck(int64_t length, const char* property) {
 	if (length <= 0) {
 		throwError(property, " may not be zero!\n");
 	}
 }
 
-void baseZeroBoundCheck(int64_t index, int64_t length, const char* property) {
+void impl_baseZeroBoundCheck(int64_t index, int64_t length, const char* property) {
 	if (index < 0 || index >= length) {
 		throwError(property, " ", index, " is out of bound 0..", (length - 1), "!\n");
 	}

@@ -25,14 +25,10 @@
 #ifndef DFPSR_COLLECTION_FIELD
 #define DFPSR_COLLECTION_FIELD
 
-#include <stdint.h>
+#include "collections.h"
 #include "../math/IVector.h"
 
 namespace dsr {
-
-// Inlined Boundchecks.h
-void nonZeroLengthCheck(int64_t length, const char* property);
-void baseZeroBoundCheck(int64_t index, int64_t length, const char* property);
 
 // A 2D version of Array with built-in support for accessing elements out of bound.
 template <typename T>
@@ -44,8 +40,8 @@ public:
 	// Constructor
 	Field(const int32_t width, const int32_t height, const T& defaultValue)
 	  : elementWidth(width), elementHeight(height) {
-		nonZeroLengthCheck(width, "New array width");
-  		nonZeroLengthCheck(height, "New array height");
+		impl_nonZeroLengthCheck(width, "New array width");
+  		impl_nonZeroLengthCheck(height, "New array height");
 		int32_t size = width * height;
 		this->elements = new T[size];
 		for (int32_t index = 0; index < size; index++) {

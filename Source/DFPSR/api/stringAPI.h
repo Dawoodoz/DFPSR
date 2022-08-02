@@ -29,7 +29,7 @@
 #include <iostream>
 #include <sstream>
 #include <functional>
-#include "../api/bufferAPI.h"
+#include "bufferAPI.h"
 #include "../collection/List.h"
 
 // Define DFPSR_INTERNAL_ACCESS before any include to get internal access to exposed types
