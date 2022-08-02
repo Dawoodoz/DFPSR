@@ -1,0 +1,17 @@
+Import "../../DFPSR/DFPSR.DsrHead"
+
+# The library uses C++14 by default, but you can override it with a newer version as well.
+CompilerFlag "-std=c++14"
+
+if Linux
+	CompilerPath = "g++"
+end
+if Windows
+	# Replace CompilerPath if you did not install the 64-bit MinGW distribution of CodeBlocks in C:\Program\CodeBlocks
+	CompilerPath = "C:/Program/CodeBlocks/MinGW/bin/x86_64-w64-mingw32-g++.exe"
+end
+
+Compile "main.cpp"
+ProgramPath = "wizard"
+
+ListDependencies = 0

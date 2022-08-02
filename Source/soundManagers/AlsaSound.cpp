@@ -3,7 +3,7 @@
 //   Install on Arch: sudo pacman -S libasound-dev
 //   Install on Debian: sudo apt-get install libasound-dev
 
-#include "../../dfpsr/Source/DFPSR/includeFramework.h"
+#include "../DFPSR/includeFramework.h"
 #include "soundManagers.h"
 #include <alsa/asoundlib.h>
 

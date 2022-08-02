@@ -242,6 +242,17 @@ ReadableString file_getPathlessName(const ReadableString &path) {
 	return string_after(path, getLastSeparator(path, -1));
 }
 
+ReadableString file_getExtension(const String& filename) {
+	int64_t lastDotIndex = string_findLast(filename, U'.');
+	int64_t lastSeparatorIndex = getLastSeparator(filename, -1);
+	// Only use the last dot if there is no folder separator after it.
+	if (lastDotIndex != -1 && lastSeparatorIndex < lastDotIndex) {
+		return string_removeOuterWhiteSpace(string_after(filename, lastDotIndex));
+	} else {
+		return U"";
+	}
+}
+
 String file_getRelativeParentFolder(const ReadableString &path, PathSyntax pathSyntax) {
 	String optimizedPath = file_optimizePath(path, pathSyntax);
 	if (string_length(optimizedPath) == 0) {
