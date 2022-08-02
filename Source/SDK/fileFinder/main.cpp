@@ -1,15 +1,5 @@
 ﻿
-// A file finding application showing how to use the filesystem wrapper in the file API using C++ 2017.
-
-/*
-TODO:
- * Function for getting EntryType from a path.
- * Implement file_getParent, getting the parent folder or root path, so that it's easy to iterate the other way.
- * Something for listing root paths, so that systems with more than one system root can have a listbox with drives to select in file explorers.
- * Wrap file_getPermissions
- * Wrap file_moveAndRename (over std::filesystem::rename)
- * Wrap copy (over std::filesystem::copy)
-*/
+// A file finding application showing how to use the filesystem wrapper in the file API using C++ 2014.
 
 #include "../../DFPSR/includeFramework.h"
 
