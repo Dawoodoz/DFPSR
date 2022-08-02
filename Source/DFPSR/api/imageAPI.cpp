@@ -106,20 +106,11 @@ Buffer dsr::image_encode(const ImageRgbaU8 &image, ImageFileFormat format, int q
 	}
 }
 
-static ReadableString getFileExtension(const String& filename) {
-	int lastDotIndex = string_findLast(filename, U'.');
-	if (lastDotIndex != -1) {
-		return string_removeOuterWhiteSpace(string_after(filename, lastDotIndex));
-	} else {
-		return U"?";
-	}
-}
-
 static ImageFileFormat detectImageFileExtension(const String& filename) {
 	ImageFileFormat result = ImageFileFormat::Unknown;
 	int lastDotIndex = string_findLast(filename, U'.');
 	if (lastDotIndex != -1) {
-		ReadableString extension = string_upperCase(getFileExtension(filename));
+		ReadableString extension = string_upperCase(file_getExtension(filename));
 		if (string_match(extension, U"JPG") || string_match(extension, U"JPEG")) {
 			result = ImageFileFormat::JPG;
 		} else if (string_match(extension, U"PNG")) {
@@ -137,7 +128,7 @@ bool dsr::image_save(const ImageRgbaU8 &image, const String& filename, bool must
 	ImageFileFormat extension = detectImageFileExtension(filename);
 	Buffer buffer;
 	if (extension == ImageFileFormat::Unknown) {
-		ReadableString extension = getFileExtension(filename);
+		ReadableString extension = file_getExtension(filename);
 		if (mustWork) { throwError(U"The extension *.", extension, " in ", filename, " is not a supported image format.\n"); }
 		return false;
 	} else {

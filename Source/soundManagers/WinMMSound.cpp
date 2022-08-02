@@ -1,7 +1,7 @@
 ﻿
 // Use -lwinmm for linking to the winmm library in GCC/G++
 
-#include "../../dfpsr/Source/DFPSR/includeFramework.h"
+#include "../DFPSR/includeFramework.h"
 #include "soundManagers.h"
 #include <windows.h>
 #include <mmsystem.h>

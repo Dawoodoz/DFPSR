@@ -129,7 +129,6 @@ static ReadableString getExtensionless(const String& filename) {
 
 void processFolder(const ReadableString& sourceFolderPath, const ReadableString& targetFolderPath) {
 	file_getFolderContent(sourceFolderPath, [targetFolderPath](const ReadableString& sourcePath, const ReadableString& entryName, EntryType entryType) {
-		printText("* Entry: ", entryName, " as ", entryType, "\n");
 		if (entryType == EntryType::Folder) {
 			// TODO: Create new output folders if needed for nested output.
 			//processFolder(sourcePath, file_combinePaths(targetFolderPath, entryName));

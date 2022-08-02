@@ -59,6 +59,20 @@ On Posix, you can have a path beginning with:
 </P><P>
 * A relative path beginning from the current directory, such as folder/files/document.txt
 </P><IMG SRC="Images/Border.png"><P>
+</P><H2> Best practice</H2><P>Store paths in relative form when you want things to work across different computers, but remember that relative paths are usually relative to the location from which the application was called, which is usually the desktop from where the shortcut started the program.
+If your application worked fine while building it from the same folder, but crashes from not finding resources when called from a shortcut, you need to handle your current path somehow.
+
+</P><P>
+Use absolute paths when you are working on one computer but often needs to access a file from different locations.
+
+</P><P>
+Use relative paths when you either want to process files specified by the user, or convert paths into absolute form using a theoretical path before use.
+
+</P><P>
+Use file_setCurrentPath(file_getApplicationFolder()); on start-up if you often forget to convert your relative paths into absolute paths.
+Changing the current path is bad practice because it prevents you from using paths relative to the caller origin, but it is also the easiest way to handle all paths relative to the application if you really don't need to access files from the caller's path.
+A compromise is to convert any paths from command line arguments into absolute paths before overwriting the current path with the application path.
+</P><IMG SRC="Images/Border.png"><P>
 </P><H2> Saving and loading</H2><P>
 </P><P>
 file_loadBuffer and file_saveBuffer are the main functions for saving and loading buffers of binary data.

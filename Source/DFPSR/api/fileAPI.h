@@ -153,8 +153,14 @@ namespace dsr {
 
 	// Path-syntax: This trivial operation should work the same independent of operating system.
 	//              Otherwise you just have to add a new argument after upgrading the static library.
-	// Returns the local name of the file or folder after the last path separator, or the whole path if no separator was found.
+	// Post-condition: Returns the local name of the file or folder after the last path separator, or the whole path if no separator was found.
 	ReadableString file_getPathlessName(const ReadableString &path);
+
+	// Path-syntax: This trivial operation should work the same independent of operating system.
+	// Post-condition: Returns the filename's extension, or U"" if there is none.
+	// This function can not tell if something is a folder or not, because there are file types on Posix systems that have no extension either.
+	//   Use file_getEntryType instead if you want to know if it's a file or folder.
+	ReadableString file_getExtension(const String& filename);
 
 	// Quickly gets the relative parent folder by removing the last entry from the string or appending .. at the end.
 	// Path-syntax: Depends on pathSyntax argument.
@@ -205,10 +211,6 @@ namespace dsr {
 	//               entryType equals file_getEntryType(entryPath).
 	// Post-condition: Returns true iff the folder could be found.
 	bool file_getFolderContent(const ReadableString& folderPath, std::function<void(const ReadableString& entryPath, const ReadableString& entryName, EntryType entryType)> action);
-
-
-
-	// Functions below are for testing and simulation of other systems by substituting the current directory and operating system with manual settings.
 
 	// A theoretical version of file_getParentFolder for evaluation on a theoretical system without actually calling file_getCurrentPath or running on the given system.
 	// Path-syntax: Depends on pathSyntax argument.

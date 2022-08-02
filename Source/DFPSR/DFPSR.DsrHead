@@ -1,0 +1,56 @@
+# A project header for using the DFPSR library.
+#   Backends:
+#     * Give the Graphics flag if the application should be able to create a window.
+#     * Give the Sound flag if the application should be able to generate sounds.
+#   Systems:
+#     * Give the Linux flag when compiling on Linux or similar Posix systems having the same dependencies installed.
+#     * Give the Windows flag when compiling on Microsoft Windows.
+#   Strings use a subset of the C standard for mangling, so \\ is used to write \.
+#     You can also use / and let the file abstraction layer convert it into \ automatically when running on Windows.
+
+if Linux
+	message "Building for Linux\n"
+end
+if Windows
+	message "Building for Windows\n"
+end
+
+# Change this if the compiler uses a different prefix for linking a library.
+linkerPrefix = "-l"
+
+# Paths are relative to the current script, even if imported somewhere else
+#   so we use .. to leave the Source/DFPSR folder and then go into the windowManagers folder.
+WindowManager = "../windowManagers/NoWindow.cpp"
+if Graphics
+	message "Building with graphics enabled"
+	if Linux
+		message "  Using X11\n"
+		LinkerFlag linkerPrefix & "X11"
+		WindowManager = "../windowManagers/X11Window.cpp"
+	end
+	if Windows
+		message "  Using Win32\n"
+		LinkerFlag linkerPrefix & "gdi32"
+		LinkerFlag linkerPrefix & "user32"
+		LinkerFlag linkerPrefix & "kernel32"
+		LinkerFlag linkerPrefix & "comctl32"
+		WindowManager = "../windowManagers/Win32Window.cpp"
+	end
+end
+Compile WindowManager
+
+SoundManager = "../soundManagers/NoSound.cpp"
+if Sound
+	message "Building with sound enabled"
+	if Linux
+		message "  Using Alsa\n"
+		LinkerFlag linkerPrefix & "asound"
+		SoundManager = "../soundManagers/AlsaSound.cpp"
+	end
+	if Windows
+		message "  Using WinMM\n"
+		LinkerFlag linkerPrefix & "winmm"
+		SoundManager = "../soundManagers/WinMMSound.cpp"
+	end
+end
+Compile SoundManager
