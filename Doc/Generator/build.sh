@@ -22,4 +22,4 @@ ${ROOT_PATH}/tools/build.sh "${PROJECT_FOLDER}" "${TARGET_FILE}" "${ROOT_PATH}" 
 
 # Execute the generation script to see the changes
 chmod +x gen.sh
-./gen.sh ./Input .. ./Resources/
+./gen.sh
