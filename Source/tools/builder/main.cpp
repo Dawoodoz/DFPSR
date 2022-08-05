@@ -1,16 +1,25 @@
 ﻿
+// Because it would be slow to check if the build system needs to be recompiled every time something uses it,
+//   you must manually delete the build system's binary and try to build a project using it after making changes to the builder's source code.
+//   Otherwise buildProject.sh will just see that an old version exists and use it.
+
 // TODO:
 //  * Let the build script define a temporary folder path for lazy compilation with reused *.o files.
 //    The /tmp folder is erased when shutting down the computer, which would force recompilation of each library after each time the computer has rebooted.
 //  * Find a way to check if a file is truly unique using a combination of pathless filenames, content checksums and visibility of surrounding files from the folder.
 //    This makes sure that including the same file twice using alternative ways of writing the path can be detected and trigger a warning.
 //    Can one convert the file ID from each platform into a string or 64-bit hash sum to quickly make sure that the file is unique?
-//  * Create scripts compiling the build system when it does not exist and managing creation of a temporary folder, calling the generated script...
 //  * Implement more features for the machine, such as:
 //    * Unary negation.
 //    * else and elseif cases.
 //    * Temporarily letting the theoretical path go into another folder within a scope, similar to if statements but only affecting the path.
 //      Like writing (cd path; stmt;) in Bash but with fast parsed Basic-like syntax.
+//      The same stack used to store theoretical paths might be useful for else if cases to remember when the scope has already passed a case when not jumping with gotos.
+//  * Create portable scripted events for pre-build and post-build, translated into both Batch and Bash.
+//    Pre-build can be used to generate and transpile code before compiling.
+//    Post-build should be used to execute the resulting program.
+//      Optionally with variables from the build script as input arguments.
+//  * Should the build system detect the local system automatically, or support cross compilation using a MinGW extension?
 
 #include "../../DFPSR/api/fileAPI.h"
 #include "generator.h"

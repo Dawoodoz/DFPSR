@@ -273,6 +273,7 @@ void generateCompilationScript(const Machine &settings, const ReadableString& pr
 		return;
 	}
 	String compiledFiles;
+	bool hasSourceCode = false;
 	bool needCppCompiler = false;
 	for (int d = 0; d < dependencies.length(); d++) {
 		Extension extension = dependencies[d].extension;
@@ -285,23 +286,29 @@ void generateCompilationScript(const Machine &settings, const ReadableString& pr
 			string_append(compiledFiles, U" ", sourcePath);
 			if (file_getEntryType(sourcePath) != EntryType::File) {
 				throwError(U"The source file ", sourcePath, U" could not be found!\n");
+			} else {
+				hasSourceCode = true;
 			}
 		}
 	}
-	// TODO: Give a warning if a known C compiler incapable of handling C++ is given C++ source code when needCppCompiler is true.
-	script_printMessage(output, language, string_combine(U"Compiling with", compilerFlags, linkerFlags));
-	string_append(output, compilerName, U" -o ", binaryPath, compilerFlags, linkerFlags, " ", compiledFiles, U"\n");
-	script_printMessage(output, language, U"Done compiling.");
-	script_printMessage(output, language, string_combine(U"Starting ", binaryPath));
-	script_executeLocalBinary(output, language, binaryPath);
-	script_printMessage(output, language, U"The program terminated.");
-	if (language == ScriptLanguage::Batch) {
-		// Windows might close the window before you have time to read the results or error messages of a CLI application, so pause at the end.
-		string_append(output, U"pause\n");
-	}
-	if (language == ScriptLanguage::Batch) {
-		string_save(scriptPath, output);
-	} else if (language == ScriptLanguage::Bash) {
-		string_save(scriptPath, output, CharacterEncoding::BOM_UTF8, LineEncoding::Lf);
+	if (hasSourceCode) {
+		// TODO: Give a warning if a known C compiler incapable of handling C++ is given C++ source code when needCppCompiler is true.
+		script_printMessage(output, language, string_combine(U"Compiling with", compilerFlags, linkerFlags));
+		string_append(output, compilerName, U" -o ", binaryPath, compilerFlags, linkerFlags, " ", compiledFiles, U"\n");
+		script_printMessage(output, language, U"Done compiling.");
+		script_printMessage(output, language, string_combine(U"Starting ", binaryPath));
+		script_executeLocalBinary(output, language, binaryPath);
+		script_printMessage(output, language, U"The program terminated.");
+		if (language == ScriptLanguage::Batch) {
+			// Windows might close the window before you have time to read the results or error messages of a CLI application, so pause at the end.
+			string_append(output, U"pause\n");
+		}
+		if (language == ScriptLanguage::Batch) {
+			string_save(scriptPath, output);
+		} else if (language == ScriptLanguage::Bash) {
+			string_save(scriptPath, output, CharacterEncoding::BOM_UTF8, LineEncoding::Lf);
+		}
+	} else {
+		printText("Filed to find any source code to compile.\n");
 	}
 }

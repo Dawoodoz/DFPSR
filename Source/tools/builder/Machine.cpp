@@ -189,11 +189,11 @@ static void interpretLine(Machine &target, List<String> &tokens, const dsr::Read
 					target.activeStackDepth++;
 				}
 				target.currentStackDepth++;
-			} else if (string_caseInsensitiveMatch(first, U"end")) {
+			} else if (string_caseInsensitiveMatch(first, U"end") && string_caseInsensitiveMatch(second, U"if")) {
 				// End if statement
 				target.currentStackDepth--;
 				target.activeStackDepth = target.currentStackDepth;
-			} else if (string_caseInsensitiveMatch(first, U"compile")) {
+			} else if (string_caseInsensitiveMatch(first, U"crawl")) {
 				// The right hand expression is evaluated into a path relative to the build script and used as the root for searching for source code.
 				analyzeSource(PATH_EXPR(1, tokens.length() - 1));
 			} else if (string_caseInsensitiveMatch(first, U"linkerflag")) {
@@ -222,7 +222,7 @@ static void interpretLine(Machine &target, List<String> &tokens, const dsr::Read
 		} else {
 			if (string_caseInsensitiveMatch(first, U"if")) {
 				target.currentStackDepth++;
-			} else if (string_caseInsensitiveMatch(first, U"end")) {
+			} else if (string_caseInsensitiveMatch(first, U"end") && string_caseInsensitiveMatch(second, U"if")) {
 				target.currentStackDepth--;
 			}
 		}
