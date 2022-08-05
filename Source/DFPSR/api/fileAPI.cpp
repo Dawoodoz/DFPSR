@@ -431,21 +431,16 @@ String file_combinePaths(const ReadableString &a, const ReadableString &b, PathS
 // Used for converting drive relative paths into true absolute paths on MS-Windows.
 static String applyDriveLetter(const ReadableString &path, const ReadableString &currentPath) {
 	// Convert implicit drive into a named drive.
-	printText("applyDriveLetter(", path, ", ", currentPath, ")\n");
 	if (path[0] == U'\\') {
-		printText("  Implicit drive.\n");
 		int64_t colonIndex = string_findFirst(currentPath, U':', -1);
 		if (colonIndex == -1) {
-			printText("  No colon found!\n");
 			return U"?";
 		} else {
 			// Get the drive letter from the current path.
 			String drive = string_until(currentPath, colonIndex);
-			printText("  drive = ", drive, "\n");
 			return string_combine(drive, path);
 		}
 	} else {
-		printText("  Already absolute.\n");
 		// Already absolute.
 		return path;
 	}

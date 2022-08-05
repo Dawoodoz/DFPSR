@@ -148,13 +148,13 @@ static String evaluateExpression(Machine &target, List<String> &tokens, int64_t 
 static void analyzeSource(const dsr::ReadableString &absolutePath) {
 	EntryType pathType = file_getEntryType(absolutePath);
 	if (pathType == EntryType::File) {
-		printText(U"  Using source from ", absolutePath, U".\n");
+		printText(U"Using source from ", absolutePath, U".\n");
 		analyzeFromFile(absolutePath);
 	} else if (pathType == EntryType::Folder) {
 		// TODO: Being analyzing from each source file in the folder recursively.
 		//       Each file that is already included will quickly be ignored.
 		//       The difficult part is that exploring a folder returns files in non-deterministic order and GNU's compiler is order dependent.
-		printText(U"  Searching for source code from the folder ", absolutePath, U" is not yet supported due to order dependent linking!\n");
+		printText(U"Searching for source code from the folder ", absolutePath, U" is not yet supported due to order dependent linking!\n");
 	} else if (pathType == EntryType::SymbolicLink) {
 		// Symbolic links can point to both files and folder, so we need to follow it and find out what it really is.
 		analyzeSource(file_followSymbolicLink(absolutePath));
@@ -196,8 +196,13 @@ static void interpretLine(Machine &target, List<String> &tokens, const dsr::Read
 			} else if (string_caseInsensitiveMatch(first, U"crawl")) {
 				// The right hand expression is evaluated into a path relative to the build script and used as the root for searching for source code.
 				analyzeSource(PATH_EXPR(1, tokens.length() - 1));
-			} else if (string_caseInsensitiveMatch(first, U"linkerflag")) {
-				target.linkerFlags.push(STRING_EXPR(1, tokens.length() - 1));
+			} else if (string_caseInsensitiveMatch(first, U"link")) {
+				// Only the path name itself is needed, so any redundant -l prefixes will be stripped away.
+				String libraryName = STRING_EXPR(1, tokens.length() - 1);
+				if (libraryName[0] == U'-' && (libraryName[1] == U'l' || libraryName[1] == U'L')) {
+					libraryName = string_after(libraryName, 2);
+				}
+				target.linkerFlags.push(libraryName);
 			} else if (string_caseInsensitiveMatch(first, U"compilerflag")) {
 				target.compilerFlags.push(STRING_EXPR(1, tokens.length() - 1));
 			} else if (string_caseInsensitiveMatch(first, U"message")) {
