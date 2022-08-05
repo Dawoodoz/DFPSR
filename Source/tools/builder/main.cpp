@@ -45,10 +45,12 @@ void dsrMain(List<String> args) {
 			int64_t assignmentIndex = string_findFirst(argument, U'=');
 			if (assignmentIndex == -1) {
 				assignValue(settings, argument, U"1");
+				printText(U"Assigning ", argument, U" to 1 from input argument.\n");
 			} else {
 				String key = string_removeOuterWhiteSpace(string_before(argument, assignmentIndex));
 				String value = string_removeOuterWhiteSpace(string_after(argument, assignmentIndex));
 				assignValue(settings, key, value);
+				printText(U"Assigning ", key, U" to ", value, U" from input argument.\n");
 			}
 		}
 		// Evaluate compiler settings while searching for source code mentioned in the project and imported headers.

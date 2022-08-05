@@ -232,20 +232,56 @@ static void script_executeLocalBinary(String &output, ScriptLanguage language, c
 	if (language == ScriptLanguage::Batch) {
 		string_append(output, code, ".exe\n");
 	} else if (language == ScriptLanguage::Bash) {
-		string_append(output, file_combinePaths(U".", code), U"\n");
+		string_append(output, file_combinePaths(U".", code), U";\n");
 	}
 }
 
+// TODO: Make a checksum for binary buffers too, so that changes can be detected in a dependency graph for lazy compilation.
+static uint64_t checksum(const ReadableString& text) {
+	uint64_t a = 0x8C2A03D4;
+	uint64_t b = 0xF42B1583;
+	uint64_t c = 0xA6815E74;
+	uint64_t d = 0;
+	for (int i = 0; i < string_length(text); i++) {
+		a = (b * c + ((i * 3756 + 2654) & 58043)) & 0xFFFFFFFF;
+		b = (231 + text[i] * (a & 154) + c * 867 + 28294061) & 0xFFFFFFFF;
+		c = (a ^ b ^ (text[i] * 1543217521)) & 0xFFFFFFFF;
+		d = d ^ (a << 32) ^ b ^ (c << 16);
+	}
+	return d;
+}
+
+struct SourceObject {
+	// TODO: Assert that there are no name collisions between identity checksums.
+	uint64_t identityChecksum = 0; // Identification number for the object's name.
+	// TODO: Content checksum, dependency checksum.
+	String sourcePath, objectPath;
+	SourceObject(const ReadableString& sourcePath, const ReadableString& tempFolder, const ReadableString& identity)
+	: identityChecksum(checksum(identity)), sourcePath(sourcePath) {
+		// TODO: Include compiler flags in the checksum.
+		this->objectPath = file_combinePaths(tempFolder, string_combine(U"dfpsr_builder_", identityChecksum, U".o"));
+	}
+};
+
 void generateCompilationScript(const Machine &settings, const ReadableString& projectPath) {
 	ReadableString scriptPath = getFlag(settings, U"ScriptPath", U"");
+	ReadableString tempFolder = file_getAbsoluteParentFolder(scriptPath);
 	if (string_length(scriptPath) == 0) {
-		printText(U"No script path was given, skipping script generation");
+		printText(U"No script path was given, skipping script generation\n");
 		return;
 	}
 	ScriptLanguage language = identifyLanguage(scriptPath);
 	scriptPath = file_getTheoreticalAbsolutePath(scriptPath, projectPath);
 	// The compiler is often a global alias, so the user must supply either an alias or an absolute path.
 	ReadableString compilerName = getFlag(settings, U"Compiler", U"g++"); // Assume g++ as the compiler if not specified.
+	ReadableString compileFrom = getFlag(settings, U"CompileFrom", U"");
+	// Check if the build system was asked to run the compiler from a specific folder.
+	bool changePath = (string_length(compileFrom) > 0);
+	if (changePath) {
+		printText(U"Using ", compilerName, " as the compiler executed from ", compileFrom, ".\n");
+	} else {
+		printText(U"Using ", compilerName, " as the compiler from the current directory.\n");
+	}
 
 	// Convert lists of linker and compiler flags into strings.
 	// TODO: Give a warning if two contradictory flags are used, such as optimization levels and language versions.
@@ -256,11 +292,11 @@ void generateCompilationScript(const Machine &settings, const ReadableString& pr
 	}
 	String linkerFlags;
 	for (int i = 0; i < settings.linkerFlags.length(); i++) {
-		string_append(linkerFlags, " ", settings.linkerFlags[i]);
+		string_append(linkerFlags, " -l", settings.linkerFlags[i]);
 	}
 
 	// Interpret ProgramPath relative to the project path.
-	ReadableString binaryPath = getFlag(settings, U"ProgramPath", language == ScriptLanguage::Batch ? U"program.exe" : U"program"); 
+	ReadableString binaryPath = getFlag(settings, U"ProgramPath", language == ScriptLanguage::Batch ? U"program.exe" : U"program");
 	binaryPath = file_getTheoreticalAbsolutePath(binaryPath, projectPath);
 
 	String output;
@@ -272,7 +308,7 @@ void generateCompilationScript(const Machine &settings, const ReadableString& pr
 		printText(U"The type of script could not be identified for ", scriptPath, U"!\nUse *.bat for Batch or *.sh for Bash.\n");
 		return;
 	}
-	String compiledFiles;
+	List<SourceObject> sourceObjects;
 	bool hasSourceCode = false;
 	bool needCppCompiler = false;
 	for (int d = 0; d < dependencies.length(); d++) {
@@ -283,7 +319,7 @@ void generateCompilationScript(const Machine &settings, const ReadableString& pr
 		if (extension == Extension::C || extension == Extension::Cpp) {
 			// Dependency paths are already absolute from the recursive search.
 			String sourcePath = dependencies[d].path;
-			string_append(compiledFiles, U" ", sourcePath);
+			sourceObjects.pushConstruct(sourcePath, tempFolder, string_combine(sourcePath, compilerFlags, projectPath));
 			if (file_getEntryType(sourcePath) != EntryType::File) {
 				throwError(U"The source file ", sourcePath, U" could not be found!\n");
 			} else {
@@ -293,8 +329,30 @@ void generateCompilationScript(const Machine &settings, const ReadableString& pr
 	}
 	if (hasSourceCode) {
 		// TODO: Give a warning if a known C compiler incapable of handling C++ is given C++ source code when needCppCompiler is true.
-		script_printMessage(output, language, string_combine(U"Compiling with", compilerFlags, linkerFlags));
-		string_append(output, compilerName, U" -o ", binaryPath, compilerFlags, linkerFlags, " ", compiledFiles, U"\n");
+		if (changePath) {
+			// Go into the requested folder.
+			if (language == ScriptLanguage::Batch) {
+				string_append(output,  "pushd ", compileFrom, "\n");
+			} else if (language == ScriptLanguage::Bash) {
+				string_append(output, U"(cd ", compileFrom, ";\n");
+			}
+		}
+		String allObjects;
+		for (int i = 0; i < sourceObjects.length(); i++) {
+			script_printMessage(output, language, string_combine(U"Compiling ", sourceObjects[i].sourcePath, U" ID:", sourceObjects[i].identityChecksum, U" with ", compilerFlags, U"."));
+			string_append(output, compilerName, compilerFlags, U" -c ", sourceObjects[i].sourcePath, U" -o ", sourceObjects[i].objectPath, U"\n");
+			string_append(allObjects, U" ", sourceObjects[i].objectPath);
+		}
+		script_printMessage(output, language, string_combine(U"Linking with ", linkerFlags, U"."));
+		string_append(output, compilerName, allObjects, linkerFlags, U" -o ", binaryPath, U"\n");
+		if (changePath) {
+			// Get back to the previous folder.
+			if (language == ScriptLanguage::Batch) {
+				string_append(output,  "popd\n");
+			} else if (language == ScriptLanguage::Bash) {
+				string_append(output, U")\n");
+			}
+		}
 		script_printMessage(output, language, U"Done compiling.");
 		script_printMessage(output, language, string_combine(U"Starting ", binaryPath));
 		script_executeLocalBinary(output, language, binaryPath);
