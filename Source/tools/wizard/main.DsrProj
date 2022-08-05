@@ -1,0 +1,21 @@
+# This project will use both sound and graphics, so we default initialize them to 1 before evaluating the library's header.
+# The caller should provide the operating system's name (Windows, Linux)
+message "Starting main.DsrProj\n"
+Graphics
+Sound
+Import "../../DFPSR/DFPSR.DsrHead"
+
+# The library uses C++14 by default, but you can override it with a newer version as well.
+CompilerFlag "-std=c++14"
+
+# Find source code included by main recursively across header and implementation files with the same names.
+Crawl "main.cpp"
+
+# Enable if you want to see which includes and connected names are used to find source code.
+ListDependencies
+
+# Extensionless path to the generated binary for this project.
+# Will automatically be named on each operating system.
+ProgramPath = "wizard"
+
+message "Ending main.DsrProj\n"

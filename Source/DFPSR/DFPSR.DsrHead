@@ -10,10 +10,10 @@
 
 if Linux
 	message "Building for Linux\n"
-end
+end if
 if Windows
 	message "Building for Windows\n"
-end
+end if
 
 # Change this if the compiler uses a different prefix for linking a library.
 linkerPrefix = "-l"
@@ -27,7 +27,7 @@ if Graphics
 		message "  Using X11\n"
 		LinkerFlag linkerPrefix & "X11"
 		WindowManager = "../windowManagers/X11Window.cpp"
-	end
+	end if
 	if Windows
 		message "  Using Win32\n"
 		LinkerFlag linkerPrefix & "gdi32"
@@ -35,9 +35,9 @@ if Graphics
 		LinkerFlag linkerPrefix & "kernel32"
 		LinkerFlag linkerPrefix & "comctl32"
 		WindowManager = "../windowManagers/Win32Window.cpp"
-	end
-end
-Compile WindowManager
+	end if
+end if
+Crawl WindowManager
 
 SoundManager = "../soundManagers/NoSound.cpp"
 if Sound
@@ -46,11 +46,11 @@ if Sound
 		message "  Using Alsa\n"
 		LinkerFlag linkerPrefix & "asound"
 		SoundManager = "../soundManagers/AlsaSound.cpp"
-	end
+	end if
 	if Windows
 		message "  Using WinMM\n"
 		LinkerFlag linkerPrefix & "winmm"
 		SoundManager = "../soundManagers/WinMMSound.cpp"
-	end
-end
-Compile SoundManager
+	end if
+end if
+Crawl SoundManager
