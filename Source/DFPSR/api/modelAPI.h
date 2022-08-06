@@ -30,6 +30,7 @@
 // TODO: How should these be exposed to the caller?
 #include "../render/Camera.h"
 #include "../render/ResourcePool.h"
+#include "../render/model/format/dmf1.h"
 
 namespace dsr {
 	// Normalized texture coordinates:
@@ -382,10 +383,8 @@ namespace dsr {
 	//       Remove any textures that are not used by the shaders.
 	//       The fixed pipeline only checks which textures are used.
 	//   * Make sure that texture names are spelled case sensitive or they might not be found on some operating systems like Linux.
-	// See renderer/model/format/dmf1.cpp for the implementation. (It does not exist in api/modelAPI.cpp)
 	Model importFromContent_DMF1(const String &fileContent, ResourcePool &pool, int detailLevel = 2);
 
 }
 
 #endif
-
