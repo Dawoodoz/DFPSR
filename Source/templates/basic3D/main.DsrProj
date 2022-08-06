@@ -1,0 +1,9 @@
+﻿CompilerFlag "-std=c++14"
+Graphics
+Sound
+Crawl "main.cpp"
+Import "../../DFPSR/DFPSR.DsrHead"
+ProgramPath = "application"
+
+# Uncomment to enable debug mode, which is slower
+#Debug
