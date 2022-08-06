@@ -36,8 +36,4 @@ void stopSound(int64_t playerID);
 // Stop all sounds at once
 void stopAllSounds();
 
-// Visualization
-void drawEnvelope(dsr::ImageRgbaU8 target, const dsr::IRect &region, const EnvelopeSettings &envelopeSettings, double releaseTime, double viewTime);
-void drawSound(dsr::ImageRgbaU8 target, const dsr::IRect &region, int soundIndex);
-
 #endif
