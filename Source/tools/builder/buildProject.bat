@@ -1,6 +1,6 @@
 @echo off
 
-rem Using buildProject.sh
+rem Using buildProject.bat
 rem   %1 must be the *.DsrProj path, which is relative to the caller location.
 rem   %2... are variable assignments sent as input to the given project file.
 rem   CPP_COMPILER_PATH should be modified if it does not already refer to an installed C++ compiler.
@@ -19,7 +19,7 @@ echo BUILDER_SOURCE = %BUILDER_SOURCE%
 
 set CPP_COMPILER_FOLDER=C:\Program\CodeBlocks\MinGW\bin
 set CPP_COMPILER_PATH=%CPP_COMPILER_FOLDER%\x86_64-w64-mingw32-g++.exe
-echo Change CPP_COMPILER_FOLDER and CPP_COMPILER_PATH in %BUILDER_FOLDER%\buildProject.sh if you are not using %CPP_COMPILER_PATH% as your compiler.
+echo Change CPP_COMPILER_FOLDER and CPP_COMPILER_PATH in %BUILDER_FOLDER%\buildProject.bat if you are not using %CPP_COMPILER_PATH% as your compiler.
 
 rem Check if the build system is compiled
 if exist %BUILDER_EXECUTABLE% (

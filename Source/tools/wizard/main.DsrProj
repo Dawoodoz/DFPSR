@@ -8,10 +8,11 @@ Import "../../DFPSR/DFPSR.DsrHead"
 # The DFPSR library uses C++14 as a minimum requirement, but you can use newer versions as well.
 CompilerFlag "-std=c++14"
 
-# Using static linking to avoid having to install standard libraries.
-CompilerFlag "-static"
-CompilerFlag "-static-libgcc"
-CompilerFlag "-static-libstdc++"
+# Linking statically to standard C/C++ libraries allow running the program without installing them.
+#   Recommended for making an installer for another application or programs that should not need an installer.
+# If you don't want static linking of standard C/C++ libraries, you have to comment out StaticRuntime
+#   and bundle the C/C++ runtime of the compiler with your program's installer.
+StaticRuntime
 
 # Find source code included by main recursively across header and implementation files with the same names.
 Crawl "main.cpp"
