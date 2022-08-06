@@ -32,6 +32,12 @@ static uint64_t checksum(const Buffer& buffer) {
 	return d;
 }
 
+enum class ScriptLanguage {
+	Unknown,
+	Batch,
+	Bash
+};
+
 struct Connection {
 	String path;
 	int64_t lineNumber = -1;
@@ -327,7 +333,6 @@ void generateCompilationScript(const Machine &settings, const ReadableString& pr
 	} else {
 		printText(U"Using ", compilerName, " as the compiler from the current directory.\n");
 	}
-
 	// Convert lists of linker and compiler flags into strings.
 	// TODO: Give a warning if two contradictory flags are used, such as optimization levels and language versions.
 	// TODO: Make sure that no spaces are inside of the flags, because that can mess up detection of pre-existing and contradictory arguments.
@@ -335,14 +340,29 @@ void generateCompilationScript(const Machine &settings, const ReadableString& pr
 	for (int i = 0; i < settings.compilerFlags.length(); i++) {
 		string_append(compilerFlags, " ", settings.compilerFlags[i]);
 	}
+	// TODO: Warn if -DNDEBUG, -DDEBUG, or optimization levels are given directly.
+	//       Using the variables instead is both more flexible by accepting input arguments
+	//       and keeping the same format to better reuse compiled objects.
+	ReadableString debugMode = getFlag(settings, U"Debug", U"0");
+	if (string_match(debugMode, U"0")) {
+		printText(U"Building with release mode.\n");
+		string_append(compilerFlags, " -DNDEBUG");
+	} else {
+		printText(U"Building with debug mode.\n");
+		string_append(compilerFlags, " -DDEBUG");
+	}
+	ReadableString optimizationLevel = getFlag(settings, U"Optimization", U"2");
+		printText(U"Building with optimization level ", optimizationLevel, U".\n");
+	string_append(compilerFlags, " -O", optimizationLevel);
+
 	String linkerFlags;
 	for (int i = 0; i < settings.linkerFlags.length(); i++) {
 		string_append(linkerFlags, " -l", settings.linkerFlags[i]);
 	}
 
 	// Interpret ProgramPath relative to the project path.
-	ReadableString binaryPath = getFlag(settings, U"ProgramPath", language == ScriptLanguage::Batch ? U"program.exe" : U"program");
-	binaryPath = file_getTheoreticalAbsolutePath(binaryPath, projectPath);
+	ReadableString programPath = getFlag(settings, U"ProgramPath", language == ScriptLanguage::Batch ? U"program.exe" : U"program");
+	programPath = file_getTheoreticalAbsolutePath(programPath, projectPath);
 
 	String output;
 	if (language == ScriptLanguage::Batch) {
@@ -407,7 +427,7 @@ void generateCompilationScript(const Machine &settings, const ReadableString& pr
 			string_append(allObjects, U" ", sourceObjects[i].objectPath);
 		}
 		script_printMessage(output, language, string_combine(U"Linking with ", linkerFlags, U"."));
-		string_append(output, compilerName, allObjects, linkerFlags, U" -o ", binaryPath, U"\n");
+		string_append(output, compilerName, allObjects, linkerFlags, U" -o ", programPath, U"\n");
 		if (changePath) {
 			// Get back to the previous folder.
 			if (language == ScriptLanguage::Batch) {
@@ -417,8 +437,8 @@ void generateCompilationScript(const Machine &settings, const ReadableString& pr
 			}
 		}
 		script_printMessage(output, language, U"Done compiling.");
-		script_printMessage(output, language, string_combine(U"Starting ", binaryPath));
-		script_executeLocalBinary(output, language, binaryPath);
+		script_printMessage(output, language, string_combine(U"Starting ", programPath));
+		script_executeLocalBinary(output, language, programPath);
 		script_printMessage(output, language, U"The program terminated.");
 		if (language == ScriptLanguage::Batch) {
 			// Windows might close the window before you have time to read the results or error messages of a CLI application, so pause at the end.
