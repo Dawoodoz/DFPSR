@@ -1,6 +1,6 @@
 ﻿CompilerFlag "-std=c++14"
 Graphics
-Sound
+#Sound
 Crawl "main.cpp"
 Import "../../DFPSR/DFPSR.DsrHead"
 ProgramPath = "application"
