@@ -384,7 +384,7 @@ void generateCompilationScript(const Machine &settings, const ReadableString& pr
 		if (extension == Extension::C || extension == Extension::Cpp) {
 			// Dependency paths are already absolute from the recursive search.
 			String sourcePath = dependencies[d].path;
-			String identity = string_combine(sourcePath, compilerFlags, projectPath);
+			String identity = string_combine(sourcePath, compilerFlags);
 			sourceObjects.pushConstruct(sourcePath, tempFolder, identity, d);
 			if (file_getEntryType(sourcePath) != EntryType::File) {
 				throwError(U"The source file ", sourcePath, U" could not be found!\n");
