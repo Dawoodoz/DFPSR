@@ -3,6 +3,35 @@
 
 using namespace dsr;
 
+static uint64_t checksum(const ReadableString& text) {
+	uint64_t a = 0x8C2A03D4;
+	uint64_t b = 0xF42B1583;
+	uint64_t c = 0xA6815E74;
+	uint64_t d = 0;
+	for (int i = 0; i < string_length(text); i++) {
+		a = (b * c + ((i * 3756 + 2654) & 58043)) & 0xFFFFFFFF;
+		b = (231 + text[i] * (a & 154) + c * 867 + 28294061) & 0xFFFFFFFF;
+		c = (a ^ b ^ (text[i] * 1543217521)) & 0xFFFFFFFF;
+		d = d ^ (a << 32) ^ b ^ (c << 16);
+	}
+	return d;
+}
+
+static uint64_t checksum(const Buffer& buffer) {
+	SafePointer<uint8_t> data = buffer_getSafeData<uint8_t>(buffer, "checksum input buffer");
+	uint64_t a = 0x8C2A03D4;
+	uint64_t b = 0xF42B1583;
+	uint64_t c = 0xA6815E74;
+	uint64_t d = 0;
+	for (int i = 0; i < buffer_getSize(buffer); i++) {
+		a = (b * c + ((i * 3756 + 2654) & 58043)) & 0xFFFFFFFF;
+		b = (231 + data[i] * (a & 154) + c * 867 + 28294061) & 0xFFFFFFFF;
+		c = (a ^ b ^ (data[i] * 1543217521)) & 0xFFFFFFFF;
+		d = d ^ (a << 32) ^ b ^ (c << 16);
+	}
+	return d;
+}
+
 struct Connection {
 	String path;
 	int64_t lineNumber = -1;
@@ -34,10 +63,12 @@ static Extension extensionFromString(const ReadableString& extensionName) {
 struct Dependency {
 	String path;
 	Extension extension;
+	uint64_t contentChecksum;
+	bool visited; // Used to avoid infinite loops while traversing dependencies.
 	List<Connection> links; // Depends on having these linked after compiling.
 	List<Connection> includes; // Depends on having these included in pre-processing.
-	Dependency(const ReadableString& path, Extension extension)
-	: path(path), extension(extension) {}
+	Dependency(const ReadableString& path, Extension extension, uint64_t contentChecksum)
+	: path(path), extension(extension), contentChecksum(contentChecksum) {}
 };
 List<Dependency> dependencies;
 
@@ -166,8 +197,13 @@ void analyzeFromFile(const ReadableString& absolutePath) {
 	if (lastDotIndex != -1) {
 		Extension extension = extensionFromString(string_after(absolutePath, lastDotIndex));
 		if (extension != Extension::Unknown) {
+			// The old length will be the new dependency's index.
 			int64_t parentIndex = dependencies.length();
-			dependencies.pushConstruct(absolutePath, extension);
+			// Get the file's binary content.
+			Buffer fileBuffer = file_loadBuffer(absolutePath);
+			// Get the checksum
+			uint64_t contentChecksum = checksum(fileBuffer);
+			dependencies.pushConstruct(absolutePath, extension, contentChecksum);
 			if (extension == Extension::H || extension == Extension::Hpp) {
 				// The current file is a header, so look for an implementation with the corresponding name.
 				String sourcePath = findSourceFile(absolutePath, extension == Extension::H, true);
@@ -179,9 +215,6 @@ void analyzeFromFile(const ReadableString& absolutePath) {
 					analyzeFromFile(sourcePath);
 				}
 			}
-			// Get the file's binary content for checksums.
-			Buffer fileBuffer = file_loadBuffer(absolutePath);
-			// TODO: Get a checksum of fileBuffer and compare with the previous state. Files that changed should recompile all object files that depend on it.
 			// Interpret the file's content.
 			analyzeCode(parentIndex, string_loadFromMemory(fileBuffer), file_getRelativeParentFolder(absolutePath));
 		}
@@ -236,30 +269,42 @@ static void script_executeLocalBinary(String &output, ScriptLanguage language, c
 	}
 }
 
-// TODO: Make a checksum for binary buffers too, so that changes can be detected in a dependency graph for lazy compilation.
-static uint64_t checksum(const ReadableString& text) {
-	uint64_t a = 0x8C2A03D4;
-	uint64_t b = 0xF42B1583;
-	uint64_t c = 0xA6815E74;
-	uint64_t d = 0;
-	for (int i = 0; i < string_length(text); i++) {
-		a = (b * c + ((i * 3756 + 2654) & 58043)) & 0xFFFFFFFF;
-		b = (231 + text[i] * (a & 154) + c * 867 + 28294061) & 0xFFFFFFFF;
-		c = (a ^ b ^ (text[i] * 1543217521)) & 0xFFFFFFFF;
-		d = d ^ (a << 32) ^ b ^ (c << 16);
+static void traverserHeaderChecksums(uint64_t &target, int64_t dependencyIndex) {
+	// Use checksums from headers
+	for (int h = 0; h < dependencies[dependencyIndex].includes.length(); h++) {
+		int64_t includedIndex = dependencies[dependencyIndex].includes[h].dependencyIndex;
+		if (!dependencies[includedIndex].visited) {
+			//printText(U"	traverserHeaderChecksums(", includedIndex, U") ", dependencies[includedIndex].path, "\n");
+			// Bitwise exclusive or is both order independent and entropy preserving for non-repeated content.
+			target = target ^ dependencies[includedIndex].contentChecksum;
+			// Just have to make sure that the same checksum is not used twice.
+			dependencies[includedIndex].visited = true;
+			// Use checksums from headers recursively
+			traverserHeaderChecksums(target, includedIndex);
+		}
 	}
-	return d;
+}
+
+static uint64_t getCombinedChecksum(int64_t dependencyIndex) {
+	//printText(U"getCombinedChecksum(", dependencyIndex, U") ", dependencies[dependencyIndex].path, "\n");
+	for (int d = 0; d < dependencies.length(); d++) {
+		dependencies[d].visited = false;
+	}
+	dependencies[dependencyIndex].visited = true;
+	uint64_t result = dependencies[dependencyIndex].contentChecksum;
+	traverserHeaderChecksums(result, dependencyIndex);
+	return result;
 }
 
 struct SourceObject {
-	// TODO: Assert that there are no name collisions between identity checksums.
 	uint64_t identityChecksum = 0; // Identification number for the object's name.
-	// TODO: Content checksum, dependency checksum.
+	uint64_t combinedChecksum = 0; // Combined content of the source file and all included headers recursively.
 	String sourcePath, objectPath;
-	SourceObject(const ReadableString& sourcePath, const ReadableString& tempFolder, const ReadableString& identity)
-	: identityChecksum(checksum(identity)), sourcePath(sourcePath) {
-		// TODO: Include compiler flags in the checksum.
-		this->objectPath = file_combinePaths(tempFolder, string_combine(U"dfpsr_builder_", identityChecksum, U".o"));
+	SourceObject(const ReadableString& sourcePath, const ReadableString& tempFolder, const ReadableString& identity, int64_t dependencyIndex)
+	: identityChecksum(checksum(identity)), combinedChecksum(getCombinedChecksum(dependencyIndex)), sourcePath(sourcePath) {
+		// By making the content checksum a part of the name, one can switch back to an older version without having to recompile everything again.
+		// Just need to clean the temporary folder once in a while because old versions can take a lot of space.
+		this->objectPath = file_combinePaths(tempFolder, string_combine(U"dfpsr_", this->identityChecksum, U"_", this->combinedChecksum, U".o"));
 	}
 };
 
@@ -319,7 +364,8 @@ void generateCompilationScript(const Machine &settings, const ReadableString& pr
 		if (extension == Extension::C || extension == Extension::Cpp) {
 			// Dependency paths are already absolute from the recursive search.
 			String sourcePath = dependencies[d].path;
-			sourceObjects.pushConstruct(sourcePath, tempFolder, string_combine(sourcePath, compilerFlags, projectPath));
+			String identity = string_combine(sourcePath, compilerFlags, projectPath);
+			sourceObjects.pushConstruct(sourcePath, tempFolder, identity, d);
 			if (file_getEntryType(sourcePath) != EntryType::File) {
 				throwError(U"The source file ", sourcePath, U" could not be found!\n");
 			} else {
@@ -339,8 +385,25 @@ void generateCompilationScript(const Machine &settings, const ReadableString& pr
 		}
 		String allObjects;
 		for (int i = 0; i < sourceObjects.length(); i++) {
+			if (language == ScriptLanguage::Batch) {
+				string_append(output,  U"if exist ", sourceObjects[i].objectPath, U" (\n");
+			} else if (language == ScriptLanguage::Bash) {
+				string_append(output, U"if [ -e \"", sourceObjects[i].objectPath, U"\" ]; then\n");
+			}
+			script_printMessage(output, language, string_combine(U"Reusing ", sourceObjects[i].sourcePath, U" ID:", sourceObjects[i].identityChecksum, U"."));
+			if (language == ScriptLanguage::Batch) {
+				string_append(output,  U") else (\n");
+			} else if (language == ScriptLanguage::Bash) {
+				string_append(output, U"else\n");
+			}
 			script_printMessage(output, language, string_combine(U"Compiling ", sourceObjects[i].sourcePath, U" ID:", sourceObjects[i].identityChecksum, U" with ", compilerFlags, U"."));
 			string_append(output, compilerName, compilerFlags, U" -c ", sourceObjects[i].sourcePath, U" -o ", sourceObjects[i].objectPath, U"\n");
+			if (language == ScriptLanguage::Batch) {
+				string_append(output,  ")\n");
+			} else if (language == ScriptLanguage::Bash) {
+				string_append(output, U"fi\n");
+			}
+			// Remember each object name for linking.
 			string_append(allObjects, U" ", sourceObjects[i].objectPath);
 		}
 		script_printMessage(output, language, string_combine(U"Linking with ", linkerFlags, U"."));

@@ -373,64 +373,6 @@ void stopAllSounds() {
 	soundMutex.unlock();
 }
 
-void drawEnvelope(ImageRgbaU8 target, const IRect &region, const EnvelopeSettings &envelopeSettings, double releaseTime, double viewTime) {
-	int top = region.top();
-	int bottom = region.bottom() - 1;
-	Envelope envelope = Envelope(envelopeSettings);
-	double secondsPerPixel = viewTime / region.width();
-	draw_rectangle(target, region, ColorRgbaI32(0, 0, 0, 255));
-	draw_rectangle(target, IRect(region.left(), region.top(), region.width() * (releaseTime / viewTime), region.height() / 8), ColorRgbaI32(0, 128, 128, 255));
-	int oldHardY = bottom;
-	for (int s = 0; s < region.width(); s++) {
-		int x = s + region.left();
-		double time = s * secondsPerPixel;
-		double smoothLevel = envelope.getVolume(time < releaseTime, secondsPerPixel);
-		double hardLevel = envelope.currentGoal;
-		if (envelope.done()) {
-			draw_line(target, x, top, x, (top * 7 + bottom) / 8, ColorRgbaI32(128, 0, 0, 255));
-		} else {
-			draw_line(target, x, (top * smoothLevel) + (bottom * (1.0 - smoothLevel)), x, bottom, ColorRgbaI32(64, 64, 0, 255));
-			int hardY = (top * hardLevel) + (bottom * (1.0 - hardLevel));
-			draw_line(target, x, oldHardY, x, hardY, ColorRgbaI32(255, 255, 255, 255));
-			oldHardY = hardY;
-		}
-	}
-}
-
-void drawSound(dsr::ImageRgbaU8 target, const dsr::IRect &region, int soundIndex) {
-	draw_rectangle(target, region, ColorRgbaI32(128, 128, 128, 255));
-	Sound *sound = &(sounds[soundIndex]);
-	int innerHeight = region.height() / sound->channelCount;
-	for (int c = 0; c < sound->channelCount; c++) {
-		IRect innerBound = IRect(region.left() + 1, region.top() + 1, region.width() - 2, innerHeight - 2);
-		draw_rectangle(target, innerBound, ColorRgbaI32(0, 0, 0, 255));
-		double strideX = ((double)sound->sampleCount - 1.0) / (double)innerBound.width();	
-		double scale = innerBound.height() * 0.5;
-		double center = innerBound.top() + scale;
-		draw_line(target, innerBound.left(), center, innerBound.right() - 1, center, ColorRgbaI32(0, 0, 255, 255));
-		if (strideX > 1.0) {
-			double startSample = 0.0;
-			double endSample = strideX;
-			for (int x = innerBound.left(); x < innerBound.right(); x++) {
-				float minimum = 1.0, maximum = -1.0;
-				// TODO: Switch between min-max sampling (denser) and linear interpolation (sparser)
-				sound->sampleMinMax(minimum, maximum, (int)startSample, (int)endSample, c);
-				draw_line(target, x, center - (minimum * scale), x, center - (maximum * scale), ColorRgbaI32(255, 255, 255, 255));
-				startSample = endSample;
-				endSample = endSample + strideX;
-			}
-		} else {
-			double sampleX = 0.0;
-			for (int x = innerBound.left(); x < innerBound.right(); x++) {
-				float valueLeft = sound->sampleLinear_clamped(sampleX, c);
-				sampleX += strideX;
-				float valueRight = sound->sampleLinear_clamped(sampleX, c);
-				draw_line(target, x, center - (valueLeft * scale), x, center - (valueRight * scale), ColorRgbaI32(255, 255, 255, 255));
-			}
-		}
-	}
-}
-
 #define PREPARE_SAMPLE \
 	double envelope = player->envelope.getVolume(player->sustained, outputSoundStep);
 #define NEXT_SAMPLE_CYCLIC \
