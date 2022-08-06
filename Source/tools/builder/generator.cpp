@@ -340,25 +340,36 @@ void generateCompilationScript(const Machine &settings, const ReadableString& pr
 	for (int i = 0; i < settings.compilerFlags.length(); i++) {
 		string_append(compilerFlags, " ", settings.compilerFlags[i]);
 	}
+	String linkerFlags;
+	for (int i = 0; i < settings.linkerFlags.length(); i++) {
+		string_append(linkerFlags, " -l", settings.linkerFlags[i]);
+	}
 	// TODO: Warn if -DNDEBUG, -DDEBUG, or optimization levels are given directly.
 	//       Using the variables instead is both more flexible by accepting input arguments
 	//       and keeping the same format to better reuse compiled objects.
-	ReadableString debugMode = getFlag(settings, U"Debug", U"0");
-	if (string_match(debugMode, U"0")) {
-		printText(U"Building with release mode.\n");
-		string_append(compilerFlags, " -DNDEBUG");
-	} else {
+	if (getFlagAsInteger(settings, U"Debug")) {
 		printText(U"Building with debug mode.\n");
 		string_append(compilerFlags, " -DDEBUG");
+	} else {
+		printText(U"Building with release mode.\n");
+		string_append(compilerFlags, " -DNDEBUG");
+	}
+	if (getFlagAsInteger(settings, U"StaticRuntime")) {
+		if (getFlagAsInteger(settings, U"Windows")) {
+			printText(U"Building with static runtime. Your application's binary will be bigger but can run without needing any installer.\n");
+			string_append(compilerFlags, " -static -static-libgcc -static-libstdc++");
+			string_append(linkerFlags, " -static -static-libgcc -static-libstdc++");
+		} else {
+			printText(U"The target platform does not support static linking of runtime! But don't worry about bundling any runtimes, because it comes with most of the Posix compliant operating systems.\n");
+		}
+	} else {
+		printText(U"Building with dynamic runtime. Don't forget to bundle the C and C++ runtimes with your application!\n");
 	}
 	ReadableString optimizationLevel = getFlag(settings, U"Optimization", U"2");
 		printText(U"Building with optimization level ", optimizationLevel, U".\n");
 	string_append(compilerFlags, " -O", optimizationLevel);
 
-	String linkerFlags;
-	for (int i = 0; i < settings.linkerFlags.length(); i++) {
-		string_append(linkerFlags, " -l", settings.linkerFlags[i]);
-	}
+
 
 	// Interpret ProgramPath relative to the project path.
 	ReadableString programPath = getFlag(settings, U"ProgramPath", language == ScriptLanguage::Batch ? U"program.exe" : U"program");

@@ -5,5 +5,11 @@ Crawl "main.cpp"
 Import "../../DFPSR/DFPSR.DsrHead"
 ProgramPath = "application"
 
+# Linking statically to standard C/C++ libraries allow running the program without installing them.
+#   Recommended for making an installer for another application or programs that should not need an installer.
+# If you don't want static linking of standard C/C++ libraries, you have to comment out StaticRuntime
+#   and bundle the C/C++ runtime of the compiler with your program's installer.
+StaticRuntime
+
 # Uncomment to enable debug mode, which is slower
 #Debug
