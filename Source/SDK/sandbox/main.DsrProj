@@ -1,6 +1,6 @@
 ﻿CompilerFlag "-std=c++14"
 Graphics
-Sound
+#Sound
 
 # An include using quotation marks will detect the header and its headers recursively.
 # For each detected header, the build system looks for an implementation file of the same name in the same folder.

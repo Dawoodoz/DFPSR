@@ -1,12 +1,13 @@
 ﻿
-// Header for including the most commonly needed parts of the framework
+// Header for including the most commonly needed parts of the framework.
 
 #ifndef DFPSR_INCLUDED_FRAMEWORK
 #define DFPSR_INCLUDED_FRAMEWORK
+	// Strings, buffers, files, et cetera.
+	#include "includeEssentials.h"
 
 	// Types needed to use the APIs
 	#include "math/includeMath.h"
-	#include "api/stringAPI.h"
 
 	// Additional functionality for convenience (not to be used in any API)
 	#include "collection/includeCollection.h" // Safer and easier to use than std collections
@@ -21,9 +22,6 @@
 	#include "api/guiAPI.h" // Handling windows, interfaces and components
 	#include "api/mediaMachineAPI.h" // A machine for running image functions
 	#include "api/fontAPI.h" // Printing text to images
-	// File API
-	#include "api/bufferAPI.h" // Storing binary data
-	#include "api/fileAPI.h" // Saving and loading binary files
 	// Convenient API
 	#include "api/timeAPI.h" // Methods for time and delays
 	#include "api/configAPI.h" // Making it easy to load your application's settings from configuration files

@@ -1,6 +1,6 @@
 ﻿
 #include "soundManagers.h"
 
-bool sound_streamToSpeakers_impl(int channels, int sampleRate, std::function<bool(float*, int)> soundOutput) {
+bool sound_streamToSpeakers(int channels, int sampleRate, std::function<bool(float*, int)> soundOutput) {
 	return false;
 }

@@ -3,6 +3,7 @@
 #define DFPSR_SOUND_API
 
 #include <functional>
+#include <stdint.h>
 
 inline float sound_convertI16ToF32(int64_t input) {
 	return input * (1.0f / 32767.0f);

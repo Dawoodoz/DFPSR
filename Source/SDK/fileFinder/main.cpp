@@ -1,7 +1,9 @@
 ﻿
 // A file finding application showing how to use the filesystem wrapper in the file API using C++ 2014.
 
-#include "../../DFPSR/includeFramework.h"
+// If you can use only the essential headers, compilation will be faster and work even if parts of the library can't be compiled.
+//#include "../../DFPSR/includeFramework.h"
+#include "../../DFPSR/includeEssentials.h"
 
 using namespace dsr;
 
