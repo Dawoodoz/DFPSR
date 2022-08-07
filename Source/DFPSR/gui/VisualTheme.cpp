@@ -173,9 +173,9 @@ BEGIN: ListBox
 	INPUT: FixedPoint, blue
 	OUTPUT: ImageRgbaU8, colorImage
 	CREATE: colorImage, width, height
-	SUB: w2<FixedPoint>, width, 2
-	SUB: h2<FixedPoint>, height, 2
-	RECTANGLE: colorImage, 1, 1, w2, h2, red, green, blue, 255
+	SUB: w2<FixedPoint>, width, 4
+	SUB: h2<FixedPoint>, height, 4
+	RECTANGLE: colorImage, 2, 2, w2, h2, red, green, blue, 255
 END:
 )QUOTE";
 
