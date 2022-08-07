@@ -1,0 +1,1 @@
+﻿SDK example of how to render isometric graphics using dynamic light. Uses Source/SDK/SpriteEngine as a graphics engine on top of depth buffered draw calls in the DFPSR library.

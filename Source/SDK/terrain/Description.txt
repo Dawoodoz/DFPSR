@@ -1,0 +1,1 @@
+﻿SDK example of how to generate bump mapping and make models look more detailed than their actual polygon count by generating an original height field of a higher resolution, calculating normals and using a limited dot product to get the light without any shadows.
