@@ -149,15 +149,15 @@ const char32_t* file_separator() {
 	return getPathSeparator(LOCAL_PATH_SYNTAX);
 }
 
-inline bool isSeparator(DsrChar c) {
+bool file_isSeparator(DsrChar c) {
 	return c == U'\\' || c == U'/';
 }
 
 // Returns the index of the first / or \ in path, or defaultIndex if none existed.
-static int64_t getFirstSeparator(const ReadableString &path, int64_t defaultIndex) {
-	for (int64_t i = 0; i < string_length(path); i++) {
+int64_t file_findFirstSeparator(const ReadableString &path, int64_t defaultIndex, int64_t startIndex) {
+	for (int64_t i = startIndex; i < string_length(path); i++) {
 		DsrChar c = path[i];
-		if (isSeparator(c)) {
+		if (file_isSeparator(c)) {
 			return i;
 		}
 	}
@@ -165,10 +165,10 @@ static int64_t getFirstSeparator(const ReadableString &path, int64_t defaultInde
 }
 
 // Returns the index of the last / or \ in path, or defaultIndex if none existed.
-static int64_t getLastSeparator(const ReadableString &path, int64_t defaultIndex) {
+int64_t file_findLastSeparator(const ReadableString &path, int64_t defaultIndex) {
 	for (int64_t i = string_length(path) - 1; i >= 0; i--) {
 		DsrChar c = path[i];
-		if (isSeparator(c)) {
+		if (file_isSeparator(c)) {
 			return i;
 		}
 	}
@@ -186,7 +186,7 @@ String file_optimizePath(const ReadableString &path, PathSyntax pathSyntax) {
 	//   The null terminator is not actually stored, but reading out of bound gives a null terminator.
 	for (int64_t i = 0; i <= inputLength; i++) {
 		DsrChar c = path[i];
-		bool separator = isSeparator(c);
+		bool separator = file_isSeparator(c);
 		if (separator || i == inputLength) {
 			bool appendEntry = true;
 			bool appendSeparator = separator;
@@ -228,7 +228,7 @@ String file_optimizePath(const ReadableString &path, PathSyntax pathSyntax) {
 	if (hadSeparator && hadContent) {
 		int64_t lastNonSeparator = -1;
 		for (int64_t i = string_length(result) - 1; i >= 0; i--) {
-			if (!isSeparator(result[i])) {
+			if (!file_isSeparator(result[i])) {
 				lastNonSeparator = i;
 				break;
 			}
@@ -239,12 +239,12 @@ String file_optimizePath(const ReadableString &path, PathSyntax pathSyntax) {
 }
 
 ReadableString file_getPathlessName(const ReadableString &path) {
-	return string_after(path, getLastSeparator(path, -1));
+	return string_after(path, file_findLastSeparator(path));
 }
 
 ReadableString file_getExtension(const String& filename) {
 	int64_t lastDotIndex = string_findLast(filename, U'.');
-	int64_t lastSeparatorIndex = getLastSeparator(filename, -1);
+	int64_t lastSeparatorIndex = file_findLastSeparator(filename);
 	// Only use the last dot if there is no folder separator after it.
 	if (lastDotIndex != -1 && lastSeparatorIndex < lastDotIndex) {
 		return string_removeOuterWhiteSpace(string_after(filename, lastDotIndex));
@@ -272,7 +272,7 @@ String file_getRelativeParentFolder(const ReadableString &path, PathSyntax pathS
 		return file_combinePaths(optimizedPath, U"..", pathSyntax);
 	} else {
 		// Inside of something.
-		int64_t lastSeparator = getLastSeparator(optimizedPath, 0);
+		int64_t lastSeparator = file_findLastSeparator(optimizedPath, 0);
 		if (pathSyntax == PathSyntax::Windows) {
 			// Return everything before the last separator.
 			return string_before(optimizedPath, lastSeparator);
@@ -326,7 +326,7 @@ bool file_isRoot(const ReadableString &path, bool treatHomeFolderAsRoot, PathSyn
 }
 
 bool file_hasRoot(const ReadableString &path, bool treatHomeFolderAsRoot, PathSyntax pathSyntax) {
-	int64_t firstSeparator = getFirstSeparator(path, -1);
+	int64_t firstSeparator = file_findFirstSeparator(path);
 	if (firstSeparator == -1) {
 		// If there is no separator, path has a root if it is a root.
 		return file_isRoot(path, treatHomeFolderAsRoot, pathSyntax);
@@ -417,7 +417,7 @@ String file_combinePaths(const ReadableString &a, const ReadableString &b, PathS
 		// Ignoring initial relative path, so that relative paths are not suddenly moved to the root by a new separator.
 		return cleanA;
 	} else {
-		if (isSeparator(a[lengthA - 1])) {
+		if (file_isSeparator(a[lengthA - 1])) {
 			// Already ending with a separator.
 			return string_combine(cleanA, cleanB);
 		} else {
@@ -587,6 +587,25 @@ bool file_getFolderContent(const ReadableString& folderPath, std::function<void(
 		closedir(directory);
 	#endif
 	return true;
+}
+
+void file_getPathEntries(const ReadableString& path, std::function<void(ReadableString, int64_t, int64_t)> action) {
+	int64_t sectionStart = 0;
+	int64_t length = string_length(path);
+	for (int64_t i = 0; i < string_length(path); i++) {
+		DsrChar c = path[i];
+		if (file_isSeparator(c)) {
+			int64_t sectionEnd = i - 1; // Inclusive end
+			ReadableString content = string_inclusiveRange(path, sectionStart, sectionEnd);
+			if (string_length(content)) { action(content, sectionStart, sectionEnd); }
+			sectionStart = i + 1;
+		}
+	}
+	if (length > sectionStart) {
+		int64_t sectionEnd = length - 1; // Inclusive end
+		ReadableString content = string_inclusiveRange(path, sectionStart, sectionEnd);
+		if (string_length(content)) { action(content, sectionStart, sectionEnd); }
+	}
 }
 
 }
