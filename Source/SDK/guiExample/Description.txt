@@ -1,0 +1,1 @@
+﻿SDK example of how to create and interact with visual components in a window. It's just throwing in as many different components as possible without cluttering with any real functionality.

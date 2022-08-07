@@ -1,0 +1,1 @@
+﻿SDK example of how to get started with 3D rendering. This fixed function rendering is not so fast nor powerful as custom rendering pipelines, but it's useful as a reference while implementing your own rendering techniques for custom geometry formats such as voxels or heightmaps.

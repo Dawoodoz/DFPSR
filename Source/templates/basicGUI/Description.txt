@@ -1,0 +1,1 @@
+﻿A template for quickly getting started with a new graphical user interface project. If you don't use sound and want to get rid of the dependency, just remove the Sound variable from main.DsrProj and the stub NoSound.cpp will simply refuse service to any sound engine trying to start it.
