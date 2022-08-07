@@ -1,7 +1,7 @@
 # Using buildProject.sh
 #   $1 must be the *.DsrProj path, which is relative to the caller location.
 #   $2... are variable assignments sent as input to the given project file.
-#   BUILDER_CPP_COMPILER_PATH should be modified if it does not already refer to an installed C++ compiler.
+#   CPP_COMPILER_PATH should be modified if it does not already refer to an installed C++ compiler.
 
 echo "Running buildProject.sh $@"
 
@@ -11,8 +11,8 @@ echo "BUILDER_FOLDER = ${BUILDER_FOLDER}"
 BUILDER_EXECUTABLE="${BUILDER_FOLDER}/builder"
 echo "BUILDER_EXECUTABLE = ${BUILDER_EXECUTABLE}"
 
-BUILDER_CPP_COMPILER_PATH="g++"
-echo "Change BUILDER_CPP_COMPILER_PATH in ${BUILDER_FOLDER}/buildProject.sh if you are not using ${BUILDER_CPP_COMPILER_PATH} as your compiler."
+CPP_COMPILER_PATH="g++"
+echo "Change CPP_COMPILER_PATH in ${BUILDER_FOLDER}/buildProject.sh if you are not using ${CPP_COMPILER_PATH} as your compiler."
 
 # Check if the build system is compiled
 if [ -e "${BUILDER_EXECUTABLE}" ]; then
@@ -21,7 +21,7 @@ else
 	echo "Building the Builder build system for first time use."
 	LIBRARY_PATH="$(realpath ${BUILDER_FOLDER}/../../DFPSR)"
 	SOURCE_CODE="${BUILDER_FOLDER}/main.cpp ${BUILDER_FOLDER}/Machine.cpp ${BUILDER_FOLDER}/generator.cpp ${LIBRARY_PATH}/collection/collections.cpp ${LIBRARY_PATH}/api/fileAPI.cpp ${LIBRARY_PATH}/api/bufferAPI.cpp ${LIBRARY_PATH}/api/stringAPI.cpp ${LIBRARY_PATH}/base/SafePointer.cpp"
-	"${BUILDER_CPP_COMPILER_PATH}" -o "${BUILDER_EXECUTABLE}" ${SOURCE_CODE} -std=c++14
+	"${CPP_COMPILER_PATH}" -o "${BUILDER_EXECUTABLE}" ${SOURCE_CODE} -std=c++14
 	if [ $? -eq 0 ]; then
 		echo "Completed building the Builder build system."
 	else
@@ -37,7 +37,7 @@ echo "Generating ${SCRIPT_PATH} from $1"
 if [ -e "${SCRIPT_PATH}" ]; then
 	rm "${SCRIPT_PATH}"
 fi
-"${BUILDER_EXECUTABLE}" $@ "ScriptPath=${SCRIPT_PATH}";
+"${BUILDER_EXECUTABLE}" "${SCRIPT_PATH}" "$@" "Compiler=${CPP_COMPILER_PATH}";
 if [ -e "${SCRIPT_PATH}" ]; then
 	echo "Giving execution permission to ${SCRIPT_PATH}"
 	chmod +x "${SCRIPT_PATH}"

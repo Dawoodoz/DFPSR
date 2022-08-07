@@ -33,23 +33,6 @@ Begin : Panel
 		Solid = 1
 		Top = 50
 		Color = 0,0,0
-		Begin : ListBox
-			Name = "projectList"
-			Color = 190,255,190
-			Left = 90%-100
-			Right = 100%-5
-			Top = 5
-			Bottom = 100%-50
-		End
-		Begin : Button
-			Name = "buildButton"
-			Text = "Build and run"
-			Color = 190,255,190
-			Left = 90%-100
-			Right = 100%-5
-			Top = 100%-45
-			Bottom = 100%-5
-		End
 		Begin : Picture
 			Name = "previewPicture"
 			Interpolation = 1
@@ -66,13 +49,30 @@ Begin : Panel
 			Top = 70%
 			Bottom = 100%-5
 		End
+		Begin : ListBox
+			Name = "projectList"
+			Color = 190,255,190
+			Left = 90%-100
+			Right = 100%-5
+			Top = 5
+			Bottom = 100%-50
+		End
+		Begin : Button
+			Name = "launchButton"
+			Text = "Launch"
+			Color = 190,255,190
+			Left = 90%-100
+			Right = 100%-5
+			Top = 100%-45
+			Bottom = 100%-5
+		End
 	End
 End
 )QUOTE";
 
 // Visual components
 Component projectList;
-Component buildButton;
+Component launchButton;
 Component descriptionLabel;
 Component previewPicture;
 
@@ -147,13 +147,10 @@ static void findProjects(const ReadableString& folderPath) {
 
 static void selectProject(int64_t index) {
 	int oldIndex = component_getProperty_integer(projectList, U"SelectedIndex", true);
-	printText(oldIndex, U" -> ", index,  U"\n");
 	// Don't trigger new events if the selected index is already updated manually.
 	if (index != oldIndex) {
-		printText(U"Assigned ", index,  U"\n");
 		component_setProperty_integer(projectList, U"SelectedIndex", index, false);
 	}
-	printText(U"Assigning description\n");
 	component_setProperty_string(descriptionLabel, U"Text", projects[index].description);
 	component_setProperty_image(previewPicture, U"Image", projects[index].preview, false);
 }
@@ -178,7 +175,7 @@ void dsrMain(List<String> args) {
 
 	// Find components
 	projectList = window_findComponentByName(window, U"projectList");
-	buildButton = window_findComponentByName(window, U"buildButton");
+	launchButton = window_findComponentByName(window, U"launchButton");
 	descriptionLabel = window_findComponentByName(window, U"descriptionLabel");
 	previewPicture = window_findComponentByName(window, U"previewPicture");
 
@@ -197,13 +194,12 @@ void dsrMain(List<String> args) {
 			}
 		}
 	});
-	component_setPressedEvent(buildButton, []() {
+	component_setPressedEvent(launchButton, []() {
 		// TODO: Implement building and running of the selected project.
 		playSound(boomSound, false, 1.0, 1.0, 0.7);
-		component_setProperty_string(descriptionLabel, U"Text", U"Compiling and running projects from the wizard application is not yet implemented.");
+		component_setProperty_string(descriptionLabel, U"Text", U"Running projects from the wizard application is not yet implemented.");
 	});
 	component_setSelectEvent(projectList, [](int64_t index) {
-		printText(U"Selecting ", index, U"\n");
 		playSound(boomSound, false, 0.5, 0.5, 0.5);
 		selectProject(index);
 	});

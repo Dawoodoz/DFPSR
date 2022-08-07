@@ -1,6 +1,13 @@
 ﻿# This project will use both sound and graphics, so we default initialize them to 1 before evaluating the library's header.
 # The caller should provide the operating system's name (Windows, Linux)
 Message "Starting main.DsrProj\n"
+
+# The wizard application is used to launch applications, so make sure that they are built before launching the selection menu.
+Build "../../SDK" SkipIfBinaryExists Supressed
+Build "../../templates" SkipIfBinaryExists Supressed
+
+Message "Done with building the examples and continuing with building main.DsrProj\n"
+
 Graphics
 Sound
 Import "../../DFPSR/DFPSR.DsrHead"

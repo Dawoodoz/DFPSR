@@ -1,7 +1,7 @@
 @echo off
 
 rem Using buildProject.bat
-rem   %1 must be the *.DsrProj path, which is relative to the caller location.
+rem   %1 must be the *.DsrProj path or a folder containing such projects. The path is relative to the caller location.
 rem   %2... are variable assignments sent as input to the given project file.
 rem   CPP_COMPILER_PATH should be modified if it does not already refer to an installed C++ compiler.
 
@@ -44,7 +44,7 @@ echo Generating %SCRIPT_PATH% from %1%
 if exist %SCRIPT_PATH% (
 	del %SCRIPT_PATH%
 )
-%BUILDER_EXECUTABLE% %* ScriptPath=%SCRIPT_PATH% Compiler=%CPP_COMPILER_PATH% CompileFrom=%CPP_COMPILER_FOLDER%
+%BUILDER_EXECUTABLE% %SCRIPT_PATH% %* Compiler=%CPP_COMPILER_PATH% CompileFrom=%CPP_COMPILER_FOLDER%
 if exist %SCRIPT_PATH% (
 	echo Running %SCRIPT_PATH%
 	%SCRIPT_PATH%
