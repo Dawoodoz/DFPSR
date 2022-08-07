@@ -90,6 +90,34 @@ namespace dsr {
 	//   Can be used to construct a file path that works for both forward and backward slash separators.
 	const char32_t* file_separator();
 
+	// Path-syntax: This operation can handle separators given from any supported platform.
+	//   because separators will be corrected by file_optimizePath when used to access files.
+	// Post-condition: Returns true iff the character C is a folder separator, currently / and \ are accepted as folder separators.
+	bool file_isSeparator(DsrChar c);
+
+	// Path-syntax: This operation can handle separators given from any supported platform.
+	// Post-condition: Returns the base-zero index of the first path separator (as defined by file_isSeparator) starting from startIndex, or defaultIndex if not found.
+	//                 If the result is not equal to defaultIndex, it is guaranteed to be equal to or greater than startIndex.
+	// Similar to string_findFirst, but with the character to find repalced with a replacable default index.
+	int64_t file_findFirstSeparator(const ReadableString &path, int64_t defaultIndex = -1, int64_t startIndex = 0);
+
+	// Path-syntax: This operation can handle separators given from any supported platform.
+	// Post-condition: Returns the base-zero index of the last path separator (as defined by file_isSeparator), or defaultIndex if not found.
+	// Similar to string_findLast, but with the character to find repalced with a replacable default index.
+	int64_t file_findLastSeparator(const ReadableString &path, int64_t defaultIndex = -1);
+
+	// Returns callbacks for non-empty entries between separator characters.
+	//   This includes folder names, filenames, symbolic links, drive letter.
+	//   This excludes blank space before the first or after the last separator, so the implicit Windows drive \ and Posix system root / will not be included.
+	// Path-syntax: This operation can handle separators given from any supported platform.
+	//              It should handle both / and \, with and without spaces in filenames.
+	// Side-effect: Returns a callback for each selectable non-empty entry in the path, from left to right.
+	//              The first argument in the callback is the entry name, and the integers are an inclusive base-zero index range from first to last characters in path.
+	// The first entry must be something selectable to be included. Otherwise it is ignored.
+	//   C: would be returned as an entry, because other drives can be selected.
+	//   The implicit Windows drive \ and Posix system root / will not be returned, because they are implicit and can't be replaced in the path.
+	void file_getPathEntries(const ReadableString& path, std::function<void(ReadableString, int64_t, int64_t)> action);
+
 	// Path-syntax: Depends on pathSyntax argument.
 	// Turns / and \ into the path convention specified by pathSyntax, which is the local system's by default.
 	// Removes redundant . and .. to reduce the risk of running out of buffer space when calling the system.
@@ -102,7 +130,7 @@ namespace dsr {
 	String file_combinePaths(const ReadableString &a, const ReadableString &b, PathSyntax pathSyntax IMPLICIT_PATH_SYNTAX);
 
 	// Path-syntax: Depends on pathSyntax argument.
-	// Post-condition: Returns true for relative paths true iff path contains a root, according to the path syntax.
+	// Post-condition: Returns true iff path starts from a root, according to the path syntax.
 	//                 Implicit drives on Windows using \ are treated as roots because we know that there is nothing above them.
 	// If treatHomeFolderAsRoot is true, starting from the /home/username folder using the Posix ~ alias will be allowed as a root as well, because we can't append it behind another path.
 	bool file_hasRoot(const ReadableString &path, bool treatHomeFolderAsRoot, PathSyntax pathSyntax IMPLICIT_PATH_SYNTAX);
@@ -146,9 +174,8 @@ namespace dsr {
 	bool file_setCurrentPath(const ReadableString &path);
 
 	// Path-syntax: According to the local computer.
-	// Post-condition: Returns  the application's folder path, from where the application is stored.
-	// If not implemented and allowFallback is true,
-	//   the current path is returned instead as a qualified guess instead of raising an exception.
+	// Post-condition: Returns the application's folder path, from where the application is stored.
+	// If not implemented and allowFallback is true, the current path is returned instead as a qualified guess instead of raising an exception.
 	String file_getApplicationFolder(bool allowFallback = true);
 
 	// Path-syntax: This trivial operation should work the same independent of operating system.
