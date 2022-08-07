@@ -46,7 +46,8 @@ void dsrMain(List<String> args) {
 	component_setKeyDownEvent(myListBox, [](const KeyboardEvent& event) {
 		if (event.dsrKey == DsrKey_Delete) {
 			// Delete from list
-			int64_t index = string_toInteger(component_call(myListBox, U"GetSelectedIndex"));
+			int64_t index = component_getProperty_integer(myListBox, U"SelectedIndex", false, 0);
+			//int64_t index = string_toInteger(component_call(myListBox, U"GetSelectedIndex")); // There is also a getter for the index
 			if (index > -1) {
 				component_call(myListBox, U"RemoveElement", string_combine(index));
 			}
@@ -60,7 +61,8 @@ void dsrMain(List<String> args) {
 	});
 	// Only triggered by mouse presses like any other component
 	component_setPressedEvent(myListBox, []() {
-		int64_t index = string_toInteger(component_call(myListBox, U"GetSelectedIndex"));
+		int64_t index = component_getProperty_integer(myListBox, U"SelectedIndex", false, 0);
+		//int64_t index = string_toInteger(component_call(myListBox, U"GetSelectedIndex")); // There is also a getter for the index
 		String content = component_call(myListBox, U"GetSelectedText");
 		printText("Pressed event: content is (", content, ") at index ", index, "\n");
 	});
