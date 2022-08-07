@@ -4,6 +4,7 @@
 //   Otherwise buildProject.sh will just see that an old version exists and use it.
 
 // TODO:
+//  * Optimize compilation of multiple projects by only generating code for compiling objects that have not already been compiled of the same version for another project.
 //  * Implement more features for the machine, such as:
 //    * Unary negation.
 //    * else and elseif cases.
@@ -15,46 +16,96 @@
 //    Post-build should be used to execute the resulting program.
 //      Optionally with variables from the build script as input arguments.
 
+/*
+Project files:
+	Syntax:
+		Precedence is not implemented for expression evaluation, so use parentheses explicitly.
+		* Assign "10" to variable x:
+			x = 10
+		* Assign "1" to variable myVariable:
+			myVariable
+		* Assign b plus c to a:
+			a = b + c
+		* Assign b minus c to a:
+			a = b - c
+		* Assign b times c to a:
+			a = b * c
+		* Assign b divided by c to a:
+			a = b / c
+		* Concatenate "hello" and " world" into "hello world" in message:
+			message = "hello" & " world"
+		* If a is less than b or c equals 3 then assign y to z:
+			if (a < b) or (c == 3)
+				z = y
+			end if
+	Commands:
+		* Build all projects in myFolder with the SkipIfBinaryExists flag in arbitrary order before continuing with compilation
+			Build "../myFolder" SkipIfBinaryExists
+		* Add file.cpp and other implementations found through includes into the list of source code to compile and link.
+			Crawl "folder/file.cpp"
+	Systems:
+		* Linux
+			Set to non-zero on Linux or similar operating systems.
+		* Windows
+			Set to non-zero on MS-Windows.
+	Variables:
+		* SkipIfBinaryExists, skips building if the binary already exists.
+		* Supressed, prevents a compiled program from running after building, which is usually given as an extra argument to Build to avoid launching all programs in a row.
+		* ProgramPath, a path to the application to create.
+		* Compiler, a path or global alias to the compiler.
+		* CompileFrom, from which path should the compiler be executed? Leave empty to use the current directory.
+		* Debug, 0 for release, anything else (usually 1) for debug.
+		* StaticRuntime, 0 for dynamic runtime linking, anything else (usually 1) for static runtime.
+		* Optimization, a natural integer specifying the amount of optimization to apply.
+*/
+
 #include "../../DFPSR/api/fileAPI.h"
 #include "generator.h"
 
 using namespace dsr;
 
+static ScriptLanguage identifyLanguage(const ReadableString filename) {
+	String scriptExtension = string_upperCase(file_getExtension(filename));
+	if (string_match(scriptExtension, U"BAT")) {
+		return ScriptLanguage::Batch;
+	} else if (string_match(scriptExtension, U"SH")) {
+		return ScriptLanguage::Bash;
+	} else {
+		throwError(U"Could not identify the scripting language of ", filename, U". Use *.bat or *.sh.\n");
+		return ScriptLanguage::Unknown;
+	}
+}
+
 // List dependencies for main.cpp on Linux: ./builder main.cpp --depend
 DSR_MAIN_CALLER(dsrMain)
 void dsrMain(List<String> args) {
 	if (args.length() <= 2) {
-		printText(U"To use the DFPSR build system, pass a path to the project file and the flags you want assigned before running the build script.\n");
+		printText(U"To use the DFPSR build system, pass a path to a project file or folder containing multiple projects, and the flags you want assigned before building.\n");
 	} else {
-		// Get the project file path from the first argument after the program name.
-		String projectFilePath = args[1];
-		String platform = args[2];
-		Machine settings;
-		// Begin reading input arguments after the project's path, as named integers assigned to ones.
-		// Calling builder with the extra arguments "Graphics" and "Linux" will then create and assign both variables to 1.
+		// Get the script's destination path for all projects built during the session as the first argument.
+		String outputScriptPath = args[1];
+		String tempFolder = file_getAbsoluteParentFolder(outputScriptPath);
+		// Get the first project file's path, which can then build other projects using the same generated script.
+		String projectFilePath = args[2];
+		// Read the reas after the project's path, as named integers assigned to ones.
+		// Calling builder with the extra arguments will interpret them as variables and mark them as inherited, so that they are passed on to any other projects build from the project file.
 		// Other values can be assigned using an equality sign.
 		//   Avoid spaces around the equality sign, because quotes are already used for string arguments in assignments.
-		for (int a = 2; a < args.length(); a++) {
-			String argument = args[a];
-			int64_t assignmentIndex = string_findFirst(argument, U'=');
-			if (assignmentIndex == -1) {
-				assignValue(settings, argument, U"1");
-				printText(U"Assigning ", argument, U" to 1 from input argument.\n");
-			} else {
-				String key = string_removeOuterWhiteSpace(string_before(argument, assignmentIndex));
-				String value = string_removeOuterWhiteSpace(string_after(argument, assignmentIndex));
-				assignValue(settings, key, value);
-				printText(U"Assigning ", key, U" to ", value, U" from input argument.\n");
-			}
+		Machine settings;
+		argumentsToSettings(settings, args, 3);
+		// Generate a script.
+		ScriptTarget scriptTarget = ScriptTarget(identifyLanguage(outputScriptPath), tempFolder);
+		if (scriptTarget.language == ScriptLanguage::Batch) {
+			string_append(scriptTarget.generatedCode, U"@echo off\n\n");
+		} else if (scriptTarget.language == ScriptLanguage::Bash) {
+			string_append(scriptTarget.generatedCode, U"#!/bin/bash\n\n");
 		}
-		// Evaluate compiler settings while searching for source code mentioned in the project and imported headers.
-		printText(U"Executing project file from ", projectFilePath, U".\n");
-		evaluateScript(settings, projectFilePath);
-		// Once we are done finding all source files, we can resolve the dependencies to create a graph connected by indices.
-		resolveDependencies();
-		if (getFlagAsInteger(settings, U"ListDependencies")) {
-			printDependencies();
+		build(scriptTarget, projectFilePath, settings);
+		// Save the script.
+		if (scriptTarget.language == ScriptLanguage::Batch) {
+			string_save(outputScriptPath, scriptTarget.generatedCode);
+		} else if (scriptTarget.language == ScriptLanguage::Bash) {
+			string_save(outputScriptPath, scriptTarget.generatedCode, CharacterEncoding::BOM_UTF8, LineEncoding::Lf);
 		}
-		generateCompilationScript(settings, file_getAbsoluteParentFolder(projectFilePath));
 	}
 }
