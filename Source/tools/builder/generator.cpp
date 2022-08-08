@@ -355,7 +355,7 @@ void generateCompilationScript(ScriptTarget &output, ProjectContext &context, co
 			} else if (output.language == ScriptLanguage::Bash) {
 				string_append(output.generatedCode, U"else\n");
 			}
-			script_printMessage(output, string_combine(U"Compiling ", sourceObjects[i].sourcePath, U" ID:", sourceObjects[i].identityChecksum, U" with ", compilerFlags, U"."));
+			script_printMessage(output, string_combine(U"Compiling ", sourceObjects[i].sourcePath, U" ID:", sourceObjects[i].identityChecksum, U" with \"", compilerFlags, U"\"."));
 			string_append(output.generatedCode, compilerName, compilerFlags, U" -c ", sourceObjects[i].sourcePath, U" -o ", sourceObjects[i].objectPath, U"\n");
 			if (output.language == ScriptLanguage::Batch) {
 				string_append(output.generatedCode,  ")\n");
@@ -365,7 +365,7 @@ void generateCompilationScript(ScriptTarget &output, ProjectContext &context, co
 			// Remember each object name for linking.
 			string_append(allObjects, U" ", sourceObjects[i].objectPath);
 		}
-		script_printMessage(output, string_combine(U"Linking with ", linkerFlags, U"."));
+		script_printMessage(output, string_combine(U"Linking with \"", linkerFlags, U"\"."));
 		string_append(output.generatedCode, compilerName, allObjects, linkerFlags, U" -o ", programPath, U"\n");
 		if (changePath) {
 			// Get back to the previous folder.

@@ -6,7 +6,6 @@
 // TODO:
 //  * Optimize compilation of multiple projects by only generating code for compiling objects that have not already been compiled of the same version for another project.
 //  * Implement more features for the machine, such as:
-//    * Unary negation.
 //    * else and elseif cases.
 //    * Temporarily letting the theoretical path go into another folder within a scope, similar to if statements but only affecting the path.
 //      Like writing (cd path; stmt;) in Bash but with fast parsed Basic-like syntax.
@@ -19,7 +18,6 @@
 /*
 Project files:
 	Syntax:
-		Precedence is not implemented for expression evaluation, so use parentheses explicitly.
 		* Assign "10" to variable x:
 			x = 10
 		* Assign "1" to variable myVariable:
@@ -38,6 +36,8 @@ Project files:
 			if (a < b) or (c == 3)
 				z = y
 			end if
+		* x is assigned a boolean value telling if the content of a matches "abc". (case sensitive comparison)
+			x = a matches "abc"
 	Commands:
 		* Build all projects in myFolder with the SkipIfBinaryExists flag in arbitrary order before continuing with compilation
 			Build "../myFolder" SkipIfBinaryExists
@@ -60,7 +60,8 @@ Project files:
 */
 
 #include "../../DFPSR/api/fileAPI.h"
-#include "generator.h"
+#include "Machine.h"
+#include "expression.h"
 
 using namespace dsr;
 
@@ -79,8 +80,12 @@ static ScriptLanguage identifyLanguage(const ReadableString filename) {
 // List dependencies for main.cpp on Linux: ./builder main.cpp --depend
 DSR_MAIN_CALLER(dsrMain)
 void dsrMain(List<String> args) {
-	if (args.length() <= 2) {
+	if (args.length() <= 1) {
+		printText(U"No arguments given to Builder. Starting regression test.\n");
+		expression_runRegressionTests();
+	} else if (args.length() == 2) {
 		printText(U"To use the DFPSR build system, pass a path to a project file or folder containing multiple projects, and the flags you want assigned before building.\n");
+		printText(U"To run regression tests, don't pass any argument to the program.\n");
 	} else {
 		// Get the script's destination path for all projects built during the session as the first argument.
 		String outputScriptPath = args[1];
