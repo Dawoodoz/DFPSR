@@ -256,12 +256,15 @@ void buildProject(ScriptTarget &output, const ReadableString &projectFilePath, M
 	// Find out where things are located.
 	String projectPath = file_getAbsoluteParentFolder(projectFilePath);
 	// Interpret ProgramPath relative to the project path.
-	ReadableString programPath = getFlag(settings, U"ProgramPath", output.language == ScriptLanguage::Batch ? U"program.exe" : U"program");
-	programPath = file_getTheoreticalAbsolutePath(programPath, projectPath);
+	String fullProgramPath = getFlag(settings, U"ProgramPath", U"program");
+	if (output.language == ScriptLanguage::Batch) {
+		string_append(fullProgramPath, U".exe");
+	}
+	fullProgramPath = file_getTheoreticalAbsolutePath(fullProgramPath, projectPath);
 	// If the SkipIfBinaryExists flag is given, we will abort as soon as we have handled its external BuildProjects requests and confirmed that the application exists.
-	if (getFlagAsInteger(settings, U"SkipIfBinaryExists") && file_getEntryType(programPath) == EntryType::File) {
+	if (getFlagAsInteger(settings, U"SkipIfBinaryExists") && file_getEntryType(fullProgramPath) == EntryType::File) {
 		// SkipIfBinaryExists was active and the binary exists, so abort here to avoid redundant work.
-		printText(U"Skipping build of ", projectFilePath, U" because the SkipIfBinaryExists flag was given.\n");
+		printText(U"Skipping build of ", projectFilePath, U" because the SkipIfBinaryExists flag was given and ", fullProgramPath, U" was found.\n");
 		return;
 	}
 	// Once we are done finding all source files, we can resolve the dependencies to create a graph connected by indices.
@@ -269,7 +272,7 @@ void buildProject(ScriptTarget &output, const ReadableString &projectFilePath, M
 	if (getFlagAsInteger(settings, U"ListDependencies")) {
 		printDependencies(context);
 	}
-	generateCompilationScript(output, context, settings, programPath);
+	generateCompilationScript(output, context, settings, fullProgramPath);
 }
 
 // Using a folder path and input arguments for all projects.
