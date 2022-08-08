@@ -208,11 +208,11 @@ static void script_printMessage(ScriptTarget &output, const ReadableString messa
 	}
 }
 
-static void script_executeLocalBinary(ScriptTarget &output, const ReadableString code) {
+static void script_executeLocalBinary(ScriptTarget &output, const ReadableString fullPath) {
 	if (output.language == ScriptLanguage::Batch) {
-		string_append(output.generatedCode, code, ".exe\n");
+		string_append(output.generatedCode, fullPath, U"\n");
 	} else if (output.language == ScriptLanguage::Bash) {
-		string_append(output.generatedCode, file_combinePaths(U".", code), U";\n");
+		string_append(output.generatedCode, fullPath, U";\n");
 	}
 }
 
