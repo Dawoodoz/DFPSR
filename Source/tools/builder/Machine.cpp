@@ -1,9 +1,14 @@
 ﻿
 #include "Machine.h"
 #include "generator.h"
+#include "expression.h"
 #include "../../DFPSR/api/fileAPI.h"
 
 using namespace dsr;
+
+#define STRING_EXPR(FIRST_TOKEN, LAST_TOKEN) evaluateExpression(target, tokens, FIRST_TOKEN, LAST_TOKEN)
+#define INTEGER_EXPR(FIRST_TOKEN, LAST_TOKEN) expression_interpretAsInteger(STRING_EXPR(FIRST_TOKEN, LAST_TOKEN))
+#define PATH_EXPR(FIRST_TOKEN, LAST_TOKEN) file_getTheoreticalAbsolutePath(STRING_EXPR(FIRST_TOKEN, LAST_TOKEN), fromPath)
 
 Extension extensionFromString(const ReadableString& extensionName) {
 	String upperName = string_upperCase(string_removeOuterWhiteSpace(extensionName));
@@ -47,20 +52,12 @@ int64_t getFlagAsInteger(const Machine &target, const dsr::ReadableString &key, 
 	}
 }
 
-static String unwrapIfNeeded(const dsr::ReadableString &value) {
-	if (value[0] == U'\"') {
-		return string_unmangleQuote(value);
-	} else {
-		return value;
-	}
-}
-
 void assignValue(Machine &target, const dsr::ReadableString &key, const dsr::ReadableString &value, bool inherited) {
 	int64_t existingIndex = findFlag(target, key);
 	if (existingIndex == -1) {
-		target.variables.pushConstruct(string_upperCase(key), unwrapIfNeeded(value), inherited);
+		target.variables.pushConstruct(string_upperCase(key), expression_unwrapIfNeeded(value), inherited);
 	} else {
-		target.variables[existingIndex].value = unwrapIfNeeded(value);
+		target.variables[existingIndex].value = expression_unwrapIfNeeded(value);
 		if (inherited) {
 			target.variables[existingIndex].inherited = true;
 		}
@@ -74,93 +71,10 @@ static void flushToken(List<String> &targetTokens, String &currentToken) {
 	}
 }
 
-// Safe access for easy pattern matching.
-static ReadableString getToken(List<String> &tokens, int index) {
-	if (0 <= index && index < tokens.length()) {
-		return tokens[index];
-	} else {
-		return U"";
-	}
-}
-
-static int64_t interpretAsInteger(const dsr::ReadableString &value) {
-	if (string_length(value) == 0) {
-		return 0;
-	} else {
-		return string_toInteger(value);
-	}
-}
-
-#define STRING_EXPR(FIRST_TOKEN, LAST_TOKEN) evaluateExpression(target, tokens, FIRST_TOKEN, LAST_TOKEN)
-#define STRING_LEFT STRING_EXPR(startTokenIndex, opIndex - 1)
-#define STRING_RIGHT STRING_EXPR(opIndex + 1, endTokenIndex)
-
-#define INTEGER_EXPR(FIRST_TOKEN, LAST_TOKEN) interpretAsInteger(STRING_EXPR(FIRST_TOKEN, LAST_TOKEN))
-#define INTEGER_LEFT INTEGER_EXPR(startTokenIndex, opIndex - 1)
-#define INTEGER_RIGHT INTEGER_EXPR(opIndex + 1, endTokenIndex)
-
-#define PATH_EXPR(FIRST_TOKEN, LAST_TOKEN) file_getTheoreticalAbsolutePath(STRING_EXPR(FIRST_TOKEN, LAST_TOKEN), fromPath)
-
-#define MATCH_CIS(TOKEN) string_caseInsensitiveMatch(currentToken, TOKEN)
-#define MATCH_CS(TOKEN) string_match(currentToken, TOKEN)
-
 static String evaluateExpression(Machine &target, List<String> &tokens, int64_t startTokenIndex, int64_t endTokenIndex) {
-	if (startTokenIndex == endTokenIndex) {
-		ReadableString first = getToken(tokens, startTokenIndex);
-		if (string_isInteger(first)) {
-			return first;
-		} else if (first[0] == U'\"') {
-			return string_unmangleQuote(first);
-		} else {
-			// Identifier defaulting to empty.
-			return getFlag(target, first, U"");
-		}
-	} else {
-		int64_t depth = 0;
-		for (int64_t opIndex = 0; opIndex < tokens.length(); opIndex++) {
-			String currentToken = tokens[opIndex];
-			if (MATCH_CS(U"(")) {
-				depth++;
-			} else if (MATCH_CS(U")")) {
-				depth--;
-				if (depth < 0) throwError(U"Negative expression depth!\n");
-			} else if (MATCH_CIS(U"and")) {
-				return string_combine(INTEGER_LEFT && INTEGER_RIGHT);
-			} else if (MATCH_CIS(U"or")) {
-				return string_combine(INTEGER_LEFT || INTEGER_RIGHT);
-			} else if (MATCH_CIS(U"xor")) {
-				return string_combine((!INTEGER_LEFT) != (!INTEGER_RIGHT));
-			} else if (MATCH_CS(U"+")) {
-				return string_combine(INTEGER_LEFT + INTEGER_RIGHT);
-			} else if (MATCH_CS(U"-")) {
-				return string_combine(INTEGER_LEFT - INTEGER_RIGHT);
-			} else if (MATCH_CS(U"*")) {
-				return string_combine(INTEGER_LEFT * INTEGER_RIGHT);
-			} else if (MATCH_CS(U"/")) {
-				return string_combine(INTEGER_LEFT / INTEGER_RIGHT);
-			} else if (MATCH_CS(U"<")) {
-				return string_combine(INTEGER_LEFT < INTEGER_RIGHT);
-			} else if (MATCH_CS(U">")) {
-				return string_combine(INTEGER_LEFT > INTEGER_RIGHT);
-			} else if (MATCH_CS(U">=")) {
-				return string_combine(INTEGER_LEFT >= INTEGER_RIGHT);
-			} else if (MATCH_CS(U"<=")) {
-				return string_combine(INTEGER_LEFT <= INTEGER_RIGHT);
-			} else if (MATCH_CS(U"==")) {
-				return string_combine(INTEGER_LEFT == INTEGER_RIGHT);
-			} else if (MATCH_CS(U"!=")) {
-				return string_combine(INTEGER_LEFT != INTEGER_RIGHT);
-			} else if (MATCH_CS(U"&")) {
-				return string_combine(STRING_LEFT, STRING_RIGHT);
-			}
-		}
-		if (depth != 0) throwError(U"Unbalanced expression depth!\n");
-		if (string_match(tokens[startTokenIndex], U"(") && string_match(tokens[endTokenIndex], U")")) {
-			return evaluateExpression(target, tokens, startTokenIndex + 1, endTokenIndex - 1);
-		}
-	}
-	throwError(U"Failed to evaluate expression!\n");
-	return U"?";
+	return expression_evaluate(tokens, startTokenIndex, endTokenIndex, [&target](ReadableString identifier) -> String {
+		return getFlag(target, identifier, U"");
+	});
 }
 
 static void crawlSource(ProjectContext &context, const dsr::ReadableString &absolutePath) {
@@ -196,8 +110,8 @@ static void interpretLine(ScriptTarget &output, ProjectContext &context, Machine
 		}
 		printText(U"\n");
 		*/
-		ReadableString first = getToken(tokens, 0);
-		ReadableString second = getToken(tokens, 1);
+		ReadableString first = expression_getToken(tokens, 0);
+		ReadableString second = expression_getToken(tokens, 1);
 		if (activeLine) {
 			// TODO: Implement elseif and else cases using a list as a virtual stack,
 			//       to remember at which layer the else cases have already been consumed by a true evaluation.
@@ -226,7 +140,7 @@ static void interpretLine(ScriptTarget &output, ProjectContext &context, Machine
 				//   Having the same external project built twice during the same session is not allowed.
 				Machine childTarget;
 				inheritMachine(childTarget, target);
-				String projectPath = file_getTheoreticalAbsolutePath(unwrapIfNeeded(second), fromPath); // Use the second token as the folder path.
+				String projectPath = file_getTheoreticalAbsolutePath(expression_unwrapIfNeeded(second), fromPath); // Use the second token as the folder path.
 				argumentsToSettings(childTarget, tokens, 2); // Send all tokens after the second token as input arguments to buildProjects.
 				printText("Building ", second, " from ", fromPath, " which is ", projectPath, "\n");
 				build(output, projectPath, childTarget);
