@@ -24,8 +24,8 @@
 /*
 TODO:
 * Test that overwriting a large file with a smaller file does not leave anything from the overwritten file on any system.
-* bool file_remove(const ReadableString& path);
-	WINBASEAPI WINBOOL WINAPI DeleteFileW (LPCWSTR lpFileName);
+* bool file_removeFile(const ReadableString& path);
+	bool DeleteFileW (LPCWSTR lpFileName);
 */
 
 #ifndef DFPSR_API_FILE
@@ -262,6 +262,14 @@ namespace dsr {
 	// Side-effects: Creates a folder at path.
 	// Post-condition: Returns true iff the operation was successful.
 	bool file_createFolder(const ReadableString &path);
+
+	// Path-syntax: According to the local computer.
+	// Pre-condition: The folder at path must be empty, so any recursion must be done manually.
+	//   Otherwise you might accidentally erase "C:\myFolder\importantDocuments" from giving C:\myFolder \junk instead of "C:\myFolder\junk" as command line arguments.
+	//   Better to implement your own recursive search that confirms for each file and folder that they are no longer needed, for such a dangerous operation.
+	// Side-effects: Removes the folder at path.
+	// Post-condition: Returns true iff the operation was successful.
+	bool file_removeEmptyFolder(const ReadableString& path);
 }
 
 #endif

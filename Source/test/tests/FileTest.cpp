@@ -101,4 +101,54 @@ START_TEST(File)
 		ASSERT_EQUAL(file_hasExtension(U"/folder/file."), true); // Not a named extension, but ending with a dot is not a pure extensionless path either.
 		ASSERT_EQUAL(file_hasExtension(U"/folder/file"), false);
 	}
+	{ // Folder creation and removal
+		// Prepare by removing any old folder from aborted tests.
+		if (file_getEntryType(U"FooBarTestFolder") == EntryType::Folder) file_removeEmptyFolder(U"FooBarTestFolder");
+		// The boolean results are compared with true rather than not-false, because it should still work if someone does that by mistake in the real program.
+		//   All booleans returned from system API calls in fileAPI are normalized to 1 and 0 using either direct assignments or comparisons.
+		//   Normalization using x == 0 or x != 0 is guaranteed to return precisely 1 or 0 according to the C++ standard.
+		// Check that the folder does not exist.
+		ASSERT_EQUAL(file_getEntryType(U"FooBarTestFolder"), EntryType::NotFound);
+		// Create the folder.
+		ASSERT_EQUAL(file_createFolder(U"FooBarTestFolder"), true); 
+		// Check that the folder does exist.
+		ASSERT_EQUAL(file_getEntryType(U"FooBarTestFolder"), EntryType::Folder);
+		// Remove the folder.
+		ASSERT_EQUAL(file_removeEmptyFolder(U"FooBarTestFolder"), true);
+		// Check that the folder does not exist.
+		ASSERT_EQUAL(file_getEntryType(U"FooBarTestFolder"), EntryType::NotFound);
+	}
+	{ // Nested creation and removal
+		String childPathA = file_combinePaths(U"FooBarParent", U"FooBarChildA", LOCAL_PATH_SYNTAX);
+		String childPathB = file_combinePaths(U"FooBarParent", U"FooBarChildB", LOCAL_PATH_SYNTAX);
+		// Prepare by removing any old folder from aborted tests.
+		if (file_getEntryType(childPathA) == EntryType::Folder) file_removeEmptyFolder(childPathA);
+		if (file_getEntryType(childPathB) == EntryType::Folder) file_removeEmptyFolder(childPathB);
+		if (file_getEntryType(U"FooBarParent") == EntryType::Folder) file_removeEmptyFolder(U"FooBarParent");
+		// Check that the folder does not exist.
+		ASSERT_EQUAL(file_getEntryType(U"FooBarParent"), EntryType::NotFound);
+		// Create the folder.
+		ASSERT_EQUAL(file_createFolder(U"FooBarParent"), true); 
+		// Check that the folder does exist.
+		ASSERT_EQUAL(file_getEntryType(U"FooBarParent"), EntryType::Folder);
+		// Create a child folder.
+		ASSERT_EQUAL(file_getEntryType(childPathA), EntryType::NotFound);
+		ASSERT_EQUAL(file_getEntryType(childPathB), EntryType::NotFound);
+		ASSERT_EQUAL(file_createFolder(childPathA), true);
+		ASSERT_EQUAL(file_getEntryType(childPathA), EntryType::Folder);
+		ASSERT_EQUAL(file_getEntryType(childPathB), EntryType::NotFound);
+		ASSERT_EQUAL(file_createFolder(childPathB), true);
+		ASSERT_EQUAL(file_getEntryType(childPathA), EntryType::Folder);
+		ASSERT_EQUAL(file_getEntryType(childPathB), EntryType::Folder);
+		ASSERT_EQUAL(file_removeEmptyFolder(U"FooBarParent"), false); // Trying to remove the parent now should fail.
+		ASSERT_EQUAL(file_removeEmptyFolder(childPathA), true);
+		ASSERT_EQUAL(file_getEntryType(childPathA), EntryType::NotFound);
+		ASSERT_EQUAL(file_getEntryType(childPathB), EntryType::Folder);
+		ASSERT_EQUAL(file_removeEmptyFolder(U"FooBarParent"), false); // Trying to remove the parent now should fail.
+		ASSERT_EQUAL(file_removeEmptyFolder(childPathB), true);
+		ASSERT_EQUAL(file_getEntryType(childPathA), EntryType::NotFound);
+		ASSERT_EQUAL(file_getEntryType(childPathB), EntryType::NotFound);
+		ASSERT_EQUAL(file_removeEmptyFolder(U"FooBarParent"), true); // Trying to remove the parent now should succeed now that it's empty.
+		ASSERT_EQUAL(file_getEntryType(U"FooBarParent"), EntryType::NotFound); // Now the parent folder should no longer exist.
+	}
 END_TEST
