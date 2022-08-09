@@ -242,6 +242,16 @@ ReadableString file_getPathlessName(const ReadableString &path) {
 	return string_after(path, file_findLastSeparator(path));
 }
 
+bool file_hasExtension(const String& path) {
+	int64_t lastDotIndex = string_findLast(path, U'.');
+	int64_t lastSeparatorIndex = file_findLastSeparator(path);
+	if (lastDotIndex != -1 && lastSeparatorIndex < lastDotIndex) {
+		return true;
+	} else {
+		return false;
+	}
+}
+
 ReadableString file_getExtension(const String& filename) {
 	int64_t lastDotIndex = string_findLast(filename, U'.');
 	int64_t lastSeparatorIndex = file_findLastSeparator(filename);
@@ -250,6 +260,17 @@ ReadableString file_getExtension(const String& filename) {
 		return string_removeOuterWhiteSpace(string_after(filename, lastDotIndex));
 	} else {
 		return U"";
+	}
+}
+
+ReadableString file_getExtensionless(const String& filename) {
+	int64_t lastDotIndex = string_findLast(filename, U'.');
+	int64_t lastSeparatorIndex = file_findLastSeparator(filename);
+	// Only use the last dot if there is no folder separator after it.
+	if (lastDotIndex != -1 && lastSeparatorIndex < lastDotIndex) {
+		return string_removeOuterWhiteSpace(string_before(filename, lastDotIndex));
+	} else {
+		return string_removeOuterWhiteSpace(filename);
 	}
 }
 

@@ -186,6 +186,16 @@ namespace dsr {
 	//   Use file_getEntryType instead if you want to know if it's a file or folder.
 	ReadableString file_getExtension(const String& filename);
 
+	// Path-syntax: This trivial operation should work the same independent of operating system.
+	// Post-condition: Returns filename without any extension, which is the original input if there is no extension.
+	//   Use to remove a file's type before appending a new extension.
+	ReadableString file_getExtensionless(const String& filename);
+
+	// Path-syntax: This trivial operation should work the same independent of operating system.
+	// Post-condition: Returns true iff path has an extension, even if it's just an empty dot at the end that file_getExtension would not detect.
+	//   Useful to check if you need to add an extension or if it already exists in a full filename.
+	bool file_hasExtension(const String& path);
+
 	// Quickly gets the relative parent folder by removing the last entry from the string or appending .. at the end.
 	// Path-syntax: Depends on pathSyntax argument.
 	// This pure syntax function getting the parent folder does not access the system in any way.
