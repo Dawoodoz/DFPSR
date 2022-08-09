@@ -70,9 +70,8 @@ void resolveDependencies(ProjectContext &context) {
 }
 
 static String findSourceFile(const ReadableString& headerPath, bool acceptC, bool acceptCpp) {
-	int lastDotIndex = string_findLast(headerPath, U'.');
-	if (lastDotIndex != -1) {
-		ReadableString extensionlessPath = string_removeOuterWhiteSpace(string_before(headerPath, lastDotIndex));
+	if (file_hasExtension(headerPath)) {
+		ReadableString extensionlessPath = file_getExtensionless(headerPath);
 		String cPath = extensionlessPath + U".c";
 		String cppPath = extensionlessPath + U".cpp";
 		if (acceptC && file_getEntryType(cPath) == EntryType::File) {

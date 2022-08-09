@@ -57,4 +57,48 @@ START_TEST(File)
 		ASSERT_MATCH(file_getRelativeParentFolder(U"mediaFolder\\..\\myFile.txt", PathSyntax::Windows), U"");
 		ASSERT_MATCH(file_getTheoreticalAbsoluteParentFolder(U"mediaFolder\\..\\myFile.txt", U"C:\\folder\\anotherFolder", PathSyntax::Windows), U"C:\\folder\\anotherFolder");
 	}
+	{ // Path removal
+		ASSERT_MATCH(file_getPathlessName(U"C:\\..\\folder\\file.txt"), U"file.txt");
+		ASSERT_MATCH(file_getPathlessName(U"C:\\..\\folder\\"), U"");
+		ASSERT_MATCH(file_getPathlessName(U"C:\\..\\folder"), U"folder");
+		ASSERT_MATCH(file_getPathlessName(U"C:\\..\\"), U"");
+		ASSERT_MATCH(file_getPathlessName(U"C:\\.."), U"..");
+		ASSERT_MATCH(file_getPathlessName(U"C:\\"), U"");
+		ASSERT_MATCH(file_getPathlessName(U"C:"), U"C:");
+		ASSERT_MATCH(file_getPathlessName(U"/folder/file.h"), U"file.h");
+		ASSERT_MATCH(file_getPathlessName(U"/folder/"), U"");
+		ASSERT_MATCH(file_getPathlessName(U"/folder"), U"folder");
+		ASSERT_MATCH(file_getPathlessName(U"/"), U"");
+	}
+	{ // Extension removal
+		ASSERT_MATCH(file_getExtensionless(U"C:\\..\\folder\\file.txt"), U"C:\\..\\folder\\file");
+		ASSERT_MATCH(file_getExtensionless(U"C:\\folder\\file.h"), U"C:\\folder\\file");
+		ASSERT_MATCH(file_getExtensionless(U"C:\\file."), U"C:\\file");
+		ASSERT_MATCH(file_getExtensionless(U"\\file."), U"\\file");
+		ASSERT_MATCH(file_getExtensionless(U"file"), U"file");
+		ASSERT_MATCH(file_getExtensionless(U""), U"");
+		ASSERT_MATCH(file_getExtensionless(U"/folder/./file.txt"), U"/folder/./file");
+		ASSERT_MATCH(file_getExtensionless(U"/folder/file.h"), U"/folder/file");
+		ASSERT_MATCH(file_getExtensionless(U"/folder/../file.h"), U"/folder/../file");
+		ASSERT_MATCH(file_getExtensionless(U"/file."), U"/file");
+		ASSERT_MATCH(file_getExtensionless(U"file"), U"file");
+		ASSERT_MATCH(file_getExtension(U"C:\\..\\folder\\file.txt"), U"txt");
+		ASSERT_MATCH(file_getExtension(U"C:\\..\\folder\\file.foo.txt"), U"txt");
+		ASSERT_MATCH(file_getExtension(U"C:\\..\\folder\\file.foo_bar.txt"), U"txt");
+		ASSERT_MATCH(file_getExtension(U"C:\\..\\folder\\file.foo.bar_txt"), U"bar_txt");
+		ASSERT_MATCH(file_getExtension(U"C:\\folder\\file.h"), U"h");
+		ASSERT_MATCH(file_getExtension(U"C:\\file."), U"");
+		ASSERT_MATCH(file_getExtension(U"\\file."), U"");
+		ASSERT_MATCH(file_getExtension(U"file"), U"");
+		ASSERT_MATCH(file_getExtension(U""), U"");
+		ASSERT_MATCH(file_getExtension(U"/folder/./file.txt"), U"txt");
+		ASSERT_MATCH(file_getExtension(U"/folder/file.h"), U"h");
+		ASSERT_MATCH(file_getExtension(U"/folder/../file.h"), U"h");
+		ASSERT_MATCH(file_getExtension(U"/file."), U"");
+		ASSERT_MATCH(file_getExtension(U"file"), U"");
+		ASSERT_EQUAL(file_hasExtension(U"/folder/./file.txt"), true);
+		ASSERT_EQUAL(file_hasExtension(U"/../folder/file.h"), true);
+		ASSERT_EQUAL(file_hasExtension(U"/folder/file."), true); // Not a named extension, but ending with a dot is not a pure extensionless path either.
+		ASSERT_EQUAL(file_hasExtension(U"/folder/file"), false);
+	}
 END_TEST
