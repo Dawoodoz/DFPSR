@@ -736,10 +736,12 @@ static void encodeText(const ByteWriterFunction &receiver, String content, bool 
 
 // Encoding to a buffer before saving all at once as a binary file.
 //   This tells the operating system how big the file is in advance and prevent the worst case of stalling for minutes!
-void dsr::string_save(const ReadableString& filename, const ReadableString& content, CharacterEncoding characterEncoding, LineEncoding lineEncoding) {
+bool dsr::string_save(const ReadableString& filename, const ReadableString& content, CharacterEncoding characterEncoding, LineEncoding lineEncoding) {
 	Buffer buffer = string_saveToMemory(content, characterEncoding, lineEncoding);
 	if (buffer_exists(buffer)) {
-		file_saveBuffer(filename, buffer);
+		return file_saveBuffer(filename, buffer);
+	} else {
+		return false;
 	}
 }
 

@@ -288,11 +288,12 @@ String string_loadFromMemory(Buffer fileContent);
 String string_dangerous_decodeFromData(const void* data, CharacterEncoding encoding);
 
 // Side-effect: Saves content to filename using the selected character and line encodings.
+// Post-condition: Returns true on success and false on failure.
 // Do not add carriage return characters yourself into strings, for these will be added automatically in the CrLf mode.
 // The internal String type should only use UTF-32 with single line feeds for breaking lines.
 //   This makes text processing algorithms a lot cleaner when a character or line break is always one element.
 // UTF-8 with BOM is default by being both compact and capable of storing 21 bits of unicode.
-void string_save(const ReadableString& filename, const ReadableString& content,
+bool string_save(const ReadableString& filename, const ReadableString& content,
   CharacterEncoding characterEncoding = CharacterEncoding::BOM_UTF8,
   LineEncoding lineEncoding = LineEncoding::CrLf
 );
