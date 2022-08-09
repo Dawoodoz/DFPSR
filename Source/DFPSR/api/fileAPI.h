@@ -206,10 +206,20 @@ namespace dsr {
 	// Post-condition: Returns the absolute parent to the given path, or U"?" if trying to leave the root or use a tilde home alias.
 	String file_getAbsoluteParentFolder(const ReadableString &path);
 
+	// A theoretical version of file_getAbsoluteParentFolder for evaluation on a theoretical system without actually calling file_getCurrentPath or running on the given system.
+	// Path-syntax: Depends on pathSyntax argument.
+	// Post-condition: Returns the absolute parent to the given path, or U"?" if trying to leave the root or use a tilde home alias.
+	String file_getTheoreticalAbsoluteParentFolder(const ReadableString &path, const ReadableString &currentPath, PathSyntax pathSyntax);
+
 	// Gets the canonical absolute version of the path.
 	// Path-syntax: According to the local computer.
 	// Post-condition: Returns an absolute version of the path, quickly without removing redundancy.
 	String file_getAbsolutePath(const ReadableString &path);
+
+	// A theoretical version of file_getAbsolutePath for evaluation on a theoretical system without actually calling file_getCurrentPath or running on the given system.
+	// Path-syntax: Depends on pathSyntax argument.
+	// Post-condition: Returns an absolute version of the path, quickly without removing redundancy.
+	String file_getTheoreticalAbsolutePath(const ReadableString &path, const ReadableString &currentPath, PathSyntax pathSyntax IMPLICIT_PATH_SYNTAX);
 
 	// Path-syntax: According to the local computer.
 	// Pre-condition: filename must refer to a file so that file_getEntryType(filename) == EntryType::File.
@@ -242,16 +252,6 @@ namespace dsr {
 	// Side-effects: Creates a folder at path.
 	// Post-condition: Returns true iff the operation was successful.
 	bool file_createFolder(const ReadableString &path);
-
-	// A theoretical version of file_getParentFolder for evaluation on a theoretical system without actually calling file_getCurrentPath or running on the given system.
-	// Path-syntax: Depends on pathSyntax argument.
-	// Post-condition: Returns the absolute parent to the given path, or U"?" if trying to leave the root or use a tilde home alias.
-	String file_getTheoreticalAbsoluteParentFolder(const ReadableString &path, const ReadableString &currentPath, PathSyntax pathSyntax);
-
-	// A theoretical version of for evaluation on a theoretical system without actually calling file_getCurrentPath or running on the given system.
-	// Path-syntax: Depends on pathSyntax argument.
-	// Post-condition: Returns an absolute version of the path, quickly without removing redundancy.
-	String file_getTheoreticalAbsolutePath(const ReadableString &path, const ReadableString &currentPath, PathSyntax pathSyntax IMPLICIT_PATH_SYNTAX);
 }
 
 #endif
