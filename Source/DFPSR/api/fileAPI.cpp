@@ -658,4 +658,18 @@ bool file_removeEmptyFolder(const ReadableString& path) {
 	return result;
 }
 
+bool file_removeFile(const ReadableString& filename) {
+	bool result = false;
+	String optimizedPath = file_optimizePath(filename, LOCAL_PATH_SYNTAX);
+	Buffer buffer;
+	const NativeChar *nativePath = toNativeString(filename, buffer);
+	// Remove the empty folder.
+	#ifdef USE_MICROSOFT_WINDOWS
+		result = (DeleteFileW(nativePath) != 0);
+	#else
+		result = (unlink(nativePath) == 0);
+	#endif
+	return result;
+}
+
 }

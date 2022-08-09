@@ -21,13 +21,6 @@
 //    3. This notice may not be removed or altered from any source
 //    distribution.
 
-/*
-TODO:
-* Test that overwriting a large file with a smaller file does not leave anything from the overwritten file on any system.
-* bool file_removeFile(const ReadableString& path);
-	bool DeleteFileW (LPCWSTR lpFileName);
-*/
-
 #ifndef DFPSR_API_FILE
 #define DFPSR_API_FILE
 
@@ -270,6 +263,12 @@ namespace dsr {
 	// Side-effects: Removes the folder at path.
 	// Post-condition: Returns true iff the operation was successful.
 	bool file_removeEmptyFolder(const ReadableString& path);
+
+	// Path-syntax: According to the local computer.
+	// Pre-condition: The file at path must exist.
+	// Side-effects: Removes the file at path. If the same file exists at multiple paths in the system, only the link to the file will be removed.
+	// Post-condition: Returns true iff the operation was successful.
+	bool file_removeFile(const ReadableString& filename);
 }
 
 #endif
