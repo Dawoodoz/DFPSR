@@ -364,7 +364,7 @@ bool file_setCurrentPath(const ReadableString &path) {
 	Buffer buffer;
 	const NativeChar *nativePath = toNativeString(file_optimizePath(path, LOCAL_PATH_SYNTAX), buffer);
 	#ifdef USE_MICROSOFT_WINDOWS
-		return SetCurrentDirectoryW(nativePath);
+		return SetCurrentDirectoryW(nativePath) != 0;
 	#else
 		return chdir(nativePath) == 0;
 	#endif
@@ -640,6 +640,20 @@ bool file_createFolder(const ReadableString &path) {
 	#else
 		// Create folder with default permissions. Read, write and search for owner and group. Read and search for others.
 		result = (mkdir(nativePath, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) == 0);
+	#endif
+	return result;
+}
+
+bool file_removeEmptyFolder(const ReadableString& path) {
+	bool result = false;
+	String optimizedPath = file_optimizePath(path, LOCAL_PATH_SYNTAX);
+	Buffer buffer;
+	const NativeChar *nativePath = toNativeString(optimizedPath, buffer);
+	// Remove the empty folder.
+	#ifdef USE_MICROSOFT_WINDOWS
+		result = (RemoveDirectoryW(nativePath) != 0);
+	#else
+		result = (rmdir(nativePath) == 0);
 	#endif
 	return result;
 }
