@@ -608,4 +608,19 @@ void file_getPathEntries(const ReadableString& path, std::function<void(Readable
 	}
 }
 
+bool file_createFolder(const ReadableString &path) {
+	bool result = false;
+	String optimizedPath = file_optimizePath(path, LOCAL_PATH_SYNTAX);
+	Buffer buffer;
+	const NativeChar *nativePath = toNativeString(optimizedPath, buffer);
+	#ifdef USE_MICROSOFT_WINDOWS
+		// Create folder with permissions inherited.
+		result = (CreateDirectoryW(nativePath, nullptr) != 0);
+	#else
+		// Create folder with default permissions. Read, write and search for owner and group. Read and search for others.
+		result = (mkdir(nativePath, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) == 0);
+	#endif
+	return result;
+}
+
 }

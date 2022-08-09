@@ -24,9 +24,6 @@
 /*
 TODO:
 * Test that overwriting a large file with a smaller file does not leave anything from the overwritten file on any system.
-* bool file_createFolder(const ReadableString& path);
-	WINBASEAPI WINBOOL WINAPI CreateDirectoryW (LPCWSTR lpPathName, LPSECURITY_ATTRIBUTES lpSecurityAttributes);
-	mkdir on Posix
 * bool file_remove(const ReadableString& path);
 	WINBASEAPI WINBOOL WINAPI DeleteFileW (LPCWSTR lpFileName);
 */
@@ -238,6 +235,13 @@ namespace dsr {
 	//               entryType equals file_getEntryType(entryPath).
 	// Post-condition: Returns true iff the folder could be found.
 	bool file_getFolderContent(const ReadableString& folderPath, std::function<void(const ReadableString& entryPath, const ReadableString& entryName, EntryType entryType)> action);
+
+	// Path-syntax: According to the local computer.
+	// Access permissions: Default settings according to the local operating system, either inherited from the parent folder or no specific restrictions.
+	// Pre-condition: The parent of path must already exist, because only one folder is created.
+	// Side-effects: Creates a folder at path.
+	// Post-condition: Returns true iff the operation was successful.
+	bool file_createFolder(const ReadableString &path);
 
 	// A theoretical version of file_getParentFolder for evaluation on a theoretical system without actually calling file_getCurrentPath or running on the given system.
 	// Path-syntax: Depends on pathSyntax argument.
