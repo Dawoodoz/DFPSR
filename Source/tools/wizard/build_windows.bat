@@ -1,7 +1,7 @@
 @echo off
 
-rem Launch the build system with main.DsrProj and Windows selected as the platform.
+rem Launch the build system with Wizard.DsrProj and Windows selected as the platform.
 
 echo "Running build_windows.bat %@%
 
-../builder/buildProject.bat main.DsrProj Windows %@%
+../builder/buildProject.bat Wizard.DsrProj Windows %@%

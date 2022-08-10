@@ -1,7 +1,8 @@
-﻿# No need to import DFPSR.DsrHead with stub backends when only including essential headers.
-CompilerFlag "-std=c++14"
+﻿CompilerFlag "-std=c++14"
+Graphics
+#Sound
 Crawl "main.cpp"
-ProgramPath = "application"
+Import "../../DFPSR/DFPSR.DsrHead"
 
 # Linking statically to standard C/C++ libraries allow running the program without installing them.
 #   Recommended for making an installer for another application or programs that should not need an installer.
@@ -11,6 +12,3 @@ StaticRuntime
 
 # Uncomment to enable debug mode, which is slower
 #Debug
-
-# Show how the build system works when finding the library's used subset
-ListDependencies

@@ -1,17 +1,8 @@
 ﻿CompilerFlag "-std=c++14"
 Graphics
 #Sound
-
-# An include using quotation marks will detect the header and its headers recursively.
-# For each detected header, the build system looks for an implementation file of the same name in the same folder.
-# Because sandbox.cpp and tool.cpp don't have sandbox.h/hpp or tool.h/hpp, the build system can't know that main depends on them.
 Crawl "main.cpp"
-# Then we just start a new crawl search from each of those disconnected include branches.
-Crawl "sandbox.cpp"
-Crawl "tool.cpp"
-
 Import "../../DFPSR/DFPSR.DsrHead"
-ProgramPath = "application"
 
 # Linking statically to standard C/C++ libraries allow running the program without installing them.
 #   Recommended for making an installer for another application or programs that should not need an installer.
