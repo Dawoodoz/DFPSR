@@ -80,18 +80,31 @@ Component previewPicture;
 int boomSound;
 
 struct Project {
-	String buildScript; // To execute
+	String projectFilePath;
+	String executableFilePath;
 	String title; // To display
 	String description; // To show when selected
+	DsrProcess programHandle;
+	DsrProcessStatus lastStatus = DsrProcessStatus::NotStarted;
 	OrderedImageRgbaU8 preview;
-	Project(const ReadableString &buildScript);
+	Project(const ReadableString &projectFilePath);
 };
 List<Project> projects;
 
-Project::Project(const ReadableString &buildScript)
-: buildScript(buildScript) {
-	String projectFolderPath = file_getRelativeParentFolder(buildScript);
-	this->title = file_getPathlessName(projectFolderPath);
+Project::Project(const ReadableString &projectFilePath)
+: projectFilePath(projectFilePath) {
+	String projectFolderPath = file_getRelativeParentFolder(projectFilePath);
+	String extensionlessProjectPath = file_getExtensionless(projectFilePath);
+	this->title = file_getPathlessName(extensionlessProjectPath);
+	// TODO: Get the native extension for each type of file? .exe, .dll, .so...
+	#ifdef USE_MICROSOFT_WINDOWS
+		this->executableFilePath = string_combine(extensionlessProjectPath, U".exe");
+	#else
+		this->executableFilePath = extensionlessProjectPath;
+	#endif
+	if (file_getEntryType(this->executableFilePath) != EntryType::File) {
+		this->executableFilePath = U"";
+	}
 	String descriptionPath = file_combinePaths(projectFolderPath, U"Description.txt");
 	if (file_getEntryType(descriptionPath) == EntryType::File) {
 		this->description = string_load(descriptionPath);
@@ -136,7 +149,7 @@ static void findProjects(const ReadableString& folderPath) {
 			// If we find a project within folderPath...
 			if (string_match(extension, U"DSRPROJ")) {
 				// ...and the folder is not namned wizard...
-				if (!string_match(newProject.title, U"wizard")) {
+				if (!string_match(newProject.title, U"Wizard")) {
 					// ...then add it to the list of projects.
 					projects.push(newProject);
 				}
@@ -145,14 +158,40 @@ static void findProjects(const ReadableString& folderPath) {
 	});
 }
 
-static void selectProject(int64_t index) {
-	int oldIndex = component_getProperty_integer(projectList, U"SelectedIndex", true);
-	// Don't trigger new events if the selected index is already updated manually.
-	if (index != oldIndex) {
-		component_setProperty_integer(projectList, U"SelectedIndex", index, false);
+// Returns true iff the interface needs to be redrawn.
+static bool updateInterface(bool forceUpdate) {
+	bool needToDraw = false;
+	int projectIndex = component_getProperty_integer(projectList, U"SelectedIndex", true);
+	//Application name from project name?
+	if (projectIndex >= 0 && projectIndex < projects.length()) {
+		DsrProcessStatus newStatus = process_getStatus(projects[projectIndex].programHandle);
+		DsrProcessStatus lastStatus = projects[projectIndex].lastStatus;
+		if (newStatus != lastStatus || forceUpdate) {
+			if (newStatus == DsrProcessStatus::Running) {
+				component_setProperty_string(descriptionLabel, U"Text", string_combine(projects[projectIndex].title, U" is running."));
+			} else if (newStatus == DsrProcessStatus::Crashed) {
+				component_setProperty_string(descriptionLabel, U"Text", string_combine(projects[projectIndex].title, U" crashed."));
+			} else if (newStatus == DsrProcessStatus::Completed) {
+				component_setProperty_string(descriptionLabel, U"Text", string_combine(projects[projectIndex].title, U" terminated safely."));
+			} else if (newStatus == DsrProcessStatus::NotStarted) {
+				component_setProperty_string(descriptionLabel, U"Text", projects[projectIndex].description);
+			}
+			needToDraw = true;
+			projects[projectIndex].lastStatus = newStatus;
+		}
+		component_setProperty_image(previewPicture, U"Image", projects[projectIndex].preview, false);
+		bool foundExecutable = string_length(projects[projectIndex].executableFilePath) > 0;
+		component_setProperty_integer(launchButton, U"Visible", foundExecutable);
 	}
-	component_setProperty_string(descriptionLabel, U"Text", projects[index].description);
-	component_setProperty_image(previewPicture, U"Image", projects[index].preview, false);
+	return needToDraw;
+}
+
+static void selectProject(int64_t projectIndex) {
+	// Don't trigger new events if the selected index is already updated manually.
+	if (projectIndex != component_getProperty_integer(projectList, U"SelectedIndex", true)) {
+		component_setProperty_integer(projectList, U"SelectedIndex", projectIndex, false);
+	}
+	updateInterface(true);
 }
 
 static void populateInterface(const ReadableString& folderPath) {
@@ -197,7 +236,18 @@ void dsrMain(List<String> args) {
 	component_setPressedEvent(launchButton, []() {
 		// TODO: Implement building and running of the selected project.
 		playSound(boomSound, false, 1.0, 1.0, 0.7);
-		component_setProperty_string(descriptionLabel, U"Text", U"Running projects from the wizard application is not yet implemented.");
+		int projectIndex = component_getProperty_integer(projectList, U"SelectedIndex", true);
+		//Application name from project name?
+		if (projectIndex >= 0 && projectIndex < projects.length()) {
+			if (file_getEntryType(projects[projectIndex].executableFilePath) != EntryType::File) {
+				// Could not find the application.
+				component_setProperty_string(descriptionLabel, U"Text", string_combine(U"Could not find the executable at ", projects[projectIndex].executableFilePath, U"!\n"), true);
+			} else if (process_getStatus(projects[projectIndex].programHandle) != DsrProcessStatus::Running) {
+				// Launch the application.
+				projects[projectIndex].programHandle = process_execute(projects[projectIndex].executableFilePath, List<String>());
+				updateInterface(true);
+			}
+		}
 	});
 	component_setSelectEvent(projectList, [](int64_t index) {
 		playSound(boomSound, false, 0.5, 0.5, 0.5);
@@ -212,7 +262,7 @@ void dsrMain(List<String> args) {
 	while(running) {
 		// Wait for actions so that we don't render until an action has been recieved
 		// This will save battery on laptops for applications that don't require animation
-		while (!window_executeEvents(window)) {
+		while (!(window_executeEvents(window) || updateInterface(false))) {
 			time_sleepSeconds(0.01);
 		}
 		// Fill the background
