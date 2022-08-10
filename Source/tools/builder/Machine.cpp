@@ -218,7 +218,8 @@ void evaluateScript(ScriptTarget &output, ProjectContext &context, Machine &targ
 				// Insert character into quote.
 				string_appendChar(currentToken, c);
 			} else {
-				if (c == U'(' || c == U')' || c == U'[' || c == U']' || c == U'{' || c == U'}' || c == U'=') {
+				// TODO: Do the tokenization in the expression module to get the correct symbols.
+				if (c == U'(' || c == U')' || c == U'[' || c == U']' || c == U'{' || c == U'}' || c == U'=' || c == U'.' || c == U',' || c == U'|' || c == U'!' || c == U'&' || c == U'+' || c == U'-' || c == U'*' || c == U'/' || c == U'\\') {
 					// Atomic token of a single character
 					flushToken(currentLine, currentToken);
 					string_appendChar(currentToken, c);
