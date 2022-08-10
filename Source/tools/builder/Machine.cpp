@@ -256,11 +256,14 @@ void buildProject(ScriptTarget &output, const ReadableString &projectFilePath, M
 	evaluateScript(output, context, settings, projectFilePath);
 	// Find out where things are located.
 	String projectPath = file_getAbsoluteParentFolder(projectFilePath);
-	// Interpret ProgramPath relative to the project path.
-	String fullProgramPath = getFlag(settings, U"ProgramPath", U"program");
+	// Get the project's name.
+	String projectName = file_getPathlessName(file_getExtensionless(projectFilePath));
+	// If no application path is given, the new executable will be named after the project and placed in the same folder.
+	String fullProgramPath = getFlag(settings, U"ProgramPath", projectName);
 	if (output.language == ScriptLanguage::Batch) {
 		string_append(fullProgramPath, U".exe");
 	}
+	// Interpret ProgramPath relative to the project path.
 	fullProgramPath = file_getTheoreticalAbsolutePath(fullProgramPath, projectPath);
 	// If the SkipIfBinaryExists flag is given, we will abort as soon as we have handled its external BuildProjects requests and confirmed that the application exists.
 	if (getFlagAsInteger(settings, U"SkipIfBinaryExists") && file_getEntryType(fullProgramPath) == EntryType::File) {
