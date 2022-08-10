@@ -6,6 +6,7 @@
 #include "../../DFPSR/render/ITriangle2D.h"
 #include "../../DFPSR/base/endian.h"
 #include "../../DFPSR/math/scalar.h"
+#include "../../DFPSR/api/fileAPI.h"
 
 // Comment out a flag to disable an optimization when debugging
 #define DIRTY_RECTANGLE_OPTIMIZATION
@@ -191,9 +192,9 @@ public:
 	// folderPath should end with a path separator
 	SpriteType(const String& folderPath, const String& name) : name(name) {
 		// Load the image atlas
-		ImageRgbaU8 loadedAtlas = image_load_RgbaU8(string_combine(folderPath, name, U".png"));
+		ImageRgbaU8 loadedAtlas = image_load_RgbaU8(string_combine(file_combinePaths(folderPath, name), U".png"));
 		// Load the settings
-		const SpriteConfig configuration = SpriteConfig(string_load(string_combine(folderPath, name, U".ini")));
+		const SpriteConfig configuration = SpriteConfig(string_load(string_combine(file_combinePaths(folderPath, name), U".ini")));
 		this->minBoundMini = IVector3D(
 		  floor(configuration.minBound.x * ortho_miniUnitsPerTile),
 		  floor(configuration.minBound.y * ortho_miniUnitsPerTile),
@@ -272,8 +273,8 @@ public:
 		} else {
 			name = visibleModelName;
 		}
-		this->visibleModel = DenseModel_create(importer_loadModel(folderPath + visibleModelName, true, Transform3D()));
-		this->shadowModel = importer_loadModel(folderPath + shadowModelName, true, Transform3D());
+		this->visibleModel = DenseModel_create(importer_loadModel(file_combinePaths(folderPath, visibleModelName), true, Transform3D()));
+		this->shadowModel = importer_loadModel(file_combinePaths(folderPath, shadowModelName), true, Transform3D());
 	}
 	ModelType(const DenseModel& visibleModel, const Model& shadowModel)
 	: visibleModel(visibleModel), shadowModel(shadowModel) {}
