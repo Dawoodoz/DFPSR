@@ -101,9 +101,9 @@ LATER:
 
 using namespace dsr;
 
-static const String mediaPath = string_combine(U"media", file_separator());
-static const String imagePath = string_combine(mediaPath, U"images", file_separator());
-static const String modelPath = string_combine(mediaPath, U"models", file_separator());
+static const String mediaPath = file_combinePaths(file_getApplicationFolder(), U"media");
+static const String imagePath = file_combinePaths(mediaPath, U"images");
+static const String modelPath = file_combinePaths(mediaPath, U"models");
 
 // Variables
 static bool running = true;
@@ -169,7 +169,7 @@ void loadModel(const ReadableString& name, const ReadableString& visibleName, co
 
 void sandbox_main() {
 	// Create the world
-	world = spriteWorld_create(OrthoSystem(string_load(string_combine(mediaPath, U"Ortho.ini"))), 256);
+	world = spriteWorld_create(OrthoSystem(string_load(file_combinePaths(mediaPath, U"Ortho.ini"))), 256);
 
 	// Create a window
 	String title = U"David Piuva's Software Renderer - Graphics sandbox";
@@ -177,7 +177,7 @@ void sandbox_main() {
 	//window = window_create_fullscreen(title);
 
 	// Load an interface to the window
-	window_loadInterfaceFromFile(window, mediaPath + U"interface.lof");
+	window_loadInterfaceFromFile(window, file_combinePaths(mediaPath, U"interface.lof"));
 
 	// Tell the application to terminate when the window is closed
 	window_setCloseEvent(window, []() {
