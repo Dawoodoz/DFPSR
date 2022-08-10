@@ -27,11 +27,18 @@
 #include "fileAPI.h"
 
 #ifdef USE_MICROSOFT_WINDOWS
+	// Headers for MS-Windows
 	#include <windows.h>
+	#include <synchapi.h>
 #else
+	// Headers for Posix compliant systems.
 	#include <unistd.h>
+	#include <spawn.h>
+	#include <sys/wait.h>
 	#include <sys/stat.h>
 	#include <dirent.h>
+	// The environment flags contain information such as username, language, color settings, which system shell and window manager is used...
+	extern char **environ;
 #endif
 #include <fstream>
 #include <cstdlib>
@@ -670,6 +677,116 @@ bool file_removeFile(const ReadableString& filename) {
 		result = (unlink(nativePath) == 0);
 	#endif
 	return result;
+}
+
+// DsrProcess is a reference counted pointer to DsrProcessImpl where the last retrieved status still remains for all to read.
+//   Because aliasing with multiple users of the same pid would deplete the messages in advance.
+struct DsrProcessImpl {
+	// Once the process has already terminated, process_getStatus will only return lastStatus.
+	bool terminated = false;
+	// We can assume that a newly created process is running until we are told that it terminated or crashed,
+	//   because DsrProcessImpl would not be created unless launching the application was successful.
+	DsrProcessStatus lastStatus = DsrProcessStatus::Running;
+	#ifdef USE_MICROSOFT_WINDOWS
+		PROCESS_INFORMATION processInfo;
+		DsrProcessImpl(const PROCESS_INFORMATION &processInfo)
+		: processInfo(processInfo) {}
+		~DsrProcessImpl() {
+			CloseHandle(processInfo.hProcess);
+			CloseHandle(processInfo.hThread);
+		}
+	#else
+		pid_t pid;
+		DsrProcessImpl(pid_t pid) : pid(pid) {}
+	#endif
+};
+
+DsrProcessStatus process_getStatus(const DsrProcess &process) {
+	if (process.get() == nullptr) {
+		return DsrProcessStatus::NotStarted;
+	} else {
+		if (!process->terminated) {
+			#ifdef USE_MICROSOFT_WINDOWS
+				DWORD status = WaitForSingleObject(process->processInfo.hProcess, 0);
+				if (status == WAIT_OBJECT_0) {
+					DWORD processResult;
+					GetExitCodeProcess(process->processInfo.hProcess, &processResult);
+					process->lastStatus = (processResult == 0) ? DsrProcessStatus::Completed : DsrProcessStatus::Crashed;
+					process->terminated = true;
+				}
+			#else
+				// When using WNOHANG, waitpid returns zero when the program is still running, and the child pid if it terminated.
+				int status = 0;
+				if (waitpid(process->pid, &status, WNOHANG) != 0) {
+					if (WIFEXITED(status)) {
+						process->lastStatus = DsrProcessStatus::Completed;
+						process->terminated = true;
+					} else if (WIFSIGNALED(status)) {
+						process->lastStatus = DsrProcessStatus::Crashed;
+						process->terminated = true;
+					}
+				}
+			#endif
+		}
+		return process->lastStatus;
+	}
+}
+
+DsrProcess process_execute(const ReadableString& programPath, List<String> arguments) {
+	// Convert the program path into the native format.
+	String optimizedPath = file_optimizePath(programPath, LOCAL_PATH_SYNTAX);
+	Buffer pathBuffer;
+	const NativeChar *nativePath = toNativeString(optimizedPath, pathBuffer);
+	// Convert
+	#ifdef USE_MICROSOFT_WINDOWS
+		DsrChar separator = U' ';
+	#else
+		DsrChar separator = U'\0';
+	#endif
+	String flattenedArguments;
+	string_append(flattenedArguments, programPath);
+	string_appendChar(flattenedArguments, U'\0');
+	for (int64_t a = 0; a < arguments.length(); a++) {
+		string_append(flattenedArguments, arguments[a]);
+		string_appendChar(flattenedArguments, U'\0');
+	}
+	Buffer argBuffer;
+	const NativeChar *nativeArgs = toNativeString(flattenedArguments, argBuffer);
+	#ifdef USE_MICROSOFT_WINDOWS
+		STARTUPINFOW startInfo;
+		PROCESS_INFORMATION processInfo;
+		memset(&startInfo, 0, sizeof(STARTUPINFO));
+		memset(&processInfo, 0, sizeof(PROCESS_INFORMATION));
+		startInfo.cb = sizeof(STARTUPINFO);
+		if (CreateProcessW(nullptr, (LPWSTR)nativeArgs, nullptr, nullptr, true, 0, nullptr, nullptr, &startInfo, &processInfo)) {
+			return std::make_shared<DsrProcessImpl>(processInfo); // Success
+		} else {
+			return DsrProcess(); // Failure
+		}
+	#else
+		int64_t codePoints = buffer_getSize(argBuffer) / sizeof(NativeChar);
+		// Count arguments.
+		int argc = arguments.length() + 1;
+		// Allocate an array of pointers for each argument and a null terminator.
+		const NativeChar *argv[argc + 1]; // TODO: Implement without VLA.
+		// Fill the array with pointers to the native strings.
+		int64_t startOffset = 0;
+		int currentArg = 0;
+		for (int64_t c = 0; c < codePoints && currentArg < argc; c++) {
+			if (nativeArgs[c] == 0) {
+				argv[currentArg] = &(nativeArgs[startOffset]);
+				startOffset = c + 1;
+				currentArg++;
+			}
+		}
+		argv[currentArg] = nullptr;
+		pid_t pid = 0;
+		if (posix_spawn(&pid, nativePath, nullptr, nullptr, (char* const*)argv, environ) == 0) {
+			return std::make_shared<DsrProcessImpl>(pid); // Success
+		} else {
+			return DsrProcess(); // Failure
+		}
+	#endif
 }
 
 }

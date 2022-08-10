@@ -30,8 +30,10 @@
 	#define USE_MICROSOFT_WINDOWS
 #endif
 
-// A module for file access that exists to prevent cyclic dependencies between strings and buffers.
-//   Buffers need a filename to be saved or loaded while strings use buffers to store their characters.
+// The file API exists to save and load buffers of data for any type of file.
+// Any file format that is implemented against the Buffer type instead of hardcoding against the file stream can easily be
+//   reused for additional layers of processing such as checksums, archiving, compression, encryption, sending over a network...
+// The file API also has functions for processing paths to the filesystem and calling other programs.
 namespace dsr {
 	// The PathSyntax enum allow processing theoreical paths for other operating systems than the local.
 	enum class PathSyntax { Windows, Posix };
@@ -215,13 +217,15 @@ namespace dsr {
 	String file_getTheoreticalAbsoluteParentFolder(const ReadableString &path, const ReadableString &currentPath, PathSyntax pathSyntax);
 
 	// Gets the canonical absolute version of the path.
+	// Current directory is expanded, but not user accounts.
 	// Path-syntax: According to the local computer.
-	// Post-condition: Returns an absolute version of the path, quickly without removing redundancy.
+	// Post-condition: Returns an absolute version of the path.
 	String file_getAbsolutePath(const ReadableString &path);
 
 	// A theoretical version of file_getAbsolutePath for evaluation on a theoretical system without actually calling file_getCurrentPath or running on the given system.
+	// Current directory is expanded, but not user accounts.
 	// Path-syntax: Depends on pathSyntax argument.
-	// Post-condition: Returns an absolute version of the path, quickly without removing redundancy.
+	// Post-condition: Returns an absolute version of the path.
 	String file_getTheoreticalAbsolutePath(const ReadableString &path, const ReadableString &currentPath, PathSyntax pathSyntax IMPLICIT_PATH_SYNTAX);
 
 	// Path-syntax: According to the local computer.
@@ -269,6 +273,28 @@ namespace dsr {
 	// Side-effects: Removes the file at path. If the same file exists at multiple paths in the system, only the link to the file will be removed.
 	// Post-condition: Returns true iff the operation was successful.
 	bool file_removeFile(const ReadableString& filename);
+
+	// The status of a program started using file_execute.
+	enum class DsrProcessStatus {
+		NotStarted, // The handle was default initialized or the result of a failed call to process_execute.
+		Running,    // The process is still running.
+		Crashed,    // The process has crashed and might not have done the task you asked for.
+		Completed   // The process has terminated successfully, so you may now check if it has written any files for you.
+	};
+
+	// A reference counted handle to a process, so that multiple callers can read the status at any time.
+	class DsrProcessImpl;
+	using DsrProcess = std::shared_ptr<DsrProcessImpl>;
+
+	// Post-condition: Returns the status of process.
+	DsrProcessStatus process_getStatus(const DsrProcess &process);
+
+	// Path-syntax: According to the local computer.
+	// Pre-condition: The executable at path must exist and have execution rights.
+	// Side-effects: Starts the program at programPath, with programPath given again as argv[0] and arguments to argv[1...] to the program's main function.
+	// Post-condition: Returns a DsrProcess handle to the started process.
+	//                 On failure to start, the handle is empty and process_getStatus will then return DsrProcessStatus::NotStarted from it.
+	DsrProcess process_execute(const ReadableString& programPath, List<String> arguments);
 }
 
 #endif
