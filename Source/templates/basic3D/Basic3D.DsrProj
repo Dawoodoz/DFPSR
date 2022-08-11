@@ -1,4 +1,5 @@
 ﻿CompilerFlag "-std=c++14"
+ReuseMemory
 Graphics
 Sound
 Crawl "main.cpp"

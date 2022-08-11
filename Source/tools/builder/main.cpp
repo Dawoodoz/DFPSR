@@ -12,8 +12,6 @@
 //      Import "../../DFPSR/DFPSR.DsrHead"
 //  * Call the compiler directly when the temp folder is given without any script name.
 //    Use it to run multiple instances of the compiler at the same time on different CPU cores.
-//  * Add a ReuseMemory flag for enabling Allocator.cpp.
-//    The macro for supressing it will then no longer be needed when using the new build system.
 //  * Improve entropy in checksums using a more advanced algorithm to reduce the risk of conflicts.
 //  * Implement more features for the machine, such as:
 //    * else and elseif cases.
