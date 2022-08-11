@@ -26,7 +26,7 @@ Precedence::Precedence(Notation notation, Associativity associativity)
 Symbol::Symbol(const dsr::ReadableString &token, bool atomic, int32_t depthOffset)
 : token(token), atomic(atomic), depthOffset(depthOffset) {}
 
-ReadableString expression_getToken(const List<String> &tokens, int index) {
+ReadableString expression_getToken(const List<String> &tokens, int64_t index) {
 	if (0 <= index && index < tokens.length()) {
 		return tokens[index];
 	} else {
@@ -184,7 +184,7 @@ struct TokenInfo {
 /*
 static String debugTokens(const List<TokenInfo> &info, int64_t infoStart, const List<String> &tokens, int64_t startTokenIndex, int64_t endTokenIndex) {
 	String result;
-	for (int t = startTokenIndex; t <= endTokenIndex; t++) {
+	for (int64_t t = startTokenIndex; t <= endTokenIndex; t++) {
 		int64_t infoIndex = t - infoStart;
 		if (t > startTokenIndex) {
 			string_appendChar(result, U' ');
@@ -192,7 +192,7 @@ static String debugTokens(const List<TokenInfo> &info, int64_t infoStart, const 
 		string_append(result, tokens[t]);
 	}
 	string_append(result, U" : ");
-	for (int t = startTokenIndex; t <= endTokenIndex; t++) {
+	for (int64_t t = startTokenIndex; t <= endTokenIndex; t++) {
 		int64_t infoIndex = t - infoStart;
 		if (t > startTokenIndex) {
 			string_appendChar(result, U' ');
@@ -204,7 +204,7 @@ static String debugTokens(const List<TokenInfo> &info, int64_t infoStart, const 
 */
 
 static int16_t identifySymbol(const ReadableString &token, const ExpressionSyntax &syntax) {
-	for (int s = 0; s < syntax.symbols.length(); s++) {
+	for (int64_t s = 0; s < syntax.symbols.length(); s++) {
 		if (syntax.symbols[s].atomic) {
 			if (string_match(token, syntax.symbols[s].token)) {
 				return s;
@@ -391,7 +391,7 @@ inline List<String> combineTokens(ARGS... args) {
 	return result;
 }
 
-static void expectResult(int &errorCount, const ReadableString &result, const ReadableString &expected) {
+static void expectResult(int64_t &errorCount, const ReadableString &result, const ReadableString &expected) {
 	if (string_match(result, expected)) {
 		printText(U"* Passed ", expected, U"\n");
 	} else {
@@ -412,12 +412,12 @@ void expression_runRegressionTests() {
 			return U"<ERROR:Unresolved identifier>";
 		}
 	};
-	/*for (int s = 0; s < defaultSyntax.symbols.length(); s++) {
+	/*for (int64_t s = 0; s < defaultSyntax.symbols.length(); s++) {
 		printText(U"Symbol ", defaultSyntax.symbols[s].token, U"\n");
 		if (validLeftmostToken(s, defaultSyntax)) printText(U"  Can be leftmost\n");
 		if (validRightmostToken(s, defaultSyntax)) printText(U"  Can be rightmost\n");
 	}*/
-	int ec = 0;
+	int64_t ec = 0;
 	expectResult(ec, expression_evaluate(combineTokens(U""), context), U"<ERROR:Unresolved identifier>");
 	expectResult(ec, expression_evaluate(combineTokens(U"0"), context), U"0");
 	expectResult(ec, expression_evaluate(combineTokens(U"(", U"19", U")"), context), U"19");

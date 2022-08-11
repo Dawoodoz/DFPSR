@@ -8,7 +8,7 @@ static uint64_t checksum(const ReadableString& text) {
 	uint64_t b = 0xF42B1583;
 	uint64_t c = 0xA6815E74;
 	uint64_t d = 0;
-	for (int i = 0; i < string_length(text); i++) {
+	for (int64_t i = 0; i < string_length(text); i++) {
 		a = (b * c + ((i * 3756 + 2654) & 58043)) & 0xFFFFFFFF;
 		b = (231 + text[i] * (a & 154) + c * 867 + 28294061) & 0xFFFFFFFF;
 		c = (a ^ b ^ (text[i] * 1543217521)) & 0xFFFFFFFF;
@@ -23,7 +23,7 @@ static uint64_t checksum(const Buffer& buffer) {
 	uint64_t b = 0xF42B1583;
 	uint64_t c = 0xA6815E74;
 	uint64_t d = 0;
-	for (int i = 0; i < buffer_getSize(buffer); i++) {
+	for (int64_t i = 0; i < buffer_getSize(buffer); i++) {
 		a = (b * c + ((i * 3756 + 2654) & 58043)) & 0xFFFFFFFF;
 		b = (231 + data[i] * (a & 154) + c * 867 + 28294061) & 0xFFFFFFFF;
 		c = (a ^ b ^ (data[i] * 1543217521)) & 0xFFFFFFFF;
@@ -42,7 +42,7 @@ static void interpretPreprocessing(ProjectContext &context, int64_t parentIndex,
 static void analyzeCode(ProjectContext &context, int64_t parentIndex, String content, const ReadableString &parentFolder);
 
 static int64_t findDependency(ProjectContext &context, const ReadableString& findPath) {
-	for (int d = 0; d < context.dependencies.length(); d++) {
+	for (int64_t d = 0; d < context.dependencies.length(); d++) {
 		if (string_match(context.dependencies[d].path, findPath)) {
 			return d;
 		}
@@ -55,16 +55,16 @@ static void resolveConnection(ProjectContext &context, Connection &connection) {
 }
 
 static void resolveDependency(ProjectContext &context, Dependency &dependency) {
-	for (int l = 0; l < dependency.links.length(); l++) {
+	for (int64_t l = 0; l < dependency.links.length(); l++) {
 		resolveConnection(context, dependency.links[l]);
 	}
-	for (int i = 0; i < dependency.includes.length(); i++) {
+	for (int64_t i = 0; i < dependency.includes.length(); i++) {
 		resolveConnection(context, dependency.includes[i]);
 	}
 }
 
 void resolveDependencies(ProjectContext &context) {
-	for (int d = 0; d < context.dependencies.length(); d++) {
+	for (int64_t d = 0; d < context.dependencies.length(); d++) {
 		resolveDependency(context, context.dependencies[d]);
 	}
 }
@@ -92,7 +92,7 @@ static void flushToken(List<String> &target, String &currentToken) {
 
 static void tokenize(List<String> &target, const ReadableString& line) {
 	String currentToken;
-	for (int i = 0; i < string_length(line); i++) {
+	for (int64_t i = 0; i < string_length(line); i++) {
 		DsrChar c = line[i];
 		DsrChar nextC = line[i + 1];
 		if (c == U'#' && nextC == U'#') {
@@ -151,7 +151,7 @@ void analyzeFromFile(ProjectContext &context, const ReadableString& absolutePath
 		// Already analyzed the current entry. Abort to prevent duplicate dependencies.
 		return;
 	}
-	int lastDotIndex = string_findLast(absolutePath, U'.');
+	int64_t lastDotIndex = string_findLast(absolutePath, U'.');
 	if (lastDotIndex != -1) {
 		Extension extension = extensionFromString(string_after(absolutePath, lastDotIndex));
 		if (extension != Extension::Unknown) {
@@ -180,7 +180,7 @@ void analyzeFromFile(ProjectContext &context, const ReadableString& absolutePath
 }
 
 static void debugPrintDependencyList(const List<Connection> &connnections, const ReadableString verb) {
-	for (int c = 0; c < connnections.length(); c++) {
+	for (int64_t c = 0; c < connnections.length(); c++) {
 		int64_t lineNumber = connnections[c].lineNumber;
 		if (lineNumber != -1) {
 			printText(U"  @", lineNumber, U"\t");
@@ -192,7 +192,7 @@ static void debugPrintDependencyList(const List<Connection> &connnections, const
 }
 
 void printDependencies(ProjectContext &context) {
-	for (int d = 0; d < context.dependencies.length(); d++) {
+	for (int64_t d = 0; d < context.dependencies.length(); d++) {
 		printText(U"* ", file_getPathlessName(context.dependencies[d].path), U"\n");
 		debugPrintDependencyList(context.dependencies[d].includes, U"including");
 		debugPrintDependencyList(context.dependencies[d].links, U"linking");
@@ -209,7 +209,7 @@ static void script_printMessage(String &output, ScriptLanguage language, const R
 
 static void traverserHeaderChecksums(ProjectContext &context, uint64_t &target, int64_t dependencyIndex) {
 	// Use checksums from headers
-	for (int h = 0; h < context.dependencies[dependencyIndex].includes.length(); h++) {
+	for (int64_t h = 0; h < context.dependencies[dependencyIndex].includes.length(); h++) {
 		int64_t includedIndex = context.dependencies[dependencyIndex].includes[h].dependencyIndex;
 		if (!context.dependencies[includedIndex].visited) {
 			//printText(U"	traverserHeaderChecksums(context, ", includedIndex, U") ", context.dependencies[includedIndex].path, "\n");
@@ -225,7 +225,7 @@ static void traverserHeaderChecksums(ProjectContext &context, uint64_t &target, 
 
 static uint64_t getCombinedChecksum(ProjectContext &context, int64_t dependencyIndex) {
 	//printText(U"getCombinedChecksum(context, ", dependencyIndex, U") ", context.dependencies[dependencyIndex].path, "\n");
-	for (int d = 0; d < context.dependencies.length(); d++) {
+	for (int64_t d = 0; d < context.dependencies.length(); d++) {
 		context.dependencies[d].visited = false;
 	}
 	context.dependencies[dependencyIndex].visited = true;
@@ -289,17 +289,17 @@ void gatherBuildInstructions(SessionContext &output, ProjectContext &context, Ma
 	// TODO: Use groups of compiler flags, so that they can be generated in the last step.
 	//       This would allow calling the compiler directly when given a folder path for temporary files instead of a script path.
 	String generatedCompilerFlags;
-	for (int i = 0; i < settings.compilerFlags.length(); i++) {
+	for (int64_t i = 0; i < settings.compilerFlags.length(); i++) {
 		string_append(generatedCompilerFlags, " ", settings.compilerFlags[i]);
 	}
 	String linkerFlags;
-	for (int i = 0; i < settings.linkerFlags.length(); i++) {
+	for (int64_t i = 0; i < settings.linkerFlags.length(); i++) {
 		string_append(linkerFlags, " -l", settings.linkerFlags[i]);
 	}
 	printText(U"Generating build instructions for ", programPath, U" using settings:\n");
 	printText(U"  Compiler flags:", generatedCompilerFlags, U"\n");
 	printText(U"  Linker flags:", linkerFlags, U"\n");
-	for (int v = 0; v < settings.variables.length(); v++) {
+	for (int64_t v = 0; v < settings.variables.length(); v++) {
 		printText(U"  * ", settings.variables[v].key, U" = ", settings.variables[v].value);
 		if (settings.variables[v].inherited) {
 			printText(U" (inherited input)");
@@ -310,7 +310,7 @@ void gatherBuildInstructions(SessionContext &output, ProjectContext &context, Ma
 	// The current project's global indices to objects shared between all projects being built during the session.
 	List<int64_t> sourceObjectIndices;
 	bool hasSourceCode = false;
-	for (int d = 0; d < context.dependencies.length(); d++) {
+	for (int64_t d = 0; d < context.dependencies.length(); d++) {
 		Extension extension = context.dependencies[d].extension;
 		if (extension == Extension::C || extension == Extension::Cpp) {
 			// Dependency paths are already absolute from the recursive search.
@@ -387,7 +387,7 @@ void generateCompilationScript(SessionContext &input, const ReadableString &scri
 
 	// Generate code for compiling source code into objects.
 	printText(U"Generating code for compiling ", input.sourceObjects.length(), U" objects.\n");
-	for (int o = 0; o < input.sourceObjects.length(); o++) {
+	for (int64_t o = 0; o < input.sourceObjects.length(); o++) {
 		SourceObject *sourceObject = &(input.sourceObjects[o]);
 		printText(U"\t* ", sourceObject->sourcePath, U"\n");
 		setCompilationFolder(generatedCode, language, currentPath, sourceObject->compileFrom);
@@ -414,20 +414,20 @@ void generateCompilationScript(SessionContext &input, const ReadableString &scri
 
 	// Generate code for linking objects into executables.
 	printText(U"Generating code for linking ", input.linkerSteps.length(), U" executables:\n");
-	for (int l = 0; l < input.linkerSteps.length(); l++) {
+	for (int64_t l = 0; l < input.linkerSteps.length(); l++) {
 		LinkingStep *linkingStep = &(input.linkerSteps[l]);
 		String programPath = linkingStep->binaryName;
 		printText(U"\tGenerating code for linking ", programPath, U" of :\n");
 		setCompilationFolder(generatedCode, language, currentPath, linkingStep->compileFrom);
 		String linkerFlags;
-		for (int lib = 0; lib < linkingStep->linkerFlags.length(); lib++) {
+		for (int64_t lib = 0; lib < linkingStep->linkerFlags.length(); lib++) {
 			String library = linkingStep->linkerFlags[lib];
 			string_append(linkerFlags, " -l", library);
 			printText(U"\t\t* ", library, U" library\n");
 		}
 		// Generate a list of object paths from indices.
 		String allObjects;
-		for (int i = 0; i < linkingStep->sourceObjectIndices.length(); i++) {
+		for (int64_t i = 0; i < linkingStep->sourceObjectIndices.length(); i++) {
 			int64_t objectIndex = linkingStep->sourceObjectIndices[i];
 			SourceObject *sourceObject = &(input.sourceObjects[objectIndex]);
 			if (objectIndex >= 0 || objectIndex < input.sourceObjects.length()) {

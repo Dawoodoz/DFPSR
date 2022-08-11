@@ -6,6 +6,15 @@
 // TODO:
 //  * Let ProjectContext refer to a global dependency tree using indices instead of having its own List of Dependency (dependencies).
 //    This would greatly improve performance by not scanning for includes and taking content checksums multiple times for the same files.
+//  * Create a file with aliases, so that import can use
+//      Import <DFPSR>
+//    instead of
+//      Import "../../DFPSR/DFPSR.DsrHead"
+//  * Call the compiler directly when the temp folder is given without any script name.
+//    Use it to run multiple instances of the compiler at the same time on different CPU cores.
+//  * Add a flag for enabling Allocator.cpp.
+//    The macro for supressing it will then no longer be needed when using the new build system.
+//  * Improve entropy in checksums using a more advanced algorithm to reduce the risk of conflicts.
 //  * Implement more features for the machine, such as:
 //    * else and elseif cases.
 //    * Temporarily letting the theoretical path go into another folder within a scope, similar to if statements but only affecting the path.
