@@ -100,7 +100,7 @@ static void inheritMachine(Machine &child, const Machine &parent) {
 	}
 }
 
-static void interpretLine(ScriptTarget &output, ProjectContext &context, Machine &target, List<String> &tokens, const dsr::ReadableString &fromPath) {
+static void interpretLine(SessionContext &output, ProjectContext &context, Machine &target, List<String> &tokens, const dsr::ReadableString &fromPath) {
 	if (tokens.length() > 0) {
 		bool activeLine = target.activeStackDepth >= target.currentStackDepth;
 		/*
@@ -183,7 +183,7 @@ static void interpretLine(ScriptTarget &output, ProjectContext &context, Machine
 	tokens.clear();
 }
 
-void evaluateScript(ScriptTarget &output, ProjectContext &context, Machine &target, const ReadableString &scriptPath) {
+void evaluateScript(SessionContext &output, ProjectContext &context, Machine &target, const ReadableString &scriptPath) {
 	if (file_getEntryType(scriptPath) != EntryType::File) {
 		printText(U"The script path ", scriptPath, U" does not exist!\n");
 	}
@@ -238,7 +238,7 @@ void evaluateScript(ScriptTarget &output, ProjectContext &context, Machine &targ
 
 static List<String> initializedProjects;
 // Using a project file path and input arguments.
-void buildProject(ScriptTarget &output, const ReadableString &projectFilePath, Machine settings) {
+void buildProject(SessionContext &output, const ReadableString &projectFilePath, Machine settings) {
 	printText("Building project at ", projectFilePath, "\n");
 	// Check if this project has begun building previously during this session.
 	String absolutePath = file_getAbsolutePath(projectFilePath);
@@ -260,8 +260,8 @@ void buildProject(ScriptTarget &output, const ReadableString &projectFilePath, M
 	String projectName = file_getPathlessName(file_getExtensionless(projectFilePath));
 	// If no application path is given, the new executable will be named after the project and placed in the same folder.
 	String fullProgramPath = getFlag(settings, U"ProgramPath", projectName);
-	if (output.language == ScriptLanguage::Batch) {
-		string_append(fullProgramPath, U".exe");
+	if (string_length(output.executableExtension) > 0) {
+		string_append(fullProgramPath, output.executableExtension);
 	}
 	// Interpret ProgramPath relative to the project path.
 	fullProgramPath = file_getTheoreticalAbsolutePath(fullProgramPath, projectPath);
@@ -276,11 +276,11 @@ void buildProject(ScriptTarget &output, const ReadableString &projectFilePath, M
 	if (getFlagAsInteger(settings, U"ListDependencies")) {
 		printDependencies(context);
 	}
-	generateCompilationScript(output, context, settings, fullProgramPath);
+	gatherBuildInstructions(output, context, settings, fullProgramPath);
 }
 
 // Using a folder path and input arguments for all projects.
-void buildProjects(ScriptTarget &output, const ReadableString &projectFolderPath, Machine &settings) {
+void buildProjects(SessionContext &output, const ReadableString &projectFolderPath, Machine &settings) {
 	printText("Building all projects in ", projectFolderPath, "\n");
 	file_getFolderContent(projectFolderPath, [&settings, &output](const ReadableString& entryPath, const ReadableString& entryName, EntryType entryType) {
 		if (entryType == EntryType::Folder) {
@@ -294,7 +294,7 @@ void buildProjects(ScriptTarget &output, const ReadableString &projectFolderPath
 	});
 }
 
-void build(ScriptTarget &output, const ReadableString &projectPath, Machine &settings) {
+void build(SessionContext &output, const ReadableString &projectPath, Machine &settings) {
 	EntryType entryType = file_getEntryType(projectPath);
 	printText("Building anything at ", projectPath, " which is ", entryType, "\n");
 	if (entryType == EntryType::File) {

@@ -4,7 +4,8 @@
 //   Otherwise buildProject.sh will just see that an old version exists and use it.
 
 // TODO:
-//  * Optimize compilation of multiple projects by only generating code for compiling objects that have not already been compiled of the same version for another project.
+//  * Let ProjectContext refer to a global dependency tree using indices instead of having its own List of Dependency (dependencies).
+//    This would greatly improve performance by not scanning for includes and taking content checksums multiple times for the same files.
 //  * Implement more features for the machine, such as:
 //    * else and elseif cases.
 //    * Temporarily letting the theoretical path go into another folder within a scope, similar to if statements but only affecting the path.
@@ -62,20 +63,9 @@ Project files:
 #include "../../DFPSR/api/fileAPI.h"
 #include "Machine.h"
 #include "expression.h"
+#include "generator.h"
 
 using namespace dsr;
-
-static ScriptLanguage identifyLanguage(const ReadableString filename) {
-	String scriptExtension = string_upperCase(file_getExtension(filename));
-	if (string_match(scriptExtension, U"BAT")) {
-		return ScriptLanguage::Batch;
-	} else if (string_match(scriptExtension, U"SH")) {
-		return ScriptLanguage::Bash;
-	} else {
-		throwError(U"Could not identify the scripting language of ", filename, U". Use *.bat or *.sh.\n");
-		return ScriptLanguage::Unknown;
-	}
-}
 
 // List dependencies for main.cpp on Linux: ./builder main.cpp --depend
 DSR_MAIN_CALLER(dsrMain)
@@ -84,33 +74,29 @@ void dsrMain(List<String> args) {
 		printText(U"No arguments given to Builder. Starting regression test.\n");
 		expression_runRegressionTests();
 	} else if (args.length() == 2) {
-		printText(U"To use the DFPSR build system, pass a path to a project file or folder containing multiple projects, and the flags you want assigned before building.\n");
+		printText(U"To use the DFPSR build system, pass a path to a script to generate, a project file or folder containing multiple projects, and the flags you want assigned before building.\n");
 		printText(U"To run regression tests, don't pass any argument to the program.\n");
 	} else {
 		// Get the script's destination path for all projects built during the session as the first argument.
-		String outputScriptPath = args[1];
-		String tempFolder = file_getAbsoluteParentFolder(outputScriptPath);
-		// Get the first project file's path, which can then build other projects using the same generated script.
-		String projectFilePath = args[2];
+		String scriptPath = args[1];
+		String tempFolder = file_getAbsoluteParentFolder(scriptPath);
+		// Get the first project file's path, or a folder path containing all projects to build.
+		String projectPath = args[2];
 		// Read the reas after the project's path, as named integers assigned to ones.
 		// Calling builder with the extra arguments will interpret them as variables and mark them as inherited, so that they are passed on to any other projects build from the project file.
 		// Other values can be assigned using an equality sign.
 		//   Avoid spaces around the equality sign, because quotes are already used for string arguments in assignments.
 		Machine settings;
 		argumentsToSettings(settings, args, 3);
-		// Generate a script.
-		ScriptTarget scriptTarget = ScriptTarget(identifyLanguage(outputScriptPath), tempFolder);
-		if (scriptTarget.language == ScriptLanguage::Batch) {
-			string_append(scriptTarget.generatedCode, U"@echo off\n\n");
-		} else if (scriptTarget.language == ScriptLanguage::Bash) {
-			string_append(scriptTarget.generatedCode, U"#!/bin/bash\n\n");
+		// Generate build instructions.
+		String executableExtension;
+		if (getFlagAsInteger(settings, U"Windows")) {
+			executableExtension = U".exe";
 		}
-		build(scriptTarget, projectFilePath, settings);
-		// Save the script.
-		if (scriptTarget.language == ScriptLanguage::Batch) {
-			string_save(outputScriptPath, scriptTarget.generatedCode);
-		} else if (scriptTarget.language == ScriptLanguage::Bash) {
-			string_save(outputScriptPath, scriptTarget.generatedCode, CharacterEncoding::BOM_UTF8, LineEncoding::Lf);
-		}
+		SessionContext buildContext = SessionContext(tempFolder, executableExtension);
+		build(buildContext, projectPath, settings);
+		// Generate a script to execute.
+		// TODO: Store compiler flags in groups of lists to allow taking them directly as program arguments when calling the compiler directly.
+		generateCompilationScript(buildContext, scriptPath);
 	}
 }

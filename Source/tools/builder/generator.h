@@ -16,6 +16,7 @@ void resolveDependencies(ProjectContext &context);
 void printDependencies(ProjectContext &context);
 
 // Generate
-void generateCompilationScript(ScriptTarget &output, ProjectContext &context, const Machine &settings, ReadableString programPath);
+void gatherBuildInstructions(SessionContext &output, ProjectContext &context, Machine &settings, ReadableString programPath);
+void generateCompilationScript(SessionContext &output, const ReadableString &scriptPath);
 
 #endif

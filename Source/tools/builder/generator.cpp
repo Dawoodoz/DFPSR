@@ -199,19 +199,11 @@ void printDependencies(ProjectContext &context) {
 	}
 }
 
-static void script_printMessage(ScriptTarget &output, const ReadableString message) {
-	if (output.language == ScriptLanguage::Batch) {
-		string_append(output.generatedCode, U"echo ", message, U"\n");
-	} else if (output.language == ScriptLanguage::Bash) {
-		string_append(output.generatedCode, U"echo ", message, U"\n");
-	}
-}
-
-static void script_executeLocalBinary(ScriptTarget &output, const ReadableString fullPath) {
-	if (output.language == ScriptLanguage::Batch) {
-		string_append(output.generatedCode, fullPath, U"\n");
-	} else if (output.language == ScriptLanguage::Bash) {
-		string_append(output.generatedCode, fullPath, U";\n");
+static void script_printMessage(String &output, ScriptLanguage language, const ReadableString message) {
+	if (language == ScriptLanguage::Batch) {
+		string_append(output, U"echo ", message, U"\n");
+	} else if (language == ScriptLanguage::Bash) {
+		string_append(output, U"echo ", message, U"\n");
 	}
 }
 
@@ -242,40 +234,16 @@ static uint64_t getCombinedChecksum(ProjectContext &context, int64_t dependencyI
 	return result;
 }
 
-struct SourceObject {
-	uint64_t identityChecksum = 0; // Identification number for the object's name.
-	uint64_t combinedChecksum = 0; // Combined content of the source file and all included headers recursively.
-	String sourcePath, objectPath;
-	SourceObject(ProjectContext &context, const ReadableString& sourcePath, const ReadableString& tempFolder, const ReadableString& identity, int64_t dependencyIndex)
-	: identityChecksum(checksum(identity)), combinedChecksum(getCombinedChecksum(context, dependencyIndex)), sourcePath(sourcePath) {
-		// By making the content checksum a part of the name, one can switch back to an older version without having to recompile everything again.
-		// Just need to clean the temporary folder once in a while because old versions can take a lot of space.
-		this->objectPath = file_combinePaths(tempFolder, string_combine(U"dfpsr_", this->identityChecksum, U"_", this->combinedChecksum, U".o"));
-	}
-};
-
-void generateCompilationScript(ScriptTarget &output, ProjectContext &context, const Machine &settings, ReadableString programPath) {
-	// Convert lists of linker and compiler flags into strings.
-	// TODO: Give a warning if two contradictory flags are used, such as optimization levels and language versions.
-	// TODO: Make sure that no spaces are inside of the flags, because that can mess up detection of pre-existing and contradictory arguments.
-	String compilerFlags;
-	for (int i = 0; i < settings.compilerFlags.length(); i++) {
-		string_append(compilerFlags, " ", settings.compilerFlags[i]);
-	}
-	String linkerFlags;
-	for (int i = 0; i < settings.linkerFlags.length(); i++) {
-		string_append(linkerFlags, " -l", settings.linkerFlags[i]);
-	}
-	printText(U"Generating build instructions for ", programPath, U" using settings:\n");
-	printText(U"  Compiler flags:", compilerFlags, U"\n");
-	printText(U"  Linker flags:", linkerFlags, U"\n");
-	for (int v = 0; v < settings.variables.length(); v++) {
-		printText(U"  * ", settings.variables[v].key, U" = ", settings.variables[v].value);
-		if (settings.variables[v].inherited) {
-			printText(U" (inherited input)");
+static int64_t findObject(SessionContext &source, uint64_t identityChecksum) {
+	for (int64_t o = 0; o < source.sourceObjects.length(); o++) {
+		if (source.sourceObjects[o].identityChecksum == identityChecksum) {
+			return o;
 		}
-		printText(U"\n");
 	}
+	return -1;
+}
+
+void gatherBuildInstructions(SessionContext &output, ProjectContext &context, Machine &settings, ReadableString programPath) {
 	// The compiler is often a global alias, so the user must supply either an alias or an absolute path.
 	ReadableString compilerName = getFlag(settings, U"Compiler", U"g++"); // Assume g++ as the compiler if not specified.
 	ReadableString compileFrom = getFlag(settings, U"CompileFrom", U"");
@@ -291,16 +259,20 @@ void generateCompilationScript(ScriptTarget &output, ProjectContext &context, co
 	//       and keeping the same format to better reuse compiled objects.
 	if (getFlagAsInteger(settings, U"Debug")) {
 		printText(U"Building with debug mode.\n");
-		string_append(compilerFlags, " -DDEBUG");
+		settings.compilerFlags.push(U"-DDEBUG");
 	} else {
 		printText(U"Building with release mode.\n");
-		string_append(compilerFlags, " -DNDEBUG");
+		settings.compilerFlags.push(U"-DNDEBUG");
 	}
 	if (getFlagAsInteger(settings, U"StaticRuntime")) {
 		if (getFlagAsInteger(settings, U"Windows")) {
 			printText(U"Building with static runtime. Your application's binary will be bigger but can run without needing any installer.\n");
-			string_append(compilerFlags, " -static -static-libgcc -static-libstdc++");
-			string_append(linkerFlags, " -static -static-libgcc -static-libstdc++");
+			settings.compilerFlags.push(U"-static");
+			settings.compilerFlags.push(U"-static-libgcc");
+			settings.compilerFlags.push(U"-static-libstdc++");
+			settings.linkerFlags.push(U"-static");
+			settings.linkerFlags.push(U"-static-libgcc");
+			settings.linkerFlags.push(U"-static-libstdc++");
 		} else {
 			printText(U"The target platform does not support static linking of runtime. But don't worry about bundling any runtimes, because it comes with most of the Posix compliant operating systems.\n");
 		}
@@ -309,80 +281,183 @@ void generateCompilationScript(ScriptTarget &output, ProjectContext &context, co
 	}
 	ReadableString optimizationLevel = getFlag(settings, U"Optimization", U"2");
 		printText(U"Building with optimization level ", optimizationLevel, U".\n");
-	string_append(compilerFlags, " -O", optimizationLevel);
+	settings.compilerFlags.push(string_combine(U"-O", optimizationLevel));
 
-	List<SourceObject> sourceObjects;
+	// Convert lists of linker and compiler flags into strings.
+	// TODO: Give a warning if two contradictory flags are used, such as optimization levels and language versions.
+	// TODO: Make sure that no spaces are inside of the flags, because that can mess up detection of pre-existing and contradictory arguments.
+	// TODO: Use groups of compiler flags, so that they can be generated in the last step.
+	//       This would allow calling the compiler directly when given a folder path for temporary files instead of a script path.
+	String generatedCompilerFlags;
+	for (int i = 0; i < settings.compilerFlags.length(); i++) {
+		string_append(generatedCompilerFlags, " ", settings.compilerFlags[i]);
+	}
+	String linkerFlags;
+	for (int i = 0; i < settings.linkerFlags.length(); i++) {
+		string_append(linkerFlags, " -l", settings.linkerFlags[i]);
+	}
+	printText(U"Generating build instructions for ", programPath, U" using settings:\n");
+	printText(U"  Compiler flags:", generatedCompilerFlags, U"\n");
+	printText(U"  Linker flags:", linkerFlags, U"\n");
+	for (int v = 0; v < settings.variables.length(); v++) {
+		printText(U"  * ", settings.variables[v].key, U" = ", settings.variables[v].value);
+		if (settings.variables[v].inherited) {
+			printText(U" (inherited input)");
+		}
+		printText(U"\n");
+	}
+	printText(U"Listing source files to compile in the current session.\n");
+	// The current project's global indices to objects shared between all projects being built during the session.
+	List<int64_t> sourceObjectIndices;
 	bool hasSourceCode = false;
-	bool needCppCompiler = false;
 	for (int d = 0; d < context.dependencies.length(); d++) {
 		Extension extension = context.dependencies[d].extension;
-		if (extension == Extension::Cpp) {
-			needCppCompiler = true;
-		}
 		if (extension == Extension::C || extension == Extension::Cpp) {
 			// Dependency paths are already absolute from the recursive search.
 			String sourcePath = context.dependencies[d].path;
-			String identity = string_combine(sourcePath, compilerFlags);
-			sourceObjects.pushConstruct(context, sourcePath, output.tempPath, identity, d);
-			if (file_getEntryType(sourcePath) != EntryType::File) {
-				throwError(U"The source file ", sourcePath, U" could not be found!\n");
+			String identity = string_combine(sourcePath, generatedCompilerFlags);
+			uint64_t identityChecksum = checksum(identity);
+			int64_t previousIndex = findObject(output, identityChecksum);
+			if (previousIndex == -1) {
+				// Content checksums were created while scanning for source code, so now we just combine each source file's content checksum with all its headers to get the combined checksum.
+				// The combined checksum represents the state after all headers are included recursively and given as input for compilation unit generating an object.
+				uint64_t combinedChecksum = getCombinedChecksum(context, d);
+				String objectPath = file_combinePaths(output.tempPath, string_combine(U"dfpsr_", identityChecksum, U"_", combinedChecksum, U".o"));
+				sourceObjectIndices.push(output.sourceObjects.length());
+				output.sourceObjects.pushConstruct(identityChecksum, combinedChecksum, sourcePath, objectPath, generatedCompilerFlags, compilerName, compileFrom);
 			} else {
-				hasSourceCode = true;
+				// Link to this pre-existing source file.
+				sourceObjectIndices.push(previousIndex);
 			}
+			hasSourceCode = true;
 		}
 	}
 	if (hasSourceCode) {
-		// TODO: Give a warning if a known C compiler incapable of handling C++ is given C++ source code when needCppCompiler is true.
-		if (changePath) {
-			// Go into the requested folder.
-			if (output.language == ScriptLanguage::Batch) {
-				string_append(output.generatedCode,  "pushd ", compileFrom, "\n");
-			} else if (output.language == ScriptLanguage::Bash) {
-				string_append(output.generatedCode, U"(cd ", compileFrom, ";\n");
-			}
-		}
-		String allObjects;
-		for (int i = 0; i < sourceObjects.length(); i++) {
-			if (output.language == ScriptLanguage::Batch) {
-				string_append(output.generatedCode,  U"if exist ", sourceObjects[i].objectPath, U" (\n");
-			} else if (output.language == ScriptLanguage::Bash) {
-				string_append(output.generatedCode, U"if [ -e \"", sourceObjects[i].objectPath, U"\" ]; then\n");
-			}
-			script_printMessage(output, string_combine(U"Reusing ", sourceObjects[i].sourcePath, U" ID:", sourceObjects[i].identityChecksum, U"."));
-			if (output.language == ScriptLanguage::Batch) {
-				string_append(output.generatedCode,  U") else (\n");
-			} else if (output.language == ScriptLanguage::Bash) {
-				string_append(output.generatedCode, U"else\n");
-			}
-			script_printMessage(output, string_combine(U"Compiling ", sourceObjects[i].sourcePath, U" ID:", sourceObjects[i].identityChecksum, U" with \"", compilerFlags, U"\"."));
-			string_append(output.generatedCode, compilerName, compilerFlags, U" -c ", sourceObjects[i].sourcePath, U" -o ", sourceObjects[i].objectPath, U"\n");
-			if (output.language == ScriptLanguage::Batch) {
-				string_append(output.generatedCode,  ")\n");
-			} else if (output.language == ScriptLanguage::Bash) {
-				string_append(output.generatedCode, U"fi\n");
-			}
-			// Remember each object name for linking.
-			string_append(allObjects, U" ", sourceObjects[i].objectPath);
-		}
-		script_printMessage(output, string_combine(U"Linking with \"", linkerFlags, U"\"."));
-		string_append(output.generatedCode, compilerName, allObjects, linkerFlags, U" -o ", programPath, U"\n");
-		if (changePath) {
-			// Get back to the previous folder.
-			if (output.language == ScriptLanguage::Batch) {
-				string_append(output.generatedCode,  "popd\n");
-			} else if (output.language == ScriptLanguage::Bash) {
-				string_append(output.generatedCode, U")\n");
-			}
-		}
-		script_printMessage(output, U"Done building.");
-		if (getFlagAsInteger(settings, U"Supressed")) {
-			script_printMessage(output, string_combine(U"Execution of ", programPath, U" was supressed using the Supressed flag."));
-		} else {
-			script_printMessage(output, string_combine(U"Starting ", programPath));
-			script_executeLocalBinary(output, programPath);
-			script_printMessage(output, U"The program terminated.");
-		}
+		printText(U"Listing target executable ", programPath, " in the current session.\n");
+		bool executeResult = getFlagAsInteger(settings, U"Supressed") == 0;
+		output.linkerSteps.pushConstruct(compilerName, compileFrom, programPath, settings.linkerFlags, sourceObjectIndices, executeResult);
 	} else {
-		printText("Filed to find any source code to compile.\n");
+		printText(U"Filed to find any source code to compile when building ", programPath, U".\n");
+	}
+}
+
+static ScriptLanguage identifyLanguage(const ReadableString &filename) {
+	String scriptExtension = string_upperCase(file_getExtension(filename));
+	if (string_match(scriptExtension, U"BAT")) {
+		return ScriptLanguage::Batch;
+	} else if (string_match(scriptExtension, U"SH")) {
+		return ScriptLanguage::Bash;
+	} else {
+		throwError(U"Could not identify the scripting language of ", filename, U". Use *.bat or *.sh.\n");
+		return ScriptLanguage::Unknown;
+	}
+}
+
+void setCompilationFolder(String &generatedCode, ScriptLanguage language, String &currentPath, const ReadableString &newPath) {
+	if (!string_match(currentPath, newPath)) {
+		if (string_length(currentPath) > 0) {
+			if (language == ScriptLanguage::Batch) {
+				string_append(generatedCode,  "popd\n");
+			} else if (language == ScriptLanguage::Bash) {
+				string_append(generatedCode, U")\n");
+			}
+		}
+		if (string_length(newPath) > 0) {
+			if (language == ScriptLanguage::Batch) {
+				string_append(generatedCode,  "pushd ", newPath, "\n");
+			} else if (language == ScriptLanguage::Bash) {
+				string_append(generatedCode, U"(cd ", newPath, ";\n");
+			}
+		}
+	}
+}
+
+void generateCompilationScript(SessionContext &input, const ReadableString &scriptPath) {
+	printText(U"Generating build script\n");
+	String generatedCode;
+	ScriptLanguage language = identifyLanguage(scriptPath);
+	if (language == ScriptLanguage::Batch) {
+		string_append(generatedCode, U"@echo off\n\n");
+	} else if (language == ScriptLanguage::Bash) {
+		string_append(generatedCode, U"#!/bin/bash\n\n");
+	}
+
+	// Keep track of the current path, so that it only changes when needed.
+	String currentPath;
+
+	// Generate code for compiling source code into objects.
+	printText(U"Generating code for compiling ", input.sourceObjects.length(), U" objects.\n");
+	for (int o = 0; o < input.sourceObjects.length(); o++) {
+		SourceObject *sourceObject = &(input.sourceObjects[o]);
+		printText(U"\t* ", sourceObject->sourcePath, U"\n");
+		setCompilationFolder(generatedCode, language, currentPath, sourceObject->compileFrom);
+		if (language == ScriptLanguage::Batch) {
+			string_append(generatedCode,  U"if exist ", sourceObject->objectPath, U" (\n");
+		} else if (language == ScriptLanguage::Bash) {
+			string_append(generatedCode, U"if [ -e \"", sourceObject->objectPath, U"\" ]; then\n");
+		}
+		script_printMessage(generatedCode, language, string_combine(U"Reusing ", sourceObject->sourcePath, U" ID:", sourceObject->identityChecksum, U"."));
+		if (language == ScriptLanguage::Batch) {
+			string_append(generatedCode,  U") else (\n");
+		} else if (language == ScriptLanguage::Bash) {
+			string_append(generatedCode, U"else\n");
+		}
+		String compilerFlags = sourceObject->generatedCompilerFlags;
+		script_printMessage(generatedCode, language, string_combine(U"Compiling ", sourceObject->sourcePath, U" ID:", sourceObject->identityChecksum, U" with ", compilerFlags, U"."));
+		string_append(generatedCode, sourceObject->compilerName, compilerFlags, U" -c ", sourceObject->sourcePath, U" -o ", sourceObject->objectPath, U"\n");
+		if (language == ScriptLanguage::Batch) {
+			string_append(generatedCode,  ")\n");
+		} else if (language == ScriptLanguage::Bash) {
+			string_append(generatedCode, U"fi\n");
+		}
+	}
+
+	// Generate code for linking objects into executables.
+	printText(U"Generating code for linking ", input.linkerSteps.length(), U" executables:\n");
+	for (int l = 0; l < input.linkerSteps.length(); l++) {
+		LinkingStep *linkingStep = &(input.linkerSteps[l]);
+		String programPath = linkingStep->binaryName;
+		printText(U"\tGenerating code for linking ", programPath, U" of :\n");
+		setCompilationFolder(generatedCode, language, currentPath, linkingStep->compileFrom);
+		String linkerFlags;
+		for (int lib = 0; lib < linkingStep->linkerFlags.length(); lib++) {
+			String library = linkingStep->linkerFlags[lib];
+			string_append(linkerFlags, " -l", library);
+			printText(U"\t\t* ", library, U" library\n");
+		}
+		// Generate a list of object paths from indices.
+		String allObjects;
+		for (int i = 0; i < linkingStep->sourceObjectIndices.length(); i++) {
+			int64_t objectIndex = linkingStep->sourceObjectIndices[i];
+			SourceObject *sourceObject = &(input.sourceObjects[objectIndex]);
+			if (objectIndex >= 0 || objectIndex < input.sourceObjects.length()) {
+				printText(U"\t\t* ", sourceObject->sourcePath, U"\n");
+				string_append(allObjects, U" ", sourceObject->objectPath);
+			} else {
+				throwError(U"Object index ", objectIndex, U" is out of bound ", 0, U"..", (input.sourceObjects.length() - 1), U"\n");
+			}
+		}
+		// Generate the code for building.
+		if (string_length(linkerFlags) > 0) {
+			script_printMessage(generatedCode, language, string_combine(U"Linking ", programPath, U" with", linkerFlags, U"."));
+		} else {
+			script_printMessage(generatedCode, language, string_combine(U"Linking ", programPath, U"."));
+		}
+		string_append(generatedCode, linkingStep->compilerName, allObjects, linkerFlags, U" -o ", programPath, U"\n");
+		if (linkingStep->executeResult) {
+			script_printMessage(generatedCode, language, string_combine(U"Starting ", programPath));
+			string_append(generatedCode, programPath, U"\n");
+			script_printMessage(generatedCode, language, U"The program terminated.");
+		}
+	}
+	setCompilationFolder(generatedCode, language, currentPath, U"");
+	script_printMessage(generatedCode, language, U"Done building.");
+
+	// Save the script.
+	printText(U"Saving script to ", scriptPath, "\n");
+	if (language == ScriptLanguage::Batch) {
+		string_save(scriptPath, generatedCode);
+	} else if (language == ScriptLanguage::Bash) {
+		string_save(scriptPath, generatedCode, CharacterEncoding::BOM_UTF8, LineEncoding::Lf);
 	}
 }
