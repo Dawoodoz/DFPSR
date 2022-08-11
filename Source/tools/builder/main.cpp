@@ -4,8 +4,6 @@
 //   Otherwise buildProject.sh will just see that an old version exists and use it.
 
 // TODO:
-//  * Let ProjectContext refer to a global dependency tree using indices instead of having its own List of Dependency (dependencies).
-//    This would greatly improve performance by not scanning for includes and taking content checksums multiple times for the same files.
 //  * Create a file with aliases, so that import can use
 //      Import <DFPSR>
 //    instead of
