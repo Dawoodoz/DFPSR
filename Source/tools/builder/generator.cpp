@@ -111,7 +111,26 @@ static void tokenize(List<String> &target, const ReadableString& line) {
 	flushToken(target, currentToken);
 }
 
+// When CACHED_ANALYSIS is enabled, files will only be analyzed once per session, by remembering them from previous projects.
+//   If features that require a different type of analysis per project are implemented, this can easily be turned off.
+#define CACHED_ANALYSIS
+
+#ifdef CACHED_ANALYSIS
+	// Remembering previous results from analyzing the same files.
+	List<Dependency> analysisCache;
+#endif
+
 void analyzeFile(Dependency &result, const ReadableString& absolutePath, Extension extension) {
+	#ifdef CACHED_ANALYSIS
+		// Check if the file has already been analyzed.
+		for (int c = 0; c < analysisCache.length(); c++) {
+			if (string_match(analysisCache[c].path, absolutePath)) {
+				// Clone all the results to keep projects separate in memory for safety.
+				result = analysisCache[c];
+				return;
+			}
+		}
+	#endif
 	// Get the file's binary content.
 	Buffer fileBuffer = file_loadBuffer(absolutePath);
 	// Get the checksum
