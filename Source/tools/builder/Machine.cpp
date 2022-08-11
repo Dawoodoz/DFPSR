@@ -1,6 +1,5 @@
 ﻿
 #include "Machine.h"
-#include "generator.h"
 #include "expression.h"
 #include "../../DFPSR/api/fileAPI.h"
 
@@ -9,21 +8,6 @@ using namespace dsr;
 #define STRING_EXPR(FIRST_TOKEN, LAST_TOKEN) evaluateExpression(target, tokens, FIRST_TOKEN, LAST_TOKEN)
 #define INTEGER_EXPR(FIRST_TOKEN, LAST_TOKEN) expression_interpretAsInteger(STRING_EXPR(FIRST_TOKEN, LAST_TOKEN))
 #define PATH_EXPR(FIRST_TOKEN, LAST_TOKEN) file_getTheoreticalAbsolutePath(STRING_EXPR(FIRST_TOKEN, LAST_TOKEN), fromPath)
-
-Extension extensionFromString(const ReadableString& extensionName) {
-	String upperName = string_upperCase(string_removeOuterWhiteSpace(extensionName));
-	Extension result = Extension::Unknown;
-	if (string_match(upperName, U"H")) {
-		result = Extension::H;
-	} else if (string_match(upperName, U"HPP")) {
-		result = Extension::Hpp;
-	} else if (string_match(upperName, U"C")) {
-		result = Extension::C;
-	} else if (string_match(upperName, U"CPP")) {
-		result = Extension::Cpp;
-	}
-	return result;
-}
 
 int64_t findFlag(const Machine &target, const dsr::ReadableString &key) {
 	for (int64_t f = 0; f < target.variables.length(); f++) {
@@ -77,19 +61,6 @@ static String evaluateExpression(Machine &target, List<String> &tokens, int64_t 
 	});
 }
 
-static void crawlSource(ProjectContext &context, const dsr::ReadableString &absolutePath) {
-	EntryType pathType = file_getEntryType(absolutePath);
-	if (pathType == EntryType::File) {
-		printText(U"Crawling for source from ", absolutePath, U".\n");
-		analyzeFromFile(context, absolutePath);
-	} else if (pathType == EntryType::Folder) {
-		printText(U"Crawling was given the folder ", absolutePath, U" but a source file was expected!\n");
-	} else if (pathType == EntryType::SymbolicLink) {
-		// Symbolic links can point to both files and folder, so we need to follow it and find out what it really is.
-		crawlSource(context, file_followSymbolicLink(absolutePath));
-	}
-}
-
 // Copy inherited variables from parent to child.
 static void inheritMachine(Machine &child, const Machine &parent) {
 	for (int64_t v = 0; v < parent.variables.length(); v++) {
@@ -138,12 +109,14 @@ static void interpretLine(SessionContext &output, Machine &target, List<String> 
 			} else if (string_caseInsensitiveMatch(first, U"build")) {
 				// Build one or more other projects from a project file or folder path, as dependencies.
 				//   Having the same external project built twice during the same session is not allowed.
-				Machine childTarget;
-				inheritMachine(childTarget, target);
+				// Evaluate arguments recursively, but let the analyzer do the work.
+				Machine childSettings;
+				inheritMachine(childSettings, target);
 				String projectPath = file_getTheoreticalAbsolutePath(expression_unwrapIfNeeded(second), fromPath); // Use the second token as the folder path.
-				argumentsToSettings(childTarget, tokens, 2); // Send all tokens after the second token as input arguments to buildProjects.
+				argumentsToSettings(childSettings, tokens, 2); // Send all tokens after the second token as input arguments to buildProjects.
 				printText("Building ", second, " from ", fromPath, " which is ", projectPath, "\n");
-				build(output, projectPath, childTarget);
+				target.otherProjectPaths.push(projectPath);
+				target.otherProjectSettings.push(childSettings);
 			} else if (string_caseInsensitiveMatch(first, U"link")) {
 				// Only the path name itself is needed, so any redundant -l prefixes will be stripped away.
 				String libraryName = STRING_EXPR(1, tokens.length() - 1);
@@ -233,84 +206,6 @@ void evaluateScript(SessionContext &output, Machine &target, const ReadableStrin
 				}
 			}
 		}
-	}
-}
-
-static List<String> initializedProjects;
-// Using a project file path and input arguments.
-void buildProject(SessionContext &output, const ReadableString &projectFilePath, Machine settings) {
-	printText("Building project at ", projectFilePath, "\n");
-	// Check if this project has begun building previously during this session.
-	String absolutePath = file_getAbsolutePath(projectFilePath);
-	for (int64_t p = 0; p < initializedProjects.length(); p++) {
-		if (string_caseInsensitiveMatch(absolutePath, initializedProjects[p])) {
-			throwError(U"Found duplicate requests to build from the same initial script ", absolutePath, U" which could cause non-determinism if different arguments are given to each!\n");
-			return;
-		}
-	}
-	// Remember that building of this project has started.
-	initializedProjects.push(absolutePath);
-	// Evaluate compiler settings while searching for source code mentioned in the project and imported headers.
-	printText(U"Executing project file from ", projectFilePath, U".\n");
-	ProjectContext context;
-	evaluateScript(output, settings, projectFilePath);
-	// Find out where things are located.
-	String projectPath = file_getAbsoluteParentFolder(projectFilePath);
-	// Get the project's name.
-	String projectName = file_getPathlessName(file_getExtensionless(projectFilePath));
-	// If no application path is given, the new executable will be named after the project and placed in the same folder.
-	String fullProgramPath = getFlag(settings, U"ProgramPath", projectName);
-	if (string_length(output.executableExtension) > 0) {
-		string_append(fullProgramPath, output.executableExtension);
-	}
-	// Interpret ProgramPath relative to the project path.
-	fullProgramPath = file_getTheoreticalAbsolutePath(fullProgramPath, projectPath);
-	// If the SkipIfBinaryExists flag is given, we will abort as soon as we have handled its external BuildProjects requests and confirmed that the application exists.
-	if (getFlagAsInteger(settings, U"SkipIfBinaryExists") && file_getEntryType(fullProgramPath) == EntryType::File) {
-		// SkipIfBinaryExists was active and the binary exists, so abort here to avoid redundant work.
-		printText(U"Skipping build of ", projectFilePath, U" because the SkipIfBinaryExists flag was given and ", fullProgramPath, U" was found.\n");
-		return;
-	}
-	// Once we know where the binary is and that it should be built, we can start searching for source code.
-	for (int o = 0; o < settings.crawlOrigins.length(); o++) {
-		crawlSource(context, settings.crawlOrigins[o]);
-	}
-	// Once we are done finding all source files, we can resolve the dependencies to create a graph connected by indices.
-	resolveDependencies(context);
-	if (getFlagAsInteger(settings, U"ListDependencies")) {
-		printDependencies(context);
-	}
-	gatherBuildInstructions(output, context, settings, fullProgramPath);
-}
-
-// Using a folder path and input arguments for all projects.
-void buildProjects(SessionContext &output, const ReadableString &projectFolderPath, Machine &settings) {
-	printText("Building all projects in ", projectFolderPath, "\n");
-	file_getFolderContent(projectFolderPath, [&settings, &output](const ReadableString& entryPath, const ReadableString& entryName, EntryType entryType) {
-		if (entryType == EntryType::Folder) {
-			buildProjects(output, entryPath, settings);
-		} else if (entryType == EntryType::File) {
-			ReadableString extension = string_upperCase(file_getExtension(entryName));
-			if (string_match(extension, U"DSRPROJ")) {
-				buildProject(output, entryPath, settings);
-			}
-		}
-	});
-}
-
-void build(SessionContext &output, const ReadableString &projectPath, Machine &settings) {
-	EntryType entryType = file_getEntryType(projectPath);
-	printText("Building anything at ", projectPath, " which is ", entryType, "\n");
-	if (entryType == EntryType::File) {
-		String extension = string_upperCase(file_getExtension(projectPath));
-		if (!string_match(extension, U"DSRPROJ")) {
-			printText(U"Can't use the Build keyword with a file that is not a project!\n");
-		} else {
-			// Build the given project
-			buildProject(output, projectPath, settings);
-		}
-	} else if (entryType == EntryType::Folder) {
-		buildProjects(output, projectPath, settings);
 	}
 }
 
