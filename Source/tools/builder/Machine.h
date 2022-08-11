@@ -54,8 +54,8 @@ struct Dependency {
 	bool visited; // Used to avoid infinite loops while traversing dependencies.
 	List<Connection> links; // Depends on having these linked after compiling.
 	List<Connection> includes; // Depends on having these included in pre-processing.
-	Dependency(const ReadableString& path, Extension extension, uint64_t contentChecksum)
-	: path(path), extension(extension), contentChecksum(contentChecksum) {}
+	Dependency(const ReadableString& path, Extension extension)
+	: path(path), extension(extension) {}
 };
 
 struct ProjectContext {
