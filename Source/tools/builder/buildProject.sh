@@ -20,7 +20,7 @@ if [ -e "${BUILDER_EXECUTABLE}" ]; then
 else
 	echo "Building the Builder build system for first time use."
 	LIBRARY_PATH="$(realpath ${BUILDER_FOLDER}/../../DFPSR)"
-	SOURCE_CODE="${BUILDER_FOLDER}/main.cpp ${BUILDER_FOLDER}/Machine.cpp ${BUILDER_FOLDER}/generator.cpp ${BUILDER_FOLDER}/expression.cpp ${LIBRARY_PATH}/collection/collections.cpp ${LIBRARY_PATH}/api/fileAPI.cpp ${LIBRARY_PATH}/api/bufferAPI.cpp ${LIBRARY_PATH}/api/stringAPI.cpp ${LIBRARY_PATH}/base/SafePointer.cpp"
+	SOURCE_CODE="${BUILDER_FOLDER}/main.cpp ${BUILDER_FOLDER}/Machine.cpp ${BUILDER_FOLDER}/generator.cpp ${BUILDER_FOLDER}/analyzer.cpp ${BUILDER_FOLDER}/expression.cpp ${LIBRARY_PATH}/collection/collections.cpp ${LIBRARY_PATH}/api/fileAPI.cpp ${LIBRARY_PATH}/api/bufferAPI.cpp ${LIBRARY_PATH}/api/stringAPI.cpp ${LIBRARY_PATH}/base/SafePointer.cpp"
 	"${CPP_COMPILER_PATH}" -o "${BUILDER_EXECUTABLE}" ${SOURCE_CODE} -std=c++14
 	if [ $? -eq 0 ]; then
 		echo "Completed building the Builder build system."

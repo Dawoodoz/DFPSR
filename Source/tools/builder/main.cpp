@@ -68,6 +68,7 @@ Project files:
 #include "../../DFPSR/api/fileAPI.h"
 #include "Machine.h"
 #include "expression.h"
+#include "analyzer.h"
 #include "generator.h"
 
 using namespace dsr;
