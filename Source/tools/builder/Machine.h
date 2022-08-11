@@ -17,7 +17,8 @@ struct Flag {
 
 struct Machine {
 	List<Flag> variables;
-	List<String> compilerFlags, linkerFlags;
+	List<String> compilerFlags;
+	List<String> linkerFlags;
 	// When activeStackDepth < currentStackDepth, we are skipping false cases.
 	int64_t currentStackDepth = 0; // How many scopes we are inside of, from the root script including all the others.
 	int64_t activeStackDepth = 0;
@@ -31,14 +32,6 @@ enum class ScriptLanguage {
 	Unknown,
 	Batch,
 	Bash
-};
-
-struct ScriptTarget {
-	ScriptLanguage language;
-	String tempPath;
-	String generatedCode;
-	ScriptTarget(ScriptLanguage language, const ReadableString &tempPath)
-	: language(language), tempPath(tempPath) {}
 };
 
 Extension extensionFromString(const ReadableString& extensionName);
@@ -65,8 +58,35 @@ struct Dependency {
 };
 
 struct ProjectContext {
+	//Machine settings;
 	List<Dependency> dependencies;
 	ProjectContext() {}
+};
+
+struct SourceObject {
+	uint64_t identityChecksum = 0; // Identification number for the object's name.
+	uint64_t combinedChecksum = 0; // Combined content of the source file and all included headers recursively.
+	String sourcePath, objectPath, generatedCompilerFlags, compilerName, compileFrom;
+	SourceObject(uint64_t identityChecksum, uint64_t combinedChecksum, const ReadableString& sourcePath, const ReadableString& objectPath, const ReadableString& generatedCompilerFlags, const ReadableString& compilerName, const ReadableString& compileFrom)
+	: identityChecksum(identityChecksum), combinedChecksum(combinedChecksum), sourcePath(sourcePath), objectPath(objectPath), generatedCompilerFlags(generatedCompilerFlags), compilerName(compilerName), compileFrom(compileFrom) {}
+};
+
+struct LinkingStep {
+	String compilerName, compileFrom, binaryName;
+	List<String> linkerFlags;
+	List<int64_t> sourceObjectIndices;
+	bool executeResult;
+	LinkingStep(const ReadableString &compilerName, const ReadableString &compileFrom, const ReadableString &binaryName, const List<String> &linkerFlags, const List<int64_t> &sourceObjectIndices, bool executeResult)
+	: compilerName(compilerName), compileFrom(compileFrom), binaryName(binaryName), linkerFlags(linkerFlags), sourceObjectIndices(sourceObjectIndices), executeResult(executeResult) {}
+};
+
+struct SessionContext {
+	String tempPath;
+	String executableExtension;
+	List<SourceObject> sourceObjects;
+	List<LinkingStep> linkerSteps;
+	SessionContext(const ReadableString &tempPath, const ReadableString &executableExtension)
+	: tempPath(tempPath), executableExtension(executableExtension) {}
 };
 
 // Returns the first case insensitive match for key in target, or -1 if not found.
@@ -81,17 +101,17 @@ void assignValue(Machine &target, const dsr::ReadableString &key, const dsr::Rea
 
 // Modifies the flags in target, while listing source files to context, using the script in scriptPath.
 // Recursively including other scripts using the script's folder as the origin for relative paths.
-void evaluateScript(ScriptTarget &output, ProjectContext &context, Machine &target, const ReadableString &scriptPath);
+void evaluateScript(SessionContext &output, ProjectContext &context, Machine &target, const ReadableString &scriptPath);
 
 // Build anything in projectPath.
-void build(ScriptTarget &output, const ReadableString &projectPath, Machine &settings);
+void build(SessionContext &output, const ReadableString &projectPath, Machine &settings);
 
 // Build the project in projectFilePath.
 // Settings must be taken by value to prevent side-effects from spilling over between different scripts.
-void buildProject(ScriptTarget &output, const ReadableString &projectFilePath, Machine settings);
+void buildProject(SessionContext &output, const ReadableString &projectFilePath, Machine settings);
 
 // Build all projects in projectFolderPath.
-void buildProjects(ScriptTarget &output, const ReadableString &projectFolderPath, Machine &settings);
+void buildProjects(SessionContext &output, const ReadableString &projectFolderPath, Machine &settings);
 void argumentsToSettings(Machine &settings, const List<String> &arguments, int64_t firstArgument);
 
 #endif
