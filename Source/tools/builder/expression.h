@@ -56,7 +56,7 @@ struct ExpressionSyntax {
 
 dsr::String expression_unwrapIfNeeded(const dsr::ReadableString &text);
 
-dsr::ReadableString expression_getToken(const dsr::List<dsr::String> &tokens, int index);
+dsr::ReadableString expression_getToken(const dsr::List<dsr::String> &tokens, int64_t index);
 
 int64_t expression_interpretAsInteger(const dsr::ReadableString &value);
 

@@ -92,7 +92,7 @@ static void crawlSource(ProjectContext &context, const dsr::ReadableString &abso
 
 // Copy inherited variables from parent to child.
 static void inheritMachine(Machine &child, const Machine &parent) {
-	for (int v = 0; v < parent.variables.length(); v++) {
+	for (int64_t v = 0; v < parent.variables.length(); v++) {
 		String key = string_upperCase(parent.variables[v].key);
 		if (parent.variables[v].inherited) {
 			child.variables.push(parent.variables[v]);
@@ -105,7 +105,7 @@ static void interpretLine(SessionContext &output, ProjectContext &context, Machi
 		bool activeLine = target.activeStackDepth >= target.currentStackDepth;
 		/*
 		printText(activeLine ? U"interpret:" : U"ignore:");
-		for (int t = 0; t < tokens.length(); t++) {
+		for (int64_t t = 0; t < tokens.length(); t++) {
 			printText(U" [", tokens[t], U"]");
 		}
 		printText(U"\n");
@@ -194,7 +194,7 @@ void evaluateScript(SessionContext &output, ProjectContext &context, Machine &ta
 	List<String> currentLine; // Keep it fast and simple by only remembering tokens for the current line.
 	bool quoted = false;
 	bool commented = false;
-	for (int i = 0; i <= string_length(projectContent); i++) {
+	for (int64_t i = 0; i <= string_length(projectContent); i++) {
 		DsrChar c = projectContent[i];
 		// The null terminator does not really exist in projectContent,
 		//   but dsr::String returns a null character safely when requesting a character out of bound,
@@ -242,7 +242,7 @@ void buildProject(SessionContext &output, const ReadableString &projectFilePath,
 	printText("Building project at ", projectFilePath, "\n");
 	// Check if this project has begun building previously during this session.
 	String absolutePath = file_getAbsolutePath(projectFilePath);
-	for (int p = 0; p < initializedProjects.length(); p++) {
+	for (int64_t p = 0; p < initializedProjects.length(); p++) {
 		if (string_caseInsensitiveMatch(absolutePath, initializedProjects[p])) {
 			throwError(U"Found duplicate requests to build from the same initial script ", absolutePath, U" which could cause non-determinism if different arguments are given to each!\n");
 			return;
@@ -311,7 +311,7 @@ void build(SessionContext &output, const ReadableString &projectPath, Machine &s
 }
 
 void argumentsToSettings(Machine &settings, const List<String> &arguments, int64_t firstArgument) {
-	for (int a = firstArgument; a < arguments.length(); a++) {
+	for (int64_t a = firstArgument; a < arguments.length(); a++) {
 		String argument = arguments[a];
 		int64_t assignmentIndex = string_findFirst(argument, U'=');
 		if (assignmentIndex == -1) {
