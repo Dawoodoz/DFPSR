@@ -38,8 +38,6 @@ static void resolveDependency(Dependency &dependency);
 static String findSourceFile(const ReadableString& headerPath, bool acceptC, bool acceptCpp);
 static void flushToken(List<String> &target, String &currentToken);
 static void tokenize(List<String> &target, const ReadableString& line);
-static void interpretPreprocessing(ProjectContext &context, int64_t parentIndex, const List<String> &tokens, const ReadableString &parentFolder, int64_t lineNumber);
-static void analyzeCode(ProjectContext &context, int64_t parentIndex, String content, const ReadableString &parentFolder);
 
 static int64_t findDependency(ProjectContext &context, const ReadableString& findPath) {
 	for (int64_t d = 0; d < context.dependencies.length(); d++) {
@@ -113,24 +111,27 @@ static void tokenize(List<String> &target, const ReadableString& line) {
 	flushToken(target, currentToken);
 }
 
-static void interpretPreprocessing(ProjectContext &context, int64_t parentIndex, const List<String> &tokens, const ReadableString &parentFolder, int64_t lineNumber) {
-	if (tokens.length() >= 3) {
-		if (string_match(tokens[1], U"include")) {
-			if (tokens[2][0] == U'\"') {
-				String relativePath = string_unmangleQuote(tokens[2]);
-				String absolutePath = file_getTheoreticalAbsolutePath(relativePath, parentFolder, LOCAL_PATH_SYNTAX);
-				context.dependencies[parentIndex].includes.pushConstruct(absolutePath, lineNumber);
-				analyzeFromFile(context, absolutePath);
-			}
+void analyzeFile(Dependency &result, const ReadableString& absolutePath, Extension extension) {
+	// Get the file's binary content.
+	Buffer fileBuffer = file_loadBuffer(absolutePath);
+	// Get the checksum
+	result.contentChecksum = checksum(fileBuffer);
+	if (extension == Extension::H || extension == Extension::Hpp) {
+		// The current file is a header, so look for an implementation with the corresponding name.
+		String sourcePath = findSourceFile(absolutePath, extension == Extension::H, true);
+		// If found:
+		if (string_length(sourcePath) > 0) {
+			// Remember that anything using the header will have to link with the implementation.
+			result.links.pushConstruct(sourcePath);
 		}
 	}
-}
-
-static void analyzeCode(ProjectContext &context, int64_t parentIndex, String content, const ReadableString &parentFolder) {
+	// Interpret the file's content.
+	String sourceCode = string_loadFromMemory(fileBuffer);
+	String parentFolder = file_getRelativeParentFolder(absolutePath);
 	List<String> tokens;
 	bool continuingLine = false;
 	int64_t lineNumber = 0;
-	string_split_callback(content, U'\n', true, [&parentIndex, &parentFolder, &tokens, &continuingLine, &lineNumber, &context](ReadableString line) {
+	string_split_callback(sourceCode, U'\n', true, [&result, &parentFolder, &tokens, &continuingLine, &lineNumber](ReadableString line) {
 		lineNumber++;
 		if (line[0] == U'#' || continuingLine) {
 			tokenize(tokens, line);
@@ -140,7 +141,15 @@ static void analyzeCode(ProjectContext &context, int64_t parentIndex, String con
 			continuingLine = false;
 		}
 		if (!continuingLine && tokens.length() > 0) {
-			interpretPreprocessing(context, parentIndex, tokens, parentFolder, lineNumber);
+			if (tokens.length() >= 3) {
+				if (string_match(tokens[1], U"include")) {
+					if (tokens[2][0] == U'\"') {
+						String relativePath = string_unmangleQuote(tokens[2]);
+						String absolutePath = file_getTheoreticalAbsolutePath(relativePath, parentFolder, LOCAL_PATH_SYNTAX);
+						result.includes.pushConstruct(absolutePath, lineNumber);
+					}
+				}
+			}
 			tokens.clear();
 		}
 	});
@@ -151,30 +160,19 @@ void analyzeFromFile(ProjectContext &context, const ReadableString& absolutePath
 		// Already analyzed the current entry. Abort to prevent duplicate dependencies.
 		return;
 	}
-	int64_t lastDotIndex = string_findLast(absolutePath, U'.');
-	if (lastDotIndex != -1) {
-		Extension extension = extensionFromString(string_after(absolutePath, lastDotIndex));
-		if (extension != Extension::Unknown) {
-			// The old length will be the new dependency's index.
-			int64_t parentIndex = context.dependencies.length();
-			// Get the file's binary content.
-			Buffer fileBuffer = file_loadBuffer(absolutePath);
-			// Get the checksum
-			uint64_t contentChecksum = checksum(fileBuffer);
-			context.dependencies.pushConstruct(absolutePath, extension, contentChecksum);
-			if (extension == Extension::H || extension == Extension::Hpp) {
-				// The current file is a header, so look for an implementation with the corresponding name.
-				String sourcePath = findSourceFile(absolutePath, extension == Extension::H, true);
-				// If found:
-				if (string_length(sourcePath) > 0) {
-					// Remember that anything using the header will have to link with the implementation.
-					context.dependencies[parentIndex].links.pushConstruct(sourcePath);
-					// Look for included headers in the implementation file.
-					analyzeFromFile(context, sourcePath);
-				}
-			}
-			// Interpret the file's content.
-			analyzeCode(context, parentIndex, string_loadFromMemory(fileBuffer), file_getRelativeParentFolder(absolutePath));
+	Extension extension = extensionFromString(file_getExtension(absolutePath));
+	if (extension != Extension::Unknown) {
+		// Create a new dependency for the file.
+		int64_t parentIndex = context.dependencies.length();
+		context.dependencies.push(Dependency(absolutePath, extension));
+		// Summarize the file's content.
+		analyzeFile(context.dependencies[parentIndex], absolutePath, extension);
+		// Continue analyzing recursively into the file's dependencies.
+		for (int64_t i = 0; i < context.dependencies[parentIndex].includes.length(); i++) {
+			analyzeFromFile(context, context.dependencies[parentIndex].includes[i].path);
+		}
+		for (int64_t l = 0; l < context.dependencies[parentIndex].links.length(); l++) {
+			analyzeFromFile(context, context.dependencies[parentIndex].links[l].path);
 		}
 	}
 }
