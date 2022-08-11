@@ -100,7 +100,7 @@ static void inheritMachine(Machine &child, const Machine &parent) {
 	}
 }
 
-static void interpretLine(SessionContext &output, ProjectContext &context, Machine &target, List<String> &tokens, const dsr::ReadableString &fromPath) {
+static void interpretLine(SessionContext &output, Machine &target, List<String> &tokens, const dsr::ReadableString &fromPath) {
 	if (tokens.length() > 0) {
 		bool activeLine = target.activeStackDepth >= target.currentStackDepth;
 		/*
@@ -119,7 +119,7 @@ static void interpretLine(SessionContext &output, ProjectContext &context, Machi
 			if (string_caseInsensitiveMatch(first, U"import")) {
 				// Get path relative to importing script's path.
 				String importPath = PATH_EXPR(1, tokens.length() - 1);
-				evaluateScript(output, context, target, importPath);
+				evaluateScript(output, target, importPath);
 				if (tokens.length() > 2) { printText(U"Unused tokens after import!\n");}
 			} else if (string_caseInsensitiveMatch(first, U"if")) {
 				// Being if statement
@@ -134,7 +134,7 @@ static void interpretLine(SessionContext &output, ProjectContext &context, Machi
 				target.activeStackDepth = target.currentStackDepth;
 			} else if (string_caseInsensitiveMatch(first, U"crawl")) {
 				// The right hand expression is evaluated into a path relative to the build script and used as the root for searching for source code.
-				crawlSource(context, PATH_EXPR(1, tokens.length() - 1));
+				target.crawlOrigins.push(PATH_EXPR(1, tokens.length() - 1));
 			} else if (string_caseInsensitiveMatch(first, U"build")) {
 				// Build one or more other projects from a project file or folder path, as dependencies.
 				//   Having the same external project built twice during the same session is not allowed.
@@ -183,7 +183,7 @@ static void interpretLine(SessionContext &output, ProjectContext &context, Machi
 	tokens.clear();
 }
 
-void evaluateScript(SessionContext &output, ProjectContext &context, Machine &target, const ReadableString &scriptPath) {
+void evaluateScript(SessionContext &output, Machine &target, const ReadableString &scriptPath) {
 	if (file_getEntryType(scriptPath) != EntryType::File) {
 		printText(U"The script path ", scriptPath, U" does not exist!\n");
 	}
@@ -202,7 +202,7 @@ void evaluateScript(SessionContext &output, ProjectContext &context, Machine &ta
 		if (c == U'\n' || c == U'\0') {
 			// Comment removing everything else.
 			flushToken(currentLine, currentToken);
-			interpretLine(output, context, target, currentLine, projectFolderPath);
+			interpretLine(output, target, currentLine, projectFolderPath);
 			commented = false; // Automatically end comments at end of line.
 			quoted = false; // Automatically end quotes at end of line.
 		} else if (c == U'\"') {
@@ -211,7 +211,7 @@ void evaluateScript(SessionContext &output, ProjectContext &context, Machine &ta
 		} else if (c == U'#') {
 			// Comment removing everything else until a new line comes.
 			flushToken(currentLine, currentToken);
-			interpretLine(output, context, target, currentLine, projectFolderPath);
+			interpretLine(output, target, currentLine, projectFolderPath);
 			commented = true;
 		} else if (!commented) {
 			if (quoted) {
@@ -253,7 +253,7 @@ void buildProject(SessionContext &output, const ReadableString &projectFilePath,
 	// Evaluate compiler settings while searching for source code mentioned in the project and imported headers.
 	printText(U"Executing project file from ", projectFilePath, U".\n");
 	ProjectContext context;
-	evaluateScript(output, context, settings, projectFilePath);
+	evaluateScript(output, settings, projectFilePath);
 	// Find out where things are located.
 	String projectPath = file_getAbsoluteParentFolder(projectFilePath);
 	// Get the project's name.
@@ -270,6 +270,10 @@ void buildProject(SessionContext &output, const ReadableString &projectFilePath,
 		// SkipIfBinaryExists was active and the binary exists, so abort here to avoid redundant work.
 		printText(U"Skipping build of ", projectFilePath, U" because the SkipIfBinaryExists flag was given and ", fullProgramPath, U" was found.\n");
 		return;
+	}
+	// Once we know where the binary is and that it should be built, we can start searching for source code.
+	for (int o = 0; o < settings.crawlOrigins.length(); o++) {
+		crawlSource(context, settings.crawlOrigins[o]);
 	}
 	// Once we are done finding all source files, we can resolve the dependencies to create a graph connected by indices.
 	resolveDependencies(context);
