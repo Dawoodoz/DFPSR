@@ -32,13 +32,6 @@ static uint64_t checksum(const Buffer& buffer) {
 	return d;
 }
 
-static int64_t findDependency(ProjectContext &context, const ReadableString& findPath);
-static void resolveConnection(Connection &connection);
-static void resolveDependency(Dependency &dependency);
-static String findSourceFile(const ReadableString& headerPath, bool acceptC, bool acceptCpp);
-static void flushToken(List<String> &target, String &currentToken);
-static void tokenize(List<String> &target, const ReadableString& line);
-
 static int64_t findDependency(ProjectContext &context, const ReadableString& findPath) {
 	for (int64_t d = 0; d < context.dependencies.length(); d++) {
 		if (string_match(context.dependencies[d].path, findPath)) {
