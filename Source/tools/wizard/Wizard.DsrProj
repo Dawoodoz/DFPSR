@@ -1,6 +1,6 @@
 ﻿# This project will use both sound and graphics, so we default initialize them to 1 before evaluating the library's header.
 # The caller should provide the operating system's name (Windows, Linux)
-Message "Starting main.DsrProj\n"
+Message "Starting Wizard.DsrProj\n"
 
 # Give the Skip flag when compiling to only compile the wizard program itself.
 if !(Skip)
@@ -9,7 +9,7 @@ if !(Skip)
 	Build "../../templates" SkipIfBinaryExists Supressed
 end if
 
-Message "Done with building the examples and continuing with building main.DsrProj\n"
+Message "Done with building the examples and continuing with building Wizard.DsrProj\n"
 
 Graphics
 Sound
@@ -33,4 +33,4 @@ Crawl "main.cpp"
 # Enable to compile a debug version
 # Debug
 
-Message "Ending main.DsrProj\n"
+Message "Ending Wizard.DsrProj\n"

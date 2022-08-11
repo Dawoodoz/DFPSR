@@ -19,6 +19,7 @@ struct Machine {
 	List<Flag> variables;
 	List<String> compilerFlags;
 	List<String> linkerFlags;
+	List<String> crawlOrigins;
 	// When activeStackDepth < currentStackDepth, we are skipping false cases.
 	int64_t currentStackDepth = 0; // How many scopes we are inside of, from the root script including all the others.
 	int64_t activeStackDepth = 0;
@@ -101,7 +102,7 @@ void assignValue(Machine &target, const dsr::ReadableString &key, const dsr::Rea
 
 // Modifies the flags in target, while listing source files to context, using the script in scriptPath.
 // Recursively including other scripts using the script's folder as the origin for relative paths.
-void evaluateScript(SessionContext &output, ProjectContext &context, Machine &target, const ReadableString &scriptPath);
+void evaluateScript(SessionContext &output, Machine &target, const ReadableString &scriptPath);
 
 // Build anything in projectPath.
 void build(SessionContext &output, const ReadableString &projectPath, Machine &settings);
