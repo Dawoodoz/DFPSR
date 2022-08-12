@@ -2,7 +2,7 @@
 #ifndef DSR_BUILDER_EXPRESSION_MODULE
 #define DSR_BUILDER_EXPRESSION_MODULE
 
-#include "../../DFPSR/api/stringAPI.h"
+#include "../../../DFPSR/api/stringAPI.h"
 
 // The expression module is a slow but generic system for evaluating expressions where all data is stored as strings for simplicity.
 //   No decimal numbers allowed, because it requires both human readable syntax and full determinism without precision loss.

@@ -1,7 +1,7 @@
 ﻿
 #include "Machine.h"
 #include "expression.h"
-#include "../../DFPSR/api/fileAPI.h"
+#include "../../../DFPSR/api/fileAPI.h"
 
 using namespace dsr;
 
@@ -169,6 +169,8 @@ void evaluateScript(SessionContext &output, Machine &target, const ReadableStrin
 	bool commented = false;
 	for (int64_t i = 0; i <= string_length(projectContent); i++) {
 		DsrChar c = projectContent[i];
+		// Treat end of file as a linebreak to simplify tokenization rules.
+		if (c == U'\0') c == U'\n';
 		// The null terminator does not really exist in projectContent,
 		//   but dsr::String returns a null character safely when requesting a character out of bound,
 		//   which allow interpreting the last line without duplicating code.
