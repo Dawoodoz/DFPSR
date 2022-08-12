@@ -8,7 +8,7 @@
 using namespace dsr;
 
 // Analyze using calls from the machine
-void analyzeFromFile(ProjectContext &context, const ReadableString& entryPath);
+void analyzeFromFile(ProjectContext &context, ReadableString entryPath);
 // Call from main when done analyzing source files
 void resolveDependencies(ProjectContext &context);
 
@@ -16,14 +16,14 @@ void resolveDependencies(ProjectContext &context);
 void printDependencies(ProjectContext &context);
 
 // Build anything in projectPath.
-void build(SessionContext &output, const ReadableString &projectPath, Machine &settings);
+void build(SessionContext &output, ReadableString projectPath, Machine &sharedsettings);
 
 // Build the project in projectFilePath.
 // Settings must be taken by value to prevent side-effects from spilling over between different scripts.
-void buildProject(SessionContext &output, const ReadableString &projectFilePath, Machine settings);
+void buildProject(SessionContext &output, ReadableString projectFilePath, Machine &sharedsettings);
 
 // Build all projects in projectFolderPath.
-void buildProjects(SessionContext &output, const ReadableString &projectFolderPath, Machine &settings);
+void buildProjects(SessionContext &output, ReadableString projectFolderPath, Machine &sharedsettings);
 
 void gatherBuildInstructions(SessionContext &output, ProjectContext &context, Machine &settings, ReadableString programPath);
 

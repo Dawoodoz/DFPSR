@@ -19,8 +19,12 @@ void assignValue(Machine &target, const dsr::ReadableString &key, const dsr::Rea
 
 // Modifies the flags in target, while listing source files to context, using the script in scriptPath.
 // Recursively including other scripts using the script's folder as the origin for relative paths.
-void evaluateScript(SessionContext &output, Machine &target, const ReadableString &scriptPath);
+void evaluateScript(Machine &target, const ReadableString &scriptPath);
 
-void argumentsToSettings(Machine &settings, const List<String> &arguments, int64_t firstArgument);
+void inheritMachine(Machine &child, const Machine &parent);
+void argumentsToSettings(Machine &settings, const List<String> &arguments, int64_t firstArgument, int64_t lastArgument);
+
+void printSettings(const Machine &settings);
+void validateSettings(const Machine &settings, const dsr::ReadableString &eventDescription);
 
 #endif

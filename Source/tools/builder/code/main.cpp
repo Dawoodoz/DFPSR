@@ -49,6 +49,12 @@ Project files:
 			Build "../myFolder" SkipIfBinaryExists
 		* Add file.cpp and other implementations found through includes into the list of source code to compile and link.
 			Crawl "folder/file.cpp"
+		* Add a linker flag as is for direct control
+			LinkerFlag -lLibrary
+		* Add a linker flag with automatic prefix for future proofing
+			Link Library
+		* Add a compiler flag as is
+			CompilerFlag -DMACRO
 	Systems:
 		* Linux
 			Set to non-zero on Linux or similar operating systems.
@@ -92,8 +98,9 @@ void dsrMain(List<String> args) {
 		// Calling builder with the extra arguments will interpret them as variables and mark them as inherited, so that they are passed on to any other projects build from the project file.
 		// Other values can be assigned using an equality sign.
 		//   Avoid spaces around the equality sign, because quotes are already used for string arguments in assignments.
-		Machine settings;
-		argumentsToSettings(settings, args, 3);
+		Machine settings(file_getPathlessName(projectPath));
+		argumentsToSettings(settings, args, 3, args.length() - 1);
+		validateSettings(settings, U"in settings after getting application arguments (in main)");
 		// Generate build instructions.
 		String executableExtension;
 		if (getFlagAsInteger(settings, U"Windows")) {
@@ -101,6 +108,7 @@ void dsrMain(List<String> args) {
 		}
 		SessionContext buildContext = SessionContext(tempFolder, executableExtension);
 		build(buildContext, projectPath, settings);
+		validateSettings(settings, U"in settings after executing the root build script (in main)");
 		// Generate a script to execute.
 		// TODO: Store compiler flags in groups of lists to allow taking them directly as program arguments when calling the compiler directly.
 		generateCompilationScript(buildContext, scriptPath);
