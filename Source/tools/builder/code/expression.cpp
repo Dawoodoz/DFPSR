@@ -7,11 +7,11 @@ using namespace dsr;
 POIndex::POIndex() {}
 POIndex::POIndex(int16_t precedenceIndex, int16_t operationIndex) : precedenceIndex(precedenceIndex), operationIndex(operationIndex) {}
 
-Operation::Operation(int16_t symbolIndex, std::function<dsr::String(dsr::ReadableString, dsr::ReadableString)> action)
+Operation::Operation(int16_t symbolIndex, std::function<String(ReadableString, ReadableString)> action)
 : symbolIndex(symbolIndex), action(action) {
 }
 
-static int16_t addOperation(ExpressionSyntax &targetSyntax, int16_t symbolIndex, std::function<dsr::String(dsr::ReadableString, dsr::ReadableString)> action) {
+static int16_t addOperation(ExpressionSyntax &targetSyntax, int16_t symbolIndex, std::function<String(ReadableString, ReadableString)> action) {
 	int16_t precedenceIndex = targetSyntax.precedences.length() - 1;
 	int16_t operationIndex = targetSyntax.precedences.last().operations.length();
 	// TODO: Only allow assigning a symbol once per prefix, infix and postfix.
@@ -23,18 +23,18 @@ static int16_t addOperation(ExpressionSyntax &targetSyntax, int16_t symbolIndex,
 Precedence::Precedence(Notation notation, Associativity associativity)
 : notation(notation), associativity(associativity) {}
 
-Symbol::Symbol(const dsr::ReadableString &token, bool atomic, int32_t depthOffset)
-: token(token), atomic(atomic), depthOffset(depthOffset) {}
+Symbol::Symbol(const ReadableString &token, SymbolType symbolType, int32_t depthOffset, DsrChar endsWith, DsrChar escapes)
+: token(token), symbolType(symbolType), depthOffset(depthOffset), endsWith(endsWith), escapes(escapes) {}
 
-ReadableString expression_getToken(const List<String> &tokens, int64_t index) {
+ReadableString expression_getToken(const List<String> &tokens, int64_t index, const ReadableString &outside) {
 	if (0 <= index && index < tokens.length()) {
 		return tokens[index];
 	} else {
-		return U"";
+		return outside;
 	}
 }
 
-int64_t expression_interpretAsInteger(const dsr::ReadableString &value) {
+int64_t expression_interpretAsInteger(const ReadableString &value) {
 	if (string_length(value) == 0) {
 		return 0;
 	} else {
@@ -42,7 +42,7 @@ int64_t expression_interpretAsInteger(const dsr::ReadableString &value) {
 	}
 }
 
-String expression_unwrapIfNeeded(const dsr::ReadableString &text) {
+String expression_unwrapIfNeeded(const ReadableString &text) {
 	if (text[0] == U'\"') {
 		return string_unmangleQuote(text);
 	} else {
@@ -50,29 +50,41 @@ String expression_unwrapIfNeeded(const dsr::ReadableString &text) {
 	}
 }
 
-static int16_t createSymbol(ExpressionSyntax &targetSyntax, const dsr::ReadableString &token, bool atomic, int32_t depthOffset) {
-	targetSyntax.symbols.pushConstruct(token, atomic, depthOffset);
-	return targetSyntax.symbols.length() - 1;
+static int16_t createSymbol(ExpressionSyntax &targetSyntax, const ReadableString &token, SymbolType symbolType, int32_t depthOffset, DsrChar endsWith, DsrChar escapes) {
+	int64_t oldCount = targetSyntax.symbols.length();
+	if (oldCount >= 32767) throwError(U"Can't declare more than 32767 symbols in a syntax, because they are referenced using 16-bit integers!\n");
+	if (string_length(token) < 1) throwError(U"Can't declare a symbol without any characters, because the empty symbol exists between every character!\n");
+	if (symbolType != SymbolType::Keyword) {
+		if (targetSyntax.keywordCount > 0) throwError(U"Can't declare atomic symbols after the first keyword!\n");
+		if (targetSyntax.atomicCount > 0 && string_length(targetSyntax.symbols[oldCount - 1].token) < string_length(token)) {
+			throwError(U"Each following atomic token must be shorter or equal to the previous atomic token, so that longest match first can be applied!\n");
+		}
+		targetSyntax.atomicCount++;
+	} else {
+		targetSyntax.keywordCount++;
+	}
+	targetSyntax.symbols.pushConstruct(token, symbolType, depthOffset, endsWith, escapes);
+	return (int16_t)oldCount;
 }
-#define CREATE_KEYWORD(TOKEN) createSymbol(*this, TOKEN, false, 0);
-#define CREATE_ATOMIC(TOKEN) createSymbol(*this, TOKEN, true, 0);
-#define CREATE_LEFT(TOKEN) createSymbol(*this, TOKEN, true, 1);
-#define CREATE_RIGHT(TOKEN) createSymbol(*this, TOKEN, true, -1);
 
+#define CREATE_KEYWORD(TOKEN) createSymbol(*this, TOKEN, SymbolType::Keyword, 0, -1, -1);
+#define CREATE_ATOMIC(TOKEN) createSymbol(*this, TOKEN, SymbolType::Atomic, 0, -1, -1);
+#define CREATE_LEFT(TOKEN) createSymbol(*this, TOKEN, SymbolType::Atomic, 1, -1, -1);
+#define CREATE_RIGHT(TOKEN) createSymbol(*this, TOKEN, SymbolType::Atomic, -1, -1, -1);
+#define CREATE_LITERAL(START_TOKEN, END_CHAR, ESCAPE_CHAR) createSymbol(*this, START_TOKEN, SymbolType::Atomic, 0, END_CHAR, ESCAPE_CHAR);
+#define CREATE_VOID(TOKEN) createSymbol(*this, TOKEN, SymbolType::Nothing, 0, -1, -1);
+#define CREATE_COMMENT(TOKEN, END_CHAR, ESCAPE_CHAR) createSymbol(*this, TOKEN, SymbolType::Nothing, 0, END_CHAR, ESCAPE_CHAR);
+
+// TODO: Create a way to enter symbols, keywords and operations from the outside to define custom syntax.
+//       * Using a file or list of symbols is the easiest way to enter them by sorting automatically, but makes it hard to connect the indices with anything useful.
+//       * Using multiple calls to an API makes it difficult to sort atomic symbols automatically based on length.
 ExpressionSyntax::ExpressionSyntax() {
 	// Symbols must be entered with longest match first, so that they can be used for tokenization.
-	// Keywords
-	int16_t token_string_match = CREATE_KEYWORD(U"matches");
-	int16_t token_logical_and = CREATE_KEYWORD(U"and");
-	int16_t token_logical_xor = CREATE_KEYWORD(U"xor");
-	int16_t token_logical_or = CREATE_KEYWORD(U"or");
 	// Length 2 symbols
-	int16_t token_lesserEqual = CREATE_ATOMIC(U"<=");
-	int16_t token_greaterEqual = CREATE_ATOMIC(U">=");
-	int16_t token_equal = CREATE_ATOMIC(U"==");
-	int16_t token_notEqual = CREATE_ATOMIC(U"!=");
-	int16_t token_leftArrow = CREATE_ATOMIC(U"<-");
-	int16_t token_rightArrow = CREATE_ATOMIC(U"->");
+	int16_t token_lesserEqual = CREATE_ATOMIC(U"<="); // Allowed because both < and = are infix operations, which can not end up on the left or right sides.
+	int16_t token_greaterEqual = CREATE_ATOMIC(U">="); // Allowed because both > and = are infix operations, which can not end up on the left or right sides.
+	int16_t token_equal = CREATE_ATOMIC(U"=="); // Allowed because = is an infix operation, which can not end up on the left or right sides.
+	int16_t token_notEqual = CREATE_ATOMIC(U"!="); // Allowed because ! is a prefix and would not end up on the left side of an assignment.
 	// Length 1 symbols
 	int16_t token_plus = CREATE_ATOMIC(U"+");
 	int16_t token_minus = CREATE_ATOMIC(U"-");
@@ -90,7 +102,24 @@ ExpressionSyntax::ExpressionSyntax() {
 	int16_t token_rightParen = CREATE_RIGHT(U")");
 	int16_t token_rightBracket = CREATE_RIGHT(U"]");
 	int16_t token_rightCurl = CREATE_RIGHT(U"}");
+	// Breaking
+	int16_t token_lineBreak = CREATE_ATOMIC(U"\n");
+	// Nothing
+	CREATE_VOID(U" ");
+	CREATE_VOID(U"\t");
+	CREATE_VOID(U"\v");
+	CREATE_VOID(U"\f");
+	CREATE_VOID(U"\r"); // \r\n becomes \n, \n\r becomes \n and \n remains the same. String only using \r to break lines need to be converted into \n linebreaks before use.
+	// Special tokens
+	int16_t token_comment = CREATE_COMMENT(U"#", U'\n', -1); // # will begin a comment until the end of the line, without any escape character.
+	int16_t token_doubleQuote = CREATE_LITERAL(U"\"", U'\"', U'\\'); // " will begin a literal until the next " not preceded by \.
+	// Keywords that are used in expressions
+	int16_t token_logical_and = CREATE_KEYWORD(U"and");
+	int16_t token_logical_or = CREATE_KEYWORD(U"or");
+	int16_t token_logical_xor = CREATE_KEYWORD(U"xor");
+	int16_t token_string_match = CREATE_KEYWORD(U"matches");
 	// Unidentified tokens are treated as identifiers or values with index -1.
+	// Unlisted keywords can still be tokenized and used for statements, just not used to perform operations in expressions.
 
 	// Each symbol can be tied once to prefix, once to infix and once to postfix.
 	this->precedences.pushConstruct(Notation::Prefix, Associativity::RightToLeft);
@@ -181,7 +210,6 @@ struct TokenInfo {
 	: depth(depth), symbolIndex(symbolIndex) {}
 };
 
-/*
 static String debugTokens(const List<TokenInfo> &info, int64_t infoStart, const List<String> &tokens, int64_t startTokenIndex, int64_t endTokenIndex) {
 	String result;
 	for (int64_t t = startTokenIndex; t <= endTokenIndex; t++) {
@@ -201,17 +229,26 @@ static String debugTokens(const List<TokenInfo> &info, int64_t infoStart, const 
 	}
 	return result;
 }
-*/
 
+static String debugTokens(const List<String> &tokens) {
+	String result;
+	for (int64_t t = 0; t < tokens.length(); t++) {
+		if (t > 0) {
+			string_appendChar(result, U' ');
+		}
+		string_append(result, U"[", tokens[t], U"]");
+	}
+	return result;
+}
 static int16_t identifySymbol(const ReadableString &token, const ExpressionSyntax &syntax) {
 	for (int64_t s = 0; s < syntax.symbols.length(); s++) {
-		if (syntax.symbols[s].atomic) {
-			if (string_match(token, syntax.symbols[s].token)) {
+		if (syntax.symbols[s].symbolType == SymbolType::Keyword) {
+			// TODO: Make case insensitive optional for keywords.
+			if (string_caseInsensitiveMatch(token, syntax.symbols[s].token)) {
 				return s;
 			}
 		} else {
-			// TODO: Make case insensitive optional for keywords.
-			if (string_caseInsensitiveMatch(token, syntax.symbols[s].token)) {
+			if (string_match(token, syntax.symbols[s].token)) {
 				return s;
 			}
 		}
@@ -252,10 +289,11 @@ static bool validRightmostToken(int16_t symbolIndex, const ExpressionSyntax &syn
 static String expression_evaluate_helper(const List<TokenInfo> &info, int64_t infoStart, int64_t currentDepth, const List<String> &tokens, int64_t startTokenIndex, int64_t endTokenIndex, const ExpressionSyntax &syntax, std::function<String(ReadableString)> identifierEvaluation) {
 	//printText(U"Evaluate: ", debugTokens(info, infoStart, tokens, startTokenIndex, endTokenIndex), U"\n");
 	if (startTokenIndex == endTokenIndex) {
-		ReadableString first = expression_getToken(tokens, startTokenIndex);
+		ReadableString first = expression_getToken(tokens, startTokenIndex, U"");
 		if (string_isInteger(first)) {
 			return first;
 		} else if (first[0] == U'\"') {
+			// TODO: Let the caller unwrap strings.
 			return string_unmangleQuote(first);
 		} else {
 			// Identifier defaulting to empty.
@@ -335,6 +373,7 @@ static String expression_evaluate_helper(const List<TokenInfo> &info, int64_t in
 				opIndex += opStep;
 			}
 		}
+		// TODO: Let the caller create a pattern matching operation for these combinations using longest match first.
 		if (string_match(tokens[startTokenIndex], U"(") && string_match(tokens[endTokenIndex], U")")) {
 			//printText(U"Unwrapping ()\n");
 			return expression_evaluate_helper(info, infoStart, currentDepth + 1, tokens, startTokenIndex + 1, endTokenIndex - 1, syntax, identifierEvaluation);
@@ -373,6 +412,83 @@ String expression_evaluate(const List<String> &tokens, std::function<String(Read
 	return expression_evaluate(tokens, 0, tokens.length() - 1, defaultSyntax, identifierEvaluation);
 }
 
+// Atomic symbols are always case sensitive.
+static bool matchAtomicFrom(const ReadableString &sourceText, int64_t location, const ReadableString &symbol) {
+	for (int64_t l = 0; l < string_length(symbol); l++) {
+		if (sourceText[location + l] != symbol[l]) {
+			return false; // No match if a character deviated.
+		}
+	}
+	return true; // Match if we found no contradicting characters.
+}
+
+void expression_tokenize(List<String> &targetTokens, const ReadableString &sourceText, const ExpressionSyntax &syntax) {
+	//printText(U"expression_tokenize(", sourceText, U")\n");
+	int64_t i = 0;
+	int64_t keywordStart = 0;
+	int64_t sourceLength = string_length(sourceText);
+	while (i < sourceLength) {
+		bool foundSymbol = false;
+		for (int64_t s = 0; s < syntax.atomicCount; s++) {
+			String startToken = syntax.symbols[s].token;
+			if (matchAtomicFrom(sourceText, i, startToken)) {
+				if (keywordStart < i) targetTokens.push(string_exclusiveRange(sourceText, keywordStart, i)); // Consume any previous keyword.
+				int64_t startTokenLength = string_length(startToken);
+				int64_t startIndex = i;
+				int64_t exclusiveEndIndex = i + string_length(startToken);
+				DsrChar endsWith = syntax.symbols[s].endsWith;
+				DsrChar escapes = syntax.symbols[s].escapes;
+				i += string_length(startToken);
+				if (endsWith != -1) {
+					// Find the end if the token is continuing.
+					int64_t j;
+					for (j = i; j < sourceLength; j++) {
+						if (sourceText[j] == endsWith) {
+							// Include the last character before ending
+							j++;
+							break;
+						} else if (sourceText[j] == escapes) {
+							// Jump past the next character when an escape character is met.
+							j++;
+						}
+					}
+					exclusiveEndIndex = j;
+				}
+				if (syntax.symbols[s].symbolType != SymbolType::Nothing) {
+					// Include the token if it's not whitespace.
+					targetTokens.push(string_exclusiveRange(sourceText, startIndex, exclusiveEndIndex));
+				}
+				i = exclusiveEndIndex;
+				// Done identifying the symbol.
+				foundSymbol = true;
+				keywordStart = i;
+				break;
+			}
+		}
+		if (!foundSymbol) {
+			i++;
+		}
+	}
+	if (keywordStart < i) targetTokens.push(string_exclusiveRange(sourceText, keywordStart, i)); // Consume any last keyword.
+	//printText(U"expression_tokenize finished with ", targetTokens.length(), " tokens\n");
+}
+
+void expression_tokenize(List<String> &targetTokens, const ReadableString &sourceText) {
+	expression_tokenize(targetTokens, sourceText, defaultSyntax);
+}
+
+List<String> expression_tokenize(const ReadableString &sourceText, const ExpressionSyntax &syntax) {
+	List<String> result;
+	expression_tokenize(result, sourceText, syntax);
+	return result;
+}
+
+List<String> expression_tokenize(const ReadableString &sourceText) {
+	List<String> result;
+	expression_tokenize(result, sourceText);
+	return expression_tokenize(sourceText, defaultSyntax);
+}
+
 // -------- Regression tests --------
 
 template<typename TYPE>
@@ -400,6 +516,22 @@ static void expectResult(int64_t &errorCount, const ReadableString &result, cons
 	}
 }
 
+static void expectResult(int64_t &errorCount, const List<String> &result, const List<String> &expected) {
+	if (result.length() != expected.length()) {
+		printText(U"    - Failed\n    ", debugTokens(expected), U" with unexpected\n    ", debugTokens(result), U" of different token count\n");
+		errorCount++;
+		return;
+	}
+	for (int64_t t = 0; t < expected.length(); t++) {
+		if (!string_match(expected[t], result[t])) {
+			printText(U"    - Failed\n    ", debugTokens(expected), U" with unexpected\n    ", debugTokens(result), U"\n");
+			errorCount++;
+			return;
+		}
+	}
+	printText(U"* Passed ", debugTokens(expected), U"\n");
+}
+
 void expression_runRegressionTests() {
 	std::function<String(ReadableString)> context = [](ReadableString identifier) -> String {
 		if (string_caseInsensitiveMatch(identifier, U"x")) {
@@ -418,6 +550,20 @@ void expression_runRegressionTests() {
 		if (validRightmostToken(s, defaultSyntax)) printText(U"  Can be rightmost\n");
 	}*/
 	int64_t ec = 0;
+	// Tokenize
+	printText(U"Tokenize test\n");
+	expectResult(ec, expression_tokenize(U"0  "), combineTokens(U"0"));
+	expectResult(ec, expression_tokenize(U"first line\nsecond line"), combineTokens(U"first", U"line", U"\n", U"second", U"line"));
+	expectResult(ec, expression_tokenize(U"#A comment\nfirst line\nsecond line"), combineTokens(U"first", U"line", U"\n", U"second", U"line"));
+	expectResult(ec, expression_tokenize(U"5+(7-8)"), combineTokens(U"5", U"+", U"(", U"7", U"-", U"8", U")"));
+	expectResult(ec, expression_tokenize(U"identifier keyword"), combineTokens(U"identifier", U"keyword"));
+	expectResult(ec, expression_tokenize(U"identifier+keyword"), combineTokens(U"identifier", U"+", U"keyword"));
+	expectResult(ec, expression_tokenize(U"\t\tidentifier +  keyword "), combineTokens(U"identifier", U"+", U"keyword"));
+	expectResult(ec, expression_tokenize(U"\" My string content \" \t+ \"My other string\""), combineTokens(U"\" My string content \"", U"+", U"\"My other string\""));
+	expectResult(ec, expression_tokenize(U"\" My string content\n \" \t+ \"My other\n string\""), combineTokens(U"\" My string content\n \"", U"+", U"\"My other\n string\""));
+	expectResult(ec, expression_tokenize(U"  \" My string content\n \"   # Comment \n + \"My other\n string\"  "), combineTokens(U"\" My string content\n \"", U"+", U"\"My other\n string\""));
+	// Evaluate from tokens
+	printText(U"Evaluate from tokens test\n");
 	expectResult(ec, expression_evaluate(combineTokens(U""), context), U"<ERROR:Unresolved identifier>");
 	expectResult(ec, expression_evaluate(combineTokens(U"0"), context), U"0");
 	expectResult(ec, expression_evaluate(combineTokens(U"(", U"19", U")"), context), U"19");
@@ -456,5 +602,44 @@ void expression_runRegressionTests() {
 	expectResult(ec, expression_evaluate(combineTokens(U"-47", U"{"), context), U"<ERROR:Unbalanced expression depth>");
 	expectResult(ec, expression_evaluate(combineTokens(U"645", U"}"), context), U"<ERROR:Negative expression depth>");
 	expectResult(ec, expression_evaluate(combineTokens(U"5", U")", U"+", U"(", U"-7"), context), U"<ERROR:Negative expression depth>");
+	// Tokenize and evaluate
+	printText(U"Tokenize and evaluate test\n");
+	expectResult(ec, expression_evaluate(expression_tokenize(U"0  "), context), U"0");
+	expectResult(ec, expression_evaluate(expression_tokenize(U"(19)"), context), U"19");
+	expectResult(ec, expression_evaluate(expression_tokenize(U"( 2+4)"), context), U"6");
+	expectResult(ec, expression_evaluate(expression_tokenize(U"3"), context), U"3");
+	expectResult(ec, expression_evaluate(expression_tokenize(U"- 5"), context), U"-5");
+	expectResult(ec, expression_evaluate(expression_tokenize(U" -32"), context), U"-32");
+	expectResult(ec, expression_evaluate(expression_tokenize(U"3+ 6"), context), U"9");
+	expectResult(ec, expression_evaluate(expression_tokenize(U"x\t"), context), U"5");
+	expectResult(ec, expression_evaluate(expression_tokenize(U"doorCount"), context), U"48");
+	expectResult(ec, expression_evaluate(expression_tokenize(U"temperature"), context), U"-18");
+	expectResult(ec, expression_evaluate(expression_tokenize(U"nonsense"), context), U"<ERROR:Unresolved identifier>");
+	expectResult(ec, expression_evaluate(expression_tokenize(U"6*2+4"), context), U"16");
+	expectResult(ec, expression_evaluate(expression_tokenize(U"4+ 6*2"), context), U"16");
+	expectResult(ec, expression_evaluate(expression_tokenize(U"4+(6* 2)"), context), U"16");
+	expectResult(ec, expression_evaluate(expression_tokenize(U"(4+6)*2"), context), U"20");
+	expectResult(ec, expression_evaluate(expression_tokenize(U"5+- 7"), context), U"-2");
+	expectResult(ec, expression_evaluate(expression_tokenize(U"5+(-7)"), context), U"-2");
+	expectResult(ec, expression_evaluate(expression_tokenize(U"5+(-7)"), context), U"-2");
+	expectResult(ec, expression_evaluate(expression_tokenize(U"5+-7"), context), U"-2");
+	expectResult(ec, expression_evaluate(expression_tokenize(U"5--7 "), context), U"12");
+	expectResult(ec, expression_evaluate(expression_tokenize(U"5&-7"), context), U"5-7");
+	expectResult(ec, expression_evaluate(expression_tokenize(U"(6+8)/(9-2)"), context), U"2");
+	expectResult(ec, expression_evaluate(expression_tokenize(U"(6+8)*(9-2)"), context), U"98");
+	expectResult(ec, expression_evaluate(expression_tokenize(U"	&-7"), context), U"<ERROR:Invalid expression>");
+	expectResult(ec, expression_evaluate(expression_tokenize(U"(-   7"), context), U"<ERROR:Unbalanced expression depth>");
+	expectResult(ec, expression_evaluate(expression_tokenize(U")3"), context), U"<ERROR:Negative expression depth>");
+	expectResult(ec, expression_evaluate(expression_tokenize(U"[8"), context), U"<ERROR:Unbalanced expression depth>");
+	expectResult(ec, expression_evaluate(expression_tokenize(U"]  65"), context), U"<ERROR:Negative expression depth>");
+	expectResult(ec, expression_evaluate(expression_tokenize(U"{12"), context), U"<ERROR:Unbalanced expression depth>");
+	expectResult(ec, expression_evaluate(expression_tokenize(U"}0"), context), U"<ERROR:Negative expression depth>");
+	expectResult(ec, expression_evaluate(expression_tokenize(U"12("), context), U"<ERROR:Unbalanced expression depth>");
+	expectResult(ec, expression_evaluate(expression_tokenize(U"2)"), context), U"<ERROR:Negative expression depth>");
+	expectResult(ec, expression_evaluate(expression_tokenize(U"-5["), context), U"<ERROR:Unbalanced expression depth>");
+	expectResult(ec, expression_evaluate(expression_tokenize(U"6]"), context), U"<ERROR:Negative expression depth>");
+	expectResult(ec, expression_evaluate(expression_tokenize(U"-47 {"), context), U"<ERROR:Unbalanced expression depth>");
+	expectResult(ec, expression_evaluate(expression_tokenize(U"645}"), context), U"<ERROR:Negative expression depth>");
+	expectResult(ec, expression_evaluate(expression_tokenize(U"5)+(-7"), context), U"<ERROR:Negative expression depth>");
 	printText(U"Completed regression tests of expressions with ", ec, U" errors in total.\n");
 }

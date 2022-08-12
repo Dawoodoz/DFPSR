@@ -40,6 +40,7 @@ static void setCompilationFolder(String &generatedCode, ScriptLanguage language,
 			}
 		}
 	}
+	currentPath = newPath;
 }
 
 void generateCompilationScript(SessionContext &input, const ReadableString &scriptPath) {
@@ -91,9 +92,9 @@ void generateCompilationScript(SessionContext &input, const ReadableString &scri
 		setCompilationFolder(generatedCode, language, currentPath, linkingStep->compileFrom);
 		String linkerFlags;
 		for (int64_t lib = 0; lib < linkingStep->linkerFlags.length(); lib++) {
-			String library = linkingStep->linkerFlags[lib];
-			string_append(linkerFlags, " -l", library);
-			printText(U"\t\t* ", library, U" library\n");
+			String linkerFlag = linkingStep->linkerFlags[lib];
+			string_append(linkerFlags, " ", linkerFlag);
+			printText(U"\t\t* ", linkerFlag, U" library\n");
 		}
 		// Generate a list of object paths from indices.
 		String allObjects;

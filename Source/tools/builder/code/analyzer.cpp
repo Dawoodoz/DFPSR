@@ -4,7 +4,7 @@
 
 using namespace dsr;
 
-static Extension extensionFromString(const ReadableString& extensionName) {
+static Extension extensionFromString(ReadableString extensionName) {
 	String upperName = string_upperCase(string_removeOuterWhiteSpace(extensionName));
 	Extension result = Extension::Unknown;
 	if (string_match(upperName, U"H")) {
@@ -19,7 +19,7 @@ static Extension extensionFromString(const ReadableString& extensionName) {
 	return result;
 }
 
-static uint64_t checksum(const ReadableString& text) {
+static uint64_t checksum(ReadableString text) {
 	uint64_t a = 0x8C2A03D4;
 	uint64_t b = 0xF42B1583;
 	uint64_t c = 0xA6815E74;
@@ -48,7 +48,7 @@ static uint64_t checksum(const Buffer& buffer) {
 	return d;
 }
 
-static int64_t findDependency(ProjectContext &context, const ReadableString& findPath) {
+static int64_t findDependency(ProjectContext &context, ReadableString findPath) {
 	for (int64_t d = 0; d < context.dependencies.length(); d++) {
 		if (string_match(context.dependencies[d].path, findPath)) {
 			return d;
@@ -76,7 +76,7 @@ void resolveDependencies(ProjectContext &context) {
 	}
 }
 
-static String findSourceFile(const ReadableString& headerPath, bool acceptC, bool acceptCpp) {
+static String findSourceFile(ReadableString headerPath, bool acceptC, bool acceptCpp) {
 	if (file_hasExtension(headerPath)) {
 		ReadableString extensionlessPath = file_getExtensionless(headerPath);
 		String cPath = extensionlessPath + U".c";
@@ -97,7 +97,7 @@ static void flushToken(List<String> &target, String &currentToken) {
 	}
 }
 
-static void tokenize(List<String> &target, const ReadableString& line) {
+static void tokenize(List<String> &target, ReadableString line) {
 	String currentToken;
 	for (int64_t i = 0; i < string_length(line); i++) {
 		DsrChar c = line[i];
@@ -129,7 +129,7 @@ static void tokenize(List<String> &target, const ReadableString& line) {
 	List<Dependency> analysisCache;
 #endif
 
-void analyzeFile(Dependency &result, const ReadableString& absolutePath, Extension extension) {
+void analyzeFile(Dependency &result, ReadableString absolutePath, Extension extension) {
 	#ifdef CACHED_ANALYSIS
 		// Check if the file has already been analyzed.
 		for (int c = 0; c < analysisCache.length(); c++) {
@@ -183,7 +183,7 @@ void analyzeFile(Dependency &result, const ReadableString& absolutePath, Extensi
 	});
 }
 
-void analyzeFromFile(ProjectContext &context, const ReadableString& absolutePath) {
+void analyzeFromFile(ProjectContext &context, ReadableString absolutePath) {
 	if (findDependency(context, absolutePath) != -1) {
 		// Already analyzed the current entry. Abort to prevent duplicate dependencies.
 		return;
@@ -262,6 +262,7 @@ static int64_t findObject(SessionContext &source, uint64_t identityChecksum) {
 }
 
 void gatherBuildInstructions(SessionContext &output, ProjectContext &context, Machine &settings, ReadableString programPath) {
+	validateSettings(settings, string_combine(U"in settings at the beginning of gatherBuildInstructions, for ", programPath, U"\n"));
 	// The compiler is often a global alias, so the user must supply either an alias or an absolute path.
 	ReadableString compilerName = getFlag(settings, U"Compiler", U"g++"); // Assume g++ as the compiler if not specified.
 	ReadableString compileFrom = getFlag(settings, U"CompileFrom", U"");
@@ -300,6 +301,7 @@ void gatherBuildInstructions(SessionContext &output, ProjectContext &context, Ma
 	ReadableString optimizationLevel = getFlag(settings, U"Optimization", U"2");
 		printText(U"Building with optimization level ", optimizationLevel, U".\n");
 	settings.compilerFlags.push(string_combine(U"-O", optimizationLevel));
+	validateSettings(settings, string_combine(U"in settings after adding flags from settings in gatherBuildInstructions, for ", programPath, U"\n"));
 
 	// Convert lists of linker and compiler flags into strings.
 	// TODO: Give a warning if two contradictory flags are used, such as optimization levels and language versions.
@@ -308,11 +310,13 @@ void gatherBuildInstructions(SessionContext &output, ProjectContext &context, Ma
 	//       This would allow calling the compiler directly when given a folder path for temporary files instead of a script path.
 	String generatedCompilerFlags;
 	for (int64_t i = 0; i < settings.compilerFlags.length(); i++) {
+		printText(U"Build script gave compiler flag:", settings.compilerFlags[i], U"\n");
 		string_append(generatedCompilerFlags, " ", settings.compilerFlags[i]);
 	}
 	String linkerFlags;
 	for (int64_t i = 0; i < settings.linkerFlags.length(); i++) {
-		string_append(linkerFlags, " -l", settings.linkerFlags[i]);
+		printText(U"Build script gave linker flag:", settings.linkerFlags[i], U"\n");
+		string_append(linkerFlags, settings.linkerFlags[i]);
 	}
 	printText(U"Generating build instructions for ", programPath, U" using settings:\n");
 	printText(U"  Compiler flags:", generatedCompilerFlags, U"\n");
@@ -355,11 +359,12 @@ void gatherBuildInstructions(SessionContext &output, ProjectContext &context, Ma
 		bool executeResult = getFlagAsInteger(settings, U"Supressed") == 0;
 		output.linkerSteps.pushConstruct(compilerName, compileFrom, programPath, settings.linkerFlags, sourceObjectIndices, executeResult);
 	} else {
-		printText(U"Filed to find any source code to compile when building ", programPath, U".\n");
+		printText(U"Failed to find any source code to compile when building ", programPath, U".\n");
 	}
+	validateSettings(settings, string_combine(U"in settings at the end of gatherBuildInstructions, for ", programPath, U"\n"));
 }
 
-static void crawlSource(ProjectContext &context, const dsr::ReadableString &absolutePath) {
+static void crawlSource(ProjectContext &context, ReadableString absolutePath) {
 	EntryType pathType = file_getEntryType(absolutePath);
 	if (pathType == EntryType::File) {
 		printText(U"Crawling for source from ", absolutePath, U".\n");
@@ -372,11 +377,14 @@ static void crawlSource(ProjectContext &context, const dsr::ReadableString &abso
 	}
 }
 
-void build(SessionContext &output, const ReadableString &projectPath, Machine &settings);
+void build(SessionContext &output, ReadableString projectPath, Machine &settings);
 
 static List<String> initializedProjects;
 // Using a project file path and input arguments.
-void buildProject(SessionContext &output, const ReadableString &projectFilePath, Machine settings) {
+void buildProject(SessionContext &output, ReadableString projectFilePath, Machine &sharedsettings) {
+	Machine settings(file_getPathlessName(projectFilePath));
+	inheritMachine(settings, sharedsettings);
+	validateSettings(settings, string_combine(U"in settings after inheriting settings from caller, for ", projectFilePath, U"\n"));
 	printText("Building project at ", projectFilePath, "\n");
 	// Check if this project has begun building previously during this session.
 	String absolutePath = file_getAbsolutePath(projectFilePath);
@@ -391,7 +399,8 @@ void buildProject(SessionContext &output, const ReadableString &projectFilePath,
 	// Evaluate compiler settings while searching for source code mentioned in the project and imported headers.
 	printText(U"Executing project file from ", projectFilePath, U".\n");
 	ProjectContext context;
-	evaluateScript(output, settings, projectFilePath);
+	evaluateScript(settings, projectFilePath);
+	validateSettings(settings, string_combine(U"in settings after evaluateScript in buildProject, for ", projectFilePath, U"\n"));
 	// Find out where things are located.
 	String projectPath = file_getAbsoluteParentFolder(projectFilePath);
 	// Get the project's name.
@@ -407,6 +416,7 @@ void buildProject(SessionContext &output, const ReadableString &projectFilePath,
 	for (int64_t b = 0; b < settings.otherProjectPaths.length(); b++) {
 		build(output, settings.otherProjectPaths[b], settings.otherProjectSettings[b]);
 	}
+	validateSettings(settings, string_combine(U"in settings after building other projects in buildProject, for ", projectFilePath, U"\n"));
 	// If the SkipIfBinaryExists flag is given, we will abort as soon as we have handled its external BuildProjects requests and confirmed that the application exists.
 	if (getFlagAsInteger(settings, U"SkipIfBinaryExists") && file_getEntryType(fullProgramPath) == EntryType::File) {
 		// SkipIfBinaryExists was active and the binary exists, so abort here to avoid redundant work.
@@ -417,30 +427,32 @@ void buildProject(SessionContext &output, const ReadableString &projectFilePath,
 	for (int64_t o = 0; o < settings.crawlOrigins.length(); o++) {
 		crawlSource(context, settings.crawlOrigins[o]);
 	}
+	validateSettings(settings, string_combine(U"in settings after crawling source in buildProject, for ", projectFilePath, U"\n"));
 	// Once we are done finding all source files, we can resolve the dependencies to create a graph connected by indices.
 	resolveDependencies(context);
 	if (getFlagAsInteger(settings, U"ListDependencies")) {
 		printDependencies(context);
 	}
 	gatherBuildInstructions(output, context, settings, fullProgramPath);
+	validateSettings(settings, string_combine(U"in settings after gathering build instructions in buildProject, for ", projectFilePath, U"\n"));
 }
 
 // Using a folder path and input arguments for all projects.
-void buildProjects(SessionContext &output, const ReadableString &projectFolderPath, Machine &settings) {
+void buildProjects(SessionContext &output, ReadableString projectFolderPath, Machine &sharedsettings) {
 	printText("Building all projects in ", projectFolderPath, "\n");
-	file_getFolderContent(projectFolderPath, [&settings, &output](const ReadableString& entryPath, const ReadableString& entryName, EntryType entryType) {
+	file_getFolderContent(projectFolderPath, [&sharedsettings, &output](const ReadableString& entryPath, const ReadableString& entryName, EntryType entryType) {
 		if (entryType == EntryType::Folder) {
-			buildProjects(output, entryPath, settings);
+			buildProjects(output, entryPath, sharedsettings);
 		} else if (entryType == EntryType::File) {
 			ReadableString extension = string_upperCase(file_getExtension(entryName));
 			if (string_match(extension, U"DSRPROJ")) {
-				buildProject(output, entryPath, settings);
+				buildProject(output, entryPath, sharedsettings);
 			}
 		}
 	});
 }
 
-void build(SessionContext &output, const ReadableString &projectPath, Machine &settings) {
+void build(SessionContext &output, ReadableString projectPath, Machine &sharedsettings) {
 	EntryType entryType = file_getEntryType(projectPath);
 	printText("Building anything at ", projectPath, " which is ", entryType, "\n");
 	if (entryType == EntryType::File) {
@@ -449,9 +461,9 @@ void build(SessionContext &output, const ReadableString &projectPath, Machine &s
 			printText(U"Can't use the Build keyword with a file that is not a project!\n");
 		} else {
 			// Build the given project
-			buildProject(output, projectPath, settings);
+			buildProject(output, projectPath, sharedsettings);
 		}
 	} else if (entryType == EntryType::Folder) {
-		buildProjects(output, projectPath, settings);
+		buildProjects(output, projectPath, sharedsettings);
 	}
 }

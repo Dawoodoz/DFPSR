@@ -16,6 +16,7 @@ struct Flag {
 };
 
 struct Machine {
+	String projectName;
 	List<Flag> variables;
 	List<String> compilerFlags;
 	List<String> linkerFlags;
@@ -25,6 +26,7 @@ struct Machine {
 	// When activeStackDepth < currentStackDepth, we are skipping false cases.
 	int64_t currentStackDepth = 0; // How many scopes we are inside of, from the root script including all the others.
 	int64_t activeStackDepth = 0;
+	Machine(const ReadableString &projectName) : projectName(projectName) {}
 };
 
 enum class Extension {
@@ -50,8 +52,8 @@ struct Connection {
 struct Dependency {
 	String path;
 	Extension extension;
-	uint64_t contentChecksum;
-	bool visited; // Used to avoid infinite loops while traversing dependencies.
+	uint64_t contentChecksum = 0;
+	bool visited = false; // Used to avoid infinite loops while traversing dependencies.
 	List<Connection> links; // Depends on having these linked after compiling.
 	List<Connection> includes; // Depends on having these included in pre-processing.
 	Dependency(const ReadableString& path, Extension extension)
