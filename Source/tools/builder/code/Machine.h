@@ -2,7 +2,7 @@
 #ifndef DSR_BUILDER_MACHINE_MODULE
 #define DSR_BUILDER_MACHINE_MODULE
 
-#include "../../DFPSR/api/stringAPI.h"
+#include "../../../DFPSR/api/stringAPI.h"
 #include "builderTypes.h"
 
 using namespace dsr;
