@@ -4,10 +4,6 @@
 //   Otherwise buildProject.sh will just see that an old version exists and use it.
 
 // TODO:
-//  * Create a file with aliases, so that import can use
-//      Import <DFPSR>
-//    instead of
-//      Import "../../DFPSR/DFPSR.DsrHead"
 //  * Give a warning when the given compiler path is not actually a path to a file and script generation is disabled.
 //    Also make the compiler's path absolute from the current directory when called, or the specified folder to call from.
 //  * Run multiple instances of the compiler at the same time on different CPU cores.
