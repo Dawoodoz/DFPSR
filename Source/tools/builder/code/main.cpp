@@ -11,7 +11,6 @@
 //  * Give a warning when the given compiler path is not actually a path to a file and script generation is disabled.
 //    Also make the compiler's path absolute from the current directory when called, or the specified folder to call from.
 //  * Run multiple instances of the compiler at the same time on different CPU cores.
-//  * Improve entropy in checksums using a more advanced algorithm to reduce the risk of conflicts.
 //  * Implement more features for the machine, such as:
 //    * else and elseif cases.
 //    * Temporarily letting the theoretical path go into another folder within a scope, similar to if statements but only affecting the path.

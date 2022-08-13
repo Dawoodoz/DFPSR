@@ -19,33 +19,58 @@ static Extension extensionFromString(ReadableString extensionName) {
 	return result;
 }
 
-static uint64_t checksum(ReadableString text) {
+struct HashGenerator {
 	uint64_t a = 0x8C2A03D4;
 	uint64_t b = 0xF42B1583;
 	uint64_t c = 0xA6815E74;
-	uint64_t d = 0;
-	for (int64_t i = 0; i < string_length(text); i++) {
-		a = (b * c + ((i * 3756 + 2654) & 58043)) & 0xFFFFFFFF;
-		b = (231 + text[i] * (a & 154) + c * 867 + 28294061) & 0xFFFFFFFF;
-		c = (a ^ b ^ (text[i] * 1543217521)) & 0xFFFFFFFF;
-		d = d ^ (a << 32) ^ b ^ (c << 16);
+	uint64_t d = 0x634B20F6;
+	uint64_t e = 0x12C49B72;
+	uint64_t f = 0x06E1F489;
+	uint64_t g = 0xA8D24954;
+	uint64_t h = 0x19CF53AA;
+	HashGenerator() {}
+	void feedByte(uint64_t input) {
+		// Write input
+		a = a ^ (input << ((e >> 12u) % 56u));
+		b = b ^ (input << ((f >> 18u) % 56u));
+		c = c ^ (input << ((g >> 15u) % 56u));
+		d = d ^ (input << ((h >>  5u) % 56u));
+		// Select bits
+		uint64_t e = (a & c) | (b & ~c);
+		uint64_t f = (c & b) | (d & ~b);
+		// Multiply
+		uint64_t g = (e >> 32) * (f & 0xFFFFFFFF);
+		uint64_t h = (f >> 32) * (e & 0xFFFFFFFF);
+		// Add
+		a = a ^ (b >> ((input) % 3u)) + (c >> ((h >> 25u) % 4u));
+		b = b ^ (c >> ((g >> 36u) % 6u)) + (d >> ((input ^ 0b10101101) % 5u));
+		c = c ^ g;
+		d = d ^ h;
 	}
-	return d;
+	uint64_t getHash64() {
+		return a ^ (b << 7) ^ (c << 19) ^ (d << 24);
+	}
+};
+
+static uint64_t checksum(ReadableString text) {
+	HashGenerator generator;
+	for (int64_t i = 0; i < string_length(text); i++) {
+		DsrChar c = text[i];
+		generator.feedByte((c >> 24) & 0xFF);
+		generator.feedByte((c >> 16) & 0xFF);
+		generator.feedByte((c >> 8) & 0xFF);
+		generator.feedByte(c & 0xFF);
+	}
+	return generator.getHash64();
 }
 
 static uint64_t checksum(const Buffer& buffer) {
+	HashGenerator generator;
 	SafePointer<uint8_t> data = buffer_getSafeData<uint8_t>(buffer, "checksum input buffer");
-	uint64_t a = 0x8C2A03D4;
-	uint64_t b = 0xF42B1583;
-	uint64_t c = 0xA6815E74;
-	uint64_t d = 0;
 	for (int64_t i = 0; i < buffer_getSize(buffer); i++) {
-		a = (b * c + ((i * 3756 + 2654) & 58043)) & 0xFFFFFFFF;
-		b = (231 + data[i] * (a & 154) + c * 867 + 28294061) & 0xFFFFFFFF;
-		c = (a ^ b ^ (data[i] * 1543217521)) & 0xFFFFFFFF;
-		d = d ^ (a << 32) ^ b ^ (c << 16);
+		generator.feedByte(data[i]);
 	}
-	return d;
+	return generator.getHash64();
 }
 
 static int64_t findDependency(ProjectContext &context, ReadableString findPath) {
