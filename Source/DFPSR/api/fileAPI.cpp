@@ -745,10 +745,10 @@ DsrProcess process_execute(const ReadableString& programPath, List<String> argum
 	#endif
 	String flattenedArguments;
 	string_append(flattenedArguments, programPath);
-	string_appendChar(flattenedArguments, U'\0');
+	string_appendChar(flattenedArguments, separator);
 	for (int64_t a = 0; a < arguments.length(); a++) {
 		string_append(flattenedArguments, arguments[a]);
-		string_appendChar(flattenedArguments, U'\0');
+		string_appendChar(flattenedArguments, separator);
 	}
 	Buffer argBuffer;
 	const NativeChar *nativeArgs = toNativeString(flattenedArguments, argBuffer);
