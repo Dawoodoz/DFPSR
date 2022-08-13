@@ -346,7 +346,7 @@ void gatherBuildInstructions(SessionContext &output, ProjectContext &context, Ma
 				uint64_t combinedChecksum = getCombinedChecksum(context, d);
 				String objectPath = file_combinePaths(output.tempPath, string_combine(U"dfpsr_", identityChecksum, U"_", combinedChecksum, U".o"));
 				sourceObjectIndices.push(output.sourceObjects.length());
-				output.sourceObjects.pushConstruct(identityChecksum, combinedChecksum, sourcePath, objectPath, generatedCompilerFlags, compilerName, compileFrom);
+				output.sourceObjects.pushConstruct(identityChecksum, combinedChecksum, sourcePath, objectPath, settings.compilerFlags, compilerName, compileFrom);
 			} else {
 				// Link to this pre-existing source file.
 				sourceObjectIndices.push(previousIndex);

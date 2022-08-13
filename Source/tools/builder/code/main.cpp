@@ -8,8 +8,9 @@
 //      Import <DFPSR>
 //    instead of
 //      Import "../../DFPSR/DFPSR.DsrHead"
-//  * Call the compiler directly when the temp folder is given without any script name.
-//    Use it to run multiple instances of the compiler at the same time on different CPU cores.
+//  * Give a warning when the given compiler path is not actually a path to a file and script generation is disabled.
+//    Also make the compiler's path absolute from the current directory when called, or the specified folder to call from.
+//  * Run multiple instances of the compiler at the same time on different CPU cores.
 //  * Improve entropy in checksums using a more advanced algorithm to reduce the risk of conflicts.
 //  * Implement more features for the machine, such as:
 //    * else and elseif cases.
@@ -79,7 +80,28 @@ Project files:
 
 using namespace dsr;
 
-// List dependencies for main.cpp on Linux: ./builder main.cpp --depend
+ScriptLanguage identifyLanguage(const ReadableString &filename) {
+	String scriptExtension = string_upperCase(file_getExtension(filename));
+	if (string_match(scriptExtension, U"BAT")) {
+		return ScriptLanguage::Batch;
+	} else if (string_match(scriptExtension, U"SH")) {
+		return ScriptLanguage::Bash;
+	} else {
+		return ScriptLanguage::Unknown;
+	}
+}
+
+// Approximate syntax:
+//   outputPath <- tempFolder | tempFolder/scriptName.sh | tempFolder\scriptName.bat
+//   key <- SkipIfBinaryExists | Supressed | ProgramPath | Compiler | CompileFrom | Debug | StaticRuntime | Optimization | (a..z|A..Z)(0..9|a..z|A..Z)*
+//   flag <- key | key=value
+//   buildCall <- builderPath outputPath projectPath flag*
+// Example uses:
+//   Build Wizard.DsrProj for Linux using the g++ compiler by generating dfpsr_compile.sh and *.o objects in the /tmp folder.
+//     ../builder/builder /tmp/dfpsr_compile.sh ./Wizard.DsrProj Compiler=g++ Linux
+//   One can also just give the temporary folder to have the compiler called directly.
+//     ../builder/builder /tmp ./Wizard.DsrProj Compiler=g++ Linux
+
 DSR_MAIN_CALLER(dsrMain)
 void dsrMain(List<String> args) {
 	if (args.length() <= 1) {
@@ -89,11 +111,47 @@ void dsrMain(List<String> args) {
 		printText(U"To use the DFPSR build system, pass a path to a script to generate, a project file or folder containing multiple projects, and the flags you want assigned before building.\n");
 		printText(U"To run regression tests, don't pass any argument to the program.\n");
 	} else {
-		// Get the script's destination path for all projects built during the session as the first argument.
-		String scriptPath = args[1];
-		String tempFolder = file_getAbsoluteParentFolder(scriptPath);
-		// Get the first project file's path, or a folder path containing all projects to build.
+		// Print the full command to show the caller if the arguments got messed up.
+		printText(U"Build command:");
+		for (int i = 0; i < args.length(); i++) {
+			printText(U" ", args[i]);
+		}
+		printText(U"\n");
+		// Get the script's destination path, or the temporary folder for all projects built during the session as the first argument.
+		String outputPath = args[1];
+		String scriptPath, tempFolder;
+		ScriptLanguage language = ScriptLanguage::Unknown;
+		if (file_getEntryType(outputPath) == EntryType::Folder) {
+			printText(U"The output path is a folder.\n");
+			// Not creating a script is useful if the operating system does not support any of the generated script languages.
+			tempFolder = outputPath;
+		} else {
+			// Creating a script is useful for understanding what went wrong when building fails.
+			language = identifyLanguage(outputPath);
+			if (language == ScriptLanguage::Unknown) {
+				printText(U"Could not identify the scripting language of \"", outputPath, U"\". Use *.bat, *.sh or just a temporary folder path to call the compiler directly.\n");
+				return;
+			}
+			printText(U"The output path is a script file.\n");
+			scriptPath = outputPath;
+			tempFolder = file_getAbsoluteParentFolder(outputPath);
+		}
+		printText(U"Using ", tempFolder, U" as the temporary folder for compiled objects.\n");
+		if (string_length(scriptPath) > 0) {
+			printText(U"Using ", scriptPath, U" as the temporary script for calling the compiler.\n");
+		} else {
+			printText(U"No script path was given. The compiler will be called directly instead.\n");
+		}
+		// Get the project file's path, or a folder path containing all projects to build.
 		String projectPath = args[2];
+		String projectExtension = string_upperCase(file_getExtension(projectPath));
+		if (string_match(projectExtension, U"DSRHEAD")) {
+			printText(U"The path ", projectPath, U" does not refer to a project file. *.DsrHead is imported into projects to automate build configurations for users of a specific library.\n");
+			return;
+		} else if (!string_match(projectExtension, U"DSRPROJ")) {
+			printText(U"The path ", projectPath, U" does not refer to a project file, because it does not have the *.DsrProj extension.\n");
+			return;
+		}
 		// Read the reas after the project's path, as named integers assigned to ones.
 		// Calling builder with the extra arguments will interpret them as variables and mark them as inherited, so that they are passed on to any other projects build from the project file.
 		// Other values can be assigned using an equality sign.
@@ -109,8 +167,12 @@ void dsrMain(List<String> args) {
 		SessionContext buildContext = SessionContext(tempFolder, executableExtension);
 		build(buildContext, projectPath, settings);
 		validateSettings(settings, U"in settings after executing the root build script (in main)");
-		// Generate a script to execute.
-		// TODO: Store compiler flags in groups of lists to allow taking them directly as program arguments when calling the compiler directly.
-		generateCompilationScript(buildContext, scriptPath);
+		if (language == ScriptLanguage::Unknown) {
+			// Call the compiler directly.
+			executeBuildInstructions(buildContext);
+		} else {
+			// Generate a script to execute.
+			generateCompilationScript(buildContext, scriptPath, language);
+		}
 	}
 }
