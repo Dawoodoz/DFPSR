@@ -7,6 +7,10 @@
 
 using namespace dsr;
 
-void generateCompilationScript(SessionContext &output, const ReadableString &scriptPath);
+// Generating a script to execute later.
+void generateCompilationScript(SessionContext &input, const ReadableString &scriptPath, ScriptLanguage language);
+
+// Calling the compiler directly.
+void executeBuildInstructions(SessionContext &input);
 
 #endif

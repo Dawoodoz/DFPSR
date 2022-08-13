@@ -30,7 +30,11 @@ struct Machine {
 };
 
 enum class Extension {
-	Unknown, H, Hpp, C, Cpp
+	Unknown,
+	H,
+	Hpp,
+	C,
+	Cpp
 };
 
 enum class ScriptLanguage {
@@ -68,9 +72,10 @@ struct ProjectContext {
 struct SourceObject {
 	uint64_t identityChecksum = 0; // Identification number for the object's name.
 	uint64_t combinedChecksum = 0; // Combined content of the source file and all included headers recursively.
-	String sourcePath, objectPath, generatedCompilerFlags, compilerName, compileFrom;
-	SourceObject(uint64_t identityChecksum, uint64_t combinedChecksum, const ReadableString& sourcePath, const ReadableString& objectPath, const ReadableString& generatedCompilerFlags, const ReadableString& compilerName, const ReadableString& compileFrom)
-	: identityChecksum(identityChecksum), combinedChecksum(combinedChecksum), sourcePath(sourcePath), objectPath(objectPath), generatedCompilerFlags(generatedCompilerFlags), compilerName(compilerName), compileFrom(compileFrom) {}
+	String sourcePath, objectPath, compilerName, compileFrom;
+	List<String> compilerFlags;
+	SourceObject(uint64_t identityChecksum, uint64_t combinedChecksum, const ReadableString& sourcePath, const ReadableString& objectPath, const List<String> &compilerFlags, const ReadableString& compilerName, const ReadableString& compileFrom)
+	: identityChecksum(identityChecksum), combinedChecksum(combinedChecksum), sourcePath(sourcePath), objectPath(objectPath), compilerFlags(compilerFlags), compilerName(compilerName), compileFrom(compileFrom) {}
 };
 
 struct LinkingStep {
