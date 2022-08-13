@@ -243,8 +243,17 @@ void dsrMain(List<String> args) {
 				// Could not find the application.
 				component_setProperty_string(descriptionLabel, U"Text", string_combine(U"Could not find the executable at ", projects[projectIndex].executableFilePath, U"!\n"), true);
 			} else if (process_getStatus(projects[projectIndex].programHandle) != DsrProcessStatus::Running) {
+				// Select input arguments.
+				List<String> arguments;
+				if (string_match(projects[projectIndex].title, U"BasicCLI")) {
+					// Give some random arguments to the CLI template, so that it will do something more than just printing "Hello World".
+					arguments.push(U"1");
+					arguments.push(U"TWO");
+					arguments.push(U"three");
+					arguments.push(U"Four");
+				}
 				// Launch the application.
-				projects[projectIndex].programHandle = process_execute(projects[projectIndex].executableFilePath, List<String>());
+				projects[projectIndex].programHandle = process_execute(projects[projectIndex].executableFilePath, arguments);
 				updateInterface(true);
 			}
 		}

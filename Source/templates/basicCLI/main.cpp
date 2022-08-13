@@ -7,6 +7,10 @@ using namespace dsr;
 
 DSR_MAIN_CALLER(dsrMain)
 void dsrMain(List<String> args) {
+	// Printing any input arguments after the program.
+	for (int i = 1; i < args.length(); i++) {
+		printText(U"args[", i, U"] = ", args[i], U"\n");
+	}
 	// Printing some text to the terminal.
 	printText(U"Hello world\n");
 }
