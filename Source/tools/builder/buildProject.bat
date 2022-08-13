@@ -7,10 +7,6 @@ set CPP_COMPILER_PATH=%CPP_COMPILER_FOLDER%\x86_64-w64-mingw32-g++.exe
 rem Change the temporary folder if want generated scripts and objects to go somewhere else.
 set TEMPORARY_FOLDER=%TEMP%
 
-rem Select build method. (Not generating a script requires having the full path of the compiler.)
-rem set GENERATE_SCRIPT=Yes
-set GENERATE_SCRIPT=No
-
 
 
 
@@ -53,22 +49,19 @@ if exist %BUILDER_EXECUTABLE% (
 	)
 )
 
-if !GENERATE_SCRIPT! EQU Yes (
-	rem Call the build system with a filename for the output script, which is later called.
-	set SCRIPT_PATH=%TEMPORARY_FOLDER%\dfpsr_compile.bat
-	echo Generating %SCRIPT_PATH% from %1%
-	if exist %SCRIPT_PATH% (
-		del %SCRIPT_PATH%
-	)
-	%BUILDER_EXECUTABLE% %SCRIPT_PATH% %* Compiler=%CPP_COMPILER_PATH% CompileFrom=%CPP_COMPILER_FOLDER%
-	if exist %SCRIPT_PATH% (
-		echo Running %SCRIPT_PATH%
-		%SCRIPT_PATH%
-	)
-) else (
-	rem Calling the build system with only the temporary folder will call the compiler directly from the build system.
-	rem   A simpler solution that works with just a single line, once the build system itself has been compiled.
-	%BUILDER_EXECUTABLE% %TEMPORARY_FOLDER% %* Compiler=%CPP_COMPILER_PATH% CompileFrom=%CPP_COMPILER_FOLDER%
+rem Call the build system with a filename for the output script, which is later called.
+set SCRIPT_PATH=%TEMPORARY_FOLDER%\dfpsr_compile.bat
+echo Generating %SCRIPT_PATH% from %1%
+if exist %SCRIPT_PATH% (
+	del %SCRIPT_PATH%
 )
+%BUILDER_EXECUTABLE% %SCRIPT_PATH% %* Compiler=%CPP_COMPILER_PATH% CompileFrom=%CPP_COMPILER_FOLDER%
+if exist %SCRIPT_PATH% (
+	echo Running %SCRIPT_PATH%
+	%SCRIPT_PATH%
+)
+
+rem Calling the build system with only the temporary folder will call the compiler directly from the build system.
+rem %BUILDER_EXECUTABLE% %TEMPORARY_FOLDER% %* Compiler=%CPP_COMPILER_PATH% CompileFrom=%CPP_COMPILER_FOLDER%
 
 pause
