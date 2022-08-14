@@ -2,7 +2,8 @@
 
 Title: Troubleshooting
 
-To add a compiler flag when not using an IDE, append it to COMPILER_FLAGS in your build.sh script.
+When using a specific framework, the common mistakes and solutions are usually very similar.
+This guide explains both the steps for finding your bugs, and reducing the risk of them comming back.
 ---
 Title2: To use or not use an IDE with a built-in debugger
 
@@ -35,20 +36,59 @@ Create a basic reference implementation without dangerous optimizations for ever
 Both for finding the cause of instability and being able to remove a feature without sending emergency patches in panic with more bugs.
 Image filters are first written using lambdas returning the color of a pixel based on the pixel coordinate and exception-free pixel sampling.
 Then one can make an optimized version using SafePointer and SIMD vectors.
+---
+Title2: Getting memory leaks.
+
+*
+Avoid using manual memory management (malloc, free, new, delete...), because it is a waste of time unless you are writing a new abstraction layer.
+
+*
+Make sure that no reference counted object can create a cycle of reference counted pointers back to itself, because then none of them would be unused according to reference counting.
+
+*
+Use the dsr::Buffer object instead of C allocation calls, to let it automatically free your memory when nobody keeps the reference counted handle.
+You can then work on its memory using SafePointer, which provides bound checks in debug mode, but must be kept close to the buffer's reference counted handle to keep the data it points to alive.
+<- Buffers.html | Read about the Buffer API
+---
+Title2: Getting random memory crashes.
+
+*
+Check that you are not using raw C pointers by searching for any use of &, *, [] in the code and replacing them with SafePointer to get bound checks.
+
+*
+Make sure that you are using debug mode, so that outside access with SafePointer is caught with error messages.
+
+*
+Make sure that no SafePointer outlives the parent Buffer, because SafePointer is not reference counting on its own.
+If SafePointer would be reference counting, it would not be a zero overhead substitution for raw C pointers in release mode, and nobody would use it for optimizations.
+
+*
+Remember that a reference in C++ is a pointer under the C++ syntax, which can also cause crashes if taken from a location in memory that may be freed during the call.
+If you passed "const ReadableString &text" from "List<String>" to a function that can reallocate the list that the string is stored in, this can cause a crash by referring to a memory location that got replaced by the list.
+If you instead pass "ReadableString text" from "List<String>", no additional heap allocations will be made, but activating reference counting makes sure that the string can be passed around independently from where it came from without causing any crashes.
+Returning a reference to a stack allocated variable, can also cause crashes with references.
+
+*
+Assert bounds with assertions in debug mode for fixed size and variable length (VLA) arrays, which have no bound checks in C/C++ but are much faster than heap memory for many small allocations.
+Getters and setters can make the bound checks reusable if you only have a few types with fixed size arrays.
+---
+Title2: The application crashes, but the debugger does not detect it.
+
+Use a debugger directly on the application with debug symbols enabled when compiling.
+Connecting Valgrind to the script used to run your application will catch memory leaks, but not invalid memory access.
+Without debug symbols, you can see which method crashed, but not the line.
 
 ---
 Title2: Getting crashes after linking to an external library.
 
-*
-Try adding the -DDISABLE_ALLOCATOR compiler flag.
+Try disabling the library's memory recycling, by either removing the ReuseMemory flag in your DsrProj build script (cleanest way) or adding the -DDISABLE_ALLOCATOR compiler flag to define the DISABLE_ALLOCATOR macro (works with other build systems).
 This will disable the library's memory recycling at DFPSR/base/allocator.cpp in case that another library already has a memory recycler.
-
 ---
 
 Title2: Getting linker errors when creating a new project without a window.
 
-*
 Linking to a window manager without using it may cause linker errors because the renderer library makes a call to outside of the library.
-The solution is to use WINDOW_MANAGER=NONE in build.sh or include NoWindow.cpp manually in your project instead of the system's actual window manager.
-
+If you have linked with guiAPI.cpp, you need to import DFPSR.DsrHead in your *.DsrProj build script.
+If the Graphics variable is default assigned to 1 before DFPSR.DsrHead is imported, a window manager will be selected based on which system you are compiling for.
+If the Graphics variable did not exist, was accidentally placed after the DFPSR.DsrHead import, or you assigned it to 0, then NoWindow.cpp will be used as a stub implementation to throw an exception if someone tries to actually create a window.
 ---
