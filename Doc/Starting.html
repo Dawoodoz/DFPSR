@@ -24,71 +24,135 @@ A:active { color: #FFFFFF; background: #444444; }
 <P>
 <A href="Manual.html">Back to main page</A>
 </P><P>
-</P><H1> Getting started</H1><P></P><IMG SRC="Images/Border.png"><P>
-</P><H2> Working in Linux</H2><P>
+</P><H1> Getting started</H1><P>
 </P><P>
-Place the library's root folder inside of a new folder. This gives room for the temporary object's folder, which will be created outside of the dfpsr folder when compiling.
+There are many ways to compile the examples using C++14, but the simplest way to check that everything works, is to build the wizard application and let it build all the other projects before letting you test them.
 
 </P><P>
-<IMG SRC="Images/Warning.png" ALT="Warning">
-A light-weight Linux distribution for laptops (such as Linux Mint) might require you to install GNU's compiler toolchain <B>"gcc"</B> and X11 headers <B>"libx11-dev"</B>.
-
-</P><P>
-<IMG SRC="Images/Warning.png" ALT="Warning">
-Big-endian support is only theoretical and has never actually been tested, because big-endian desktops were practically extinct when the library was created. If you happen to own such a rare museum item in working condition, sending the <B>DSR_BIG_ENDIAN</B> macro to compilation should activate the big-endian mode and shift the direction of bit shift meant to be equivalent with the address space.
-
-</P><P>
-</P><H2> Build and run an example program:</H2><P>
+</P><IMG SRC="Images/Border.png"><P>
+</P><H2> Minimum system requirements</H2><P>
 </P><P>
 <IMG SRC="Images/SmallDot.png">
-Select an SDK example and open its folder in a terminal.
+1 GHz single-core ARMv6 CPU is enough for low-resolution realtime 2D graphics, passive interfaces and grayscale robotic vision, without any SIMD.
+
+</P><P>
+<IMG SRC="Images/SmallDot.png">
+1.4 GHz quad-core ARMv8 CPU is enough for medium-resolution realtime 2D graphics, using ARM NEON.
+
+</P><P>
+<IMG SRC="Images/SmallDot.png">
+3 GHz quad-core Intel/AMD CPU is enough for high resolution 2D/isometric/3D graphics with advanced light effects, using SSE2.
+
+</P><P>
+<IMG SRC="Images/SmallDot.png">
+4 GHz hexa-core Intel/AMD CPU is enough to not notice that the 3D graphics is software rendered.
+Enabling SSSE3 (-mssse3) can give a performance boost in image processing and shading to textures by making vector extraction faster.
+Enabling AVX2 (-mavx2) can make texture sampling faster by enabling the gather instructions.
+
+</P><P>
+<IMG SRC="Images/SmallDot.png">
+Truecolor (8 bits per channel) is a minimum requirement to create a window.
+
+</P><P>
+<IMG SRC="Images/SmallDot.png">
+Windows XP (from year 2001) is the oldest supported version of MS-Windows because CreateProcessW is used to start other applications.
+The file API also assumes access to Unicode versions of functions from Windows 2000.
+
+</P><P>
+<IMG SRC="Images/SmallDot.png">
+Big-endian support is only theoretical and has never actually been tested, because big-endian desktops were practically extinct when the library was created. If you happen to own such a rare museum item in working condition, sending the <B>DSR_BIG_ENDIAN</B> macro to compilation should activate the big-endian mode and shift the direction of bit shift meant to be equivalent with the address space.
+</P><IMG SRC="Images/Border.png"><P>
+</P><H2> Buliding the wizard application on Linux</H2><P>
+</P><P>
+<IMG SRC="Images/Warning.png" ALT="Warning">
+Linux has many different ways to create a window, so you might need to write a new window manager and add its dependencies to Source/DFPSR/DFPSR.DsrHead if new Linux distributions are not compatible.
+
+</P><P>
+<IMG SRC="Images/Warning.png" ALT="Warning">
+Light-weight Linux distributions (such as Linux Mint) might require you to install GNU's compiler toolchain <B>"gcc"</B> and X11 headers <B>"libx11-dev"</B>.
+
+</P><P>
+<IMG SRC="Images/SmallDot.png">
+Check that you have g++ installed at /usr/bin/g++ and change CPP_COMPILER_PATH in Source/tools/builder/buildProject.sh if it's located somewhere else.
+You can also change TEMPORARY_FOLDER if using another system than Linux where /tmp is called something else, or you want to keep objects in a persistent folder after your system reboots.
+The advantage of using /tmp, is that the files there can be placed in memory and you don't have to erase them manually.
+
+</P><P>
+<IMG SRC="Images/SmallDot.png">
+Go to the Source\tools\wizard folder in a terminal.
 
 </P><P>
 <IMG SRC="Images/SmallDot.png">
 Give permission to execute the build script.
-
-</P><P>
-<PRE><BLOCKQUOTE>chmod +x build.sh</BLOCKQUOTE></PRE>
+<PRE><BLOCKQUOTE>chmod +x build_linux.sh</BLOCKQUOTE></PRE>
 
 </P><P>
 <IMG SRC="Images/SmallDot.png">
 Run the build script.
-
-</P><P>
-<PRE><BLOCKQUOTE>./build.sh</BLOCKQUOTE></PRE>
-</P><H2> If no example runs, try regression tests to diagnose:</H2><P><IMG SRC="Images/SmallDot.png">
-Open the source folder in a terminal and run the test script:
-
-</P><P>
-<PRE><BLOCKQUOTE>chmod +x test.sh
-./test.sh</BLOCKQUOTE></PRE>
-
-</P><P>
-This will stop with a clearly visible error message if any of the tests fail.
-
-</P><P>
-</P><H2> Create your own project</H2><P>
+<PRE><BLOCKQUOTE>./build_linux.sh</BLOCKQUOTE></PRE>
+</P><IMG SRC="Images/Border.png"><P>
+</P><H2> Buliding the wizard application on Windows</H2><P>
 </P><P>
 <IMG SRC="Images/SmallDot.png">
-Copy the folder of a template program.
+Download a mingw edition of CodeBlocks from their website. <A href="http://www.codeblocks.org/downloads/26#windows">www.codeblocks.org/downloads</A>
+This is the easiest way to install GNU's C++ compiler g++ on Windows, but CodeBlocks can also be used as a debugger if you create a project with the same source code, backends and compiler flags.
+
+</P><P>
+<IMG SRC="Images/SmallDot.png">
+Open Source\tools\builder\buildProject.bat in a text editor.
+
+</P><P>
+<IMG SRC="Images/SmallDot.png">
+Check that CPP_COMPILER_FOLDER and CPP_COMPILER_PATH refers to where your GNU C++ compiler is installed. If you installed CodeBlocks in the default path C:\Program, this should usually be the case. Otherwise just update the path.
+
+</P><P>
+<IMG SRC="Images/SmallDot.png">
+Open CMD.exe, go to the Source\tools\wizard folder and execute build_windows.bat from the same folder.
+This makes sure that the build system can be found using relative paths.
+
+</P><P>
+<IMG SRC="Images/SmallDot.png">
+Be patient while building the Builder build system.
+The Wizard.DsrProj build script will then build all SDK examples and templates, before launching the Wizard application that lets you browse and run examples.
+
+</P><P>
+<IMG SRC="Images/SmallDot.png">
+Make sure to manually erase object files in your temporary folder once in a while, because the build system in Source/tools/builder keeps everything for maximum build speed.
+</P><IMG SRC="Images/Border.png"><P>
+</P><H2> Create your own cross-platform project</H2><P>
+</P><P>
+<IMG SRC="Images/SmallDot.png">
+Copy the folder of a template program to where you want it.
 If you want a 3D application with animations, start from basic3D.
 If you want graphical user interface that only redrawn when something happens, start from basicGUI.
-If you want a command line interface application, start from basicCLI. Command line applications are more portable by using "WINDOW_MANAGER=NONE". This compiles the dummy wrapper NoWindow.cpp so that it can run on the pure operating system without any display server.
+If you want a command line interface application, start from basicCLI to only depend on the most essential parts of the library.
 
 </P><P>
 <IMG SRC="Images/SmallDot.png">
-Change ROOT_PATH and TEMP_DIR in your build script to refer to the same locations from a new source path. If you don't use the build script, you can just delete it.
+For easy building on new computers with relative paths, you can either place the whole software renderer next to your projects, or just a symbolic link to it as if the library exists at multiple locations.
+Then just copy the whole folder structure with all your projects when making backups and you will only have to install any missing tools and give access permissions next time you get started.
 
 </P><P>
 <IMG SRC="Images/SmallDot.png">
-Update header include paths to the library from the new folder location.
+Update the relative paths to tools/builder/buildProject.sh in build_linux.sh and tools\builder\buildProject.bat in build_windows.bat.
+These paths are relative to the folder that you will stand in when calling build_linux.sh or build_windows.bat, but the convention is to call these from where they are located.
+Note the differences in path separators with / on Posix systems and \ on Windows.
 
 </P><P>
 <IMG SRC="Images/SmallDot.png">
-Add your own external dependencies to LINKER_FLAGS within a quote with -l in front of each library name.
+Update the relative path to DFPSR.DsrHead, where you import it in your DsrProj build script.
+The paths for importing *.DsrHead are relative to the folder where the importing *.DsrProj file is stored, just like includes in C++.
 
 </P><P>
-</P><H2> Create a shortcut</H2><P>
+<IMG SRC="Images/SmallDot.png">
+Update relative include paths to includeFramework.h, includeEssentials.h and other headers from the new folder location.
+If you have a lot of includes referring directly to the framework in a large project, you can create a new header including includeFramework.h once for all your source files.
+
+</P><P>
+<IMG SRC="Images/SmallDot.png">
+Making some changes in main.cpp and try building your new project on the targeted operating systems.
+</P><IMG SRC="Images/Border.png"><P>
+</P><H2> Create a shortcut on Linux</H2><P>
 </P><P>
 There are two types of shortcuts on Linux, symbolic links which are used to make a folder appear on two locations and *.desktop files.
 For a shortcut to a program, you will create a *.desktop file because it allows you to select an icon and which folder to execute the application from, so that your media files can be found using relative paths.
@@ -110,7 +174,7 @@ StartupNotify=false
 </P><P>
 You can also begin your main function with file_setCurrentPath(file_getApplicationFolder()); to move into the application's folder automatically, which is supported on both Windows and Linux, but not guaranteed to work on all Posix systems because the symbolic link /proc/self/exe is not a part of the Posix standard.
 </P><IMG SRC="Images/Border.png"><P>
-</P><H2> Compiling a project on Microsoft Windows</H2><P>
+</P><H2> Compiling a CodeBlocks project on Microsoft Windows</H2><P>
 </P><P>
 Create a project from existing code:
 
@@ -120,15 +184,16 @@ Download a mingw edition of CodeBlocks from their website. <A href="http://www.c
 
 </P><P>
 <IMG SRC="Images/SmallDot.png">
-Start CodeBlocks with administrator rights and create a new Win32 project, just to get the correct libraries. You can then throw away the template main file.
-
-</P><P>
-<IMG SRC="Images/SmallDot.png">
+Start CodeBlocks with administrator rights and create a new project.
 If not starting as an administrator, certain parts of the file system may lack necessary permissions needed for creating executable binaries.
+Can create a Win32 project, just to quickly get the correct libraries for Win32Window.cpp (-lgdi32 -luser32 -lkernel32 -lcomctl32).
+You can then throw away the template main file, because you probably want to start with a template using dsrMain to get input arguments converted into List<String> with Unicode support on multiple platforms.
 
 </P><P>
 <IMG SRC="Images/SmallDot.png">
-Select C++ 14 with G++ from the GCC toolchain, so that it will be compatible with the software renderer. Link with "-lm -pthread" to get standard C++ math and threading. This should be done for both debug and release.
+Select C++ 14 with G++ from the GCC toolchain, so that it will be compatible with the framework.
+Also -O2 or higher optimization, unless you want terrible performance.
+This should be done for both debug and release.
 
 </P><P>
 <IMG SRC="Images/SmallDot.png">
@@ -140,18 +205,15 @@ Import all source files from <B>the project you want to build</B>.
 
 </P><P>
 <IMG SRC="Images/SmallDot.png">
-Import <B>dfpsr/Source/windowManagers/Win32Window.cpp</B>.
+Import <B>dfpsr/Source/windowManagers/Win32Window.cpp</B> if needed by the project (linking with -lgdi32 -luser32 -lkernel32 -lcomctl32).
 
 </P><P>
 <IMG SRC="Images/SmallDot.png">
-Save your project, so that you can continue working on the project.
+Import <B>dfpsr/Source/soundManagers/WinMMSound.cpp</B> if needed by the project (linking with -lwinmm).
 
 </P><P>
 <IMG SRC="Images/SmallDot.png">
-Build and run the project.
-
-</P><P>
-This is not an ideal solution for development if you plan to have multiple projects depending on the same library. A better solution would be to compile the whole dfpsr folder into a static library, link to it in each of your projects and refer to includeFramework.h.
+Build and run the project in debug mode, to check that your settings are correct and the compiler works.
 </P><IMG SRC="Images/Border.png"><P>
 </P>
 </BODY> </HTML>
