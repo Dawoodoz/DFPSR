@@ -30,7 +30,7 @@ using namespace dsr;
 
 IMAGE_DEFINITION(ImageRgbaU8Impl, 4, Color4xU8, uint8_t);
 
-ImageRgbaU8Impl::ImageRgbaU8Impl(int32_t newWidth, int32_t newHeight, int32_t newStride, Buffer buffer, intptr_t startOffset, PackOrder packOrder) :
+ImageRgbaU8Impl::ImageRgbaU8Impl(int32_t newWidth, int32_t newHeight, int32_t newStride, Buffer buffer, intptr_t startOffset, const PackOrder &packOrder) :
   ImageImpl(newWidth, newHeight, newStride, sizeof(Color4xU8), buffer, startOffset), packOrder(packOrder) {
 	assert(buffer_getSize(buffer) - startOffset >= imageInternal::getUsedBytes(this));
 	this->initializeRgbaImage();
@@ -231,6 +231,7 @@ void ImageRgbaU8Impl::generatePyramid() {
 		}
 		// Fill unused mip levels with duplicates of the last mip level
 		for (int32_t m = mipmaps; m < MIP_BIN_COUNT; m++) {
+			// m - 1 is never negative, because mipmaps is clamped to at least 1 and nobody would choose zero for MIP_BIN_COUNT.
 			this->texture.mips[m] = this->texture.mips[m - 1];
 		}
 	}

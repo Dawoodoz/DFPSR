@@ -47,7 +47,7 @@ struct TriangleDrawData {
 	TriangleInput triangleInput;
 	// Function pointer to the method that will process the command
 	DRAW_CALLBACK_TYPE processTriangle;
-	TriangleDrawData(ImageRgbaU8Impl *targetImage, ImageF32Impl *depthBuffer, bool perspective, Filter filter, TriangleInput triangleInput, DRAW_CALLBACK_TYPE processTriangle)
+	TriangleDrawData(ImageRgbaU8Impl *targetImage, ImageF32Impl *depthBuffer, bool perspective, Filter filter, const TriangleInput &triangleInput, DRAW_CALLBACK_TYPE processTriangle)
 	: targetImage(targetImage), depthBuffer(depthBuffer), perspective(perspective), filter(filter), triangleInput(triangleInput), processTriangle(processTriangle) {}
 };
 

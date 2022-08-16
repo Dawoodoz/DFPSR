@@ -250,8 +250,7 @@ struct RendererImpl {
 	bool pointInsideOfEdge(const LVector2D &edgeA, const LVector2D &edgeB, const LVector2D &point) {
 		LVector2D edgeDirection = LVector2D(edgeB.y - edgeA.y, edgeA.x - edgeB.x);
 		LVector2D relativePosition = point - edgeA;
-		int64_t dotProduct = (edgeDirection.x * relativePosition.x) + (edgeDirection.y * relativePosition.y);
-		return dotProduct <= 0;
+		return (edgeDirection.x * relativePosition.x) + (edgeDirection.y * relativePosition.y) <= 0;
 	}
 	// Returns true iff the point is inside of the hull
 	// convexHullCorners from 0 to cornerCount-1 must be sorted clockwise and may not include any concave corners

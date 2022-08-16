@@ -42,7 +42,7 @@ struct VertexData {
 	FVector4D texCoord; // Two 2D coordinates or one 3D coordinate
 	FVector4D color; // RGBA
 	VertexData() : texCoord(FVector4D(0.0f, 0.0f, 0.0f, 0.0f)), color(FVector4D(1.0f, 1.0f, 1.0f, 1.0f)) {}
-	VertexData(FVector4D texCoord, FVector4D color) : texCoord(texCoord), color(color) {}
+	VertexData(const FVector4D &texCoord, const FVector4D &color) : texCoord(texCoord), color(color) {}
 };
 
 // Only used when constructing new polygons
@@ -50,7 +50,7 @@ struct Vertex {
 	int32_t pointIndex = -1; // Empty
 	VertexData data;
 	Vertex() {}
-	Vertex(int32_t pointIndex, VertexData data) : pointIndex(pointIndex), data(data) {}
+	Vertex(int32_t pointIndex, const VertexData &data) : pointIndex(pointIndex), data(data) {}
 };
 
 struct Polygon {
