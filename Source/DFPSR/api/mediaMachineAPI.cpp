@@ -54,9 +54,21 @@ public:
 		switch(type) {
 			case DataType_FixedPoint:
 				if (sourceArg.argType == ArgumentType::Immediate) {
+					#ifdef VIRTUAL_MACHINE_DEBUG_PRINT
+						printText(U"Storing: FixedPoint[", targetStackIndex, U"] <- immediate ", sourceArg.value, U".\n");
+					#endif
 					this->FixedPointMemory.accessByStackIndex(targetStackIndex) = sourceArg.value;
 				} else {
-					this->FixedPointMemory.accessByStackIndex(targetStackIndex) = this->FixedPointMemory.accessByGlobalIndex(sourceArg.value.getMantissa(), sourceFramePointer);
+					int globalIndex = sourceArg.value.getMantissa();
+					FixedPoint value = this->FixedPointMemory.accessByGlobalIndex(globalIndex, sourceFramePointer);
+					#ifdef VIRTUAL_MACHINE_DEBUG_PRINT
+						if (globalIndex < 0) {
+							printText(U"Storing: FixedPoint[", targetStackIndex, U"] <- FixedPoint[", -(globalIndex + 1), U"] = ", value, U".\n");
+						} else {
+							printText(U"Storing: FixedPoint[", targetStackIndex, U"] <- FixedPoint[fp(", sourceFramePointer, U") + ", globalIndex, U"] = ", value, U".\n");
+						}
+					#endif
+					this->FixedPointMemory.accessByStackIndex(targetStackIndex) = value;
 				}
 			break;
 			case DataType_ImageU8:
@@ -71,15 +83,16 @@ public:
 		}
 	}
 	void load(int sourceStackIndex, const VMA& targetArg, int targetFramePointer, DataType type) override {
+		int globalIndex = targetArg.value.getMantissa();
 		switch(type) {
 			case DataType_FixedPoint:
-				this->FixedPointMemory.accessByGlobalIndex(targetArg.value.getMantissa(), targetFramePointer) = this->FixedPointMemory.accessByStackIndex(sourceStackIndex);
+				this->FixedPointMemory.accessByGlobalIndex(globalIndex, targetFramePointer) = this->FixedPointMemory.accessByStackIndex(sourceStackIndex);
 			break;
 			case DataType_ImageU8:
-				this->AlignedImageU8Memory.accessByGlobalIndex(targetArg.value.getMantissa(), targetFramePointer) = this->AlignedImageU8Memory.accessByStackIndex(sourceStackIndex);
+				this->AlignedImageU8Memory.accessByGlobalIndex(globalIndex, targetFramePointer) = this->AlignedImageU8Memory.accessByStackIndex(sourceStackIndex);
 			break;
 			case DataType_ImageRgbaU8:
-				this->OrderedImageRgbaU8Memory.accessByGlobalIndex(targetArg.value.getMantissa(), targetFramePointer) = this->OrderedImageRgbaU8Memory.accessByStackIndex(sourceStackIndex);
+				this->OrderedImageRgbaU8Memory.accessByGlobalIndex(globalIndex, targetFramePointer) = this->OrderedImageRgbaU8Memory.accessByStackIndex(sourceStackIndex);
 			break;
 			default:
 				throwError("Loading element of unhandled type!\n");
@@ -960,18 +973,30 @@ static T& accessOutputByIndex(MemoryPlane<T>& stack, int framePointer, Method& m
 // Set input by argument index
 //   Indexed arguments are confirmed to be inputs during compilation of the script
 void machine_setInputByIndex(MediaMachine& machine, int methodIndex, int inputIndex, int32_t input) {
+	#ifdef VIRTUAL_MACHINE_DEBUG_PRINT
+		printText("Input ", inputIndex, " of ", machine->methods[methodIndex].inputCount, " (", machine->methods[methodIndex].locals[inputIndex].name, ") to ", machine->methods[methodIndex].name, " = ", input, "\n");
+	#endif
 	checkMethodIndex(machine, methodIndex);
 	setInputByIndex(((MediaMemory*)machine->memory.get())->FixedPointMemory, machine->memory->current.framePointer[DataType_FixedPoint], machine->methods[methodIndex], DataType_FixedPoint, inputIndex, FixedPoint::fromWhole(input));
 }
 void machine_setInputByIndex(MediaMachine& machine, int methodIndex, int inputIndex, const FixedPoint& input) {
+	#ifdef VIRTUAL_MACHINE_DEBUG_PRINT
+		printText("Input ", inputIndex, " of ", machine->methods[methodIndex].inputCount, " (", machine->methods[methodIndex].locals[inputIndex].name, ") to ", machine->methods[methodIndex].name, " = ", input, "\n");
+	#endif
 	checkMethodIndex(machine, methodIndex);
 	setInputByIndex(((MediaMemory*)machine->memory.get())->FixedPointMemory, machine->memory->current.framePointer[DataType_FixedPoint], machine->methods[methodIndex], DataType_FixedPoint, inputIndex, input);
 }
 void machine_setInputByIndex(MediaMachine& machine, int methodIndex, int inputIndex, const AlignedImageU8& input) {
+	#ifdef VIRTUAL_MACHINE_DEBUG_PRINT
+		printText("Input ", inputIndex, " of ", machine->methods[methodIndex].inputCount, " (", machine->methods[methodIndex].locals[inputIndex].name, ") to ", machine->methods[methodIndex].name, " = monochrome image of ", image_getWidth(input), "x", image_getHeight(input), " pixels\n");
+	#endif
 	checkMethodIndex(machine, methodIndex);
 	setInputByIndex(((MediaMemory*)machine->memory.get())->AlignedImageU8Memory, machine->memory->current.framePointer[DataType_ImageU8], machine->methods[methodIndex], DataType_ImageU8, inputIndex, input);
 }
 void machine_setInputByIndex(MediaMachine& machine, int methodIndex, int inputIndex, const OrderedImageRgbaU8& input) {
+	#ifdef VIRTUAL_MACHINE_DEBUG_PRINT
+		printText("Input ", inputIndex, " of ", machine->methods[methodIndex].inputCount, " (", machine->methods[methodIndex].locals[inputIndex].name, ") to ", machine->methods[methodIndex].name, " = rgba image of ", image_getWidth(input), "x", image_getHeight(input), " pixels\n");
+	#endif
 	checkMethodIndex(machine, methodIndex);
 	setInputByIndex(((MediaMemory*)machine->memory.get())->OrderedImageRgbaU8Memory, machine->memory->current.framePointer[DataType_ImageRgbaU8], machine->methods[methodIndex], DataType_ImageRgbaU8, inputIndex, input);
 }

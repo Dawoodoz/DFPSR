@@ -36,7 +36,8 @@
 
 namespace dsr {
 
-#define MAX_TYPE_COUNT 4
+// TODO: Can this be a template argument?
+#define MAX_TYPE_COUNT 3
 
 // Forward declarations
 struct VirtualMachine;
@@ -122,8 +123,9 @@ struct MemoryPlane {
 	T& accessByStackIndex(int32_t stackIndex) {
 		return this->stack[stackIndex];
 	}
+	// globalIndex uses the negative values starting from -1 to access global memory, and from 0 and up to access local variables on top of the type's own frame pointer.
 	T& accessByGlobalIndex(int32_t globalIndex, int32_t framePointer) {
-		int32_t stackIndex = globalIndex < 0 ? -(globalIndex + 1) : framePointer + globalIndex;
+		int32_t stackIndex = (globalIndex < 0) ? -(globalIndex + 1) : (framePointer + globalIndex);
 		return this->stack[stackIndex];
 	}
 	T& getRef(const VMA& arg, int32_t framePointer) {
@@ -226,7 +228,7 @@ struct Method {
 	String name;
 
 	// Global instruction space
-	const int32_t startAddress; // Index to machineWords
+	const int32_t startAddress = 0; // Index to machineWords
 	int32_t instructionCount = 0; // Number of machine words (safer than return statements in case of memory corruption)
 
 	// Unified local space
@@ -357,12 +359,12 @@ struct VirtualMachine {
 				if (typeDefinition) {
 					typeDefinition->debugPrinter(*(this->memory.get()), *variable, globalIndex, framePointer, fullContent);
 					if (globalIndex < 0) {
-						printText(" @gi(", globalIndex, ")");
+						printText(U" @gi(", globalIndex, U")");
 					} else {
-						printText(" @gi(", globalIndex, ")+fp(", framePointer[typeDefinition->dataType], ")");
+						printText(U" @gi(", globalIndex, U") + fp(", framePointer[typeDefinition->dataType], U")");
 					}
 				} else {
-					printText("?");
+					printText(U"?");
 				}
 			}
 		}
@@ -370,35 +372,36 @@ struct VirtualMachine {
 			Method* method = &this->methods[methodIndex];
 			for (int i = 0; i < method->locals.length(); i++) {
 				Variable* variable = &method->locals[i];
-				printText(indentation, "* ", getName(variable->access), " ");
+				printText(indentation, U"* ", getName(variable->access), U" ");
 				const VMTypeDef* typeDefinition = getMachineType(variable->typeDescription->dataType);
 				if (typeDefinition) {
 					typeDefinition->debugPrinter(*(this->memory.get()), *variable, variable->getGlobalIndex(), framePointer, false);
 				} else {
-					printText("?");
+					printText(U"?");
 				}
-				printText("\n");
+				printText(U"\n");
 			}
 		}
-		void debugPrintMethod(int methodIndex, int32_t* framePointer, const ReadableString& indentation) {
+		void debugPrintMethod(int methodIndex, int32_t* framePointer, int32_t* stackPointer, const ReadableString& indentation) {
 			printText("  ", this->methods[methodIndex].name, ":\n");
 			for (int t = 0; t < this->machineTypeCount; t++) {
-				printText("    FramePointer[", t, "] = ", framePointer[t], " Count[", t, "] = ", this->methods[methodIndex].count[t], "\n");
+				printText(U"    FramePointer[", t, "] = ", framePointer[t], U" Count[", t, "] = ", this->methods[methodIndex].count[t], U" StackPointer[", t, "] = ", stackPointer[t], U"\n");
 			}
 			debugPrintVariables(methodIndex, framePointer, indentation);
-			printText("\n");
+			printText(U"\n");
 		}
 		void debugPrintMemory() {
 			int methodIndex = this->memory->current.methodIndex;
-			printText("\nMemory:\n");
-			if (methodIndex > 0) {
-				int32_t globalFramePointer[MAX_TYPE_COUNT] = {};
-				debugPrintMethod(0, globalFramePointer, U"    ");
-			}
+			printText(U"\nMemory:\n");
+			// Global memory is at the bottom of the stack.
+			int32_t globalFramePointer[MAX_TYPE_COUNT] = {};
+			debugPrintMethod(0, globalFramePointer, this->methods[0].count, U"    ");
+			// Stack memory for each calling method.
 			for (int i = 0; i < memory->callStack.length(); i++) {
-				debugPrintMethod(memory->callStack[i].methodIndex, memory->callStack[i].framePointer, U"    ");
+				debugPrintMethod(memory->callStack[i].methodIndex, memory->callStack[i].framePointer, memory->callStack[i].stackPointer, U"    ");
 			}
-			debugPrintMethod(methodIndex, this->memory->current.framePointer, U"    ");
+			// Stack memory for the current method, which is not in the call stack because that would be slow to access.
+			debugPrintMethod(methodIndex, this->memory->current.framePointer, this->memory->current.stackPointer, U"    ");
 		}
 	#endif
 	void executeMethod(int methodIndex);
