@@ -309,7 +309,7 @@ void VirtualMachine::addCallInstructions(const List<String>& arguments) {
 		int32_t newStackPointer[MAX_TYPE_COUNT] = {};
 		for (int t = 0; t < MAX_TYPE_COUNT; t++) {
 			newFramePointer[t] = memory.current.stackPointer[t];
-			newStackPointer[t] = memory.current.stackPointer[t] + machine.methods[oldMethodIndex].count[t];
+			newStackPointer[t] = memory.current.stackPointer[t] + machine.methods[calledMethodIndex].count[t];
 		}
 		// Assign inputs
 		for (int a = 1; a < args.length(); a++) {
