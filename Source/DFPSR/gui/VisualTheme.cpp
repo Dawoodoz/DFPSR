@@ -72,14 +72,16 @@ BEGIN: generate_rounded_rectangle
 	RECTANGLE: resultImage, border, radius, w4, h3, 255
 END:
 
-BEGIN: Button
+BEGIN: generate_rounded_button
 	INPUT: FixedPoint, width
 	INPUT: FixedPoint, height
 	INPUT: FixedPoint, pressed
 	INPUT: FixedPoint, red
 	INPUT: FixedPoint, green
 	INPUT: FixedPoint, blue
-	OUTPUT: ImageRgbaU8, colorImage
+	INPUT: FixedPoint, radius
+	INPUT: FixedPoint, border
+	OUTPUT: ImageRgbaU8, resultImage
 	# Scale by 2 / 255 so that 127.5 represents full intensity in patternImage
 	MUL: normRed<FixedPoint>, red, 0.007843138
 	MUL: normGreen<FixedPoint>, green, 0.007843138
@@ -90,13 +92,24 @@ BEGIN: Button
 	SUB: highLuma<FixedPoint>, 150, pressDarknessHigh
 	SUB: lowLuma<FixedPoint>, 100, pressDarknessLow
 	FADE_LINEAR: patternImage,  0, 0, highLuma,  0, height, lowLuma
-	CALL: generate_rounded_rectangle, lumaImage<ImageU8>, width, height, 12, 2
+	CALL: generate_rounded_rectangle, lumaImage<ImageU8>, width, height, radius, border
 	MUL: lumaImage, lumaImage, patternImage, 0.003921569
-	CALL: generate_rounded_rectangle, visImage<ImageU8>, width, height, 12, 0
+	CALL: generate_rounded_rectangle, visImage<ImageU8>, width, height, radius, 0
 	MUL: redImage<ImageU8>, lumaImage, normRed
 	MUL: greenImage<ImageU8>, lumaImage, normGreen
 	MUL: blueImage<ImageU8>, lumaImage, normBlue
-	PACK_RGBA: colorImage, redImage, greenImage, blueImage, visImage
+	PACK_RGBA: resultImage, redImage, greenImage, blueImage, visImage
+END:
+
+BEGIN: Button
+	INPUT: FixedPoint, width
+	INPUT: FixedPoint, height
+	INPUT: FixedPoint, pressed
+	INPUT: FixedPoint, red
+	INPUT: FixedPoint, green
+	INPUT: FixedPoint, blue
+	OUTPUT: ImageRgbaU8, colorImage
+	CALL: generate_rounded_button, colorImage, width, height, pressed, red, green, blue, 12, 2
 END:
 
 BEGIN: ScrollButton
@@ -107,23 +120,7 @@ BEGIN: ScrollButton
 	INPUT: FixedPoint, green
 	INPUT: FixedPoint, blue
 	OUTPUT: ImageRgbaU8, colorImage
-	# Scale by 2 / 255 so that 127.5 represents full intensity in patternImage
-	MUL: normRed<FixedPoint>, red, 0.007843138
-	MUL: normGreen<FixedPoint>, green, 0.007843138
-	MUL: normBlue<FixedPoint>, blue, 0.007843138
-	CREATE: patternImage<ImageU8>, width, height
-	MUL: pressDarknessHigh<FixedPoint>, pressed, 80
-	MUL: pressDarknessLow<FixedPoint>, pressed, 10
-	SUB: highLuma<FixedPoint>, 150, pressDarknessHigh
-	SUB: lowLuma<FixedPoint>, 100, pressDarknessLow
-	FADE_LINEAR: patternImage,  0, 0, highLuma,  0, height, lowLuma
-	CALL: generate_rounded_rectangle, lumaImage<ImageU8>, width, height, 5, 1
-	MUL: lumaImage, lumaImage, patternImage, 0.003921569
-	CALL: generate_rounded_rectangle, visImage<ImageU8>, width, height, 5, 0
-	MUL: redImage<ImageU8>, lumaImage, normRed
-	MUL: greenImage<ImageU8>, lumaImage, normGreen
-	MUL: blueImage<ImageU8>, lumaImage, normBlue
-	PACK_RGBA: colorImage, redImage, greenImage, blueImage, visImage
+	CALL: generate_rounded_button, colorImage, width, height, pressed, red, green, blue, 5, 2
 END:
 
 BEGIN: VerticalScrollBar
