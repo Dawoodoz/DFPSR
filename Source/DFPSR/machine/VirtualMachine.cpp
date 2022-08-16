@@ -252,7 +252,7 @@ void VirtualMachine::addReturnInstruction() {
 }
 void VirtualMachine::addCallInstructions(const List<String>& arguments) {
 	if (arguments.length() < 1) {
-		throwError("Cannot make a call without the name of a method!\n");
+		throwError(U"Cannot make a call without the name of a method!\n");
 	}
 	// TODO: Allow calling methods that aren't defined yet.
 	int currentMethodIndex = this->methods.length() - 1;
@@ -260,7 +260,7 @@ void VirtualMachine::addCallInstructions(const List<String>& arguments) {
 	// Check the total number of arguments
 	Method* calledMethod = &this->methods[calledMethodIndex];
 	if (arguments.length() - 1 != calledMethod->outputCount + calledMethod->inputCount) {
-		throwError("Wrong argument count to \"", calledMethod->name, "\"! Call arguments should start with the method to call, continue with output references and end with inputs.\n");
+		throwError(U"Wrong argument count to \"", calledMethod->name, U"\"! Call arguments should start with the method to call, continue with output references and end with inputs.\n");
 	}
 	// Split assembler arguments into separate input and output arguments for machine instructions
 	List<VMA> inputArguments;
@@ -284,16 +284,16 @@ void VirtualMachine::addCallInstructions(const List<String>& arguments) {
 		// Output
 		Variable* variable = &calledMethod->locals[a - 1 + calledMethod->inputCount];
 		if (outputArguments[a].argType != ArgumentType::Reference) {
-			throwError("Output argument for \"", variable->name, "\" in \"", calledMethod->name, "\" must be a reference to allow writing its result!\n");
+			throwError(U"Output argument for \"", variable->name, U"\" in \"", calledMethod->name, U"\" must be a reference to allow writing its result!\n");
 		} else if (outputArguments[a].dataType != variable->typeDescription->dataType) {
-			throwError("Output argument for \"", variable->name, "\" in \"", calledMethod->name, "\" must have the type \"", variable->typeDescription->name, "\"!\n");
+			throwError(U"Output argument for \"", variable->name, U"\" in \"", calledMethod->name, U"\" must have the type \"", variable->typeDescription->name, U"\"!\n");
 		}
 	}
 	for (int a = 1; a < inputArguments.length(); a++) {
 		// Input
 		Variable* variable = &calledMethod->locals[a - 1];
 		if (inputArguments[a].dataType != variable->typeDescription->dataType) {
-			throwError("Input argument for \"", variable->name, "\" in \"", calledMethod->name, "\" must have the type \"", variable->typeDescription->name, "\"!\n");
+			throwError(U"Input argument for \"", variable->name, U"\" in \"", calledMethod->name, U"\" must have the type \"", variable->typeDescription->name, U"\"!\n");
 		}
 	}
 	addMachineWord([](VirtualMachine& machine, PlanarMemory& memory, const List<VMA>& args) {
@@ -302,7 +302,7 @@ void VirtualMachine::addCallInstructions(const List<String>& arguments) {
 		int oldMethodIndex = memory.current.methodIndex;
 		Method* calledMethod = &machine.methods[calledMethodIndex];
 		#ifdef VIRTUAL_MACHINE_DEBUG_PRINT
-			printText("Calling \"", calledMethod->name, "\".\n");
+			printText(U"Calling \"", calledMethod->name, U"\".\n");
 		#endif
 		// Calculate new frame pointers
 		int32_t newFramePointer[MAX_TYPE_COUNT] = {};
@@ -310,6 +310,14 @@ void VirtualMachine::addCallInstructions(const List<String>& arguments) {
 		for (int t = 0; t < MAX_TYPE_COUNT; t++) {
 			newFramePointer[t] = memory.current.stackPointer[t];
 			newStackPointer[t] = memory.current.stackPointer[t] + machine.methods[calledMethodIndex].count[t];
+			#ifdef VIRTUAL_MACHINE_DEBUG_PRINT
+				printText(U"Allocating stack memory for type ", t, U".\n");
+				printText(U"    old frame pointer = ", memory.current.framePointer[t], U"\n");
+				printText(U"    old stack pointer = ", memory.current.stackPointer[t], U"\n");
+				printText(U"    needed elements = ", machine.methods[oldMethodIndex].count[t], U"\n");
+				printText(U"    new frame pointer = ", newFramePointer[t], U"\n");
+				printText(U"    new stack pointer = ", newStackPointer[t], U"\n");
+			#endif
 		}
 		// Assign inputs
 		for (int a = 1; a < args.length(); a++) {
@@ -332,7 +340,7 @@ void VirtualMachine::addCallInstructions(const List<String>& arguments) {
 		int calledMethodIndex = args[0].value.getMantissa();
 		Method* calledMethod = &machine.methods[calledMethodIndex];
 		#ifdef VIRTUAL_MACHINE_DEBUG_PRINT
-			printText("Writing results after call to \"", calledMethod->name, "\":\n");
+			printText(U"Writing results after call to \"", calledMethod->name, U"\":\n");
 		#endif
 		// Assign outputs
 		for (int a = 1; a < args.length(); a++) {
@@ -341,11 +349,11 @@ void VirtualMachine::addCallInstructions(const List<String>& arguments) {
 			int sourceStackIndex = source->getStackIndex(memory.current.stackPointer[typeIndex]);
 			memory.load(sourceStackIndex, args[a], memory.current.framePointer[typeIndex], typeIndex);
 			#ifdef VIRTUAL_MACHINE_DEBUG_PRINT
-				printText("  ");
+				printText(U"  ");
 				machine.debugArgument(VMA(typeIndex, source->getGlobalIndex()), calledMethodIndex, memory.current.stackPointer, false);
-				printText(" -> ");
+				printText(U" -> ");
 				machine.debugArgument(args[a], memory.current.methodIndex, memory.current.framePointer, false);
-				printText("\n");
+				printText(U"\n");
 			#endif
 		}
 		// TODO: Decrease reference counts for images by zeroing memory above the new stack-pointer
@@ -360,12 +368,12 @@ void VirtualMachine::addCallInstructions(const List<String>& arguments) {
 
 void VirtualMachine::interpretMachineWord(const ReadableString& command, const List<String>& arguments) {
 	#ifdef VIRTUAL_MACHINE_DEBUG_PRINT
-		printText("interpretMachineWord @", this->machineWords.length(), " ", command, "(");
+		printText(U"interpretMachineWord @", this->machineWords.length(), U" ", command, U"(");
 		for (int a = 0; a < arguments.length(); a++) {
-			if (a > 0) { printText(", "); }
+			if (a > 0) { printText(U", "); }
 			printText(getArg(arguments, a));
 		}
-		printText(")\n");
+		printText(U")\n");
 	#endif
 	if (string_caseInsensitiveMatch(command, U"Begin")) {
 		if (this->methods.length() == 1) {
@@ -407,7 +415,7 @@ void VirtualMachine::executeMethod(int methodIndex) {
 	#ifdef VIRTUAL_MACHINE_PROFILE
 		if (rootMethod->instructionCount < 1) {
 			// TODO: Assert that each method ends with a return or jump instruction after compiling
-			printText("Cannot call \"", rootMethod->name, "\", because it doesn't have any instructions.\n");
+			printText(U"Cannot call \"", rootMethod->name, U"\", because it doesn't have any instructions.\n");
 			return;
 		}
 	#endif
@@ -425,7 +433,7 @@ void VirtualMachine::executeMethod(int methodIndex) {
 		this->debugPrintMemory();
 	#endif
 	#ifdef VIRTUAL_MACHINE_PROFILE
-		printText("Calling \"", rootMethod->name, "\":\n");
+		printText(U"Calling \"", rootMethod->name, U"\":\n");
 		double startTime = time_getSeconds();
 	#endif
 
@@ -435,7 +443,7 @@ void VirtualMachine::executeMethod(int methodIndex) {
 		if (pc < 0 || pc >= this->machineWords.length()) {
 			// Return statements will set the program counter to -1 if there are no more callers saved in the stack
 			if (pc != -1) {
-				throwError("Unexpected program counter! @", pc, " outside of 0..", (this->machineWords.length() - 1), "\n");
+				throwError(U"Unexpected program counter! @", pc, U" outside of 0..", (this->machineWords.length() - 1), U"\n");
 			}
 			break;
 		}
@@ -443,37 +451,37 @@ void VirtualMachine::executeMethod(int methodIndex) {
 		#ifdef VIRTUAL_MACHINE_DEBUG_PRINT
 			const InsSig* signature = getMachineInstructionFromFunction(word->operation);
 			if (signature) {
-				printText("Executing @", pc, " ", signature->name, "(");
+				printText(U"Executing @", pc, U" ", signature->name, U"(");
 				for (int a = signature->targetCount; a < word->args.length(); a++) {
 					if (a > signature->targetCount) {
-						printText(", ");
+						printText(U", ");
 					}
 					debugArgument(word->args[a], this->memory->current.methodIndex, this->memory->current.framePointer, false);
 				}
-				printText(")");
+				printText(U")");
 			}
 			word->operation(*this, *(this->memory.get()), word->args);
 			if (signature) {
 				if (signature->targetCount > 0) {
-					printText(" -> ");
+					printText(U" -> ");
 					for (int a = 0; a < signature->targetCount; a++) {
 						if (a > 0) {
-							printText(", ");
+							printText(U", ");
 						}
 						debugArgument(word->args[a], this->memory->current.methodIndex, this->memory->current.framePointer, true);
 					}
 				}
 			}
-			printText("\n");
+			printText(U"\n");
 		#else
 			word->operation(*this, *(this->memory.get()), word->args);
 		#endif
 	}
 	#ifdef VIRTUAL_MACHINE_PROFILE
 		double endTime = time_getSeconds();
-		printText("Done calling \"", rootMethod->name, "\" after ", (endTime - startTime) * 1000000.0, " microseconds.\n");
+		printText(U"Done calling \"", rootMethod->name, U"\" after ", (endTime - startTime) * 1000000.0, U" microseconds.\n");
 		#ifdef VIRTUAL_MACHINE_DEBUG_PRINT
-			printText(" (debug prints are active)\n");
+			printText(U" (debug prints are active)\n");
 		#endif
 	#endif
 }
