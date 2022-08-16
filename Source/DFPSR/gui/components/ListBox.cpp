@@ -94,22 +94,22 @@ void ListBox::generateGraphics() {
 			IRect lower = IRect(whole.left(), whole.bottom() - scrollEndHeight, whole.width(), scrollEndHeight);
 			IRect knob = this->getKnobLocation();
 			// Only redraw the knob image if its dimensions changed
-			if (!image_exists(this->scrollKnob_normal)
-			  || image_getWidth(this->scrollKnob_normal) != knob.width()
-			  || image_getHeight(this->scrollKnob_normal) != knob.height()) {
-				this->scalableImage_scrollButton(knob.width(), knob.height(), false, color.red, color.green, color.blue)(this->scrollKnob_normal);
+			if (!image_exists(this->scrollKnobImage)
+			  || image_getWidth(this->scrollKnobImage) != knob.width()
+			  || image_getHeight(this->scrollKnobImage) != knob.height()) {
+				this->scalableImage_scrollButton(knob.width(), knob.height(), false, color.red, color.green, color.blue)(this->scrollKnobImage);
 			}
 			// Only redraw the scroll list if its dimenstions changed
-			if (!image_exists(this->verticalScrollBar_normal)
-			  || image_getWidth(this->verticalScrollBar_normal) != whole.width()
-			  || image_getHeight(this->verticalScrollBar_normal) != whole.height()) {
-				this->scalableImage_verticalScrollBar(whole.width(), whole.height(), color.red, color.green, color.blue)(this->verticalScrollBar_normal);
+			if (!image_exists(this->verticalScrollBarImage)
+			  || image_getWidth(this->verticalScrollBarImage) != whole.width()
+			  || image_getHeight(this->verticalScrollBarImage) != whole.height()) {
+				this->scalableImage_verticalScrollBar(whole.width(), whole.height(), color.red, color.green, color.blue)(this->verticalScrollBarImage);
 			}
 			// Draw the scroll-bar
-			draw_alphaFilter(this->image, this->verticalScrollBar_normal, whole.left(), whole.top());
-			draw_alphaFilter(this->image, this->scrollKnob_normal, knob.left(), knob.top());
-			draw_alphaFilter(this->image, (this->pressScrollUp) ? this->scrollButtonTop_pressed : this->scrollButtonTop_normal, upper.left(), upper.top());
-			draw_alphaFilter(this->image, (this->pressScrollDown && this->inside) ? this->scrollButtonBottom_pressed : this->scrollButtonBottom_normal, lower.left(), lower.top());
+			draw_alphaFilter(this->image, this->verticalScrollBarImage, whole.left(), whole.top());
+			draw_alphaFilter(this->image, this->scrollKnobImage, knob.left(), knob.top());
+			draw_alphaFilter(this->image, this->pressScrollUp ? this->scrollButtonTopImage_pressed : this->scrollButtonTopImage_normal, upper.left(), upper.top());
+			draw_alphaFilter(this->image, this->pressScrollDown ? this->scrollButtonBottomImage_pressed : this->scrollButtonBottomImage_normal, lower.left(), lower.top());
 		}
 		this->hasImages = true;
 	}
@@ -126,7 +126,7 @@ void ListBox::pressScrollBar(int64_t localY) {
 	int64_t knobHeight = this->getKnobLocation().height();
 	int64_t endDistance = scrollEndHeight + knobHeight / 2;
 	int64_t barHeight = this->location.height() - (endDistance * 2);
-	this->firstVisible = ((localY - endDistance) * maxScroll) / barHeight;
+	this->firstVisible = ((localY - endDistance) * maxScroll + (barHeight / 2)) / barHeight;
 	this->limitScrolling();
 	// Avoid expensive redrawing if the index did not change
 	if (this->firstVisible != oldIndex) {
@@ -224,10 +224,10 @@ void ListBox::loadTheme(VisualTheme theme) {
 	this->scalableImage_verticalScrollBar = theme_getScalableImage(theme, U"VerticalScrollBar");
 	// Generate fixed size buttons for the scroll buttons (because their size is currently given by constants)
 	ColorRgbI32 color = this->color.value;
-	this->scalableImage_scrollButton(scrollWidth, scrollEndHeight, false, color.red, color.green, color.blue)(this->scrollButtonTop_normal);
-	this->scalableImage_scrollButton(scrollWidth, scrollEndHeight, true, color.red, color.green, color.blue)(this->scrollButtonTop_pressed);
-	this->scalableImage_scrollButton(scrollWidth, scrollEndHeight, false, color.red, color.green, color.blue)(this->scrollButtonBottom_normal);
-	this->scalableImage_scrollButton(scrollWidth, scrollEndHeight, true, color.red, color.green, color.blue)(this->scrollButtonBottom_pressed);
+	this->scalableImage_scrollButton(scrollWidth, scrollEndHeight, false, color.red, color.green, color.blue)(this->scrollButtonTopImage_normal);
+	this->scalableImage_scrollButton(scrollWidth, scrollEndHeight, true, color.red, color.green, color.blue)(this->scrollButtonTopImage_pressed);
+	this->scalableImage_scrollButton(scrollWidth, scrollEndHeight, false, color.red, color.green, color.blue)(this->scrollButtonBottomImage_normal);
+	this->scalableImage_scrollButton(scrollWidth, scrollEndHeight, true, color.red, color.green, color.blue)(this->scrollButtonBottomImage_pressed);
 }
 
 void ListBox::changedTheme(VisualTheme newTheme) {
@@ -235,16 +235,20 @@ void ListBox::changedTheme(VisualTheme newTheme) {
 	this->hasImages = false; // Force redraw
 }
 
-void ListBox::completeAssets() {
-	if (this->scalableImage_listBox.methodIndex == -1) {
-		this->loadTheme(theme_getDefault());
-	}
+void ListBox::loadFont() {
 	if (!font_exists(this->font)) {
 		this->font = font_getDefault();
 	}
 	if (!font_exists(this->font)) {
 		throwError("Failed to load the default font for a ListBox!\n");
 	}
+}
+
+void ListBox::completeAssets() {
+	if (this->scalableImage_listBox.methodIndex == -1) {
+		this->loadTheme(theme_getDefault());
+	}
+	this->loadFont();
 }
 
 void ListBox::changedLocation(const IRect &oldLocation, const IRect &newLocation) {
@@ -296,7 +300,7 @@ void ListBox::limitSelection(bool indexChangedMeaning) {
 }
 
 int64_t ListBox::getVisibleScrollRange() {
-	this->completeAssets();
+	this->loadFont(); // We might not have the color assigned yet, but at least load the font to get the item height.
 	int64_t verticalStep = font_getSize(this->font);
 	return (this->location.height() - textBorderTop * 2) / verticalStep;
 }
@@ -329,7 +333,7 @@ IRect ListBox::getKnobLocation() {
 // limitSelection should be called before limitScrolling, because scrolling limits depend on selection
 void ListBox::limitScrolling(bool keepSelectedVisible) {
 	// Try to load the font before estimating how big the view is
-	this->completeAssets();
+	this->loadFont();
 	int64_t itemCount = this->list.value.length();
 	int64_t visibleRange = this->getVisibleScrollRange();
 	int64_t maxScroll;

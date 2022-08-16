@@ -53,12 +53,13 @@ private:
 	MediaMethod scalableImage_scrollButton;
 	MediaMethod scalableImage_verticalScrollBar;
 	RasterFont font;
+	void loadFont();
 	void completeAssets();
 	void generateGraphics();
 	// Generated
 	bool hasImages = false;
-	OrderedImageRgbaU8 scrollButtonTop_normal, scrollButtonTop_pressed, scrollButtonBottom_normal, scrollButtonBottom_pressed;
-	OrderedImageRgbaU8 scrollKnob_normal, verticalScrollBar_normal;
+	OrderedImageRgbaU8 scrollButtonTopImage_normal, scrollButtonTopImage_pressed, scrollButtonBottomImage_normal, scrollButtonBottomImage_pressed;
+	OrderedImageRgbaU8 scrollKnobImage, verticalScrollBarImage;
 	OrderedImageRgbaU8 image;
 	// Helper methods
 	// Returns the selected index referring to an existing element or -1 if none is selected
