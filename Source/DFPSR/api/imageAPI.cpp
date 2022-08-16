@@ -128,8 +128,7 @@ bool dsr::image_save(const ImageRgbaU8 &image, const String& filename, bool must
 	ImageFileFormat extension = detectImageFileExtension(filename);
 	Buffer buffer;
 	if (extension == ImageFileFormat::Unknown) {
-		ReadableString extension = file_getExtension(filename);
-		if (mustWork) { throwError(U"The extension *.", extension, " in ", filename, " is not a supported image format.\n"); }
+		if (mustWork) { throwError(U"The extension *.", file_getExtension(filename), " in ", filename, " is not a supported image format.\n"); }
 		return false;
 	} else {
 		buffer = image_encode(image, extension, quality);

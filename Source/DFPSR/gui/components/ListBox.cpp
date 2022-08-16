@@ -301,10 +301,6 @@ int64_t ListBox::getVisibleScrollRange() {
 	return (this->location.height() - textBorderTop * 2) / verticalStep;
 }
 
-IRect ListBox::getScrollBarLocation_includingButtons() {
-	return IRect(this->location.width() - scrollWidth, 0, scrollWidth, this->location.height());
-}
-
 IRect ListBox::getScrollBarLocation_excludingButtons() {
 	return IRect(this->location.width() - scrollWidth, scrollEndHeight, scrollWidth, this->location.height() - (scrollEndHeight * 2));
 }

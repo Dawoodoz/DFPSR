@@ -91,6 +91,13 @@ public:
 		#endif
 		return this->data;
 	}
+	// Get unsafe pointer without bound checks for implementing your own safety
+	inline T* getUnchecked() {
+		return this->data;
+	}
+	inline const T* getUnchecked() const {
+		return this->data;
+	}
 	// Returns the pointer in modulo byteAlignment
 	// Returns 0 if the pointer is aligned with byteAlignment
 	inline int getAlignmentOffset(int byteAlignment) const {
@@ -219,22 +226,22 @@ template <typename T, typename S>
 inline void safeMemoryCopy(SafePointer<T> target, const SafePointer<S>& source, int byteSize) {
 	#ifdef SAFE_POINTER_CHECKS
 		// Both target and source must be in valid memory
-		target.assertInside("memoryCopy (target)", target.getUnsafe(), (size_t)byteSize);
-		source.assertInside("memoryCopy (source)", source.getUnsafe(), (size_t)byteSize);
+		target.assertInside("memoryCopy (target)", target.getUnchecked(), (size_t)byteSize);
+		source.assertInside("memoryCopy (source)", source.getUnchecked(), (size_t)byteSize);
 		// memcpy doesn't allow pointer aliasing
 		// TODO: Make a general assertion with the same style as out of bound exceptions
-		assert(((const uint8_t*)target.getUnsafe()) + byteSize <= (uint8_t*)source.getUnsafe() || ((const uint8_t*)source.getUnsafe()) + byteSize <= (uint8_t*)target.getUnsafe());
+		assert(((const uint8_t*)target.getUnchecked()) + byteSize <= (uint8_t*)source.getUnchecked() || ((const uint8_t*)source.getUnchecked()) + byteSize <= (uint8_t*)target.getUnchecked());
 	#endif
-	std::memcpy(target.getUnsafe(), source.getUnsafe(), (size_t)byteSize);
+	std::memcpy(target.getUnchecked(), source.getUnchecked(), (size_t)byteSize);
 }
 
 template <typename T>
 inline void safeMemorySet(SafePointer<T>& target, uint8_t value, int byteSize) {
 	#ifdef SAFE_POINTER_CHECKS
 		// Target must be in valid memory
-		target.assertInside("memoryCopy (target)", target.getUnsafe(), byteSize);
+		target.assertInside("memoryCopy (target)", target.getUnchecked(), byteSize);
 	#endif
-	std::memset((char*)(target.getUnsafe()), value, (size_t)byteSize);
+	std::memset((char*)(target.getUnchecked()), value, (size_t)byteSize);
 }
 
 }

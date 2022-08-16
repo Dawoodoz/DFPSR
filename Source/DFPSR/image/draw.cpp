@@ -670,14 +670,13 @@ void dsr::imageImpl_drawHigher(ImageU16Impl& targetHeight, const ImageU16Impl& s
 	if (ImageIntersection::canCreate(targetHeight, sourceHeight, left, top)) {
 		ImageIntersection intersectionH = ImageIntersection::create(targetHeight, sourceHeight, left, top);
 		ITERATE_PIXELS(intersectionH.subTarget, intersectionH.subSource,
-			int32_t sourceHeight = *((const uint16_t*)sourcePixel);
-			if (sourceHeight > 0) {
-				sourceHeight += sourceHeightOffset;
-				int32_t targetHeight = *((uint16_t*)targetPixel);
-				if (sourceHeight < 0) { sourceHeight = 0; }
-				if (sourceHeight > 65535) { sourceHeight = 65535; }
-				if (sourceHeight > 0 && sourceHeight > targetHeight) {
-					*((uint16_t*)targetPixel) = sourceHeight;
+			int32_t newHeight = *((const uint16_t*)sourcePixel);
+			if (newHeight > 0) {
+				newHeight += sourceHeightOffset;
+				if (newHeight < 0) { newHeight = 0; }
+				if (newHeight > 65535) { newHeight = 65535; }
+				if (newHeight > 0 && newHeight > *((uint16_t*)targetPixel)) {
+					*((uint16_t*)targetPixel) = newHeight;
 				}
 			}
 		);
@@ -691,14 +690,13 @@ void dsr::imageImpl_drawHigher(ImageU16Impl& targetHeight, const ImageU16Impl& s
 		ImageIntersection intersectionH = ImageIntersection::create(targetHeight, sourceHeight, left, top);
 		ImageIntersection intersectionA = ImageIntersection::create(targetA, sourceA, left, top);
 		ITERATE_PIXELS_2(intersectionH.subTarget, intersectionH.subSource, intersectionA.subTarget, intersectionA.subSource,
-			int32_t sourceHeight = *((const uint16_t*)sourcePixel1);
-			if (sourceHeight > 0) {
-				sourceHeight += sourceHeightOffset;
-				int32_t targetHeight = *((uint16_t*)targetPixel1);
-				if (sourceHeight < 0) { sourceHeight = 0; }
-				if (sourceHeight > 65535) { sourceHeight = 65535; }
-				if (sourceHeight > targetHeight) {
-					*((uint16_t*)targetPixel1) = sourceHeight;
+			int32_t newHeight = *((const uint16_t*)sourcePixel1);
+			if (newHeight > 0) {
+				newHeight += sourceHeightOffset;
+				if (newHeight < 0) { newHeight = 0; }
+				if (newHeight > 65535) { newHeight = 65535; }
+				if (newHeight > *((uint16_t*)targetPixel1)) {
+					*((uint16_t*)targetPixel1) = newHeight;
 					targetPixel2[targetA.packOrder.redIndex]   = sourcePixel2[sourceA.packOrder.redIndex];
 					targetPixel2[targetA.packOrder.greenIndex] = sourcePixel2[sourceA.packOrder.greenIndex];
 					targetPixel2[targetA.packOrder.blueIndex]  = sourcePixel2[sourceA.packOrder.blueIndex];
@@ -719,14 +717,13 @@ void dsr::imageImpl_drawHigher(ImageU16Impl& targetHeight, const ImageU16Impl& s
 		ImageIntersection intersectionA = ImageIntersection::create(targetA, sourceA, left, top);
 		ImageIntersection intersectionB = ImageIntersection::create(targetB, sourceB, left, top);
 		ITERATE_PIXELS_3(intersectionH.subTarget, intersectionH.subSource, intersectionA.subTarget, intersectionA.subSource, intersectionB.subTarget, intersectionB.subSource,
-			int32_t sourceHeight = *((const uint16_t*)sourcePixel1);
-			if (sourceHeight > 0) {
-				sourceHeight += sourceHeightOffset;
-				int32_t targetHeight = *((uint16_t*)targetPixel1);
-				if (sourceHeight < 0) { sourceHeight = 0; }
-				if (sourceHeight > 65535) { sourceHeight = 65535; }
-				if (sourceHeight > targetHeight) {
-					*((uint16_t*)targetPixel1) = sourceHeight;
+			int32_t newHeight = *((const uint16_t*)sourcePixel1);
+			if (newHeight > 0) {
+				newHeight += sourceHeightOffset;
+				if (newHeight < 0) { newHeight = 0; }
+				if (newHeight > 65535) { newHeight = 65535; }
+				if (newHeight > *((uint16_t*)targetPixel1)) {
+					*((uint16_t*)targetPixel1) = newHeight;
 					targetPixel2[targetA.packOrder.redIndex]   = sourcePixel2[sourceA.packOrder.redIndex];
 					targetPixel2[targetA.packOrder.greenIndex] = sourcePixel2[sourceA.packOrder.greenIndex];
 					targetPixel2[targetA.packOrder.blueIndex]  = sourcePixel2[sourceA.packOrder.blueIndex];
@@ -745,12 +742,11 @@ void dsr::imageImpl_drawHigher(ImageF32Impl& targetHeight, const ImageF32Impl& s
 	if (ImageIntersection::canCreate(targetHeight, sourceHeight, left, top)) {
 		ImageIntersection intersectionH = ImageIntersection::create(targetHeight, sourceHeight, left, top);
 		ITERATE_PIXELS(intersectionH.subTarget, intersectionH.subSource,
-			float sourceHeight = *((const float*)sourcePixel);
-			if (sourceHeight > -std::numeric_limits<float>::infinity()) {
-				sourceHeight += sourceHeightOffset;
-				float targetHeight = *((float*)targetPixel);
-				if (sourceHeight > targetHeight) {
-					*((float*)targetPixel) = sourceHeight;
+			float newHeight = *((const float*)sourcePixel);
+			if (newHeight > -std::numeric_limits<float>::infinity()) {
+				newHeight += sourceHeightOffset;
+				if (newHeight > *((float*)targetPixel)) {
+					*((float*)targetPixel) = newHeight;
 				}
 			}
 		);
@@ -764,12 +760,11 @@ void dsr::imageImpl_drawHigher(ImageF32Impl& targetHeight, const ImageF32Impl& s
 		ImageIntersection intersectionH = ImageIntersection::create(targetHeight, sourceHeight, left, top);
 		ImageIntersection intersectionA = ImageIntersection::create(targetA, sourceA, left, top);
 		ITERATE_PIXELS_2(intersectionH.subTarget, intersectionH.subSource, intersectionA.subTarget, intersectionA.subSource,
-			float sourceHeight = *((const float*)sourcePixel1);
-			if (sourceHeight > -std::numeric_limits<float>::infinity()) {
-				sourceHeight += sourceHeightOffset;
-				float targetHeight = *((float*)targetPixel1);
-				if (sourceHeight > targetHeight) {
-					*((float*)targetPixel1) = sourceHeight;
+			float newHeight = *((const float*)sourcePixel1);
+			if (newHeight > -std::numeric_limits<float>::infinity()) {
+				newHeight += sourceHeightOffset;
+				if (newHeight > *((float*)targetPixel1)) {
+					*((float*)targetPixel1) = newHeight;
 					targetPixel2[targetA.packOrder.redIndex]   = sourcePixel2[sourceA.packOrder.redIndex];
 					targetPixel2[targetA.packOrder.greenIndex] = sourcePixel2[sourceA.packOrder.greenIndex];
 					targetPixel2[targetA.packOrder.blueIndex]  = sourcePixel2[sourceA.packOrder.blueIndex];
@@ -790,12 +785,11 @@ void dsr::imageImpl_drawHigher(ImageF32Impl& targetHeight, const ImageF32Impl& s
 		ImageIntersection intersectionA = ImageIntersection::create(targetA, sourceA, left, top);
 		ImageIntersection intersectionB = ImageIntersection::create(targetB, sourceB, left, top);
 		ITERATE_PIXELS_3(intersectionH.subTarget, intersectionH.subSource, intersectionA.subTarget, intersectionA.subSource, intersectionB.subTarget, intersectionB.subSource,
-			float sourceHeight = *((const float*)sourcePixel1);
-			if (sourceHeight > -std::numeric_limits<float>::infinity()) {
-				sourceHeight += sourceHeightOffset;
-				float targetHeight = *((float*)targetPixel1);
-				if (sourceHeight > targetHeight) {
-					*((float*)targetPixel1) = sourceHeight;
+			float newHeight = *((const float*)sourcePixel1);
+			if (newHeight > -std::numeric_limits<float>::infinity()) {
+				newHeight += sourceHeightOffset;
+				if (newHeight > *((float*)targetPixel1)) {
+					*((float*)targetPixel1) = newHeight;
 					targetPixel2[targetA.packOrder.redIndex]   = sourcePixel2[sourceA.packOrder.redIndex];
 					targetPixel2[targetA.packOrder.greenIndex] = sourcePixel2[sourceA.packOrder.greenIndex];
 					targetPixel2[targetA.packOrder.blueIndex]  = sourcePixel2[sourceA.packOrder.blueIndex];
@@ -810,13 +804,6 @@ void dsr::imageImpl_drawHigher(ImageF32Impl& targetHeight, const ImageF32Impl& s
 	}
 }
 
-/*
-void imageImpl_drawHigher(ImageF32Impl& targetHeight, const ImageF32Impl& sourceHeight, int32_t left = 0, int32_t top = 0, float sourceHeightOffset = 0);
-void imageImpl_drawHigher(ImageF32Impl& targetHeight, const ImageF32Impl& sourceHeight, ImageRgbaU8Impl& targetA, const ImageRgbaU8Impl& sourceA,
-  int32_t left = 0, int32_t top = 0, float sourceHeightOffset = 0);
-void imageImpl_drawHigher(ImageF32Impl& targetHeight, const ImageF32Impl& sourceHeight, ImageRgbaU8Impl& targetA, const ImageRgbaU8Impl& sourceA,
-  ImageRgbaU8Impl& targetB, const ImageRgbaU8Impl& sourceB, int32_t left = 0, int32_t top = 0, float sourceHeightOffset = 0);
-*/
 
 // -------------------------------- Resize --------------------------------
 

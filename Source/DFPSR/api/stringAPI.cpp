@@ -313,8 +313,6 @@ String dsr::string_unmangleQuote(const ReadableString& mangledText) {
 				// Detect bad input
 				if (c == U'\"') { // Double quote
 					 throwError(U"Unmangled double quote sign detected in string_unmangleQuote!\n", mangledText, "\n");
-				} else if (c == U'\\') { // Back slash
-					 throwError(U"Unmangled back slash detected in string_unmangleQuote!\n", mangledText, "\n");
 				} else if (c == U'\a') { // Audible bell
 					 throwError(U"Unmangled audible bell detected in string_unmangleQuote!\n", mangledText, "\n");
 				} else if (c == U'\b') { // Backspace
@@ -794,7 +792,7 @@ static int64_t getNewBufferSize(int64_t minimumSize) {
 // Guarantees that the new buffer is not shared by other strings, so that it may be written to freely
 static void reallocateBuffer(String &target, int64_t newLength, bool preserve) {
 	// Holding oldData alive while copying to the new buffer
-	Buffer oldBuffer = target.buffer;
+	Buffer oldBuffer = target.buffer; // Kept for reference counting only, do not remove.
 	const char32_t* oldData = target.readSection;
 	target.buffer = buffer_create(getNewBufferSize(newLength * sizeof(DsrChar)));
 	target.readSection = target.writeSection = reinterpret_cast<char32_t*>(buffer_dangerous_getUnsafeData(target.buffer));

@@ -390,12 +390,12 @@ String file_getCurrentPath() {
 }
 
 String file_followSymbolicLink(const ReadableString &path, bool mustExist) {
-	String modifiedPath = file_optimizePath(path, LOCAL_PATH_SYNTAX);
-	Buffer buffer;
-	const NativeChar *nativePath = toNativeString(modifiedPath, buffer);
 	#ifdef USE_MICROSOFT_WINDOWS
 		// TODO: Is there anything that can be used as a symbolic link on Windows?
 	#else
+		String modifiedPath = file_optimizePath(path, LOCAL_PATH_SYNTAX);
+		Buffer buffer;
+		const NativeChar *nativePath = toNativeString(modifiedPath, buffer);
 		NativeChar resultBuffer[maxLength + 1] = {0};
 		if (readlink(nativePath, resultBuffer, maxLength) != -1) {
 			return fromNativeString(resultBuffer);
@@ -669,7 +669,7 @@ bool file_removeFile(const ReadableString& filename) {
 	bool result = false;
 	String optimizedPath = file_optimizePath(filename, LOCAL_PATH_SYNTAX);
 	Buffer buffer;
-	const NativeChar *nativePath = toNativeString(filename, buffer);
+	const NativeChar *nativePath = toNativeString(optimizedPath, buffer);
 	// Remove the empty folder.
 	#ifdef USE_MICROSOFT_WINDOWS
 		result = (DeleteFileW(nativePath) != 0);
@@ -735,8 +735,6 @@ DsrProcessStatus process_getStatus(const DsrProcess &process) {
 DsrProcess process_execute(const ReadableString& programPath, List<String> arguments) {
 	// Convert the program path into the native format.
 	String optimizedPath = file_optimizePath(programPath, LOCAL_PATH_SYNTAX);
-	Buffer pathBuffer;
-	const NativeChar *nativePath = toNativeString(optimizedPath, pathBuffer);
 	// Convert
 	#ifdef USE_MICROSOFT_WINDOWS
 		DsrChar separator = U' ';
@@ -744,7 +742,7 @@ DsrProcess process_execute(const ReadableString& programPath, List<String> argum
 		DsrChar separator = U'\0';
 	#endif
 	String flattenedArguments;
-	string_append(flattenedArguments, programPath);
+	string_append(flattenedArguments, optimizedPath);
 	string_appendChar(flattenedArguments, separator);
 	for (int64_t a = 0; a < arguments.length(); a++) {
 		string_append(flattenedArguments, arguments[a]);
@@ -764,6 +762,8 @@ DsrProcess process_execute(const ReadableString& programPath, List<String> argum
 			return DsrProcess(); // Failure
 		}
 	#else
+		Buffer pathBuffer;
+		const NativeChar *nativePath = toNativeString(optimizedPath, pathBuffer);
 		int64_t codePoints = buffer_getSize(argBuffer) / sizeof(NativeChar);
 		// Count arguments.
 		int argc = arguments.length() + 1;
