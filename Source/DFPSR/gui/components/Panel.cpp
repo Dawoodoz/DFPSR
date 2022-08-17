@@ -56,7 +56,7 @@ void Panel::generateGraphics() {
 	if (height < 1) { height = 1; }
 	if (!this->hasImages) {
 		completeAssets();
-		this->background(width, height, this->color.value.red, this->color.value.green, this->color.value.blue)(this->imageBackground);
+		this->generateImage(this->background, width, height, this->color.value.red, this->color.value.green, this->color.value.blue)(this->imageBackground);
 		this->hasImages = true;
 	}
 }

@@ -50,8 +50,8 @@ private:
 	int64_t firstVisible = 0; // Index of first visible element for scrolling. May never go below zero.
 	// Given from the style
 	MediaMethod scalableImage_listBox;
-	MediaMethod scalableImage_scrollButton;
-	MediaMethod scalableImage_verticalScrollBar;
+	MediaMethod scalableImage_scrollTop, scalableImage_scrollBottom;
+	MediaMethod scalableImage_verticalScrollBackground, scalableImage_verticalScrollKnob;
 	RasterFont font;
 	void loadFont();
 	void completeAssets();

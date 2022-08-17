@@ -97,13 +97,13 @@ void ListBox::generateGraphics() {
 			if (!image_exists(this->scrollKnobImage)
 			  || image_getWidth(this->scrollKnobImage) != knob.width()
 			  || image_getHeight(this->scrollKnobImage) != knob.height()) {
-				this->scalableImage_scrollButton(knob.width(), knob.height(), false, color.red, color.green, color.blue)(this->scrollKnobImage);
+				this->generateImage(this->scalableImage_verticalScrollKnob, knob.width(), knob.height(), color.red, color.green, color.blue, 0)(this->scrollKnobImage);
 			}
 			// Only redraw the scroll list if its dimenstions changed
 			if (!image_exists(this->verticalScrollBarImage)
 			  || image_getWidth(this->verticalScrollBarImage) != whole.width()
 			  || image_getHeight(this->verticalScrollBarImage) != whole.height()) {
-				this->scalableImage_verticalScrollBar(whole.width(), whole.height(), color.red, color.green, color.blue)(this->verticalScrollBarImage);
+				this->generateImage(this->scalableImage_verticalScrollBackground, whole.width(), whole.height(), color.red, color.green, color.blue, 0)(this->verticalScrollBarImage);
 			}
 			// Draw the scroll-bar
 			draw_alphaFilter(this->image, this->verticalScrollBarImage, whole.left(), whole.top());
@@ -220,14 +220,16 @@ void ListBox::receiveKeyboardEvent(const KeyboardEvent& event) {
 
 void ListBox::loadTheme(VisualTheme theme) {
 	this->scalableImage_listBox = theme_getScalableImage(theme, U"ListBox");
-	this->scalableImage_scrollButton = theme_getScalableImage(theme, U"ScrollButton");
-	this->scalableImage_verticalScrollBar = theme_getScalableImage(theme, U"VerticalScrollBar");
+	this->scalableImage_scrollTop = theme_getScalableImage(theme, U"ScrollTop");
+	this->scalableImage_scrollBottom = theme_getScalableImage(theme, U"ScrollBottom");
+	this->scalableImage_verticalScrollKnob = theme_getScalableImage(theme, U"VerticalScrollKnob");
+	this->scalableImage_verticalScrollBackground = theme_getScalableImage(theme, U"VerticalScrollBackground");
 	// Generate fixed size buttons for the scroll buttons (because their size is currently given by constants)
 	ColorRgbI32 color = this->color.value;
-	this->scalableImage_scrollButton(scrollWidth, scrollEndHeight, false, color.red, color.green, color.blue)(this->scrollButtonTopImage_normal);
-	this->scalableImage_scrollButton(scrollWidth, scrollEndHeight, true, color.red, color.green, color.blue)(this->scrollButtonTopImage_pressed);
-	this->scalableImage_scrollButton(scrollWidth, scrollEndHeight, false, color.red, color.green, color.blue)(this->scrollButtonBottomImage_normal);
-	this->scalableImage_scrollButton(scrollWidth, scrollEndHeight, true, color.red, color.green, color.blue)(this->scrollButtonBottomImage_pressed);
+	this->generateImage(this->scalableImage_scrollTop,    scrollWidth, scrollEndHeight, color.red, color.green, color.blue, 0)(this->scrollButtonTopImage_normal);
+	this->generateImage(this->scalableImage_scrollTop,    scrollWidth, scrollEndHeight, color.red, color.green, color.blue, 1)(this->scrollButtonTopImage_pressed);	
+	this->generateImage(this->scalableImage_scrollBottom, scrollWidth, scrollEndHeight, color.red, color.green, color.blue, 0)(this->scrollButtonBottomImage_normal);
+	this->generateImage(this->scalableImage_scrollBottom, scrollWidth, scrollEndHeight, color.red, color.green, color.blue, 1)(this->scrollButtonBottomImage_pressed);
 }
 
 void ListBox::changedTheme(VisualTheme newTheme) {

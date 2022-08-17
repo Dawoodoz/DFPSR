@@ -50,10 +50,10 @@ bool Button::isContainer() const {
 	return false;
 }
 
-static OrderedImageRgbaU8 generateButtonImage(MediaMethod imageGenerator, int pressed, int width, int height, ColorRgbI32 backColor, String text, RasterFont font) {
+static OrderedImageRgbaU8 generateButtonImage(Button &button, MediaMethod imageGenerator, int pressed, int width, int height, ColorRgbI32 backColor, String text, RasterFont font) {
 	// Create a scaled image
 	OrderedImageRgbaU8 result;
- 	imageGenerator(width, height, pressed, backColor.red, backColor.green, backColor.blue)(result);
+ 	button.generateImage(imageGenerator, width, height, backColor.red, backColor.green, backColor.blue, pressed)(result);
 	if (string_length(text) > 0) {
 		int left = (image_getWidth(result) - font_getLineWidth(font, text)) / 2;
 		int top = (image_getHeight(result) - font_getSize(font)) / 2;
@@ -72,8 +72,8 @@ void Button::generateGraphics() {
 	if (height < 1) { height = 1; }
 	if (!this->hasImages) {
 		completeAssets();
-		this->imageUp = generateButtonImage(this->button, 0, width, height, this->color.value, this->text.value, this->font);
-		this->imageDown = generateButtonImage(this->button, 1, width, height, this->color.value, this->text.value, this->font);
+		this->imageUp = generateButtonImage(*this, this->button, 0, width, height, this->color.value, this->text.value, this->font);
+		this->imageDown = generateButtonImage(*this, this->button, 1, width, height, this->color.value, this->text.value, this->font);
 		this->hasImages = true;
 	}
 }

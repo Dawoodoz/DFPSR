@@ -75,10 +75,10 @@ END:
 BEGIN: generate_rounded_button
 	INPUT: FixedPoint, width
 	INPUT: FixedPoint, height
-	INPUT: FixedPoint, pressed
 	INPUT: FixedPoint, red
 	INPUT: FixedPoint, green
 	INPUT: FixedPoint, blue
+	INPUT: FixedPoint, pressed
 	INPUT: FixedPoint, radius
 	INPUT: FixedPoint, border
 	OUTPUT: ImageRgbaU8, resultImage
@@ -104,26 +104,48 @@ END:
 BEGIN: Button
 	INPUT: FixedPoint, width
 	INPUT: FixedPoint, height
-	INPUT: FixedPoint, pressed
 	INPUT: FixedPoint, red
 	INPUT: FixedPoint, green
 	INPUT: FixedPoint, blue
+	INPUT: FixedPoint, pressed
 	OUTPUT: ImageRgbaU8, colorImage
-	CALL: generate_rounded_button, colorImage, width, height, pressed, red, green, blue, 12, 2
+	CALL: generate_rounded_button, colorImage, width, height, red, green, blue, pressed, 12, 2
 END:
 
-BEGIN: ScrollButton
+BEGIN: ScrollTop
 	INPUT: FixedPoint, width
 	INPUT: FixedPoint, height
-	INPUT: FixedPoint, pressed
 	INPUT: FixedPoint, red
 	INPUT: FixedPoint, green
 	INPUT: FixedPoint, blue
+	INPUT: FixedPoint, pressed
 	OUTPUT: ImageRgbaU8, colorImage
-	CALL: generate_rounded_button, colorImage, width, height, pressed, red, green, blue, 5, 2
+	CALL: generate_rounded_button, colorImage, width, height, red, green, blue, pressed, 5, 2
 END:
 
-BEGIN: VerticalScrollBar
+BEGIN: ScrollBottom
+	INPUT: FixedPoint, width
+	INPUT: FixedPoint, height
+	INPUT: FixedPoint, red
+	INPUT: FixedPoint, green
+	INPUT: FixedPoint, blue
+	INPUT: FixedPoint, pressed
+	OUTPUT: ImageRgbaU8, colorImage
+	CALL: generate_rounded_button, colorImage, width, height, red, green, blue, pressed, 5, 2
+END:
+
+BEGIN: VerticalScrollKnob
+	INPUT: FixedPoint, width
+	INPUT: FixedPoint, height
+	INPUT: FixedPoint, red
+	INPUT: FixedPoint, green
+	INPUT: FixedPoint, blue
+	INPUT: FixedPoint, pressed
+	OUTPUT: ImageRgbaU8, colorImage
+	CALL: generate_rounded_button, colorImage, width, height, red, green, blue, pressed, 8, 2
+END:
+
+BEGIN: VerticalScrollBackground
 	INPUT: FixedPoint, width
 	INPUT: FixedPoint, height
 	INPUT: FixedPoint, red

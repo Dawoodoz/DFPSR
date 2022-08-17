@@ -384,3 +384,25 @@ bool VisualComponent::isFocused() {
 		return this->focusComponent.get() == nullptr; // Focused if no child is focused.
 	}
 }
+
+MediaResult VisualComponent::generateImage(MediaMethod &method, int width, int height, int red, int green, int blue, int pressed) {
+	return method.callUsingKeywords([width, height, red, green, blue, pressed](MediaMachine &machine, int methodIndex, int inputIndex, const ReadableString &argumentName){
+		if (string_caseInsensitiveMatch(argumentName, U"width")) {
+			machine_setInputByIndex(machine, methodIndex, inputIndex, width);
+		} else if (string_caseInsensitiveMatch(argumentName, U"height")) {
+			machine_setInputByIndex(machine, methodIndex, inputIndex, height);
+		} else if (string_caseInsensitiveMatch(argumentName, U"pressed")) {
+			machine_setInputByIndex(machine, methodIndex, inputIndex, pressed);
+		} else if (string_caseInsensitiveMatch(argumentName, U"red")) {
+			machine_setInputByIndex(machine, methodIndex, inputIndex, red);
+		} else if (string_caseInsensitiveMatch(argumentName, U"green")) {
+			machine_setInputByIndex(machine, methodIndex, inputIndex, green);
+		} else if (string_caseInsensitiveMatch(argumentName, U"blue")) {
+			machine_setInputByIndex(machine, methodIndex, inputIndex, blue);
+		} else {
+			// TODO: Ask the theme for the argument using a specified style class for variations between different types of buttons, checkboxes, panels, et cetera.
+			//       Throw an exception if the theme did not provide an input argument to its own media function.
+			throwError(U"Unhandled input ", argumentName, U" requested by ", machine_getMethodName(machine, methodIndex), U" in the visual theme!\n");
+		}
+	});
+}

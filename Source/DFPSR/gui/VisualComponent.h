@@ -218,6 +218,8 @@ public:
 	// Returns true iff the component is focused.
 	//   The root component is considered focused if none of its children are focused.
 	bool isFocused();
+	// A reusable method for calling the media machine that allow providing additional variables as style flags.
+	MediaResult generateImage(MediaMethod &method, int width, int height, int red, int green, int blue, int pressed = 0);
 };
 
 }
