@@ -133,20 +133,7 @@ BEGIN: VerticalScrollBar
 	CREATE: visImage<ImageU8>, width, height
 	CREATE: lumaImage<ImageU8>, width, height
 	FADE_LINEAR: visImage, 0, 0, 128, width, 0, 0
-	MUL: fadeLength<FixedPoint>, width, 2.0
-	MUL: maxFadeLength<FixedPoint>, height, 0.5
-	MIN: fadeLength, fadeLength, maxFadeLength
-	FADE_REGION_LINEAR: lumaImage, 0, 0, width, fadeLength, 0, 0, 128, 0, fadeLength, 0
-	SUB: lowerFadeTop<FixedPoint>, height, fadeLength
-	FADE_REGION_LINEAR: lumaImage, 0, lowerFadeTop, width, fadeLength, 0, 0, 0, 0, fadeLength, 128
-	# Scale by 2 / 255 so that 127.5 represents full intensity in patternImage
-	MUL: normRed<FixedPoint>, red, 0.007843138
-	MUL: normGreen<FixedPoint>, green, 0.007843138
-	MUL: normBlue<FixedPoint>, blue, 0.007843138
-	MUL: redImage<ImageU8>, lumaImage, normRed
-	MUL: greenImage<ImageU8>, lumaImage, normGreen
-	MUL: blueImage<ImageU8>, lumaImage, normBlue
-	PACK_RGBA: colorImage, redImage, greenImage, blueImage, visImage
+	PACK_RGBA: colorImage, 0, 0, 0, visImage
 END:
 
 BEGIN: Panel
