@@ -31,7 +31,6 @@ namespace dsr {
 
 MediaMachine machine_create(const ReadableString& code);
 
-// Low-level call API
 int machine_findMethod(MediaMachine& machine, const ReadableString& methodName);
 void machine_setInputByIndex(MediaMachine& machine, int methodIndex, int inputIndex, int32_t input);
 void machine_setInputByIndex(MediaMachine& machine, int methodIndex, int inputIndex, const FixedPoint& input);
@@ -44,6 +43,8 @@ OrderedImageRgbaU8 machine_getImageRgbaU8OutputByIndex(MediaMachine& machine, in
 String machine_getMethodName(MediaMachine& machine, int methodIndex);
 int machine_getInputCount(MediaMachine& machine, int methodIndex);
 int machine_getOutputCount(MediaMachine& machine, int methodIndex);
+String machine_getInputName(MediaMachine& machine, int methodIndex, int inputIndex);
+String machine_getOutputName(MediaMachine& machine, int methodIndex, int outputIndex);
 
 inline constexpr int argCount() {
 	return 0;
@@ -116,7 +117,8 @@ public:
  	: methodIndex(-1) {}
 	MediaMethod(const MediaMachine& machine, int methodIndex)
  	: machine(machine), methodIndex(methodIndex) {}
-	// MediaMethod can be called like a function using arguments
+	// MediaMethod can be called like a function using arguments, returning MediaResult for assigning outputs by reference. 
+	// Useful when you know the arguments in advance.
 	template <typename... ARGS>
 	MediaResult operator () (ARGS... args) {
 		int givenCount = argCount(args...);
@@ -128,6 +130,11 @@ public:
 		machine_executeMethod(this->machine, this->methodIndex);
 		return MediaResult(this->machine, this->methodIndex);
 	}
+	// MediaMethod can also take the inputs as keyword arguments by getting a callback with the index and name of each input to assign.
+	// The function setInputAction should simply make a call to machine_setInputByIndex with the provided machine, methodIndex, inputIndex and the value corresponding to argumentName in setInputAction.
+	// If you don't recognize argumentName, then throw an exception because default input arguments are currently not implemented.
+	// Useful when the called function can be extended or reduced with only the arguments needed.
+	MediaResult callUsingKeywords(std::function<void(MediaMachine &machine, int methodIndex, int inputIndex, const ReadableString &argumentName)> setInputAction);
 };
 
 MediaMethod machine_getMethod(MediaMachine& machine, const ReadableString& methodName);

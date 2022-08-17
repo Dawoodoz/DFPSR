@@ -1038,4 +1038,33 @@ int machine_getOutputCount(MediaMachine& machine, int methodIndex) {
 	return machine->methods[methodIndex].outputCount;
 }
 
+String machine_getInputName(MediaMachine& machine, int methodIndex, int inputIndex) {
+	checkMethodIndex(machine, methodIndex);
+	Method *method = &(machine->methods[methodIndex]);
+	if (inputIndex < 0 || inputIndex >= method->inputCount) {
+		throwError(U"Input index ", inputIndex, U" is out of bound 0..", method->inputCount - 1, U" for method ", machine_getMethodName(machine, methodIndex), U"!\n");
+	}
+	return method->locals[inputIndex].name;
+}
+
+String machine_getOutputName(MediaMachine& machine, int methodIndex, int outputIndex) {
+	checkMethodIndex(machine, methodIndex);
+	Method *method = &(machine->methods[methodIndex]);
+	if (outputIndex < 0 || outputIndex >= method->outputCount) {
+		throwError(U"Input index ", outputIndex, U" is out of bound 0..", method->outputCount - 1, U" for method ", machine_getMethodName(machine, methodIndex), U"!\n");
+	}
+	return method->locals[method->inputCount + outputIndex].name;
+}
+
+MediaResult MediaMethod::callUsingKeywords(std::function<void(MediaMachine &machine, int methodIndex, int inputIndex, const ReadableString &argumentName)> setInputAction) {
+	Method *method = &(this->machine->methods[methodIndex]);
+	int inputCount = method->inputCount;
+	// TODO: Make sure that input arguments are assigned default arguments before assigning inputs as keywords.
+	for (int i = 0; i < inputCount; i++) {
+		setInputAction(this->machine, methodIndex, i, method->locals[i].name);
+	}
+	machine_executeMethod(this->machine, this->methodIndex);
+	return MediaResult(this->machine, this->methodIndex);
+}
+
 }
