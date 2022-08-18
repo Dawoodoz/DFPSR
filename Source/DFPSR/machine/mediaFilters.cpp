@@ -181,11 +181,12 @@ void dsr::media_filter_mul(AlignedImageU8& targetImage, AlignedImageU8 imageL, A
 
 void dsr::media_fade_region_linear(ImageU8& targetImage, const IRect& viewport, FixedPoint x1, FixedPoint y1, FixedPoint luma1, FixedPoint x2, FixedPoint y2, FixedPoint luma2) {
 	assertExisting(targetImage);
+	// Saturate luma in advance
 	if (luma1 < 0) { luma1 = FixedPoint::zero(); }
 	if (luma1 > 255) { luma1 = FixedPoint::fromWhole(255); }
 	if (luma2 < 0) { luma2 = FixedPoint::zero(); }
 	if (luma2 > 255) { luma2 = FixedPoint::fromWhole(255); }
-	// Subtracting half a pixel in the fade line is equivalent to adding half a pixel on X and Y
+	// Subtracting half a pixel in the fade line is equivalent to adding half a pixel on X and Y during sampling
 	int64_t startX = x1.getMantissa() - 32768;
 	int64_t startY = y1.getMantissa() - 32768;
 	int64_t endX = x2.getMantissa() - 32768;
@@ -196,8 +197,8 @@ void dsr::media_fade_region_linear(ImageU8& targetImage, const IRect& viewport, 
 	//   By both generating a squared length and using a dot product, no square root is required.
 	//   This is because length(v)² = dot(v, v)
 	int64_t squareLength = ((diffX * diffX) + (diffY * diffY)) / 65536; // length² * 65536
-	if (squareLength < 65536) { squareLength = 65536; } // Prevent overflow
-	int64_t reciprocalSquareLength = 4294967296ll / squareLength; // (1 / length²) * 65536
+	// Limit to at least one pixel's length, both to get anti-aliasing and prevent overflow.
+	if (squareLength < 65536) { squareLength = 65536; }
 	// Calculate ratios for 3 pixels using dot products
 	int64_t offsetX = -startX; // First pixel relative to x1
 	int64_t offsetY = -startY; // First pixel relative to y1
@@ -206,9 +207,9 @@ void dsr::media_fade_region_linear(ImageU8& targetImage, const IRect& viewport, 
 	int64_t dotProduct = ((offsetX * diffX) + (offsetY * diffY)) / 65536; // dot(offset, diff) * 65536
 	int64_t dotProduct_right = ((offsetX_right * diffX) + (offsetY * diffY)) / 65536; // dot(offsetRight, diff) * 65536
 	int64_t dotProduct_down = ((offsetX * diffX) + (offsetY_down * diffY)) / 65536; // dot(offsetDown, diff) * 65536
-	int64_t startRatio = (dotProduct * reciprocalSquareLength) / 65536; // The color mix ratio at the first pixel in a scale from 0 to 65536
-	int64_t ratioDx = (dotProduct_right * reciprocalSquareLength) / 65536 - startRatio; // The color mix difference when going right
-	int64_t ratioDy = (dotProduct_down * reciprocalSquareLength) / 65536 - startRatio; // The color mix difference when going down
+	int64_t startRatio = (dotProduct * 65536 / squareLength); // The color mix ratio at the first pixel in a scale from 0 to 65536
+	int64_t ratioDx = (dotProduct_right * 65536 / squareLength) - startRatio; // The color mix difference when going right
+	int64_t ratioDy = (dotProduct_down * 65536 / squareLength) - startRatio; // The color mix difference when going down
 	// TODO: Optimize the cases where ratioDx == 0 (memset per line) or ratioDy == 0 (memcpy from first line)
 	for (int32_t y = viewport.top(); y < viewport.bottom(); y++) {
 		int64_t ratio = startRatio;
