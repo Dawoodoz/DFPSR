@@ -85,6 +85,9 @@ inline FixedPoint operator-(const FixedPoint &left, int32_t right) {
 inline FixedPoint operator-(int32_t left, const FixedPoint &right) {
 	return FixedPoint((left * 65536) - right.getMantissa());
 }
+inline FixedPoint operator-(const FixedPoint& value) {
+	return FixedPoint(0 - value.getMantissa());
+}
 
 // Multiplication is faster against whole integers, by not having to reduce the result
 inline FixedPoint operator*(const FixedPoint &left, const FixedPoint &right) {

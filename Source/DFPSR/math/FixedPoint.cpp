@@ -316,7 +316,7 @@ double dsr::fixedPoint_approximate(const FixedPoint& value) {
 }
 
 String& dsr::string_toStreamIndented(String& target, const FixedPoint& value, const ReadableString& indentation) {
-	// TODO: Make own fixed-point serialization which cannot resort to scientific notation
+	// TODO: Make a deterministic fixed-point serialization
 	string_append(target, indentation, fixedPoint_approximate(value));
 	return target;
 }
