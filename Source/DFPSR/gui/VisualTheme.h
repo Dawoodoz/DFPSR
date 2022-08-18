@@ -1,6 +1,6 @@
 ﻿// zlib open source license
 //
-// Copyright (c) 2018 to 2019 David Forsgren Piuva
+// Copyright (c) 2018 to 2022 David Forsgren Piuva
 // 
 // This software is provided 'as-is', without any express or implied
 // warranty. In no event will the authors be held liable for any damages
@@ -28,12 +28,17 @@
 
 namespace dsr {
 
-// TODO: Move to the API folder
+// TODO: Move to the API folder once themes are easy to create.
 
-// Theme API
-VisualTheme theme_create(const ReadableString& mediaCode);
+// Construction
+VisualTheme theme_create(const ReadableString& mediaCode, const ReadableString& themeCode);
 VisualTheme theme_getDefault();
+
+// Get a scalable image by name from the theme.
 MediaMethod theme_getScalableImage(const VisualTheme& theme, const ReadableString &name);
+
+// Post-condition: Returns true if argumentName was identified and assigned as input to inputIndex of methodIndex in machine.
+bool theme_assignMediaMachineArguments(const VisualTheme& theme, MediaMachine &machine, int methodIndex, int inputIndex, const ReadableString &argumentName);
 
 }
 

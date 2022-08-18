@@ -92,7 +92,7 @@ protected:
 	IRect location;
 	void setLocation(const IRect &newLocation);
 	// Applied reqursively while selecting the correct theme
-	VisualTheme theme;
+	VisualTheme theme = theme_getDefault();
 public:
 	void applyTheme(VisualTheme theme);
 	VisualTheme getTheme() const;
