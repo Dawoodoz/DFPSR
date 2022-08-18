@@ -1,6 +1,6 @@
 ﻿// zlib open source license
 //
-// Copyright (c) 2018 to 2019 David Forsgren Piuva
+// Copyright (c) 2018 to 2022 David Forsgren Piuva
 // 
 // This software is provided 'as-is', without any express or implied
 // warranty. In no event will the authors be held liable for any damages
@@ -25,12 +25,14 @@
 #include "VisualTheme.h"
 #include "../api/imageAPI.h"
 #include "../api/drawAPI.h"
+#include "../api/mediaMachineAPI.h"
+#include "../api/configAPI.h"
 
 namespace dsr {
 
 // The default theme
 //   Copy and modify and compile with theme_create to get a custom theme
-static const ReadableString defaultThemeCode =
+static const ReadableString defaultMediaMachineCode =
 UR"QUOTE(
 # Helper methods
 BEGIN: generate_rounded_rectangle
@@ -108,8 +110,25 @@ BEGIN: Button
 	INPUT: FixedPoint, green
 	INPUT: FixedPoint, blue
 	INPUT: FixedPoint, pressed
+	INPUT: FixedPoint, Button_borderThickness
+	INPUT: FixedPoint, Button_rounding
 	OUTPUT: ImageRgbaU8, colorImage
-	CALL: generate_rounded_button, colorImage, width, height, red, green, blue, pressed, 12, 2
+	CALL: generate_rounded_button, colorImage, width, height, red, green, blue, pressed, Button_rounding, Button_borderThickness
+END:
+
+BEGIN: ListBox
+	INPUT: FixedPoint, width
+	INPUT: FixedPoint, height
+	INPUT: FixedPoint, red
+	INPUT: FixedPoint, green
+	INPUT: FixedPoint, blue
+	INPUT: FixedPoint, ListBox_borderThickness
+	OUTPUT: ImageRgbaU8, colorImage
+	CREATE: colorImage, width, height
+	ADD: b2<FixedPoint>, ListBox_borderThickness, ListBox_borderThickness
+	SUB: w2<FixedPoint>, width, b2
+	SUB: h2<FixedPoint>, height, b2
+	RECTANGLE: colorImage, ListBox_borderThickness, ListBox_borderThickness, w2, h2, red, green, blue, 255
 END:
 
 BEGIN: ScrollTop
@@ -119,8 +138,10 @@ BEGIN: ScrollTop
 	INPUT: FixedPoint, green
 	INPUT: FixedPoint, blue
 	INPUT: FixedPoint, pressed
+	INPUT: FixedPoint, Scroll_borderThickness
+	INPUT: FixedPoint, Scroll_button_rounding
 	OUTPUT: ImageRgbaU8, colorImage
-	CALL: generate_rounded_button, colorImage, width, height, red, green, blue, pressed, 5, 2
+	CALL: generate_rounded_button, colorImage, width, height, red, green, blue, pressed, Scroll_button_rounding, Scroll_borderThickness
 END:
 
 BEGIN: ScrollBottom
@@ -130,8 +151,10 @@ BEGIN: ScrollBottom
 	INPUT: FixedPoint, green
 	INPUT: FixedPoint, blue
 	INPUT: FixedPoint, pressed
+	INPUT: FixedPoint, Scroll_borderThickness
+	INPUT: FixedPoint, Scroll_button_rounding
 	OUTPUT: ImageRgbaU8, colorImage
-	CALL: generate_rounded_button, colorImage, width, height, red, green, blue, pressed, 5, 2
+	CALL: generate_rounded_button, colorImage, width, height, red, green, blue, pressed, Scroll_button_rounding, Scroll_borderThickness
 END:
 
 BEGIN: VerticalScrollKnob
@@ -141,8 +164,10 @@ BEGIN: VerticalScrollKnob
 	INPUT: FixedPoint, green
 	INPUT: FixedPoint, blue
 	INPUT: FixedPoint, pressed
+	INPUT: FixedPoint, Scroll_borderThickness
+	INPUT: FixedPoint, Scroll_knob_rounding
 	OUTPUT: ImageRgbaU8, colorImage
-	CALL: generate_rounded_button, colorImage, width, height, red, green, blue, pressed, 8, 2
+	CALL: generate_rounded_button, colorImage, width, height, red, green, blue, pressed, Scroll_knob_rounding, Scroll_borderThickness
 END:
 
 BEGIN: VerticalScrollBackground
@@ -164,32 +189,59 @@ BEGIN: Panel
 	INPUT: FixedPoint, red
 	INPUT: FixedPoint, green
 	INPUT: FixedPoint, blue
+	INPUT: FixedPoint, Panel_borderThickness
 	OUTPUT: ImageRgbaU8, colorImage
 	CREATE: colorImage, width, height
-	SUB: w2<FixedPoint>, width, 2
-	SUB: h2<FixedPoint>, height, 2
-	RECTANGLE: colorImage, 1, 1, w2, h2, red, green, blue, 255
-END:
-
-BEGIN: ListBox
-	INPUT: FixedPoint, width
-	INPUT: FixedPoint, height
-	INPUT: FixedPoint, red
-	INPUT: FixedPoint, green
-	INPUT: FixedPoint, blue
-	OUTPUT: ImageRgbaU8, colorImage
-	CREATE: colorImage, width, height
-	SUB: w2<FixedPoint>, width, 4
-	SUB: h2<FixedPoint>, height, 4
-	RECTANGLE: colorImage, 2, 2, w2, h2, red, green, blue, 255
+	ADD: b2<FixedPoint>, Panel_borderThickness, Panel_borderThickness
+	SUB: w2<FixedPoint>, width, b2
+	SUB: h2<FixedPoint>, height, b2
+	RECTANGLE: colorImage, Panel_borderThickness, Panel_borderThickness, w2, h2, red, green, blue, 255
 END:
 )QUOTE";
+
+// Using *.ini files for storing style settings as a simple start.
+//   A more advanced system will be used later.
+static const ReadableString defaultStyleSettings =
+UR"QUOTE(
+	Button_borderThickness = 2
+	Button_rounding = 12
+	ListBox_borderThickness = 2
+	Scroll_borderThickness = 2
+	Scroll_button_rounding = 5
+	Scroll_knob_rounding = 8
+	Panel_borderThickness = 1
+)QUOTE";
+
+template <typename V>
+struct KeywordEntry {
+	String key;
+	V value;
+	KeywordEntry(const ReadableString &key, const V &value)
+	: key(key), value(value) {}
+};
+
+struct StyleSettings {
+	List<KeywordEntry<AlignedImageU8>> monochromeImages;
+	List<KeywordEntry<OrderedImageRgbaU8>> colorImages;
+	List<KeywordEntry<FixedPoint>> scalars;
+	StyleSettings(const ReadableString &styleSettings) {
+		config_parse_ini(styleSettings, [this](const ReadableString& block, const ReadableString& key, const ReadableString& value) {
+			// Assuming that everything is a scalar in the global context until a more advanced parser has been implemented.
+			// TODO: Should blocks be used for internal style variations with multiple ini files per theme?
+			//       Or can blocks be used for both internal style and user selected styles?
+			//       Maybe selecting color presets separatelly is enough for user preferences.
+			if (string_length(block) == 0) {
+				this->scalars.pushConstruct(key, FixedPoint::fromText(value));
+			}
+		});
+	}
+};
 
 class VisualThemeImpl {
 public:
 	MediaMachine machine;
-	// Constructor
-	explicit VisualThemeImpl(const ReadableString& mediaCode) : machine(machine_create(mediaCode)) {}
+	StyleSettings settings;
+	explicit VisualThemeImpl(const ReadableString& mediaCode, const ReadableString &styleCode) : machine(machine_create(mediaCode)), settings(styleCode) {}
 	// Destructor
 	virtual ~VisualThemeImpl() {}
 };
@@ -197,17 +249,44 @@ public:
 static VisualTheme defaultTheme;
 VisualTheme theme_getDefault() {
 	if (!(defaultTheme.get())) {
-		defaultTheme = theme_create(defaultThemeCode);
+		defaultTheme = theme_create(defaultMediaMachineCode, defaultStyleSettings);
 	}
 	return defaultTheme;
 }
 
-VisualTheme theme_create(const ReadableString& mediaCode) {
-	return std::make_shared<VisualThemeImpl>(mediaCode);
+VisualTheme theme_create(const ReadableString& mediaCode, const ReadableString& styleSettings) {
+	return std::make_shared<VisualThemeImpl>(mediaCode, styleSettings);
 }
 
 MediaMethod theme_getScalableImage(const VisualTheme& theme, const ReadableString &name) {
 	return machine_getMethod(theme->machine, name);
+}
+
+bool theme_assignMediaMachineArguments(const VisualTheme& theme, MediaMachine &machine, int methodIndex, int inputIndex, const ReadableString &argumentName) {
+	if (theme.get()) {
+		// Search for argumentName in monochromeImages.
+		for (int64_t i = 0; i < theme->settings.monochromeImages.length(); i++) {
+			if (string_caseInsensitiveMatch(theme->settings.monochromeImages[i].key, argumentName)) {
+				machine_setInputByIndex(machine, methodIndex, inputIndex, theme->settings.monochromeImages[i].value);
+				return true;
+			}
+		}
+		// Search for argumentName in colorImages.
+		for (int64_t i = 0; i < theme->settings.colorImages.length(); i++) {
+			if (string_caseInsensitiveMatch(theme->settings.colorImages[i].key, argumentName)) {
+				machine_setInputByIndex(machine, methodIndex, inputIndex, theme->settings.colorImages[i].value);
+				return true;
+			}
+		}
+		// Search for argumentName in scalars.
+		for (int64_t i = 0; i < theme->settings.scalars.length(); i++) {
+			if (string_caseInsensitiveMatch(theme->settings.scalars[i].key, argumentName)) {
+				machine_setInputByIndex(machine, methodIndex, inputIndex, theme->settings.scalars[i].value);
+				return true;
+			}
+		}
+	}
+	return false;
 }
 
 }

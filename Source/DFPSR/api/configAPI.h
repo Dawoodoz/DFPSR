@@ -1,6 +1,6 @@
 ﻿// zlib open source license
 //
-// Copyright (c) 2018 to 2019 David Forsgren Piuva
+// Copyright (c) 2018 to 2022 David Forsgren Piuva
 // 
 // This software is provided 'as-is', without any express or implied
 // warranty. In no event will the authors be held liable for any damages
@@ -28,9 +28,9 @@
 #include <functional>
 
 namespace dsr {
-	// A type of function sending (Block, Key, Value) to the caller.
+	// A type of function sending (block, key, value) to the caller.
 	//   One can have hard-coded options, lookup-tables, dictionaries, et cetera for looking up the given key names.
-	using ConfigIniCallback = std::function<void(const ReadableString&, const ReadableString&, const ReadableString&)>;
+	using ConfigIniCallback = std::function<void(const ReadableString& block, const ReadableString& key, const ReadableString& value)>;
 	/*
 		Parsing the given content of a *.ini configuration file.
 		Sending callbacks to receiverLambda for each key being assigned a value.
@@ -39,7 +39,7 @@ namespace dsr {
 		  * The value will be sent as the third argument.
 		Example:
 			config_parse_ini(content, [this](const ReadableString& block, const ReadableString& key, const ReadableString& value) {
-				if (block.length() == 0) {
+				if (string_length(block) == 0) {
 					if (string_caseInsensitiveMatch(key, U"A")) {
 						this->valueA = string_parseInteger(value);
 					} else if (string_caseInsensitiveMatch(key, U"B")) {

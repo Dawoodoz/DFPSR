@@ -1,6 +1,6 @@
 ﻿// zlib open source license
 //
-// Copyright (c) 2020 David Forsgren Piuva
+// Copyright (c) 2020 to 2022 David Forsgren Piuva
 //
 // This software is provided 'as-is', without any express or implied
 // warranty. In no event will the authors be held liable for any damages
@@ -69,7 +69,7 @@ void ListBox::generateGraphics() {
 	if (!this->hasImages) {
 		this->completeAssets();
 		ColorRgbI32 color = this->color.value;
-	 	this->scalableImage_listBox(width, height, color.red, color.green, color.blue)(this->image);
+	 	this->generateImage(this->scalableImage_listBox, width, height, color.red, color.green, color.blue)(this->image);
 		int verticalStep = font_getSize(this->font);
 		int left = textBorderLeft;
 		int top = textBorderTop;
