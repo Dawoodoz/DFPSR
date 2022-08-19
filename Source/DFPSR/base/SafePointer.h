@@ -223,7 +223,7 @@ public:
 };
 
 template <typename T, typename S>
-inline void safeMemoryCopy(SafePointer<T> target, const SafePointer<S>& source, int byteSize) {
+inline void safeMemoryCopy(SafePointer<T> target, const SafePointer<S>& source, int64_t byteSize) {
 	#ifdef SAFE_POINTER_CHECKS
 		// Both target and source must be in valid memory
 		target.assertInside("memoryCopy (target)", target.getUnchecked(), (size_t)byteSize);
@@ -236,7 +236,7 @@ inline void safeMemoryCopy(SafePointer<T> target, const SafePointer<S>& source, 
 }
 
 template <typename T>
-inline void safeMemorySet(SafePointer<T>& target, uint8_t value, int byteSize) {
+inline void safeMemorySet(SafePointer<T>& target, uint8_t value, int64_t byteSize) {
 	#ifdef SAFE_POINTER_CHECKS
 		// Target must be in valid memory
 		target.assertInside("memoryCopy (target)", target.getUnchecked(), byteSize);
