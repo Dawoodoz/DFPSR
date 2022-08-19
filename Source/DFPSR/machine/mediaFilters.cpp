@@ -23,6 +23,8 @@
 
 #include "mediaFilters.h"
 #include "../base/simd.h"
+#include "../api/imageAPI.h"
+#include "../api/drawAPI.h"
 
 using namespace dsr;
 
@@ -181,6 +183,7 @@ void dsr::media_filter_mul(AlignedImageU8& targetImage, AlignedImageU8 imageL, A
 
 void dsr::media_fade_region_linear(ImageU8& targetImage, const IRect& viewport, FixedPoint x1, FixedPoint y1, FixedPoint luma1, FixedPoint x2, FixedPoint y2, FixedPoint luma2) {
 	assertExisting(targetImage);
+	IRect safeBound = IRect::cut(viewport, image_getBound(targetImage));
 	// Saturate luma in advance
 	if (luma1 < 0) { luma1 = FixedPoint::zero(); }
 	if (luma1 > 255) { luma1 = FixedPoint::fromWhole(255); }
@@ -210,22 +213,71 @@ void dsr::media_fade_region_linear(ImageU8& targetImage, const IRect& viewport, 
 	int64_t startRatio = (dotProduct * 65536 / squareLength); // The color mix ratio at the first pixel in a scale from 0 to 65536
 	int64_t ratioDx = (dotProduct_right * 65536 / squareLength) - startRatio; // The color mix difference when going right
 	int64_t ratioDy = (dotProduct_down * 65536 / squareLength) - startRatio; // The color mix difference when going down
-	// TODO: Optimize the cases where ratioDx == 0 (memset per line) or ratioDy == 0 (memcpy from first line)
-	for (int32_t y = viewport.top(); y < viewport.bottom(); y++) {
-		int64_t ratio = startRatio;
-		for (int32_t x = viewport.left(); x < viewport.right(); x++) {
-			int64_t saturatedRatio = ratio;
-			// TODO: Reuse this code section
-			if (saturatedRatio < 0) { saturatedRatio = 0; }
-			if (saturatedRatio > 65536) { saturatedRatio = 65536; }
-			int64_t mixedColor = ((luma1.getMantissa() * (65536 - ratio)) + (luma2.getMantissa() * ratio) + 2147483648ll) / 4294967296ll;
-			if (mixedColor < 0) { mixedColor = 0; }
-			if (mixedColor > 255) { mixedColor = 255; }
-			// TODO: Write the already saturated result using safe pointers to the target image
-			image_writePixel(targetImage, x, y, mixedColor);
-			ratio += ratioDx;
+	SafePointer<uint8_t> targetRow = image_getSafePointer(targetImage, safeBound.top()) + safeBound.left();
+	int32_t targetStride = image_getStride(targetImage);
+	if (ratioDx == 0) {
+		if (ratioDy == 0) {
+			// No direction at all. Fill the whole rectangle with luma1.
+			draw_rectangle(targetImage, safeBound, fixedPoint_round(luma1));
+		} else {
+			// Up or down using memset per row.
+			int32_t widthInBytes = safeBound.width();
+			for (int32_t y = safeBound.top(); y < safeBound.bottom(); y++) {
+				int64_t saturatedRatio = startRatio;
+				if (saturatedRatio < 0) { saturatedRatio = 0; }
+				if (saturatedRatio > 65536) { saturatedRatio = 65536; }
+				int64_t mixedColor = ((luma1.getMantissa() * (65536 - saturatedRatio)) + (luma2.getMantissa() * saturatedRatio) + 2147483648ll) / 4294967296ll;
+				if (mixedColor < 0) { mixedColor = 0; }
+				if (mixedColor > 255) { mixedColor = 255; }
+				safeMemorySet<uint8_t>(targetRow, mixedColor, widthInBytes);
+				targetRow.increaseBytes(targetStride);
+				startRatio += ratioDy;
+			}
 		}
-		startRatio += ratioDy;
+	} else {
+		if (ratioDy == 0) {
+			// Left or right using memcpy per row.
+			SafePointer<uint8_t> sourceRow = targetRow;
+			SafePointer<uint8_t> targetPixel = targetRow;
+			int64_t ratio = startRatio;
+			int32_t widthInBytes = safeBound.width();
+			// Evaluate the first line.
+			for (int32_t x = viewport.left(); x < viewport.right(); x++) {
+				int64_t saturatedRatio = ratio;
+				if (saturatedRatio < 0) { saturatedRatio = 0; }
+				if (saturatedRatio > 65536) { saturatedRatio = 65536; }
+				int64_t mixedColor = ((luma1.getMantissa() * (65536 - saturatedRatio)) + (luma2.getMantissa() * saturatedRatio) + 2147483648ll) / 4294967296ll;
+				if (mixedColor < 0) { mixedColor = 0; }
+				if (mixedColor > 255) { mixedColor = 255; }
+				*targetPixel = mixedColor;
+				targetPixel += 1;
+				ratio += ratioDx;
+			}
+			// Copy the rest from the first line.
+			for (int32_t y = viewport.top() + 1; y < viewport.bottom(); y++) {
+				safeMemoryCopy<uint8_t>(targetRow, sourceRow, widthInBytes);
+				targetRow.increaseBytes(targetStride);
+			}
+		} else {
+			// Each pixel needs to be evaluated in this fade.
+			for (int32_t y = viewport.top(); y < viewport.bottom(); y++) {
+				SafePointer<uint8_t> targetPixel = targetRow;
+				int64_t ratio = startRatio;
+				for (int32_t x = viewport.left(); x < viewport.right(); x++) {
+				int64_t saturatedRatio = startRatio;
+				if (saturatedRatio < 0) { saturatedRatio = 0; }
+				if (saturatedRatio > 65536) { saturatedRatio = 65536; }
+				int64_t mixedColor = ((luma1.getMantissa() * (65536 - saturatedRatio)) + (luma2.getMantissa() * saturatedRatio) + 2147483648ll) / 4294967296ll;
+					if (mixedColor < 0) { mixedColor = 0; }
+					if (mixedColor > 255) { mixedColor = 255; }
+					*targetPixel = mixedColor;
+					targetPixel += 1;
+					ratio += ratioDx;
+				}
+				targetRow.increaseBytes(targetStride);
+				startRatio += ratioDy;
+			}
+		}
 	}
 }
 
@@ -233,22 +285,27 @@ void dsr::media_fade_linear(ImageU8& targetImage, FixedPoint x1, FixedPoint y1, 
 	media_fade_region_linear(targetImage, image_getBound(targetImage), x1, y1, luma1, x2, y2, luma2);
 }
 
+// TODO: Does the radial fade allow a large enough viewport?
 void dsr::media_fade_region_radial(ImageU8& targetImage, const IRect& viewport, FixedPoint centerX, FixedPoint centerY, FixedPoint innerRadius, FixedPoint innerLuma, FixedPoint outerRadius, FixedPoint outerLuma) {
 	assertExisting(targetImage);
+	IRect safeBound = IRect::cut(viewport, image_getBound(targetImage));
 	if (innerLuma < 0) { innerLuma = FixedPoint::zero(); }
 	if (innerLuma > 255) { innerLuma = FixedPoint::fromWhole(255); }
 	if (outerLuma < 0) { outerLuma = FixedPoint::zero(); }
 	if (outerLuma > 255) { outerLuma = FixedPoint::fromWhole(255); }
 	// Subtracting half a pixel in the fade line is equivalent to adding half a pixel on X and Y
-	FixedPoint originX = centerX + viewport.left() - FixedPoint::half();
-	FixedPoint originY = centerY + viewport.top() - FixedPoint::half();
+	FixedPoint originX = centerX + safeBound.left() - FixedPoint::half();
+	FixedPoint originY = centerY + safeBound.top() - FixedPoint::half();
 	// Let outerRadius be slightly outside of innerRadius to prevent division by zero
 	if (outerRadius <= innerRadius) {
 		outerRadius = innerRadius + FixedPoint::epsilon();
 	}
 	FixedPoint reciprocalFadeLength = FixedPoint::one() / (outerRadius - innerRadius);
-	for (int32_t y = viewport.top(); y < viewport.bottom(); y++) {
-		for (int32_t x = viewport.left(); x < viewport.right(); x++) {
+	SafePointer<uint8_t> targetRow = image_getSafePointer(targetImage, safeBound.top()) + safeBound.left();
+	int32_t targetStride = image_getStride(targetImage);
+	for (int32_t y = safeBound.top(); y < safeBound.bottom(); y++) {
+		SafePointer<uint8_t> targetPixel = targetRow;
+		for (int32_t x = safeBound.left(); x < safeBound.right(); x++) {
 			FixedPoint diffX = x - originX;
 			FixedPoint diffY = y - originY;
 			FixedPoint length = fixedPoint_squareRoot((diffX * diffX) + (diffY * diffY));
@@ -260,9 +317,10 @@ void dsr::media_fade_region_radial(ImageU8& targetImage, const IRect& viewport, 
 			int64_t mixedColor = ((innerLuma.getMantissa() * (65536 - ratio.getMantissa())) + (outerLuma.getMantissa() * ratio.getMantissa()) + 2147483648ll) / 4294967296ll;
 			if (mixedColor < 0) { mixedColor = 0; }
 			if (mixedColor > 255) { mixedColor = 255; }
-			// TODO: Write the already saturated result using safe pointers to the target image
-			image_writePixel(targetImage, x, y, mixedColor);
+			*targetPixel = mixedColor;
+			targetPixel += 1;
 		}
+		targetRow.increaseBytes(targetStride);
 	}
 }
 
