@@ -137,6 +137,7 @@
 		#define ADD_U8_SIMD(A, B) _mm_add_epi8(A, B)
 		#define ADD_SAT_U8_SIMD(A, B) _mm_adds_epu8(A, B) // Saturated addition
 		#define SUB_U8_SIMD(A, B) _mm_sub_epi8(A, B)
+		#define SUB_SAT_U8_SIMD(A, B) _mm_subs_epu8(A, B) // Saturated subtraction
 		// No 8-bit multiplications
 
 		// Statistics
@@ -247,6 +248,7 @@
 		#define ADD_U8_SIMD(A, B) vaddq_u8(A, B)
 		#define ADD_SAT_U8_SIMD(A, B) vqaddq_u8(A, B) // Saturated addition
 		#define SUB_U8_SIMD(A, B) vsubq_u8(A, B)
+		#define SUB_SAT_U8_SIMD(A, B) vqaddq_u8(A, B) // Saturated subtraction
 		// No 8-bit multiplications
 
 		// Statistics
@@ -1482,31 +1484,53 @@
 			);
 		#endif
 	}
-	inline uint8_t saturateToU8(uint32_t x) {
-		// No need to check lower bound for unsigned input
-		return x > 255 ? 255 : x;
-	}
+	inline uint8_t impl_limit0(int32_t x) { return x < 0 ? 0 : x; }
+	inline uint8_t impl_limit255(uint32_t x) { return x > 255 ? 255 : x; }
 	inline U8x16 saturatedAddition(const U8x16& left, const U8x16& right) {
 		#ifdef USE_BASIC_SIMD
 			return U8x16(ADD_SAT_U8_SIMD(left.v, right.v));
 		#else
 			return U8x16(
-			  saturateToU8((uint32_t)left.emulated[0] + (uint32_t)right.emulated[0]),
-			  saturateToU8((uint32_t)left.emulated[1] + (uint32_t)right.emulated[1]),
-			  saturateToU8((uint32_t)left.emulated[2] + (uint32_t)right.emulated[2]),
-			  saturateToU8((uint32_t)left.emulated[3] + (uint32_t)right.emulated[3]),
-			  saturateToU8((uint32_t)left.emulated[4] + (uint32_t)right.emulated[4]),
-			  saturateToU8((uint32_t)left.emulated[5] + (uint32_t)right.emulated[5]),
-			  saturateToU8((uint32_t)left.emulated[6] + (uint32_t)right.emulated[6]),
-			  saturateToU8((uint32_t)left.emulated[7] + (uint32_t)right.emulated[7]),
-			  saturateToU8((uint32_t)left.emulated[8] + (uint32_t)right.emulated[8]),
-			  saturateToU8((uint32_t)left.emulated[9] + (uint32_t)right.emulated[9]),
-			  saturateToU8((uint32_t)left.emulated[10] + (uint32_t)right.emulated[10]),
-			  saturateToU8((uint32_t)left.emulated[11] + (uint32_t)right.emulated[11]),
-			  saturateToU8((uint32_t)left.emulated[12] + (uint32_t)right.emulated[12]),
-			  saturateToU8((uint32_t)left.emulated[13] + (uint32_t)right.emulated[13]),
-			  saturateToU8((uint32_t)left.emulated[14] + (uint32_t)right.emulated[14]),
-			  saturateToU8((uint32_t)left.emulated[15] + (uint32_t)right.emulated[15])
+			  impl_limit255((uint32_t)left.emulated[0] + (uint32_t)right.emulated[0]),
+			  impl_limit255((uint32_t)left.emulated[1] + (uint32_t)right.emulated[1]),
+			  impl_limit255((uint32_t)left.emulated[2] + (uint32_t)right.emulated[2]),
+			  impl_limit255((uint32_t)left.emulated[3] + (uint32_t)right.emulated[3]),
+			  impl_limit255((uint32_t)left.emulated[4] + (uint32_t)right.emulated[4]),
+			  impl_limit255((uint32_t)left.emulated[5] + (uint32_t)right.emulated[5]),
+			  impl_limit255((uint32_t)left.emulated[6] + (uint32_t)right.emulated[6]),
+			  impl_limit255((uint32_t)left.emulated[7] + (uint32_t)right.emulated[7]),
+			  impl_limit255((uint32_t)left.emulated[8] + (uint32_t)right.emulated[8]),
+			  impl_limit255((uint32_t)left.emulated[9] + (uint32_t)right.emulated[9]),
+			  impl_limit255((uint32_t)left.emulated[10] + (uint32_t)right.emulated[10]),
+			  impl_limit255((uint32_t)left.emulated[11] + (uint32_t)right.emulated[11]),
+			  impl_limit255((uint32_t)left.emulated[12] + (uint32_t)right.emulated[12]),
+			  impl_limit255((uint32_t)left.emulated[13] + (uint32_t)right.emulated[13]),
+			  impl_limit255((uint32_t)left.emulated[14] + (uint32_t)right.emulated[14]),
+			  impl_limit255((uint32_t)left.emulated[15] + (uint32_t)right.emulated[15])
+			);
+		#endif
+	}
+	inline U8x16 saturatedSubtraction(const U8x16& left, const U8x16& right) {
+		#ifdef USE_BASIC_SIMD
+			return U8x16(SUB_SAT_U8_SIMD(left.v, right.v));
+		#else
+			return U8x16(
+			  impl_limit0((int32_t)left.emulated[0] - (int32_t)right.emulated[0]),
+			  impl_limit0((int32_t)left.emulated[1] - (int32_t)right.emulated[1]),
+			  impl_limit0((int32_t)left.emulated[2] - (int32_t)right.emulated[2]),
+			  impl_limit0((int32_t)left.emulated[3] - (int32_t)right.emulated[3]),
+			  impl_limit0((int32_t)left.emulated[4] - (int32_t)right.emulated[4]),
+			  impl_limit0((int32_t)left.emulated[5] - (int32_t)right.emulated[5]),
+			  impl_limit0((int32_t)left.emulated[6] - (int32_t)right.emulated[6]),
+			  impl_limit0((int32_t)left.emulated[7] - (int32_t)right.emulated[7]),
+			  impl_limit0((int32_t)left.emulated[8] - (int32_t)right.emulated[8]),
+			  impl_limit0((int32_t)left.emulated[9] - (int32_t)right.emulated[9]),
+			  impl_limit0((int32_t)left.emulated[10] - (int32_t)right.emulated[10]),
+			  impl_limit0((int32_t)left.emulated[11] - (int32_t)right.emulated[11]),
+			  impl_limit0((int32_t)left.emulated[12] - (int32_t)right.emulated[12]),
+			  impl_limit0((int32_t)left.emulated[13] - (int32_t)right.emulated[13]),
+			  impl_limit0((int32_t)left.emulated[14] - (int32_t)right.emulated[14]),
+			  impl_limit0((int32_t)left.emulated[15] - (int32_t)right.emulated[15])
 			);
 		#endif
 	}
@@ -1617,22 +1641,22 @@
 			return U8x16(PACK_SAT_U16_TO_U8(lower.v, upper.v));
 		#else
 			return U8x16(
-			  saturateToU8(lower.emulated[0]),
-			  saturateToU8(lower.emulated[1]),
-			  saturateToU8(lower.emulated[2]),
-			  saturateToU8(lower.emulated[3]),
-			  saturateToU8(lower.emulated[4]),
-			  saturateToU8(lower.emulated[5]),
-			  saturateToU8(lower.emulated[6]),
-			  saturateToU8(lower.emulated[7]),
-			  saturateToU8(upper.emulated[0]),
-			  saturateToU8(upper.emulated[1]),
-			  saturateToU8(upper.emulated[2]),
-			  saturateToU8(upper.emulated[3]),
-			  saturateToU8(upper.emulated[4]),
-			  saturateToU8(upper.emulated[5]),
-			  saturateToU8(upper.emulated[6]),
-			  saturateToU8(upper.emulated[7])
+			  impl_limit255(lower.emulated[0]),
+			  impl_limit255(lower.emulated[1]),
+			  impl_limit255(lower.emulated[2]),
+			  impl_limit255(lower.emulated[3]),
+			  impl_limit255(lower.emulated[4]),
+			  impl_limit255(lower.emulated[5]),
+			  impl_limit255(lower.emulated[6]),
+			  impl_limit255(lower.emulated[7]),
+			  impl_limit255(upper.emulated[0]),
+			  impl_limit255(upper.emulated[1]),
+			  impl_limit255(upper.emulated[2]),
+			  impl_limit255(upper.emulated[3]),
+			  impl_limit255(upper.emulated[4]),
+			  impl_limit255(upper.emulated[5]),
+			  impl_limit255(upper.emulated[6]),
+			  impl_limit255(upper.emulated[7])
 			);
 		#endif
 	}
