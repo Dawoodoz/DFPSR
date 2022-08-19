@@ -29,21 +29,21 @@
 using namespace dsr;
 
 template <typename T, typename U>
-static void assertSameSize(const T& imageL, const U& imageR) {
-	if (!image_exists(imageL) || !image_exists(imageR)) {
-		if (image_exists(imageL)) {
+static void assertSameSize(const T& imageA, const U& imageB) {
+	if (!image_exists(imageA) || !image_exists(imageB)) {
+		if (image_exists(imageA)) {
 			// Left side exists, so there's no right side
 			throwError("Media filter: Non-existing right side input image.\n");
-		} else if (image_exists(imageR)) {
+		} else if (image_exists(imageB)) {
 			// Right side exists, so there's no left side
 			throwError("Media filter: Non-existing left side input image.\n");
 		} else {
 			// Neither input exists
 			throwError("Media filter: Non-existing input images.\n");
 		}
-	} else if (image_getWidth(imageL) != image_getWidth(imageR)
-	       || image_getHeight(imageL) != image_getHeight(imageR)) {
-		throwError("Media filter: Taking input images of different dimensions, ", image_getWidth(imageL), "x", image_getHeight(imageL), " and ", image_getWidth(imageR), "x", image_getHeight(imageR), ".\n");
+	} else if (image_getWidth(imageA) != image_getWidth(imageB)
+	       || image_getHeight(imageA) != image_getHeight(imageB)) {
+		throwError("Media filter: Taking input images of different dimensions, ", image_getWidth(imageA), "x", image_getHeight(imageA), " and ", image_getWidth(imageB), "x", image_getHeight(imageB), ".\n");
 	}
 }
 
@@ -71,113 +71,212 @@ static void allocateToSameSize(T& targetImage, const U& inputImage) {
 	}
 }
 
-void dsr::media_filter_add(AlignedImageU8& targetImage, AlignedImageU8 imageL, AlignedImageU8 imageR) {
-	assertSameSize(imageL, imageR);
+void dsr::media_filter_add(AlignedImageU8& targetImage, AlignedImageU8 imageA, AlignedImageU8 imageB) {
+	assertSameSize(imageA, imageB);
 	removeIfShared(targetImage);
-	allocateToSameSize(targetImage, imageL);
-	// TODO: Implement U8x16 in simd.h
-	//       readAligned, writeAligned, addSaturated, subtractSaturated...
-	/*for (int32_t y = 0; y < image_getHeight(targetImage); y++) {
-		const SafePointer<uint8_t> targetRow = imageInternal::getSafeData<uint8_t>(targetImage, y);
-		const SafePointer<uint8_t> sourceRowL = imageInternal::getSafeData<uint8_t>(imageL, y);
-		const SafePointer<uint8_t> sourceRowR = imageInternal::getSafeData<uint8_t>(imageR, y);
-		for (int32_t x = 0; x < image_getWidth(targetImage); x += 4) {
-			ALIGN16 U8x16 colorL = U8x16::readAligned(sourceRowL, "media_filter_add (sourceRowL)");
-			ALIGN16 U8x16 colorR = U8x16::readAligned(sourceRowR, "media_filter_add (sourceRowR)");
-			ALIGN16 U8x16 result = U8x16::addSaturated(colorL, colorR);
-			result.writeAligned(targetRow, "media_filter_add (targetRow)");
-			targetRow += 16;
-			sourceRowL += 16;
-			sourceRowR += 16;
-		}
-	}*/
-	// Reference implementation
+	allocateToSameSize(targetImage, imageA);
+	SafePointer<uint8_t> targetRow = image_getSafePointer(targetImage);
+	SafePointer<uint8_t> sourceRowA = image_getSafePointer(imageA);
+	SafePointer<uint8_t> sourceRowB = image_getSafePointer(imageB);
+	int32_t targetStride = image_getStride(targetImage);
+	int32_t sourceStrideA = image_getStride(imageA);
+	int32_t sourceStrideB = image_getStride(imageB);
 	for (int32_t y = 0; y < image_getHeight(targetImage); y++) {
-		for (int32_t x = 0; x < image_getWidth(targetImage); x++) {
-			image_writePixel(targetImage, x, y, image_readPixel_clamp(imageL, x, y) + image_readPixel_clamp(imageR, x, y));
+		SafePointer<uint8_t> targetPixel = targetRow;
+		SafePointer<uint8_t> sourcePixelA = sourceRowA;
+		SafePointer<uint8_t> sourcePixelB = sourceRowB;
+		for (int32_t x = 0; x < image_getWidth(targetImage); x += 16) {
+			U8x16 colorA = U8x16::readAligned(sourcePixelA, "media_filter_add (sourcePixelA)");
+			U8x16 colorB = U8x16::readAligned(sourcePixelB, "media_filter_add (sourcePixelB)");
+			U8x16 result = saturatedAddition(colorA, colorB);
+			result.writeAligned(targetPixel, "media_filter_add (targetPixel)");
+			targetPixel += 16;
+			sourcePixelA += 16;
+			sourcePixelB += 16;
 		}
+		targetRow.increaseBytes(targetStride);
+		sourceRowA.increaseBytes(sourceStrideA);
+		sourceRowB.increaseBytes(sourceStrideB);
 	}
 }
 
-void dsr::media_filter_add(AlignedImageU8& targetImage, AlignedImageU8 image, FixedPoint scalar) {
+void dsr::media_filter_add(AlignedImageU8& targetImage, AlignedImageU8 image, int32_t luma) {
+	assertExisting(image);
+	removeIfShared(targetImage);
+	allocateToSameSize(targetImage, image);
+	if (luma < 0) luma = 0;
+	if (luma > 255) luma = 255;
+	SafePointer<uint8_t> targetRow = image_getSafePointer(targetImage);
+	SafePointer<uint8_t> sourceRowA = image_getSafePointer(image);
+	int32_t targetStride = image_getStride(targetImage);
+	int32_t sourceStride = image_getStride(image);
+	U8x16 repeatedLuma = U8x16(luma);
+	for (int32_t y = 0; y < image_getHeight(targetImage); y++) {
+		SafePointer<uint8_t> targetPixel = targetRow;
+		SafePointer<uint8_t> sourcePixel = sourceRowA;
+		for (int32_t x = 0; x < image_getWidth(targetImage); x += 16) {
+			U8x16 colorA = U8x16::readAligned(sourcePixel, "media_filter_add (sourcePixel)");
+			U8x16 result = saturatedAddition(colorA, repeatedLuma);
+			result.writeAligned(targetPixel, "media_filter_add (targetPixel)");
+			targetPixel += 16;
+			sourcePixel += 16;
+		}
+		targetRow.increaseBytes(targetStride);
+		sourceRowA.increaseBytes(sourceStride);
+	}
+}
+
+void dsr::media_filter_add(AlignedImageU8& targetImage, AlignedImageU8 image, FixedPoint luma) {
+	media_filter_add(targetImage, image, fixedPoint_round(luma));
+}
+
+void dsr::media_filter_sub(AlignedImageU8& targetImage, AlignedImageU8 imageA, AlignedImageU8 imageB) {
+	assertSameSize(imageA, imageB);
+	removeIfShared(targetImage);
+	allocateToSameSize(targetImage, imageA);
+	SafePointer<uint8_t> targetRow = image_getSafePointer(targetImage);
+	SafePointer<uint8_t> sourceRowA = image_getSafePointer(imageA);
+	SafePointer<uint8_t> sourceRowB = image_getSafePointer(imageB);
+	int32_t targetStride = image_getStride(targetImage);
+	int32_t sourceStrideA = image_getStride(imageA);
+	int32_t sourceStrideB = image_getStride(imageB);
+	for (int32_t y = 0; y < image_getHeight(targetImage); y++) {
+		SafePointer<uint8_t> targetPixel = targetRow;
+		SafePointer<uint8_t> sourcePixelA = sourceRowA;
+		SafePointer<uint8_t> sourcePixelB = sourceRowB;
+		for (int32_t x = 0; x < image_getWidth(targetImage); x += 16) {
+			U8x16 colorA = U8x16::readAligned(sourcePixelA, "media_filter_add (sourcePixelA)");
+			U8x16 colorB = U8x16::readAligned(sourcePixelB, "media_filter_add (sourcePixelB)");
+			U8x16 result = saturatedSubtraction(colorA, colorB);
+			result.writeAligned(targetPixel, "media_filter_add (targetPixel)");
+			targetPixel += 16;
+			sourcePixelA += 16;
+			sourcePixelB += 16;
+		}
+		targetRow.increaseBytes(targetStride);
+		sourceRowA.increaseBytes(sourceStrideA);
+		sourceRowB.increaseBytes(sourceStrideB);
+	}
+}
+
+void dsr::media_filter_sub(AlignedImageU8& targetImage, AlignedImageU8 image, int32_t luma) {
+	assertExisting(image);
+	removeIfShared(targetImage);
+	allocateToSameSize(targetImage, image);
+	if (luma < 0) luma = 0;
+	if (luma > 255) luma = 255;
+	SafePointer<uint8_t> targetRow = image_getSafePointer(targetImage);
+	SafePointer<uint8_t> sourceRowA = image_getSafePointer(image);
+	int32_t targetStride = image_getStride(targetImage);
+	int32_t sourceStride = image_getStride(image);
+	U8x16 repeatedLuma = U8x16(luma);
+	for (int32_t y = 0; y < image_getHeight(targetImage); y++) {
+		SafePointer<uint8_t> targetPixel = targetRow;
+		SafePointer<uint8_t> sourcePixel = sourceRowA;
+		for (int32_t x = 0; x < image_getWidth(targetImage); x += 16) {
+			U8x16 colorA = U8x16::readAligned(sourcePixel, "media_filter_add (sourcePixel)");
+			U8x16 result = saturatedSubtraction(colorA, repeatedLuma);
+			result.writeAligned(targetPixel, "media_filter_add (targetPixel)");
+			targetPixel += 16;
+			sourcePixel += 16;
+		}
+		targetRow.increaseBytes(targetStride);
+		sourceRowA.increaseBytes(sourceStride);
+	}
+}
+
+void dsr::media_filter_sub(AlignedImageU8& targetImage, int32_t luma, AlignedImageU8 image) {
+	assertExisting(image);
+	removeIfShared(targetImage);
+	allocateToSameSize(targetImage, image);
+	if (luma < 0) luma = 0;
+	if (luma > 255) luma = 255;
+	SafePointer<uint8_t> targetRow = image_getSafePointer(targetImage);
+	SafePointer<uint8_t> sourceRowA = image_getSafePointer(image);
+	int32_t targetStride = image_getStride(targetImage);
+	int32_t sourceStride = image_getStride(image);
+	U8x16 repeatedLuma = U8x16(luma);
+	for (int32_t y = 0; y < image_getHeight(targetImage); y++) {
+		SafePointer<uint8_t> targetPixel = targetRow;
+		SafePointer<uint8_t> sourcePixel = sourceRowA;
+		for (int32_t x = 0; x < image_getWidth(targetImage); x += 16) {
+			U8x16 colorA = U8x16::readAligned(sourcePixel, "media_filter_add (sourcePixel)");
+			U8x16 result = saturatedSubtraction(repeatedLuma, colorA);
+			result.writeAligned(targetPixel, "media_filter_add (targetPixel)");
+			targetPixel += 16;
+			sourcePixel += 16;
+		}
+		targetRow.increaseBytes(targetStride);
+		sourceRowA.increaseBytes(sourceStride);
+	}
+}
+
+void dsr::media_filter_sub(AlignedImageU8& targetImage, AlignedImageU8 image, FixedPoint luma) {
+	media_filter_sub(targetImage, image, fixedPoint_round(luma));
+}
+
+void dsr::media_filter_sub(AlignedImageU8& targetImage, FixedPoint luma, AlignedImageU8 image) {
+	media_filter_sub(targetImage, fixedPoint_round(luma), image);
+}
+
+void dsr::media_filter_mul(AlignedImageU8& targetImage, AlignedImageU8 image, FixedPoint luma) {
 	assertExisting(image);
 	removeIfShared(targetImage);
 	allocateToSameSize(targetImage, image);
 	// Reference implementation
-	int whole = fixedPoint_round(scalar);
-	for (int32_t y = 0; y < image_getHeight(targetImage); y++) {
-		for (int32_t x = 0; x < image_getWidth(targetImage); x++) {
-			image_writePixel(targetImage, x, y, image_readPixel_clamp(image, x, y) + whole);
-		}
-	}
-}
-
-void dsr::media_filter_sub(AlignedImageU8& targetImage, AlignedImageU8 imageL, AlignedImageU8 imageR) {
-	assertSameSize(imageL, imageR);
-	removeIfShared(targetImage);
-	allocateToSameSize(targetImage, imageL);
-	// Reference implementation
-	for (int32_t y = 0; y < image_getHeight(targetImage); y++) {
-		for (int32_t x = 0; x < image_getWidth(targetImage); x++) {
-			image_writePixel(targetImage, x, y, image_readPixel_clamp(imageL, x, y) - image_readPixel_clamp(imageR, x, y));
-		}
-	}
-}
-
-void dsr::media_filter_sub(AlignedImageU8& targetImage, AlignedImageU8 image, FixedPoint scalar) {
-	assertExisting(image);
-	removeIfShared(targetImage);
-	allocateToSameSize(targetImage, image);
-	// Reference implementation
-	int whole = fixedPoint_round(scalar);
-	for (int32_t y = 0; y < image_getHeight(targetImage); y++) {
-		for (int32_t x = 0; x < image_getWidth(targetImage); x++) {
-			image_writePixel(targetImage, x, y, image_readPixel_clamp(image, x, y) - whole);
-		}
-	}
-}
-
-void dsr::media_filter_sub(AlignedImageU8& targetImage, FixedPoint scalar, AlignedImageU8 image) {
-	assertExisting(image);
-	removeIfShared(targetImage);
-	allocateToSameSize(targetImage, image);
-	// Reference implementation
-	int whole = fixedPoint_round(scalar);
-	for (int32_t y = 0; y < image_getHeight(targetImage); y++) {
-		for (int32_t x = 0; x < image_getWidth(targetImage); x++) {
-			image_writePixel(targetImage, x, y, whole - image_readPixel_clamp(image, x, y));
-		}
-	}
-}
-
-void dsr::media_filter_mul(AlignedImageU8& targetImage, AlignedImageU8 image, FixedPoint scalar) {
-	assertExisting(image);
-	removeIfShared(targetImage);
-	allocateToSameSize(targetImage, image);
-	// Reference implementation
-	int64_t mantissa = scalar.getMantissa();
+	int64_t mantissa = luma.getMantissa();
 	if (mantissa < 0) { mantissa = 0; } // At least zero, because negative clamps to zero
 	if (mantissa > 16711680) { mantissa = 16711680; } // At most 255 whole integers, became more makes no difference
+	SafePointer<uint8_t> targetRow = image_getSafePointer(targetImage);
+	SafePointer<uint8_t> sourceRow = image_getSafePointer(image);
+	int32_t targetStride = image_getStride(targetImage);
+	int32_t sourceStride = image_getStride(image);
 	for (int32_t y = 0; y < image_getHeight(targetImage); y++) {
+		SafePointer<uint8_t> targetPixel = targetRow;
+		SafePointer<uint8_t> sourcePixel = sourceRow;
 		for (int32_t x = 0; x < image_getWidth(targetImage); x++) {
-			image_writePixel(targetImage, x, y, ((int64_t)image_readPixel_clamp(image, x, y) * mantissa) / 65536);
+			int64_t result = ((int64_t)(*sourcePixel) * mantissa) / 65536;
+			if (result < 0) { result = 0; }
+			if (result > 255) { result = 255; }
+			*targetPixel = result;
+			targetPixel += 1;
+			sourcePixel += 1;
 		}
+		targetRow.increaseBytes(targetStride);
+		sourceRow.increaseBytes(sourceStride);
 	}
 }
 
-void dsr::media_filter_mul(AlignedImageU8& targetImage, AlignedImageU8 imageL, AlignedImageU8 imageR, FixedPoint scalar) {
-	assertSameSize(imageL, imageR);
+void dsr::media_filter_mul(AlignedImageU8& targetImage, AlignedImageU8 imageA, AlignedImageU8 imageB, FixedPoint luma) {
+	assertSameSize(imageA, imageB);
 	removeIfShared(targetImage);
-	allocateToSameSize(targetImage, imageL);
+	allocateToSameSize(targetImage, imageA);
 	// Reference implementation
-	int64_t mantissa = scalar.getMantissa();
+	int64_t mantissa = luma.getMantissa();
 	if (mantissa < 0) { mantissa = 0; } // At least zero, because negative clamps to zero
 	if (mantissa > 16711680) { mantissa = 16711680; } // At most 255 whole integers, became more makes no difference
+	SafePointer<uint8_t> targetRow = image_getSafePointer(targetImage);
+	SafePointer<uint8_t> sourceRowA = image_getSafePointer(imageA);
+	SafePointer<uint8_t> sourceRowB = image_getSafePointer(imageB);
+	int32_t targetStride = image_getStride(targetImage);
+	int32_t sourceStrideA = image_getStride(imageA);
+	int32_t sourceStrideB = image_getStride(imageB);
 	for (int32_t y = 0; y < image_getHeight(targetImage); y++) {
+		SafePointer<uint8_t> targetPixel = targetRow;
+		SafePointer<uint8_t> sourcePixelA = sourceRowA;
+		SafePointer<uint8_t> sourcePixelB = sourceRowB;
 		for (int32_t x = 0; x < image_getWidth(targetImage); x++) {
-			int32_t result = ((uint64_t)image_readPixel_clamp(imageL, x, y) * (uint64_t)image_readPixel_clamp(imageR, x, y) * mantissa) / 65536;
-			image_writePixel(targetImage, x, y, result);
+			int64_t result = (((uint64_t)*sourcePixelA) * ((uint64_t)*sourcePixelB) * mantissa) / 65536;
+			if (result < 0) { result = 0; }
+			if (result > 255) { result = 255; }
+			*targetPixel = result;
+			targetPixel += 1;
+			sourcePixelA += 1;
+			sourcePixelB += 1;
 		}
+		targetRow.increaseBytes(targetStride);
+		sourceRowA.increaseBytes(sourceStrideA);
+		sourceRowB.increaseBytes(sourceStrideB);
 	}
 }
 

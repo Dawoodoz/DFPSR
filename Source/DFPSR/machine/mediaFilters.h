@@ -28,19 +28,22 @@
 
 namespace dsr {
 
-// Aliasing between a target and input image will increase reference count when input is given,
-// detect target as shared and make a new allocation for the target.
-// In other words, aliasing between input and output cannot be used to reduce the number of allocations.
+// No float nor double allowed in Media Filters.
+//   Every bit has to be 100% deterministic across different computers if they use the same version of the library.
+//   How a specific version works may however change how rounding is done in order to improve speed and precision.
 
-void media_filter_add(AlignedImageU8& targetImage, AlignedImageU8 imageL, AlignedImageU8 imageR);
-void media_filter_add(AlignedImageU8& targetImage, AlignedImageU8 image, FixedPoint scalar);
+void media_filter_add(AlignedImageU8& targetImage, AlignedImageU8 imageA, AlignedImageU8 imageB);
+void media_filter_add(AlignedImageU8& targetImage, AlignedImageU8 image, FixedPoint luma);
+void media_filter_add(AlignedImageU8& targetImage, AlignedImageU8 image, int32_t luma);
 
-void media_filter_sub(AlignedImageU8& targetImage, AlignedImageU8 imageL, AlignedImageU8 imageR);
-void media_filter_sub(AlignedImageU8& targetImage, AlignedImageU8 image, FixedPoint scalar);
-void media_filter_sub(AlignedImageU8& targetImage, FixedPoint scalar, AlignedImageU8 image);
+void media_filter_sub(AlignedImageU8& targetImage, AlignedImageU8 imageA, AlignedImageU8 imageB);
+void media_filter_sub(AlignedImageU8& targetImage, AlignedImageU8 image, FixedPoint luma);
+void media_filter_sub(AlignedImageU8& targetImage, FixedPoint luma, AlignedImageU8 image);
+void media_filter_sub(AlignedImageU8& targetImage, AlignedImageU8 image, int32_t luma);
+void media_filter_sub(AlignedImageU8& targetImage, int32_t luma, AlignedImageU8 image);
 
 void media_filter_mul(AlignedImageU8& targetImage, AlignedImageU8 image, FixedPoint scalar);
-void media_filter_mul(AlignedImageU8& targetImage, AlignedImageU8 imageL, AlignedImageU8 imageR, FixedPoint scalar);
+void media_filter_mul(AlignedImageU8& targetImage, AlignedImageU8 imageA, AlignedImageU8 imageB, FixedPoint scalar);
 
 // Fill a region of the image with a linear fade, so that the pixel at (x1, y1) becomes roughly luma1, and the pixel at (x2, y2) becomes roughly luma2.
 // Fills entirely with luma1 if x1 == x2 and y1 == y2 (the line has no direction).
