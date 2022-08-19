@@ -1,6 +1,6 @@
 ﻿// zlib open source license
 //
-// Copyright (c) 2019 David Forsgren Piuva
+// Copyright (c) 2019 to 2022 David Forsgren Piuva
 // 
 // This software is provided 'as-is', without any express or implied
 // warranty. In no event will the authors be held liable for any damages
@@ -42,16 +42,19 @@ void media_filter_sub(AlignedImageU8& targetImage, FixedPoint scalar, AlignedIma
 void media_filter_mul(AlignedImageU8& targetImage, AlignedImageU8 image, FixedPoint scalar);
 void media_filter_mul(AlignedImageU8& targetImage, AlignedImageU8 imageL, AlignedImageU8 imageR, FixedPoint scalar);
 
-// Fill a region of the image with a linear fade
+// Fill a region of the image with a linear fade, so that the pixel at (x1, y1) becomes roughly luma1, and the pixel at (x2, y2) becomes roughly luma2.
+// Fills entirely with luma1 if x1 == x2 and y1 == y2 (the line has no direction).
+// Safely crops the viewport to targetImage if too big.
 void media_fade_region_linear(ImageU8& targetImage, const IRect& viewport, FixedPoint x1, FixedPoint y1, FixedPoint luma1, FixedPoint x2, FixedPoint y2, FixedPoint luma2);
-// Fill the whole image with a linear fade
+// Fill the whole image with a linear fade.
 void media_fade_linear(ImageU8& targetImage, FixedPoint x1, FixedPoint y1, FixedPoint luma1, FixedPoint x2, FixedPoint y2, FixedPoint luma2);
 
-// Fill a region of the image with a radial fade
-// Pre-condition: innerRadius < outerRadius
-//   outerRadius will silently be reassigned to innerRadius + epsilon if the criteria isn't met
+// Fill a region of the image with a radial fade.
+// Safely crops the viewport to targetImage if too big.
+// Pre-condition: innerRadius < outerRadius.
+//   outerRadius will silently be reassigned to innerRadius + epsilon if the criteria isn't met.
 void media_fade_region_radial(ImageU8& targetImage, const IRect& viewport, FixedPoint centerX, FixedPoint centerY, FixedPoint innerRadius, FixedPoint innerLuma, FixedPoint outerRadius, FixedPoint outerLuma);
-// Fill the whole image with a radial fade
+// Fill the whole image with a radial fade.
 void media_fade_radial(ImageU8& targetImage, FixedPoint centerX, FixedPoint centerY, FixedPoint innerRadius, FixedPoint innerLuma, FixedPoint outerRadius, FixedPoint outerLuma);
 
 }
