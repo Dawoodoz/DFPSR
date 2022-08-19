@@ -49,7 +49,6 @@ private:
 		assert(this->height > 0);
 		assert(this->stride >= this->width * this->pixelSize);
 		assert(this->pixelSize > 0);
-		// TODO: Assert that the buffer is large enough to fit padding after each row
 	}
 public:
 	// Sub-images
