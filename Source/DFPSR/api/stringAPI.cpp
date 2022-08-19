@@ -459,7 +459,6 @@ static void feedStringFromFileBuffer_UTF8(const UTF32WriterFunction &reciever, c
 				character = (character << 6) | (nextByte & 0b00111111);
 				extraBytes--;
 			}
-			if (nullTerminated && character == 0) { return; }
 			feedCharacter(reciever, (DsrChar)character);
 		}
 	}
@@ -497,7 +496,6 @@ static void feedStringFromFileBuffer_UTF16(const UTF32WriterFunction &reciever, 
 			uint32_t higher10Bits = wordA & (uint32_t)0b1111111111;
 			uint32_t lower10Bits  = wordB & (uint32_t)0b1111111111;
 			DsrChar finalChar = (DsrChar)(((higher10Bits << 10) | lower10Bits) + (uint32_t)0x10000);
-			if (nullTerminated && finalChar == 0) { return; }
 			feedCharacter(reciever, finalChar);
 		}
 	}
