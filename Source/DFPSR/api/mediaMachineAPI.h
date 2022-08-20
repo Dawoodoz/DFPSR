@@ -104,7 +104,8 @@ public:
 class MediaMethod {
 public:
 	MediaMachine machine;
-	int methodIndex;
+	int methodIndex; // Index of the method being called.
+	int contextIndex; // Index used to know from which context implicit variables are being fetched.
 private:
 	inline void setInputs(int firstInputIndex) {}
 	template<typename HEAD, typename... TAIL>
@@ -114,9 +115,9 @@ private:
 	}
 public:
 	MediaMethod()
- 	: methodIndex(-1) {}
-	MediaMethod(const MediaMachine& machine, int methodIndex)
- 	: machine(machine), methodIndex(methodIndex) {}
+ 	: methodIndex(-1), contextIndex(0) {}
+	MediaMethod(const MediaMachine& machine, int methodIndex, int contextIndex)
+ 	: machine(machine), methodIndex(methodIndex), contextIndex(contextIndex) {}
 	// MediaMethod can be called like a function using arguments, returning MediaResult for assigning outputs by reference. 
 	// Useful when you know the arguments in advance.
 	template <typename... ARGS>
@@ -137,7 +138,7 @@ public:
 	MediaResult callUsingKeywords(std::function<void(MediaMachine &machine, int methodIndex, int inputIndex, const ReadableString &argumentName)> setInputAction);
 };
 
-MediaMethod machine_getMethod(MediaMachine& machine, const ReadableString& methodName);
+MediaMethod machine_getMethod(MediaMachine& machine, const ReadableString& methodName, int contextIndex, bool mustExist = true);
 
 }
 

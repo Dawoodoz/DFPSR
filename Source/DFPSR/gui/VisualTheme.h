@@ -31,14 +31,15 @@ namespace dsr {
 // TODO: Move to the API folder once themes are easy to create.
 
 // Construction
-VisualTheme theme_create(const ReadableString& mediaCode, const ReadableString& themeCode);
+VisualTheme theme_create(const ReadableString &mediaCode, const ReadableString &themeCode);
 VisualTheme theme_getDefault();
 
 // Get a scalable image by name from the theme.
-MediaMethod theme_getScalableImage(const VisualTheme& theme, const ReadableString &name);
+MediaMethod theme_getScalableImage(const VisualTheme &theme, const ReadableString &className);
 
+// Called by VisualComponent to assign input arguments to functions in the media machine that were not given by the component itself.
 // Post-condition: Returns true if argumentName was identified and assigned as input to inputIndex of methodIndex in machine.
-bool theme_assignMediaMachineArguments(const VisualTheme& theme, MediaMachine &machine, int methodIndex, int inputIndex, const ReadableString &argumentName);
+bool theme_assignMediaMachineArguments(const VisualTheme &theme, int contextIndex, MediaMachine &machine, int methodIndex, int inputIndex, const ReadableString &argumentName);
 
 }
 

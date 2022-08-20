@@ -1019,8 +1019,12 @@ int machine_findMethod(MediaMachine& machine, const ReadableString& methodName) 
 	return machine->findMethod(methodName);
 }
 
-MediaMethod machine_getMethod(MediaMachine& machine, const ReadableString& methodName) {
-	return MediaMethod(machine, machine_findMethod(machine, methodName));
+MediaMethod machine_getMethod(MediaMachine& machine, const ReadableString& methodName, int contextIndex, bool mustExist) {
+	int methodIndex = machine_findMethod(machine, methodName);
+	if (mustExist && methodIndex == -1) {
+		throwError(U"The method name ", methodName, U" could not be found in the media machine!\n");
+	}
+	return MediaMethod(machine, methodIndex, contextIndex);
 }
 
 String machine_getMethodName(MediaMachine& machine, int methodIndex) {
@@ -1057,6 +1061,9 @@ String machine_getOutputName(MediaMachine& machine, int methodIndex, int outputI
 }
 
 MediaResult MediaMethod::callUsingKeywords(std::function<void(MediaMachine &machine, int methodIndex, int inputIndex, const ReadableString &argumentName)> setInputAction) {
+	if (methodIndex < 0 || methodIndex >= this->machine->methods.length()) {
+		throwError(U"Method index ", methodIndex, U" is out of bound 0..", this->machine->methods.length() - 1, U"\n");
+	}
 	Method *method = &(this->machine->methods[methodIndex]);
 	int inputCount = method->inputCount;
 	// TODO: Make sure that input arguments are assigned default arguments before assigning inputs as keywords.
