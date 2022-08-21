@@ -76,7 +76,7 @@ public:
 		// Get the root component that contains all other components in the window
 		std::shared_ptr<VisualComponent> getRootComponent() const;
 		void resetInterface();
-		void loadInterfaceFromString(String layout);
+		void loadInterfaceFromString(String layout, const ReadableString &fromPath);
 		String saveInterfaceToString();
 
 public:

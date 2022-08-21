@@ -25,6 +25,7 @@
 #define DFPSR_PERSISTENT_CLASSFACTORY
 
 #include "../api/stringAPI.h"
+#include "../api/fileAPI.h"
 #include "../collection/List.h"
 #include <memory>
 
@@ -41,7 +42,7 @@ inline std::shared_ptr<Persistent> classConstructor() {
 #define PERSISTENT_DECLARATION(CLASS) \
 	std::shared_ptr<StructureDefinition> getStructure() const override; \
 	decltype(&classConstructor) getConstructor() const override; \
-	explicit CLASS(const ReadableString &content);
+	explicit CLASS(const ReadableString &content, const ReadableString &fromPath);
 
 // Must be used in the implementation of each class inheriting from Persistent
 #define PERSISTENT_DEFINITION(CLASS) \
@@ -53,8 +54,8 @@ inline std::shared_ptr<Persistent> classConstructor() {
 		} \
 		return CLASS##Type; \
 	} \
-	CLASS::CLASS(const ReadableString &content) { \
-		this->assignValue(content); \
+	CLASS::CLASS(const ReadableString &content, const ReadableString &fromPath) { \
+		this->assignValue(content, fromPath); \
 	} \
 	std::shared_ptr<Persistent> CLASS##Constructor() { \
 		return std::dynamic_pointer_cast<Persistent>(std::make_shared<CLASS>()); \
@@ -97,7 +98,7 @@ public:
 	virtual decltype(&classConstructor) getConstructor() const = 0;
 	// Call from the start of main, to allow constructing the class by name
 	void registerPersistentClass();
-	void setProperty(const ReadableString &key, const ReadableString &value);
+	void setProperty(const ReadableString &key, const ReadableString &value, const ReadableString &fromPath);
 	String getClassName() const;
 public:
 	// Override for non-atomic collection types
@@ -122,7 +123,8 @@ public:
 
 	// Assign content from a string
 	//   Returns true on success and false if no assigment was made
-	virtual bool assignValue(const ReadableString &content);
+	virtual bool assignValue(const ReadableString &content, const ReadableString &fromPath);
+	
 	// Save to a stream using any indentation
 	virtual String& toStreamIndented(String& out, const ReadableString& indentation) const override;
 };
@@ -140,7 +142,7 @@ inline std::ostream& operator<< (std::ostream& out, const Persistent& p) {
 std::shared_ptr<Persistent> createPersistentClass(const String &type, bool mustExist = true);
 
 // Create a class instance from text
-std::shared_ptr<Persistent> createPersistentClassFromText(const ReadableString &text);
+std::shared_ptr<Persistent> createPersistentClassFromText(const ReadableString &text, const ReadableString &fromPath);
 
 }
 

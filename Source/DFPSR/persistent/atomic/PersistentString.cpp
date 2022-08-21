@@ -33,7 +33,7 @@ PersistentString PersistentString::unmangled(const ReadableString &text) {
 	return result;
 }
 
-bool PersistentString::assignValue(const ReadableString &text) {
+bool PersistentString::assignValue(const ReadableString &text, const ReadableString &fromPath) {
 	this->value = string_unmangleQuote(text);
 	return true;
 }

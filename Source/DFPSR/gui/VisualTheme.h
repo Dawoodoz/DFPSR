@@ -33,7 +33,7 @@ namespace dsr {
 // Create a theme using a virtual machine with functions to call, style settings telling which functions to call with what arguments, and a path to load any non-embedded images from.
 VisualTheme theme_createFromText(const MediaMachine &machine, const ReadableString &styleSettings, const ReadableString &fromPath);
 // Create a theme using a virtual machine with functions to call, and a path to the style settings to load.
-//   Any non-embedded images will be loaded using paths relative to the parent folder of styleFilename;
+//   Any non-embedded images will be loaded relative to styleFilename's folder;
 VisualTheme theme_createFromFile(const MediaMachine &machine, const ReadableString &styleFilename);
 // Get a handle to the default theme.
 VisualTheme theme_getDefault();

@@ -27,7 +27,7 @@ using namespace dsr;
 
 PERSISTENT_DEFINITION(PersistentColor)
 
-bool PersistentColor::assignValue(const ReadableString &text) {
+bool PersistentColor::assignValue(const ReadableString &text, const ReadableString &fromPath) {
 	this->value = ColorRgbI32(text);
 	return true; // TODO: Discriminate bad input
 }

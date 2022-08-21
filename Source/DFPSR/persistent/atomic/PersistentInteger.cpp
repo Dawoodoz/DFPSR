@@ -27,7 +27,7 @@ using namespace dsr;
 
 PERSISTENT_DEFINITION(PersistentInteger)
 
-bool PersistentInteger::assignValue(const ReadableString &text) {
+bool PersistentInteger::assignValue(const ReadableString &text, const ReadableString &fromPath) {
 	if (string_isInteger(text)) {
 		this->value = string_toInteger(text);
 		return true;

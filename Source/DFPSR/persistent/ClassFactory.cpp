@@ -73,12 +73,12 @@ std::shared_ptr<Persistent> Persistent::getChild(int index) const {
 	return std::shared_ptr<Persistent>();
 }
 
-void Persistent::setProperty(const ReadableString &key, const ReadableString &value) {
+void Persistent::setProperty(const ReadableString &key, const ReadableString &value, const ReadableString &fromPath) {
 	Persistent* target = this->findAttribute(key);
 	if (target == nullptr) {
 		printText("setProperty: ", key, " in ", this->getClassName(), " could not be found.\n");
 	} else {
-		if (!target->assignValue(value)) {
+		if (!target->assignValue(value, fromPath)) {
 			printText("setProperty: The input ", value, " could not be assigned to property ", key, " because of incorrect format.\n");
 		}
 	}
@@ -90,7 +90,7 @@ Persistent* Persistent::findAttribute(const ReadableString &name) {
 
 void Persistent::declareAttributes(StructureDefinition &target) const {}
 
-bool Persistent::assignValue(const ReadableString &content) {
+bool Persistent::assignValue(const ReadableString &content, const ReadableString &fromPath) {
 	printText("Warning! assignValue is not implemented for ", this->getClassName(), ".\n");
 	return false;
 }
@@ -135,16 +135,16 @@ std::shared_ptr<Persistent> dsr::createPersistentClass(const String &type, bool 
 	return std::shared_ptr<Persistent>(); // Null
 }
 
-std::shared_ptr<Persistent> dsr::createPersistentClassFromText(const ReadableString &text) {
+std::shared_ptr<Persistent> dsr::createPersistentClassFromText(const ReadableString &text, const ReadableString &fromPath) {
 	std::shared_ptr<Persistent> rootObject, newObject;
 	List<std::shared_ptr<Persistent>> stack;
-	string_split_callback([&rootObject, &newObject, &stack](ReadableString line) {
+	string_split_callback([&rootObject, &newObject, &stack, &fromPath](ReadableString line) {
 		int equalityIndex = string_findFirst(line, '=');
 		if (equalityIndex > -1) {
 			// Assignment
 			String key = string_removeOuterWhiteSpace(string_before(line, equalityIndex));
 			String value = string_removeOuterWhiteSpace(string_after(line, equalityIndex));
-			stack.last()->setProperty(key, value);
+			stack.last()->setProperty(key, value, fromPath);
 		} else {
 			int colonIndex = string_findFirst(line, ':');
 			if (colonIndex > -1) {

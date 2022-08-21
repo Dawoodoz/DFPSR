@@ -36,7 +36,7 @@ public:
 	PersistentInteger() : value(0) {}
 	explicit PersistentInteger(int64_t value) : value(value) {}
 public:
-	virtual bool assignValue(const ReadableString &text) override;
+	virtual bool assignValue(const ReadableString &text, const ReadableString &fromPath) override;
 	virtual String& toStreamIndented(String& out, const ReadableString& indentation) const override;
 };
 
