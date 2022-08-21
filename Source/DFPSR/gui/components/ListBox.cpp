@@ -220,10 +220,10 @@ void ListBox::receiveKeyboardEvent(const KeyboardEvent& event) {
 
 void ListBox::loadTheme(VisualTheme theme) {
 	this->scalableImage_listBox = theme_getScalableImage(theme, U"ListBox");
-	this->scalableImage_scrollTop = theme_getScalableImage(theme, U"ScrollTop");
-	this->scalableImage_scrollBottom = theme_getScalableImage(theme, U"ScrollBottom");
+	this->scalableImage_scrollTop = theme_getScalableImage(theme, U"ScrollUp");
+	this->scalableImage_scrollBottom = theme_getScalableImage(theme, U"ScrollDown");
 	this->scalableImage_verticalScrollKnob = theme_getScalableImage(theme, U"VerticalScrollKnob");
-	this->scalableImage_verticalScrollBackground = theme_getScalableImage(theme, U"VerticalScrollBackground");
+	this->scalableImage_verticalScrollBackground = theme_getScalableImage(theme, U"VerticalScrollList");
 	// Generate fixed size buttons for the scroll buttons (because their size is currently given by constants)
 	ColorRgbI32 color = this->color.value;
 	this->generateImage(this->scalableImage_scrollTop,    scrollWidth, scrollEndHeight, color.red, color.green, color.blue, 0)(this->scrollButtonTopImage_normal);

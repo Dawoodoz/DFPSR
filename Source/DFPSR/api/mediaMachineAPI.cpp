@@ -510,7 +510,58 @@ static const InsSig mediaMachineInstructions[] = {
 		ArgSig(U"SourceWidth", true, DataType_FixedPoint),
 		ArgSig(U"SourceHeight", true, DataType_FixedPoint)
 	),
+	InsSig::create(U"RESIZE_BILINEAR", 1,
+		[](VirtualMachine& machine, PlanarMemory& memory, const List<VMA>& args) {
+			IMAGE_U8_REF(0) = filter_resize(IMAGE_U8_REF(3), Sampler::Linear, INT_VALUE(1), INT_VALUE(2));
+			NEXT_INSTRUCTION
+		},
+		ArgSig(U"Target", false, DataType_ImageU8),
+		ArgSig(U"NewWidth", true, DataType_FixedPoint),
+		ArgSig(U"NewHeight", true, DataType_FixedPoint),
+		ArgSig(U"Source", true, DataType_ImageU8)
+	),
+	InsSig::create(U"RESIZE_BILINEAR", 1,
+		[](VirtualMachine& machine, PlanarMemory& memory, const List<VMA>& args) {
+			IMAGE_RGBAU8_REF(0) = filter_resize(IMAGE_RGBAU8_REF(3), Sampler::Linear, INT_VALUE(1), INT_VALUE(2));
+			NEXT_INSTRUCTION
+		},
+		ArgSig(U"Target", false, DataType_ImageRgbaU8),
+		ArgSig(U"NewWidth", true, DataType_FixedPoint),
+		ArgSig(U"NewHeight", true, DataType_FixedPoint),
+		ArgSig(U"Source", true, DataType_ImageRgbaU8)
+	),
+	InsSig::create(U"RESIZE_BILINEAR", 1,
+		[](VirtualMachine& machine, PlanarMemory& memory, const List<VMA>& args) {
+			IMAGE_U8_REF(0) = filter_resize(image_getSubImage(IMAGE_U8_REF(3), IRect(INT_VALUE(4), INT_VALUE(5), INT_VALUE(6), INT_VALUE(7))), Sampler::Linear, INT_VALUE(1), INT_VALUE(2));
+			NEXT_INSTRUCTION
+		},
+		// TODO: Prevent aliasing
+		ArgSig(U"Target", false, DataType_ImageU8),
+		ArgSig(U"NewWidth", true, DataType_FixedPoint),
+		ArgSig(U"NewHeight", true, DataType_FixedPoint),
+		ArgSig(U"Source", true, DataType_ImageU8),
+		ArgSig(U"SourceLeft", true, DataType_FixedPoint),
+		ArgSig(U"SourceTop", true, DataType_FixedPoint),
+		ArgSig(U"SourceWidth", true, DataType_FixedPoint),
+		ArgSig(U"SourceHeight", true, DataType_FixedPoint)
+	),
+	InsSig::create(U"RESIZE_BILINEAR", 1,
+		[](VirtualMachine& machine, PlanarMemory& memory, const List<VMA>& args) {
+			IMAGE_RGBAU8_REF(0) = filter_resize(image_getSubImage(IMAGE_RGBAU8_REF(3), IRect(INT_VALUE(4), INT_VALUE(5), INT_VALUE(6), INT_VALUE(7))), Sampler::Linear, INT_VALUE(1), INT_VALUE(2));
+			NEXT_INSTRUCTION
+		},
+		// TODO: Prevent aliasing
+		ArgSig(U"Target", false, DataType_ImageRgbaU8),
+		ArgSig(U"NewWidth", true, DataType_FixedPoint),
+		ArgSig(U"NewHeight", true, DataType_FixedPoint),
+		ArgSig(U"Source", true, DataType_ImageRgbaU8),
+		ArgSig(U"SourceLeft", true, DataType_FixedPoint),
+		ArgSig(U"SourceTop", true, DataType_FixedPoint),
+		ArgSig(U"SourceWidth", true, DataType_FixedPoint),
+		ArgSig(U"SourceHeight", true, DataType_FixedPoint)
+	),
 	InsSig::create(U"GET_RED", 1,
+		// Getting red channel of an image.
 		[](VirtualMachine& machine, PlanarMemory& memory, const List<VMA>& args) {
 			IMAGE_U8_REF(0) = image_get_red(IMAGE_RGBAU8_REF(1));
 			NEXT_INSTRUCTION
@@ -518,7 +569,21 @@ static const InsSig mediaMachineInstructions[] = {
 		ArgSig(U"Target", false, DataType_ImageU8),
 		ArgSig(U"Source", true, DataType_ImageRgbaU8)
 	),
+	InsSig::create(U"GET_RED", 1,
+		// Getting red channel of a source region in the image.
+		[](VirtualMachine& machine, PlanarMemory& memory, const List<VMA>& args) {
+			IMAGE_U8_REF(0) = image_get_red(image_getSubImage(IMAGE_RGBAU8_REF(1), IRect(INT_VALUE(2), INT_VALUE(3), INT_VALUE(4), INT_VALUE(5))));
+			NEXT_INSTRUCTION
+		},
+		ArgSig(U"Target", false, DataType_ImageU8),
+		ArgSig(U"Source", true, DataType_ImageRgbaU8),
+		ArgSig(U"SourceLeft", true, DataType_FixedPoint),
+		ArgSig(U"SourceTop", true, DataType_FixedPoint),
+		ArgSig(U"SourceWidth", true, DataType_FixedPoint),
+		ArgSig(U"SourceHeight", true, DataType_FixedPoint)
+	),
 	InsSig::create(U"GET_GREEN", 1,
+		// Getting green channel of an image.
 		[](VirtualMachine& machine, PlanarMemory& memory, const List<VMA>& args) {
 			IMAGE_U8_REF(0) = image_get_green(IMAGE_RGBAU8_REF(1));
 			NEXT_INSTRUCTION
@@ -526,7 +591,21 @@ static const InsSig mediaMachineInstructions[] = {
 		ArgSig(U"Target", false, DataType_ImageU8),
 		ArgSig(U"Source", true, DataType_ImageRgbaU8)
 	),
+	InsSig::create(U"GET_GREEN", 1,
+		// Getting green channel of a source region in the image.
+		[](VirtualMachine& machine, PlanarMemory& memory, const List<VMA>& args) {
+			IMAGE_U8_REF(0) = image_get_green(image_getSubImage(IMAGE_RGBAU8_REF(1), IRect(INT_VALUE(2), INT_VALUE(3), INT_VALUE(4), INT_VALUE(5))));
+			NEXT_INSTRUCTION
+		},
+		ArgSig(U"Target", false, DataType_ImageU8),
+		ArgSig(U"Source", true, DataType_ImageRgbaU8),
+		ArgSig(U"SourceLeft", true, DataType_FixedPoint),
+		ArgSig(U"SourceTop", true, DataType_FixedPoint),
+		ArgSig(U"SourceWidth", true, DataType_FixedPoint),
+		ArgSig(U"SourceHeight", true, DataType_FixedPoint)
+	),
 	InsSig::create(U"GET_BLUE", 1,
+		// Getting blue channel of an image.
 		[](VirtualMachine& machine, PlanarMemory& memory, const List<VMA>& args) {
 			IMAGE_U8_REF(0) = image_get_blue(IMAGE_RGBAU8_REF(1));
 			NEXT_INSTRUCTION
@@ -534,13 +613,40 @@ static const InsSig mediaMachineInstructions[] = {
 		ArgSig(U"Target", false, DataType_ImageU8),
 		ArgSig(U"Source", true, DataType_ImageRgbaU8)
 	),
+	InsSig::create(U"GET_BLUE", 1,
+		// Getting blue channel of a source region in the image.
+		[](VirtualMachine& machine, PlanarMemory& memory, const List<VMA>& args) {
+			IMAGE_U8_REF(0) = image_get_blue(image_getSubImage(IMAGE_RGBAU8_REF(1), IRect(INT_VALUE(2), INT_VALUE(3), INT_VALUE(4), INT_VALUE(5))));
+			NEXT_INSTRUCTION
+		},
+		ArgSig(U"Target", false, DataType_ImageU8),
+		ArgSig(U"Source", true, DataType_ImageRgbaU8),
+		ArgSig(U"SourceLeft", true, DataType_FixedPoint),
+		ArgSig(U"SourceTop", true, DataType_FixedPoint),
+		ArgSig(U"SourceWidth", true, DataType_FixedPoint),
+		ArgSig(U"SourceHeight", true, DataType_FixedPoint)
+	),
 	InsSig::create(U"GET_ALPHA", 1,
+		// Getting alpha channel of an image.
 		[](VirtualMachine& machine, PlanarMemory& memory, const List<VMA>& args) {
 			IMAGE_U8_REF(0) = image_get_alpha(IMAGE_RGBAU8_REF(1));
 			NEXT_INSTRUCTION
 		},
 		ArgSig(U"Target", false, DataType_ImageU8),
 		ArgSig(U"Source", true, DataType_ImageRgbaU8)
+	),
+	InsSig::create(U"GET_ALPHA", 1,
+		// Getting alpha channel of a source region in the image.
+		[](VirtualMachine& machine, PlanarMemory& memory, const List<VMA>& args) {
+			IMAGE_U8_REF(0) = image_get_alpha(image_getSubImage(IMAGE_RGBAU8_REF(1), IRect(INT_VALUE(2), INT_VALUE(3), INT_VALUE(4), INT_VALUE(5))));
+			NEXT_INSTRUCTION
+		},
+		ArgSig(U"Target", false, DataType_ImageU8),
+		ArgSig(U"Source", true, DataType_ImageRgbaU8),
+		ArgSig(U"SourceLeft", true, DataType_FixedPoint),
+		ArgSig(U"SourceTop", true, DataType_FixedPoint),
+		ArgSig(U"SourceWidth", true, DataType_FixedPoint),
+		ArgSig(U"SourceHeight", true, DataType_FixedPoint)
 	),
 	InsSig::create(U"PACK_RGBA", 1,
 		[](VirtualMachine& machine, PlanarMemory& memory, const List<VMA>& args) {
