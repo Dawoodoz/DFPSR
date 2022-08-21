@@ -262,8 +262,9 @@ void ListBox::changedLocation(const IRect &oldLocation, const IRect &newLocation
 }
 
 void ListBox::changedAttribute(const ReadableString &name) {
-	// If an attribute has changed then force the image to be redrawn
-	this->hasImages = false;
+	if (!string_caseInsensitiveMatch(name, U"Visible")) {
+		this->hasImages = false;
+	}
 	if (string_caseInsensitiveMatch(name, U"List")) {
 		// Reset selection on full list updates
 		this->setSelectedIndex(0, true);

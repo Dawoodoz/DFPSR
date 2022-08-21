@@ -107,6 +107,7 @@ void Picture::changedLocation(const IRect &oldLocation, const IRect &newLocation
 }
 
 void Picture::changedAttribute(const ReadableString &name) {
-	// If an attribute has changed then force the image to be redrawn
-	this->hasImages = false;
+	if (!string_caseInsensitiveMatch(name, U"Visible")) {
+		this->hasImages = false;
+	}
 }
