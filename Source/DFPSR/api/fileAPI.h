@@ -214,7 +214,7 @@ namespace dsr {
 	// A theoretical version of file_getAbsoluteParentFolder for evaluation on a theoretical system without actually calling file_getCurrentPath or running on the given system.
 	// Path-syntax: Depends on pathSyntax argument.
 	// Post-condition: Returns the absolute parent to the given path, or U"?" if trying to leave the root or use a tilde home alias.
-	String file_getTheoreticalAbsoluteParentFolder(const ReadableString &path, const ReadableString &currentPath, PathSyntax pathSyntax);
+	String file_getTheoreticalAbsoluteParentFolder(const ReadableString &path, const ReadableString &currentPath, PathSyntax pathSyntax IMPLICIT_PATH_SYNTAX);
 
 	// Gets the canonical absolute version of the path.
 	// Current directory is expanded, but not user accounts.

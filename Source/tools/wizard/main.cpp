@@ -104,7 +104,7 @@ END:
 static const ReadableString styleSettings =
 UR"QUOTE(
 	border = 2
-	atlas = RGBA|File:media/Style.png
+	atlas = ImageRgbaU8|File:media/Style.png
 	; Image location in the atlas
 	sourceLeft = 0
 	sourceTop = 0
@@ -319,28 +319,36 @@ static void populateInterface(const ReadableString& folderPath) {
 
 DSR_MAIN_CALLER(dsrMain)
 void dsrMain(List<String> args) {
-	// Start sound
+	// Get the application folder.
+	String applicationFolder = file_getApplicationFolder();
+
+	// Start sound.
 	sound_initialize();
-	boomSound = loadSoundFromFile(file_combinePaths(file_getApplicationFolder(), U"Boom.wav"));
+	boomSound = loadSoundFromFile(file_combinePaths(applicationFolder, U"Boom.wav"));
 
-	// Create a window
+	// Create a window.
 	window = window_create(U"DFPSR wizard application", 800, 600);
-	window_loadInterfaceFromString(window, interfaceContent);
-	window_applyTheme(window, theme_create(mediaMachineCode, styleSettings));
 
-	// Find components
+	// Create components using the layout.
+	window_loadInterfaceFromString(window, interfaceContent);
+
+	// Create a virtual machine with reusable image generating functions.
+	MediaMachine machine = machine_create(mediaMachineCode);
+	// Use the virtual machine with a specific style referring to the functions in machine.
+	window_applyTheme(window, theme_createFromText(machine, styleSettings, applicationFolder));
+
+	// Find components.
 	projectList = window_findComponentByName(window, U"projectList");
 	launchButton = window_findComponentByName(window, U"launchButton");
 	descriptionLabel = window_findComponentByName(window, U"descriptionLabel");
 	previewPicture = window_findComponentByName(window, U"previewPicture");
 
-	// Find projects to showcase
+	// Find projects to showcase.
 	//   On systems that don't allow getting the application's folder, the program must be started somewhere within the Source folder.
-	String applicationFolder = file_getApplicationFolder();
 	String sourceFolder = findParent(applicationFolder, U"Source");
 	populateInterface(sourceFolder);
 
-	// Bind methods to events
+	// Bind methods to events.
 	window_setKeyboardEvent(window, [](const KeyboardEvent& event) {
 		DsrKey key = event.dsrKey;
 		if (event.keyboardEventType == KeyboardEventType::KeyDown) {
@@ -382,23 +390,23 @@ void dsrMain(List<String> args) {
 		running = false;
 	});
 
-	// Execute
+	// Execute.
 	playSound(boomSound, false, 1.0, 1.0, 0.25);
 	while(running) {
-		// Wait for actions so that we don't render until an action has been recieved
-		// This will save battery on laptops for applications that don't require animation
+		// Wait for actions so that we don't render until an action has been recieved.
+		// This will save battery on laptops for applications that don't require animation.
 		while (!(window_executeEvents(window) || updateInterface(false))) {
 			time_sleepSeconds(0.01);
 		}
-		// Fill the background
+		// Fill the background.
 		AlignedImageRgbaU8 canvas = window_getCanvas(window);
 		image_fill(canvas, ColorRgbaI32(64, 64, 64, 255));
-		// Draw interface
+		// Draw interface.
 		window_drawComponents(window);
-		// Show the final image
+		// Show the final image.
 		window_showCanvas(window);
 	}
 
-	// Close sound
+	// Close sound.
 	sound_terminate();
 }

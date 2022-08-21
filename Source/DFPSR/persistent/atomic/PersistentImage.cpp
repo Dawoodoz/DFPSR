@@ -22,6 +22,7 @@
 //    distribution.
 
 #include "PersistentImage.h"
+#include "../../api/fileAPI.h"
 
 using namespace dsr;
 
@@ -43,7 +44,8 @@ static uint8_t readHexaDecimal(const ReadableString &text, int &readFrom) {
 	}
 	return result;
 }
-bool PersistentImage::assignValue(const ReadableString &text) {
+
+bool PersistentImage::assignValue(const ReadableString &text, const ReadableString &fromPath) {
 	if (string_caseInsensitiveMatch(text, U"NONE")) {
 		// Set the handle to null
 		this->value = OrderedImageRgbaU8();
@@ -57,7 +59,8 @@ bool PersistentImage::assignValue(const ReadableString &text) {
 		ReadableString leftSide = string_before(text, colonIndex);
 		if (string_caseInsensitiveMatch(leftSide, U"FILE")) {
 			// Read image from the file path
-			this->value = image_load_RgbaU8(string_after(text, colonIndex));
+			String absolutePath = file_getTheoreticalAbsolutePath(string_after(text, colonIndex), fromPath);
+			this->value = image_load_RgbaU8(absolutePath);
 		} else {
 			// Read dimensions and a sequence of pixels as hexadecimals
 			int xIndex = string_findFirst(text, U'x');
@@ -86,6 +89,10 @@ bool PersistentImage::assignValue(const ReadableString &text) {
 		}
 	}
 	return true;
+}
+
+bool PersistentImage::assignValue(const ReadableString &text) {
+	return this->assignValue(text, file_getCurrentPath());
 }
 
 static const String hexadecimals = U"0123456789ABCDEF";

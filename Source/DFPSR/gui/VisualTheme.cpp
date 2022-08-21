@@ -23,6 +23,7 @@
 
 #include <stdint.h>
 #include "VisualTheme.h"
+#include "../api/fileAPI.h"
 #include "../api/imageAPI.h"
 #include "../api/drawAPI.h"
 #include "../api/mediaMachineAPI.h"
@@ -215,7 +216,7 @@ struct ClassSettings {
 		FOR_EACH_COLLECTION(this->, RETURN_TRUE_IF_SETTING_EXISTS)
 		return false;
 	}
-	void setVariable(const ReadableString &key, const ReadableString &value) {
+	void setVariable(const ReadableString &key, const ReadableString &value, const ReadableString &fromPath) {
 		if (this->keyExists(key)) { throwError(U"The property ", key, U" was defined multiple times in ", className, U"\n"); }
 		DsrChar firstCharacter = value[0];
 		if (firstCharacter == U'\"') {
@@ -223,11 +224,11 @@ struct ClassSettings {
 			this->strings.pushConstruct(key, string_unmangleQuote(value));
 		} else {
 			int64_t pipeIndex = string_findFirst(value, U'|');
-			if (pipeIndex > -1 && string_caseInsensitiveMatch(string_before(value, pipeIndex), U"RGBA")) {
-				// Key = RGBA|File:Path
-				// Key = RGBA|WxH:Hexadecimals
+			if (pipeIndex > -1 && string_caseInsensitiveMatch(string_before(value, pipeIndex), U"ImageRgbaU8")) {
+				// Key = ImageRgbaU8|File:Path
+				// Key = ImageRgbaU8|WxH:Hexadecimals
 				PersistentImage newImage;
-				newImage.assignValue(string_after(value, pipeIndex));
+				newImage.assignValue(string_after(value, pipeIndex), fromPath);
 				this->colorImages.pushConstruct(key, newImage);
 			} else {
 				// Key = Integer
@@ -259,11 +260,11 @@ public:
 		settings.pushConstruct(className);
 		return settings.length() - 1;
 	}
-	VisualThemeImpl(const ReadableString& mediaCode, const ReadableString &styleSettings) : machine(machine_create(mediaCode)) {
+	VisualThemeImpl(const MediaMachine &machine, const ReadableString &styleSettings, const ReadableString &fromPath) : machine(machine) {
 		this->settings.pushConstruct(U"default");
-		config_parse_ini(styleSettings, [this](const ReadableString& block, const ReadableString& key, const ReadableString& value) {
+		config_parse_ini(styleSettings, [this, fromPath](const ReadableString& block, const ReadableString& key, const ReadableString& value) {
 			int32_t classIndex = (string_length(block) == 0) ? 0 : this->getClassIndex(block);
-			this->settings[classIndex].setVariable(key, value);
+			this->settings[classIndex].setVariable(key, value, fromPath);
 		});
 	}
 	// Destructor
@@ -273,13 +274,17 @@ public:
 static VisualTheme defaultTheme;
 VisualTheme theme_getDefault() {
 	if (!(defaultTheme.get())) {
-		defaultTheme = theme_create(defaultMediaMachineCode, defaultStyleSettings);
+		defaultTheme = theme_createFromText(machine_create(defaultMediaMachineCode), defaultStyleSettings, file_getCurrentPath());
 	}
 	return defaultTheme;
 }
 
-VisualTheme theme_create(const ReadableString &mediaCode, const ReadableString &styleSettings) {
-	return std::make_shared<VisualThemeImpl>(mediaCode, styleSettings);
+VisualTheme theme_createFromText(const MediaMachine &machine, const ReadableString &styleSettings, const ReadableString &fromPath) {
+	return std::make_shared<VisualThemeImpl>(machine, styleSettings, fromPath);
+}
+
+VisualTheme theme_createFromFile(const MediaMachine &machine, const ReadableString &styleFilename) {
+	return theme_createFromText(machine, string_load(styleFilename), file_getRelativeParentFolder(styleFilename));
 }
 
 MediaMethod theme_getScalableImage(const VisualTheme &theme, const ReadableString &className) {
