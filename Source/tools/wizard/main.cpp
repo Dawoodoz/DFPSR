@@ -330,7 +330,7 @@ void dsrMain(List<String> args) {
 	window = window_create(U"DFPSR wizard application", 800, 600);
 
 	// Create components using the layout.
-	window_loadInterfaceFromString(window, interfaceContent);
+	window_loadInterfaceFromString(window, interfaceContent, applicationFolder);
 
 	// Create a virtual machine with reusable image generating functions.
 	MediaMachine machine = machine_create(mediaMachineCode);

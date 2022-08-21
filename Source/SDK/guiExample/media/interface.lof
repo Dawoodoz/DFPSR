@@ -49,7 +49,7 @@
 		End
 		Begin : Picture
 			Name = "linkedPicture"
-			Image = File:media/Alien.png
+			Image = File:Alien.png
 			Interpolation = 0
 			Left = 10%+200
 			Top = 100%-410

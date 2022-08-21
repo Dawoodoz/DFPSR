@@ -41,7 +41,7 @@ public:
 	FlexValue() {}
 	FlexValue(int ratio, int offset) : ratio(std::min(std::max(0, ratio), 100)), offset(offset) {}
 public:
-	bool assignValue(const ReadableString &text) override;
+	bool assignValue(const ReadableString &text, const ReadableString &fromPath) override;
 	String& toStreamIndented(String& out, const ReadableString& indentation) const override;
 public:
 	int32_t getRatio() const { return this->ratio; }
@@ -64,10 +64,10 @@ public:
 	void setTop(const FlexValue &top) { this->sides[1] = top; }
 	void setRight(const FlexValue &right) { this->sides[2] = right; }
 	void setBottom(const FlexValue &bottom) { this->sides[3] = bottom; }
-	void setLeft(const ReadableString &left) { this->sides[0] = FlexValue(left); }
-	void setTop(const ReadableString &top) { this->sides[1] = FlexValue(top); }
-	void setRight(const ReadableString &right) { this->sides[2] = FlexValue(right); }
-	void setBottom(const ReadableString &bottom) { this->sides[3] = FlexValue(bottom); }
+	void setLeft(const ReadableString &left) { this->sides[0] = FlexValue(left, U""); }
+	void setTop(const ReadableString &top) { this->sides[1] = FlexValue(top, U""); }
+	void setRight(const ReadableString &right) { this->sides[2] = FlexValue(right, U""); }
+	void setBottom(const ReadableString &bottom) { this->sides[3] = FlexValue(bottom, U""); }
 public:
 	// Full region
 	FlexRegion() {

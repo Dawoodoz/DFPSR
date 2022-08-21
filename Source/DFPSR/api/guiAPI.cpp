@@ -27,6 +27,7 @@
 #include "guiAPI.h"
 #include "timeAPI.h"
 #include "../gui/DsrWindow.h"
+#include "fileAPI.h"
 
 using namespace dsr;
 
@@ -58,14 +59,19 @@ bool dsr::component_exists(const Component& component) {
 	return component.get() != nullptr;
 }
 
+void dsr::window_loadInterfaceFromString(const Window& window, const String& content, const ReadableString &fromPath) {
+	MUST_EXIST(window, window_loadInterfaceFromString);
+	window->loadInterfaceFromString(content, fromPath);
+}
+
 void dsr::window_loadInterfaceFromString(const Window& window, const String& content) {
 	MUST_EXIST(window, window_loadInterfaceFromString);
-	window->loadInterfaceFromString(content);
+	window->loadInterfaceFromString(content, file_getCurrentPath());
 }
 
 void dsr::window_loadInterfaceFromFile(const Window& window, const ReadableString& filename) {
 	MUST_EXIST(window, window_loadInterfaceFromFile);
-	window->loadInterfaceFromString(string_load(filename));
+	window->loadInterfaceFromString(string_load(filename), file_getRelativeParentFolder(filename));
 }
 
 String dsr::window_saveInterfaceToString(const Window& window) {
@@ -243,7 +249,7 @@ bool dsr::component_hasProperty(const Component& component, const ReadableString
 	return target != nullptr;
 }
 
-ReturnCode dsr::component_setProperty(const Component& component, const ReadableString& propertyName, const ReadableString& value, bool mustAssign) {
+ReturnCode dsr::component_setProperty(const Component& component, const ReadableString& propertyName, const ReadableString& value, const ReadableString& fromPath, bool mustAssign) {
 	MUST_EXIST(component, component_setProperty);
 	Persistent* target = component->findAttribute(propertyName);
 	if (target == nullptr) {
@@ -252,7 +258,7 @@ ReturnCode dsr::component_setProperty(const Component& component, const Readable
 		}
 		return ReturnCode::KeyNotFound;
 	} else {
-		if (target->assignValue(value)) {
+		if (target->assignValue(value, fromPath)) {
 			component->changedAttribute(propertyName);
 			return ReturnCode::Good;
 		} else {

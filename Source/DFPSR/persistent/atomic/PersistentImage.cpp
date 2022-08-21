@@ -91,10 +91,6 @@ bool PersistentImage::assignValue(const ReadableString &text, const ReadableStri
 	return true;
 }
 
-bool PersistentImage::assignValue(const ReadableString &text) {
-	return this->assignValue(text, file_getCurrentPath());
-}
-
 static const String hexadecimals = U"0123456789ABCDEF";
 static void writeHexaDecimal(String &out, uint8_t value) {
 	string_appendChar(out, hexadecimals[(value & 0b11110000) >> 4]);

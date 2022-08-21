@@ -120,9 +120,9 @@ void DsrWindow::resetInterface() {
 	this->applyLayout();
 }
 
-void DsrWindow::loadInterfaceFromString(String layout) {
+void DsrWindow::loadInterfaceFromString(String layout, const ReadableString &fromPath) {
 	// Load a tree structure of visual components from text
-	this->mainPanel = std::dynamic_pointer_cast<VisualComponent>(createPersistentClassFromText(layout));
+	this->mainPanel = std::dynamic_pointer_cast<VisualComponent>(createPersistentClassFromText(layout, fromPath));
 	if (this->mainPanel.get() == nullptr) {
 		throwError(U"DsrWindow::loadInterfaceFromString: The window's root component could not be created!\n\nLayout:\n", layout, "\n");
 	}

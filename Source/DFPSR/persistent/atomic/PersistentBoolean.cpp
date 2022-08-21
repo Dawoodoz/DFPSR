@@ -27,7 +27,7 @@ using namespace dsr;
 
 PERSISTENT_DEFINITION(PersistentBoolean)
 
-bool PersistentBoolean::assignValue(const ReadableString &text) {
+bool PersistentBoolean::assignValue(const ReadableString &text, const ReadableString &fromPath) {
 	if (string_match(text, U"1") ) {
 		this->value = true;
 		return true;

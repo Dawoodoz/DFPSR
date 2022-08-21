@@ -37,7 +37,7 @@ public:
 	// Because the constructor from text is used for serialization, an explicit constructor must be used to avoid mangling
 	static PersistentString unmangled(const ReadableString &text);
 public:
-	virtual bool assignValue(const ReadableString &text) override;
+	virtual bool assignValue(const ReadableString &text, const ReadableString &fromPath) override;
 	virtual String& toStreamIndented(String& out, const ReadableString& indentation) const override;
 };
 

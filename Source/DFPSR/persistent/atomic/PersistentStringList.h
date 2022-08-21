@@ -35,7 +35,7 @@ public:
 public:
 	PersistentStringList() : value() {}
 public:
-	virtual bool assignValue(const ReadableString &text) override;
+	virtual bool assignValue(const ReadableString &text, const ReadableString &fromPath) override;
 	virtual String& toStreamIndented(String& out, const ReadableString& indentation) const override;
 };
 

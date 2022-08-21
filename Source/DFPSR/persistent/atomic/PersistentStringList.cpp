@@ -28,7 +28,7 @@ using namespace dsr;
 
 PERSISTENT_DEFINITION(PersistentStringList)
 
-bool PersistentStringList::assignValue(const ReadableString &text) {
+bool PersistentStringList::assignValue(const ReadableString &text, const ReadableString &fromPath) {
 	bool quoted = false;
 	bool first = true;
 	bool hadComma = false;

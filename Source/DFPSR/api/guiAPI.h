@@ -50,14 +50,19 @@ namespace dsr {
 	bool window_exists(const Window& window);
 
 // Layout files
-	// Loading an interface by parsing a layout file's content.
-	//   Raises an exception if window doesn't exist.
+	// Loading an interface by parsing a layout file's content, with any external resources loaded relative to fromPath.
+	//   Embedded images do not count as external resources, but file paths need fromPath in order to know from where they will be loaded.
+	// Raises an exception if window doesn't exist.
+	void window_loadInterfaceFromString(const Window& window, const dsr::String& content, const ReadableString &fromPath);
+	// Loading an interface by parsing a layout file's content, with any external resources loaded relative to the current directory.
+	//   Useful when your application has already assigned the current directory, or when all resources are embedded into the layout.
+	// Raises an exception if window doesn't exist.
 	void window_loadInterfaceFromString(const Window& window, const dsr::String& content);
 	// Loading an interface by parsing a layout file loaded by filename.
-	//   Raises an exception if window doesn't exist.
+	// Raises an exception if window doesn't exist.
 	void window_loadInterfaceFromFile(const Window& window, const dsr::ReadableString& filename);
 	// Store the interface back into a layout file.
-	//   Raises an exception if window doesn't exist.
+	// Raises an exception if window doesn't exist.
 	String window_saveInterfaceToString(const Window& window);
 
 // Find a component
@@ -203,7 +208,7 @@ namespace dsr {
 	//     Returns ReturnCode::KeyNotFound if propertyName wasn't found in component.
 	//   Unless mustAssign forces an exception.
 	//     Returns ReturnCode::ParsingFailure if propertyName was found but value couldn't be converted to its type.
-	ReturnCode component_setProperty(const Component& component, const ReadableString& propertyName, const ReadableString& value, bool mustAssign = true);
+	ReturnCode component_setProperty(const Component& component, const ReadableString& propertyName, const ReadableString& value, const ReadableString& fromPath, bool mustAssign = true);
 	// A version for setting integers and booleans.
 	//   For integers:
 	//     Just set value to whatever you want assigned directly.

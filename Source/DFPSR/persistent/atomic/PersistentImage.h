@@ -38,9 +38,7 @@ public:
 public:
 	PersistentImage() {}
 public:
-	virtual bool assignValue(const ReadableString &text) override;
-	// TODO: Let all persistent types know which directory is being used to load resources.
-	bool assignValue(const ReadableString &text, const ReadableString &fromPath);
+	virtual bool assignValue(const ReadableString &text, const ReadableString &fromPath) override;
 	virtual String& toStreamIndented(String& out, const ReadableString& indentation) const override;
 };
 

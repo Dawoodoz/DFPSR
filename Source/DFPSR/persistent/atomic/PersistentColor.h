@@ -37,7 +37,7 @@ public:
 	PersistentColor() : value(0, 0, 0) {}
 	explicit PersistentColor(ColorRgbI32 color) : value(color) {}
 public:
-	virtual bool assignValue(const ReadableString &text) override;
+	virtual bool assignValue(const ReadableString &text, const ReadableString &fromPath) override;
 	virtual String& toStreamIndented(String& out, const ReadableString& indentation) const override;
 };
 
