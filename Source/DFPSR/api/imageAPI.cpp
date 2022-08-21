@@ -72,7 +72,7 @@ OrderedImageRgbaU8 dsr::image_load_RgbaU8(const String& filename, bool mustExist
 	if (buffer_exists(fileContent)) {
 		result = image_decode_RgbaU8(fileContent);
 		if (mustExist && !image_exists(result)) {
-			throwError(U"buffer_save: Can't save a buffer that don't exist to a file.\n");
+			throwError(U"image_load_RgbaU8: Failed to load the image at ", filename, U".\n");
 		}
 	}
 	return result;
