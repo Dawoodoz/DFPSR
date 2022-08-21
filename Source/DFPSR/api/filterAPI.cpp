@@ -131,21 +131,27 @@ AlignedImageF32 dsr::filter_generateF32(int width, int height, const ImageGenF32
 // -------------------------------- Resize --------------------------------
 
 
-static OrderedImageRgbaU8 resizeToRef(const ImageRgbaU8Impl& source, Sampler interpolation, int32_t newWidth, int32_t newHeight) {
-	OrderedImageRgbaU8 resultImage = image_create_RgbaU8(newWidth, newHeight);
-	imageImpl_resizeToTarget(*resultImage, source, interpolation == Sampler::Linear);
-	return resultImage;
-}
-
-OrderedImageRgbaU8 dsr::filter_resize(ImageRgbaU8 source, Sampler interpolation, int32_t newWidth, int32_t newHeight) {
+OrderedImageRgbaU8 dsr::filter_resize(const ImageRgbaU8 &source, Sampler interpolation, int32_t newWidth, int32_t newHeight) {
 	if (source.get() != nullptr) {
-		return resizeToRef(*source, interpolation, newWidth, newHeight);
+		OrderedImageRgbaU8 resultImage = image_create_RgbaU8(newWidth, newHeight);
+		imageImpl_resizeToTarget(*resultImage, *source, interpolation == Sampler::Linear);
+		return resultImage;
 	} else {
 		return OrderedImageRgbaU8(); // Null gives null
 	}
 }
 
-void dsr::filter_blockMagnify(ImageRgbaU8 target, const ImageRgbaU8& source, int pixelWidth, int pixelHeight) {
+AlignedImageU8 dsr::filter_resize(const ImageU8 &source, Sampler interpolation, int32_t newWidth, int32_t newHeight) {
+	if (source.get() != nullptr) {
+		AlignedImageU8 resultImage = image_create_U8(newWidth, newHeight);
+		imageImpl_resizeToTarget(*resultImage, *source, interpolation == Sampler::Linear);
+		return resultImage;
+	} else {
+		return AlignedImageU8(); // Null gives null
+	}
+}
+
+void dsr::filter_blockMagnify(ImageRgbaU8 &target, const ImageRgbaU8& source, int pixelWidth, int pixelHeight) {
 	if (target.get() != nullptr && source.get() != nullptr) {
 		imageImpl_blockMagnify(*target, *source, pixelWidth, pixelHeight);
 	}

@@ -823,21 +823,21 @@ static inline ColorRgbaI32 U32x4_to_ColorRgbaI32(const U32x4& color) {
 static inline U32x4 mixColorsUniform(const U32x4 &colorA, const U32x4 &colorB, uint32_t fineRatio) {
 	uint16_t ratio = fineRatio >> 8;
 	uint16_t invRatio = 256 - ratio;
-	ALIGN16 U16x8 weightA = U16x8(invRatio);
-	ALIGN16 U16x8 weightB = U16x8(ratio);
-	ALIGN16 U32x4 lowMask(0x00FF00FFu);
-	ALIGN16 U16x8 lowColorA = U16x8(colorA & lowMask);
-	ALIGN16 U16x8 lowColorB = U16x8(colorB & lowMask);
-	ALIGN16 U32x4 highMask(0xFF00FF00u);
-	ALIGN16 U16x8 highColorA = U16x8((colorA & highMask) >> 8);
-	ALIGN16 U16x8 highColorB = U16x8((colorB & highMask) >> 8);
-	ALIGN16 U32x4 lowColor = (((lowColorA * weightA) + (lowColorB * weightB))).get_U32();
-	ALIGN16 U32x4 highColor = (((highColorA * weightA) + (highColorB * weightB))).get_U32();
+	U16x8 weightA = U16x8(invRatio);
+	U16x8 weightB = U16x8(ratio);
+	U32x4 lowMask(0x00FF00FFu);
+	U16x8 lowColorA = U16x8(colorA & lowMask);
+	U16x8 lowColorB = U16x8(colorB & lowMask);
+	U32x4 highMask(0xFF00FF00u);
+	U16x8 highColorA = U16x8((colorA & highMask) >> 8);
+	U16x8 highColorB = U16x8((colorB & highMask) >> 8);
+	U32x4 lowColor = (((lowColorA * weightA) + (lowColorB * weightB))).get_U32();
+	U32x4 highColor = (((highColorA * weightA) + (highColorB * weightB))).get_U32();
 	return (((lowColor >> 8) & lowMask) | (highColor & highMask));
 }
 
-#define READ_CLAMP(X,Y) ImageRgbaU8Impl::unpackRgba(ImageRgbaU8Impl::readPixel_clamp(source, X, Y), source.packOrder)
-#define READ_CLAMP_SIMD(X,Y) ColorRgbaI32_to_U32x4(READ_CLAMP(X,Y))
+#define READ_RGBAU8_CLAMP(X,Y) ImageRgbaU8Impl::unpackRgba(ImageRgbaU8Impl::readPixel_clamp(source, X, Y), source.packOrder)
+#define READ_RGBAU8_CLAMP_SIMD(X,Y) ColorRgbaI32_to_U32x4(READ_RGBAU8_CLAMP(X,Y))
 
 // Fixed-precision decimal system with 16-bit indices and 16-bit sub-pixel weights
 static const uint32_t interpolationFullPixel = 65536;
@@ -845,14 +845,51 @@ static const uint32_t interpolationHalfPixel = interpolationFullPixel / 2;
 // Modulo mask for values greater than or equal to 0 and lesser than interpolationFullPixel
 static const uint32_t interpolationWeightMask = interpolationFullPixel - 1;
 
+template <bool BILINEAR>
+static uint32_t samplePixel(const ImageRgbaU8Impl& target, const ImageRgbaU8Impl& source, uint32_t leftX, uint32_t upperY, uint32_t rightRatio, uint32_t lowerRatio) {
+	if (BILINEAR) {
+		uint32_t upperRatio = 65536 - lowerRatio;
+		uint32_t leftRatio = 65536 - rightRatio;
+		U32x4 vUpperLeftColor = READ_RGBAU8_CLAMP_SIMD(leftX, upperY);
+		U32x4 vUpperRightColor = READ_RGBAU8_CLAMP_SIMD(leftX + 1, upperY);
+		U32x4 vLowerLeftColor = READ_RGBAU8_CLAMP_SIMD(leftX, upperY + 1);
+		U32x4 vLowerRightColor = READ_RGBAU8_CLAMP_SIMD(leftX + 1, upperY + 1);
+		U32x4 vLeftRatio = U32x4(leftRatio);
+		U32x4 vRightRatio = U32x4(rightRatio);
+		U32x4 vUpperColor = ((vUpperLeftColor * vLeftRatio) + (vUpperRightColor * vRightRatio)) >> 16;
+		U32x4 vLowerColor = ((vLowerLeftColor * vLeftRatio) + (vLowerRightColor * vRightRatio)) >> 16;
+		U32x4 vCenterColor = ((vUpperColor * upperRatio) + (vLowerColor * lowerRatio)) >> 16;
+		return (target.packRgba(U32x4_to_ColorRgbaI32(vCenterColor))).packed;
+	} else {
+		return (target.packRgba(READ_RGBAU8_CLAMP(leftX, upperY))).packed;
+	}
+}
+
+template <bool BILINEAR>
+static uint8_t samplePixel(const ImageU8Impl& target, const ImageU8Impl& source, uint32_t leftX, uint32_t upperY, uint32_t rightRatio, uint32_t lowerRatio) {
+	if (BILINEAR) {
+		uint32_t upperRatio = 65536 - lowerRatio;
+		uint32_t leftRatio = 65536 - rightRatio;
+		uint32_t upperLeftLuma = ImageU8Impl::readPixel_clamp(source, leftX, upperY);
+		uint32_t upperRightLuma = ImageU8Impl::readPixel_clamp(source, leftX + 1, upperY);
+		uint32_t lowerLeftLuma = ImageU8Impl::readPixel_clamp(source, leftX, upperY + 1);
+		uint32_t lowerRightLuma = ImageU8Impl::readPixel_clamp(source, leftX + 1, upperY + 1);
+		uint32_t upperLuma = ((upperLeftLuma * leftRatio) + (upperRightLuma * rightRatio)) >> 16;
+		uint32_t lowerLuma = ((lowerLeftLuma * leftRatio) + (lowerRightLuma * rightRatio)) >> 16;
+		return ((upperLuma * upperRatio) + (lowerLuma * lowerRatio)) >> 16;
+	} else {
+		return ImageU8Impl::readPixel_clamp(source, leftX, upperY);
+	}
+}
+
 // BILINEAR: Enables linear interpolation
 // scaleRegion:
 //     The stretched location of the source image in the target image
 //     Making it smaller than the target image will fill the outside with stretched pixels
 //     Allowing the caller to crop away parts of the source image that aren't interesting
 //     Can be used to round the region to a multiple of the input size for a fixed pixel size
-template <bool BILINEAR>
-static void resize_reference(ImageRgbaU8Impl& target, const ImageRgbaU8Impl& source, const IRect& scaleRegion) {
+template <bool BILINEAR, typename IMAGE_TYPE, typename PIXEL_TYPE>
+static void resize_reference(IMAGE_TYPE& target, const IMAGE_TYPE& source, const IRect& scaleRegion) {
 	// Reference implementation
 
 	// Offset in source pixels per target pixel
@@ -864,42 +901,23 @@ static void resize_reference(ImageRgbaU8Impl& target, const ImageRgbaU8Impl& sou
 		startX -= interpolationHalfPixel;
 		startY -= interpolationHalfPixel;
 	}
-	SafePointer<uint32_t> targetRow = imageInternal::getSafeData<uint32_t>(target);
+	SafePointer<PIXEL_TYPE> targetRow = imageInternal::getSafeData<PIXEL_TYPE>(target);
 	int32_t readY = startY;
 	for (int32_t y = 0; y < target.height; y++) {
 		int32_t naturalY = readY;
 		if (naturalY < 0) { naturalY = 0; }
 		uint32_t sampleY = (uint32_t)naturalY;
 		uint32_t upperY = sampleY >> 16;
-		uint32_t lowerY = upperY + 1;
 		uint32_t lowerRatio = sampleY & interpolationWeightMask;
-		uint32_t upperRatio = 65536 - lowerRatio;
-		SafePointer<uint32_t> targetPixel = targetRow;
+		SafePointer<PIXEL_TYPE> targetPixel = targetRow;
 		int32_t readX = startX;
 		for (int32_t x = 0; x < target.width; x++) {
 			int32_t naturalX = readX;
 			if (naturalX < 0) { naturalX = 0; }
 			uint32_t sampleX = (uint32_t)naturalX;
 			uint32_t leftX = sampleX >> 16;
-			uint32_t rightX = leftX + 1;
 			uint32_t rightRatio = sampleX & interpolationWeightMask;
-			uint32_t leftRatio = 65536 - rightRatio;
-			ColorRgbaI32 finalColor;
-			if (BILINEAR) {
-				ALIGN16 U32x4 vUpperLeftColor = READ_CLAMP_SIMD(leftX, upperY);
-				ALIGN16 U32x4 vUpperRightColor = READ_CLAMP_SIMD(rightX, upperY);
-				ALIGN16 U32x4 vLowerLeftColor = READ_CLAMP_SIMD(leftX, lowerY);
-				ALIGN16 U32x4 vLowerRightColor = READ_CLAMP_SIMD(rightX, lowerY);
-				ALIGN16 U32x4 vLeftRatio = U32x4(leftRatio);
-				ALIGN16 U32x4 vRightRatio = U32x4(rightRatio);
-				ALIGN16 U32x4 vUpperColor = ((vUpperLeftColor * vLeftRatio) + (vUpperRightColor * vRightRatio)) >> 16;
-				ALIGN16 U32x4 vLowerColor = ((vLowerLeftColor * vLeftRatio) + (vLowerRightColor * vRightRatio)) >> 16;
-				ALIGN16 U32x4 vCenterColor = ((vUpperColor * upperRatio) + (vLowerColor * lowerRatio)) >> 16;
-				finalColor = U32x4_to_ColorRgbaI32(vCenterColor);
-			} else {
-				finalColor = READ_CLAMP(leftX, upperY);
-			}
-			*targetPixel = target.packRgba(finalColor).packed;
+			*targetPixel = samplePixel<BILINEAR>(target, source, leftX, upperY, rightRatio, lowerRatio);
 			targetPixel += 1;
 			readX += offsetX;
 		}
@@ -957,8 +975,8 @@ static void resize_optimized(ImageRgbaU8Impl& target, const ImageRgbaU8Impl& sou
 					}
 				} else {
 					for (int32_t x = 0; x < target.width; x++) {
-						ALIGN16 U32x4 vUpperColor = READ_CLAMP_SIMD(x, upperY);
-						ALIGN16 U32x4 vLowerColor = READ_CLAMP_SIMD(x, lowerY);
+						ALIGN16 U32x4 vUpperColor = READ_RGBAU8_CLAMP_SIMD(x, upperY);
+						ALIGN16 U32x4 vLowerColor = READ_RGBAU8_CLAMP_SIMD(x, lowerY);
 						ALIGN16 U32x4 vCenterColor = ((vUpperColor * upperRatio) + (vLowerColor * lowerRatio)) >> 16;
 						ColorRgbaI32 finalColor = U32x4_to_ColorRgbaI32(vCenterColor);
 						*targetPixel = target.packRgba(finalColor).packed;
@@ -996,12 +1014,12 @@ static void resize_optimized(ImageRgbaU8Impl& target, const ImageRgbaU8Impl& sou
 				uint32_t leftRatio = 65536 - rightRatio;
 				ColorRgbaI32 finalColor;
 				if (BILINEAR) {
-					ALIGN16 U32x4 vLeftColor = READ_CLAMP_SIMD(leftX, y);
-					ALIGN16 U32x4 vRightColor = READ_CLAMP_SIMD(rightX, y);
+					ALIGN16 U32x4 vLeftColor = READ_RGBAU8_CLAMP_SIMD(leftX, y);
+					ALIGN16 U32x4 vRightColor = READ_RGBAU8_CLAMP_SIMD(rightX, y);
 					ALIGN16 U32x4 vCenterColor = ((vLeftColor * leftRatio) + (vRightColor * rightRatio)) >> 16;
 					finalColor = U32x4_to_ColorRgbaI32(vCenterColor);
 				} else {
-					finalColor = READ_CLAMP(leftX, y);
+					finalColor = READ_RGBAU8_CLAMP(leftX, y);
 				}
 				*targetPixel = target.packRgba(finalColor).packed;
 				targetPixel += 1;
@@ -1011,7 +1029,7 @@ static void resize_optimized(ImageRgbaU8Impl& target, const ImageRgbaU8Impl& sou
 		}
 	} else {
 		// Call the reference implementation
-		resize_reference<BILINEAR>(target, source, scaleRegion);
+		resize_reference<BILINEAR, ImageRgbaU8Impl, uint32_t>(target, source, scaleRegion);
 	}
 }
 
@@ -1025,14 +1043,14 @@ static bool imageIs16ByteAligned(const ImageImpl& image) {
 static void resize_aux(ImageRgbaU8Impl& target, const ImageRgbaU8Impl& source, bool interpolate, bool paddWrite, const IRect& scaleRegion) {
 	// If writing to padding is allowed and both images are 16-byte aligned with the same pack order
 	if (paddWrite && imageIs16ByteAligned(source) && imageIs16ByteAligned(target)) {
-		// Optimized resize allowed
+		// SIMD resize allowed
 		if (interpolate) {
 			resize_optimized<true, true>(target, source, scaleRegion);
 		} else {
 			resize_optimized<false, true>(target, source, scaleRegion);
 		}
 	} else {
-		// Non-optimized resize
+		// Non-SIMD resize
 		if (interpolate) {
 			resize_optimized<true, false>(target, source, scaleRegion);
 		} else {
@@ -1041,41 +1059,47 @@ static void resize_aux(ImageRgbaU8Impl& target, const ImageRgbaU8Impl& source, b
 	}
 }
 
-void dsr::imageImpl_resizeInPlace(ImageRgbaU8Impl& target, ImageRgbaU8Impl* wideTempImage, const ImageRgbaU8Impl& source, bool interpolate, const IRect& scaleRegion) {
+// TODO: Optimize monochrome resizing.
+static void resize_aux(ImageU8Impl& target, const ImageU8Impl& source, bool interpolate, bool paddWrite, const IRect& scaleRegion) {
+	if (interpolate) {
+		resize_reference<true, ImageU8Impl, uint8_t>(target, source, scaleRegion);
+	} else {
+		resize_reference<false, ImageU8Impl, uint8_t>(target, source, scaleRegion);
+	}
+}
+
+// Creating an image to replacedImage with the same pack order as originalImage when applicable to the image format.
+static ImageRgbaU8Impl createWithSamePackOrder(const ImageRgbaU8Impl& originalImage, int32_t width, int32_t height) {
+	return ImageRgbaU8Impl(width, height, originalImage.packOrder.packOrderIndex);
+}
+static ImageU8Impl createWithSamePackOrder(const ImageU8Impl& originalImage, int32_t width, int32_t height) {
+	return ImageU8Impl(width, height);
+}
+
+template <typename IMAGE_TYPE>
+void resizeToTarget(IMAGE_TYPE& target, const IMAGE_TYPE& source, bool interpolate) {
+	IRect scaleRegion = imageInternal::getBound(target);
 	if (target.width != source.width && target.height > source.height) {
 		// Upscaling is faster in two steps by both reusing the horizontal interpolation and vectorizing the vertical interpolation.
 		int tempWidth = target.width;
 		int tempHeight = source.height;
-		PackOrderIndex tempPackOrder = target.packOrder.packOrderIndex;
 		IRect tempScaleRegion = IRect(scaleRegion.left(), 0, scaleRegion.width(), source.height);
-		if (wideTempImage == nullptr
-		 || wideTempImage->width != tempWidth
-		 || wideTempImage->height != tempHeight
-		 || wideTempImage->packOrder.packOrderIndex != tempPackOrder) {
-			// Performance warnings
-			// TODO: Make optional
-			if (wideTempImage != nullptr) {
-				if (wideTempImage->width != tempWidth) { printText("Ignored temp buffer of wrong width! Found ", wideTempImage->width, " instead of ", tempWidth, "\n"); }
-				if (wideTempImage->height != tempHeight) { printText("Ignored temp buffer of wrong height! Found ", wideTempImage->height, " instead of ", tempHeight, "\n"); }
-				if (wideTempImage->packOrder.packOrderIndex != tempPackOrder) { printText("Ignored temp buffer of wrong pack order!\n"); }
-			}
-			// Create a new buffer
-			ImageRgbaU8Impl newTempImage = ImageRgbaU8Impl(tempWidth, tempHeight, tempPackOrder);
-			resize_aux(newTempImage, source, interpolate, true, tempScaleRegion);
-			resize_aux(target, newTempImage, interpolate, true, scaleRegion);
-		} else {
-			// Use existing buffer
-			resize_aux(*wideTempImage, source, interpolate, true, tempScaleRegion);
-			resize_aux(target, *wideTempImage, interpolate, true, scaleRegion);
-		}
+		// Create a temporary buffer.
+		IMAGE_TYPE newTempImage = createWithSamePackOrder(target, tempWidth, tempHeight);
+		resize_aux(newTempImage, source, interpolate, true, tempScaleRegion);
+		resize_aux(target, newTempImage, interpolate, true, scaleRegion);
 	} else {
-		// Downscaling or only changing one dimension is faster in one step
+		// Downscaling or only changing one dimension is faster in one step.
 		resize_aux(target, source, interpolate, true, scaleRegion);
 	}
 }
 
 void dsr::imageImpl_resizeToTarget(ImageRgbaU8Impl& target, const ImageRgbaU8Impl& source, bool interpolate) {
-	imageImpl_resizeInPlace(target, nullptr, source, interpolate, imageInternal::getBound(target));
+	resizeToTarget<ImageRgbaU8Impl>(target, source, interpolate);
+}
+
+void dsr::imageImpl_resizeToTarget(ImageU8Impl& target, const ImageU8Impl& source, bool interpolate) {
+	resizeToTarget<ImageU8Impl>(target, source, interpolate);
 }
 
 template <bool CONVERT_COLOR>
@@ -1089,7 +1113,6 @@ static inline Color4xU8 convertRead(const ImageRgbaU8Impl& target, const ImageRg
 
 // Used for drawing large pixels
 static inline void fillRectangle(ImageRgbaU8Impl& target, int pixelLeft, int pixelRight, int pixelTop, int pixelBottom, const Color4xU8& packedColor) {
-	// TODO: Get target pointer in advance and add the correct offsets
 	SafePointer<Color4xU8> targetRow = imageInternal::getSafeData<Color4xU8>(target, pixelTop) + pixelLeft;
 	for (int y = pixelTop; y < pixelBottom; y++) {
 		SafePointer<Color4xU8> targetPixel = targetRow;

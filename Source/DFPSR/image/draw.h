@@ -76,20 +76,15 @@ void imageImpl_drawHigher(ImageF32Impl& targetHeight, const ImageF32Impl& source
   ImageRgbaU8Impl& targetB, const ImageRgbaU8Impl& sourceB, int32_t left = 0, int32_t top = 0, float sourceHeightOffset = 0);
 
 // Pre-conditions:
-//     * wideTempImage should be one of the following:
-//        * A nullptr (for allocating it automatically when needed)
-//          Can be preferred when down-scaling, because the two-step resize is only used when width changes and height increases
-//        * An image of dimensions target.width x source.height and the same pack order as target
-//          Wrong dimensions or pack order for wideTempImage is equivalent to passing nullptr
 //     * target must own its padding
 //       This is automatically true for aligned images
-//       If broken, visible pixels in a parent image may change outside of the sub-image's region
+//       If the target does not own its padding, any pixels being treated as padding at the end of each line may become visible artifacts in another image sharing the buffer.
 // Side-effects:
 //     * Writes a resized version of source to target, including padding
 //     * May also write to any pixels in wideTempImage, including padding
 //     * May also change the pack order of wideTempImage
-void imageImpl_resizeInPlace(ImageRgbaU8Impl& target, ImageRgbaU8Impl* wideTempImage, const ImageRgbaU8Impl& source, bool interpolate, const IRect& scaleRegion);
 void imageImpl_resizeToTarget(ImageRgbaU8Impl& target, const ImageRgbaU8Impl& source, bool interpolate);
+void imageImpl_resizeToTarget(ImageU8Impl& target, const ImageU8Impl& source, bool interpolate);
 void imageImpl_blockMagnify(ImageRgbaU8Impl& target, const ImageRgbaU8Impl& source, int pixelWidth, int pixelHeight);
 void imageImpl_blockMagnify_aligned(ImageRgbaU8Impl& target, const ImageRgbaU8Impl& source, int pixelWidth, int pixelHeight);
 

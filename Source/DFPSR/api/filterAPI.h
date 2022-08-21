@@ -31,32 +31,30 @@
 namespace dsr {
 
 // Image resizing
-	// The interpolate argument
-	//   Bi-linear interoplation is used when true
-	//   Nearest neighbor sampling is used when false
-	// Create a stretched version of the source image with the given dimensions and default RGBA pack order
-	OrderedImageRgbaU8 filter_resize(ImageRgbaU8 source, Sampler interpolation, int32_t newWidth, int32_t newHeight);
-	// The nearest-neighbor resize used for up-scaling the window canvas
-	//   The source image is scaled by pixelWidth and pixelHeight from the upper left corner
-	//   If source is too small, transparent black pixels (0, 0, 0, 0) fills the outside
-	//   If source is too large, partial pixels will be cropped away completely and replaced by the black border
-	//   Letting the images have the same pack order and be aligned to 16-bytes will increase speed
-	void filter_blockMagnify(ImageRgbaU8 target, const ImageRgbaU8& source, int pixelWidth, int pixelHeight);
+	// Create a stretched version of the source image with the given dimensions and default RGBA pack order.
+	OrderedImageRgbaU8 filter_resize(const ImageRgbaU8 &source, Sampler interpolation, int32_t newWidth, int32_t newHeight);
+	AlignedImageU8     filter_resize(const ImageU8 &source,     Sampler interpolation, int32_t newWidth, int32_t newHeight);
+	// The nearest-neighbor resize used for up-scaling the window canvas.
+	//   The source image is scaled by pixelWidth and pixelHeight from the upper left corner.
+	//   If source is too small, transparent black pixels (0, 0, 0, 0) fills the outside.
+	//   If source is too large, partial pixels will be cropped away completely and replaced by the black border.
+	//   Letting the images have the same pack order and be aligned to 16-bytes will increase speed.
+	void filter_blockMagnify(ImageRgbaU8 &target, const ImageRgbaU8 &source, int pixelWidth, int pixelHeight);
 
 // Image generation and filtering
-//   Create new images from Lambda expressions
-//   Useful for pre-generating images for reference implementations, fast prototyping and texture generation
-	// Lambda expressions for generating integer images
+//   Create new images from Lambda expressions.
+//   Useful for pre-generating images for reference implementations, fast prototyping and texture generation.
+	// Lambda expressions for generating integer images.
 	using ImageGenRgbaU8 = std::function<ColorRgbaI32(int, int)>;
-	using ImageGenI32 = std::function<int32_t(int, int)>; // Used for U8 and U16 images using different saturations
+	using ImageGenI32 = std::function<int32_t(int, int)>; // Used for U8 and U16 images using different saturations.
 	using ImageGenF32 = std::function<float(int, int)>;
-	// In-place image generation to an existing image
-	//   The pixel at the upper left corner gets (startX, startY) as x and y arguments to the function
+	// In-place image generation to an existing image.
+	//   The pixel at the upper left corner gets (startX, startY) as x and y arguments to the function.
 	void filter_mapRgbaU8(ImageRgbaU8 target, const ImageGenRgbaU8& lambda, int startX = 0, int startY = 0);
 	void filter_mapU8(ImageU8 target, const ImageGenI32& lambda, int startX = 0, int startY = 0);
 	void filter_mapU16(ImageU16 target, const ImageGenI32& lambda, int startX = 0, int startY = 0);
 	void filter_mapF32(ImageF32 target, const ImageGenF32& lambda, int startX = 0, int startY = 0);
-	// A simpler image generation that constructs the image as a result
+	// A simpler image generation that constructs the image as a result.
 	// Example:
 	//     int width = 64;
 	//     int height = 64;

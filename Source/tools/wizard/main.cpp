@@ -17,7 +17,122 @@ using namespace dsr;
 bool running = true;
 Window window;
 
-String interfaceContent =
+static const ReadableString mediaMachineCode =
+UR"QUOTE(
+BEGIN: Button
+	INPUT: FixedPoint, width
+	INPUT: FixedPoint, height
+	INPUT: FixedPoint, red
+	INPUT: FixedPoint, green
+	INPUT: FixedPoint, blue
+	INPUT: FixedPoint, pressed
+	INPUT: FixedPoint, sourceLeft
+	INPUT: FixedPoint, sourceTop
+	INPUT: FixedPoint, sourceWidth
+	INPUT: FixedPoint, sourceHeight
+	INPUT: FixedPoint, pressOffsetX
+	INPUT: FixedPoint, pressOffsetY
+	INPUT: ImageRgbaU8, atlas
+	OUTPUT: ImageRgbaU8, colorImage
+	# Scale by 1 / 255 so that 255 represents full intensity in atlas.
+	MUL: normRed<FixedPoint>, red, 0.00392156862745
+	MUL: normGreen<FixedPoint>, green, 0.00392156862745
+	MUL: normBlue<FixedPoint>, blue, 0.00392156862745
+	# Calculate the final source location to read.
+	MUL: sourceOffsetX<FixedPoint>, pressed, pressOffsetX
+	MUL: sourceOffsetY<FixedPoint>, pressed, pressOffsetY
+	ADD: adjustedSourceLeft<FixedPoint>, sourceLeft, sourceOffsetX
+	ADD: adjustedSourceTop<FixedPoint>, sourceTop, sourceOffsetY
+	# Resize source region from the atlas.
+	RESIZE_BILINEAR: sourceImage<ImageRgbaU8>, width, height, atlas, adjustedSourceLeft, adjustedSourceTop, sourceWidth, sourceHeight
+	GET_RED: diffuseMap<ImageU8>, sourceImage
+	GET_GREEN: specularMap<ImageU8>, sourceImage
+	GET_ALPHA: visibilityMap<ImageU8>, sourceImage
+	MUL: redImage<ImageU8>, diffuseMap, normRed
+	MUL: greenImage<ImageU8>, diffuseMap, normGreen
+	MUL: blueImage<ImageU8>, diffuseMap, normBlue
+	ADD: redImage, redImage, specularMap
+	ADD: greenImage, greenImage, specularMap
+	ADD: blueImage, blueImage, specularMap
+	PACK_RGBA: colorImage, redImage, greenImage, blueImage, visibilityMap
+END:
+
+BEGIN: ListBox
+	INPUT: FixedPoint, width
+	INPUT: FixedPoint, height
+	INPUT: FixedPoint, red
+	INPUT: FixedPoint, green
+	INPUT: FixedPoint, blue
+	INPUT: FixedPoint, border
+	OUTPUT: ImageRgbaU8, colorImage
+	CREATE: colorImage, width, height
+	ADD: b2<FixedPoint>, border, border
+	SUB: w2<FixedPoint>, width, b2
+	SUB: h2<FixedPoint>, height, b2
+	RECTANGLE: colorImage, border, border, w2, h2, red, green, blue, 255
+END:
+
+BEGIN: VerticalScrollList
+	INPUT: FixedPoint, width
+	INPUT: FixedPoint, height
+	INPUT: FixedPoint, red
+	INPUT: FixedPoint, green
+	INPUT: FixedPoint, blue
+	OUTPUT: ImageRgbaU8, colorImage
+	CREATE: visImage<ImageU8>, width, height
+	CREATE: lumaImage<ImageU8>, width, height
+	FADE_LINEAR: visImage, 0, 0, 128, width, 0, 0
+	PACK_RGBA: colorImage, 0, 0, 0, visImage
+END:
+
+BEGIN: Panel
+	INPUT: FixedPoint, width
+	INPUT: FixedPoint, height
+	INPUT: FixedPoint, red
+	INPUT: FixedPoint, green
+	INPUT: FixedPoint, blue
+	INPUT: FixedPoint, border
+	OUTPUT: ImageRgbaU8, colorImage
+	CREATE: colorImage, width, height
+	ADD: b2<FixedPoint>, border, border
+	SUB: w2<FixedPoint>, width, b2
+	SUB: h2<FixedPoint>, height, b2
+	RECTANGLE: colorImage, border, border, w2, h2, red, green, blue, 255
+END:
+)QUOTE";
+
+static const ReadableString styleSettings =
+UR"QUOTE(
+	border = 2
+	atlas = RGBA|File:media/Style.png
+	; Image location in the atlas
+	sourceLeft = 0
+	sourceTop = 0
+	sourceWidth = 64
+	sourceHeight = 64
+	; How the image location moves when pressed increases
+	pressOffsetX = 64
+	pressOffsetY = 0
+	; Fall back on the Button method if a component's class could not be recognized.
+	method = "Button"
+	[Button]
+		rounding = 12
+	[ListBox]
+		method = "ListBox"
+	[VerticalScrollKnob]
+		rounding = 8
+	[VerticalScrollList]
+		method = "VerticalScrollList"
+	[ScrollUp]
+		rounding = 5
+	[ScrollDown]
+		rounding = 5
+	[Panel]
+		border = 1
+		method = "Panel"
+)QUOTE";
+
+static const ReadableString interfaceContent =
 UR"QUOTE(
 Begin : Panel
 	Name = "mainPanel"
@@ -211,6 +326,7 @@ void dsrMain(List<String> args) {
 	// Create a window
 	window = window_create(U"DFPSR wizard application", 800, 600);
 	window_loadInterfaceFromString(window, interfaceContent);
+	window_applyTheme(window, theme_create(mediaMachineCode, styleSettings));
 
 	// Find components
 	projectList = window_findComponentByName(window, U"projectList");
