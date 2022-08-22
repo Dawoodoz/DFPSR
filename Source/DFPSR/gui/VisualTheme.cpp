@@ -223,12 +223,11 @@ struct ClassSettings {
 			// Key = "text"
 			this->strings.pushConstruct(key, string_unmangleQuote(value));
 		} else {
-			int64_t pipeIndex = string_findFirst(value, U'|');
-			if (pipeIndex > -1 && string_caseInsensitiveMatch(string_before(value, pipeIndex), U"ImageRgbaU8")) {
-				// Key = ImageRgbaU8|File:Path
-				// Key = ImageRgbaU8|WxH:Hexadecimals
+			if (string_findFirst(value, U':') > -1) {
+				// Key = File:Path
+				// Key = WxH:Hexadecimals
 				PersistentImage newImage;
-				newImage.assignValue(string_after(value, pipeIndex), fromPath);
+				newImage.assignValue(value, fromPath);
 				this->colorImages.pushConstruct(key, newImage);
 			} else {
 				// Key = Integer
