@@ -1,0 +1,49 @@
+﻿Begin : Panel
+	Name = "mainPanel"
+	Solid = 0
+	Begin : Panel
+		Name = "upperPanel"
+		Bottom = 50
+		Solid = 1
+		Color = 190,255,190
+	End
+	Begin : Panel
+		Name = "lowerPanel"
+		Solid = 1
+		Top = 50
+		Color = 0,0,0
+		Begin : Picture
+			Name = "previewPicture"
+			Interpolation = 1
+			Left = 5
+			Top = 5
+			Right = 90%-105
+			Bottom = 70%-5
+		End
+		Begin : Label
+			Name = "descriptionLabel"
+			Color = 190,255,190
+			Left = 5
+			Right = 90%-105
+			Top = 70%
+			Bottom = 100%-5
+		End
+		Begin : ListBox
+			Name = "projectList"
+			Color = 190,255,190
+			Left = 90%-100
+			Right = 100%-5
+			Top = 5
+			Bottom = 100%-50
+		End
+		Begin : Button
+			Name = "launchButton"
+			Text = "Launch"
+			Color = 190,255,190
+			Left = 90%-100
+			Right = 100%-5
+			Top = 100%-45
+			Bottom = 100%-5
+		End
+	End
+End
