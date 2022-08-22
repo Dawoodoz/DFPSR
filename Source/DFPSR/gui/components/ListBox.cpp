@@ -59,7 +59,7 @@ bool ListBox::isContainer() const {
 static const int textBorderLeft = 6;
 static const int textBorderTop = 4;
 static const int scrollWidth = 16; // The width of the scroll bar
-static const int scrollEndHeight = 14; // The height of upper and lower scroll buttons
+static const int scrollEndHeight = 16; // The height of upper and lower scroll buttons
 
 void ListBox::generateGraphics() {
 	int width = this->location.width();
@@ -342,7 +342,7 @@ void ListBox::limitScrolling(bool keepSelectedVisible) {
 	int64_t maxScroll;
 	int64_t minScroll;
 	// Big enough list to need scrolling but big enough list-box to fit two buttons inside
-	this->hasVerticalScroll = itemCount > visibleRange && this->location.width() >= scrollWidth * 2 && this->location.height() >= scrollEndHeight * 2;
+	this->hasVerticalScroll = itemCount > visibleRange && this->location.width() >= scrollWidth * 2 && this->location.height() >= scrollEndHeight * 3;
 	if (keepSelectedVisible) {
 		maxScroll = this->selectedIndex.value;
 		minScroll = maxScroll + 1 - visibleRange;
