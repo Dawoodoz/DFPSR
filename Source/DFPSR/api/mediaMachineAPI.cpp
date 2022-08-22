@@ -512,7 +512,9 @@ static const InsSig mediaMachineInstructions[] = {
 	),
 	InsSig::create(U"RESIZE_BILINEAR", 1,
 		[](VirtualMachine& machine, PlanarMemory& memory, const List<VMA>& args) {
-			IMAGE_U8_REF(0) = filter_resize(IMAGE_U8_REF(3), Sampler::Linear, INT_VALUE(1), INT_VALUE(2));
+			int width = INT_VALUE(1); if (width < 1) width = 1;
+			int height = INT_VALUE(2); if (height < 1) height = 1;
+			IMAGE_U8_REF(0) = filter_resize(IMAGE_U8_REF(3), Sampler::Linear, width, height);
 			NEXT_INSTRUCTION
 		},
 		ArgSig(U"Target", false, DataType_ImageU8),
@@ -522,7 +524,9 @@ static const InsSig mediaMachineInstructions[] = {
 	),
 	InsSig::create(U"RESIZE_BILINEAR", 1,
 		[](VirtualMachine& machine, PlanarMemory& memory, const List<VMA>& args) {
-			IMAGE_RGBAU8_REF(0) = filter_resize(IMAGE_RGBAU8_REF(3), Sampler::Linear, INT_VALUE(1), INT_VALUE(2));
+			int width = INT_VALUE(1); if (width < 1) width = 1;
+			int height = INT_VALUE(2); if (height < 1) height = 1;
+			IMAGE_RGBAU8_REF(0) = filter_resize(IMAGE_RGBAU8_REF(3), Sampler::Linear, width, height);
 			NEXT_INSTRUCTION
 		},
 		ArgSig(U"Target", false, DataType_ImageRgbaU8),
@@ -532,7 +536,9 @@ static const InsSig mediaMachineInstructions[] = {
 	),
 	InsSig::create(U"RESIZE_BILINEAR", 1,
 		[](VirtualMachine& machine, PlanarMemory& memory, const List<VMA>& args) {
-			IMAGE_U8_REF(0) = filter_resize(image_getSubImage(IMAGE_U8_REF(3), IRect(INT_VALUE(4), INT_VALUE(5), INT_VALUE(6), INT_VALUE(7))), Sampler::Linear, INT_VALUE(1), INT_VALUE(2));
+			int width = INT_VALUE(1); if (width < 1) width = 1;
+			int height = INT_VALUE(2); if (height < 1) height = 1;
+			IMAGE_U8_REF(0) = filter_resize(image_getSubImage(IMAGE_U8_REF(3), IRect(INT_VALUE(4), INT_VALUE(5), INT_VALUE(6), INT_VALUE(7))), Sampler::Linear, width, height);
 			NEXT_INSTRUCTION
 		},
 		// TODO: Prevent aliasing
@@ -547,7 +553,9 @@ static const InsSig mediaMachineInstructions[] = {
 	),
 	InsSig::create(U"RESIZE_BILINEAR", 1,
 		[](VirtualMachine& machine, PlanarMemory& memory, const List<VMA>& args) {
-			IMAGE_RGBAU8_REF(0) = filter_resize(image_getSubImage(IMAGE_RGBAU8_REF(3), IRect(INT_VALUE(4), INT_VALUE(5), INT_VALUE(6), INT_VALUE(7))), Sampler::Linear, INT_VALUE(1), INT_VALUE(2));
+			int width = INT_VALUE(1); if (width < 1) width = 1;
+			int height = INT_VALUE(2); if (height < 1) height = 1;
+			IMAGE_RGBAU8_REF(0) = filter_resize(image_getSubImage(IMAGE_RGBAU8_REF(3), IRect(INT_VALUE(4), INT_VALUE(5), INT_VALUE(6), INT_VALUE(7))), Sampler::Linear, width, height);
 			NEXT_INSTRUCTION
 		},
 		// TODO: Prevent aliasing
