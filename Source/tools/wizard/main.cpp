@@ -17,174 +17,6 @@ using namespace dsr;
 bool running = true;
 Window window;
 
-static const ReadableString mediaMachineCode =
-UR"QUOTE(
-BEGIN: Button
-	INPUT: FixedPoint, width
-	INPUT: FixedPoint, height
-	INPUT: FixedPoint, red
-	INPUT: FixedPoint, green
-	INPUT: FixedPoint, blue
-	INPUT: FixedPoint, pressed
-	INPUT: FixedPoint, sourceLeft
-	INPUT: FixedPoint, sourceTop
-	INPUT: FixedPoint, sourceWidth
-	INPUT: FixedPoint, sourceHeight
-	INPUT: FixedPoint, pressOffsetX
-	INPUT: FixedPoint, pressOffsetY
-	INPUT: ImageRgbaU8, atlas
-	OUTPUT: ImageRgbaU8, colorImage
-	# Scale by 1 / 255 so that 255 represents full intensity in atlas.
-	MUL: normRed<FixedPoint>, red, 0.00392156862745
-	MUL: normGreen<FixedPoint>, green, 0.00392156862745
-	MUL: normBlue<FixedPoint>, blue, 0.00392156862745
-	# Calculate the final source location to read.
-	MUL: sourceOffsetX<FixedPoint>, pressed, pressOffsetX
-	MUL: sourceOffsetY<FixedPoint>, pressed, pressOffsetY
-	ADD: adjustedSourceLeft<FixedPoint>, sourceLeft, sourceOffsetX
-	ADD: adjustedSourceTop<FixedPoint>, sourceTop, sourceOffsetY
-	# Resize source region from the atlas.
-	RESIZE_BILINEAR: sourceImage<ImageRgbaU8>, width, height, atlas, adjustedSourceLeft, adjustedSourceTop, sourceWidth, sourceHeight
-	GET_RED: diffuseMap<ImageU8>, sourceImage
-	GET_GREEN: specularMap<ImageU8>, sourceImage
-	GET_ALPHA: visibilityMap<ImageU8>, sourceImage
-	MUL: redImage<ImageU8>, diffuseMap, normRed
-	MUL: greenImage<ImageU8>, diffuseMap, normGreen
-	MUL: blueImage<ImageU8>, diffuseMap, normBlue
-	ADD: redImage, redImage, specularMap
-	ADD: greenImage, greenImage, specularMap
-	ADD: blueImage, blueImage, specularMap
-	PACK_RGBA: colorImage, redImage, greenImage, blueImage, visibilityMap
-END:
-
-BEGIN: ListBox
-	INPUT: FixedPoint, width
-	INPUT: FixedPoint, height
-	INPUT: FixedPoint, red
-	INPUT: FixedPoint, green
-	INPUT: FixedPoint, blue
-	INPUT: FixedPoint, border
-	OUTPUT: ImageRgbaU8, colorImage
-	CREATE: colorImage, width, height
-	ADD: b2<FixedPoint>, border, border
-	SUB: w2<FixedPoint>, width, b2
-	SUB: h2<FixedPoint>, height, b2
-	RECTANGLE: colorImage, border, border, w2, h2, red, green, blue, 255
-END:
-
-BEGIN: VerticalScrollList
-	INPUT: FixedPoint, width
-	INPUT: FixedPoint, height
-	INPUT: FixedPoint, red
-	INPUT: FixedPoint, green
-	INPUT: FixedPoint, blue
-	OUTPUT: ImageRgbaU8, colorImage
-	CREATE: visImage<ImageU8>, width, height
-	CREATE: lumaImage<ImageU8>, width, height
-	FADE_LINEAR: visImage, 0, 0, 128, width, 0, 0
-	PACK_RGBA: colorImage, 0, 0, 0, visImage
-END:
-
-BEGIN: Panel
-	INPUT: FixedPoint, width
-	INPUT: FixedPoint, height
-	INPUT: FixedPoint, red
-	INPUT: FixedPoint, green
-	INPUT: FixedPoint, blue
-	INPUT: FixedPoint, border
-	OUTPUT: ImageRgbaU8, colorImage
-	CREATE: colorImage, width, height
-	ADD: b2<FixedPoint>, border, border
-	SUB: w2<FixedPoint>, width, b2
-	SUB: h2<FixedPoint>, height, b2
-	RECTANGLE: colorImage, border, border, w2, h2, red, green, blue, 255
-END:
-)QUOTE";
-
-static const ReadableString styleSettings =
-UR"QUOTE(
-	border = 2
-	atlas = ImageRgbaU8|File:media/Style.png
-	; Image location in the atlas
-	sourceLeft = 0
-	sourceTop = 0
-	sourceWidth = 64
-	sourceHeight = 64
-	; How the image location moves when pressed increases
-	pressOffsetX = 64
-	pressOffsetY = 0
-	; Fall back on the Button method if a component's class could not be recognized.
-	method = "Button"
-	[Button]
-		rounding = 12
-	[ListBox]
-		method = "ListBox"
-	[VerticalScrollKnob]
-		rounding = 8
-	[VerticalScrollList]
-		method = "VerticalScrollList"
-	[ScrollUp]
-		rounding = 5
-	[ScrollDown]
-		rounding = 5
-	[Panel]
-		border = 1
-		method = "Panel"
-)QUOTE";
-
-static const ReadableString interfaceContent =
-UR"QUOTE(
-Begin : Panel
-	Name = "mainPanel"
-	Solid = 0
-	Begin : Panel
-		Name = "upperPanel"
-		Bottom = 50
-		Solid = 1
-		Color = 190,255,190
-	End
-	Begin : Panel
-		Name = "lowerPanel"
-		Solid = 1
-		Top = 50
-		Color = 0,0,0
-		Begin : Picture
-			Name = "previewPicture"
-			Interpolation = 1
-			Left = 5
-			Top = 5
-			Right = 90%-105
-			Bottom = 70%-5
-		End
-		Begin : Label
-			Name = "descriptionLabel"
-			Color = 190,255,190
-			Left = 5
-			Right = 90%-105
-			Top = 70%
-			Bottom = 100%-5
-		End
-		Begin : ListBox
-			Name = "projectList"
-			Color = 190,255,190
-			Left = 90%-100
-			Right = 100%-5
-			Top = 5
-			Bottom = 100%-50
-		End
-		Begin : Button
-			Name = "launchButton"
-			Text = "Launch"
-			Color = 190,255,190
-			Left = 90%-100
-			Right = 100%-5
-			Top = 100%-45
-			Bottom = 100%-5
-		End
-	End
-End
-)QUOTE";
-
 // Visual components
 Component projectList;
 Component launchButton;
@@ -321,21 +153,23 @@ DSR_MAIN_CALLER(dsrMain)
 void dsrMain(List<String> args) {
 	// Get the application folder.
 	String applicationFolder = file_getApplicationFolder();
+	String mediaFolder = file_combinePaths(applicationFolder, U"media");
 
 	// Start sound.
 	sound_initialize();
-	boomSound = loadSoundFromFile(file_combinePaths(applicationFolder, U"Boom.wav"));
+	boomSound = loadSoundFromFile(file_combinePaths(mediaFolder, U"Boom.wav"));
 
 	// Create a window.
 	window = window_create(U"DFPSR wizard application", 800, 600);
 
 	// Create components using the layout.
-	window_loadInterfaceFromString(window, interfaceContent, applicationFolder);
+	window_loadInterfaceFromFile(window, file_combinePaths(mediaFolder, U"Interface.lof"));
 
 	// Create a virtual machine with reusable image generating functions.
-	MediaMachine machine = machine_create(mediaMachineCode);
+	//   The same Media Machine Code (*.mmc) can be used for multiple themes.
+	MediaMachine machine = machine_create(string_load(file_combinePaths(mediaFolder, U"Drawing.mmc")));
 	// Use the virtual machine with a specific style referring to the functions in machine.
-	window_applyTheme(window, theme_createFromText(machine, styleSettings, applicationFolder));
+	window_applyTheme(window, theme_createFromFile(machine, file_combinePaths(mediaFolder, U"Theme.ini")));
 
 	// Find components.
 	projectList = window_findComponentByName(window, U"projectList");
