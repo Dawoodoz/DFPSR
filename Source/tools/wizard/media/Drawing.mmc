@@ -1,4 +1,59 @@
-﻿BEGIN: Button
+﻿BEGIN: Resize3x3
+	INPUT: FixedPoint, targetWidth
+	INPUT: FixedPoint, targetHeight
+	INPUT: FixedPoint, sourceBorder
+	INPUT: ImageRgbaU8, sourceImage
+	INPUT: FixedPoint, sourceLeft
+	INPUT: FixedPoint, sourceTop
+	INPUT: FixedPoint, sourceWidth
+	INPUT: FixedPoint, sourceHeight
+	OUTPUT: ImageRgbaU8, targetImage
+	CREATE: targetImage, targetWidth, targetHeight
+	# Limit targetBorder
+	MIN: targetBorder<FixedPoint>, targetWidth, targetHeight
+	MUL: targetBorder, targetBorder, 0.3
+	MIN: targetBorder, targetBorder, sourceBorder
+	# Calculat dimensions
+	ADD: sourceRight<FixedPoint>, sourceLeft, sourceWidth
+	ADD: sourceBottom<FixedPoint>, sourceTop, sourceHeight
+	ADD: sb2<FixedPoint>, sourceBorder, sourceBorder
+	SUB: sbiw<FixedPoint>, sourceWidth, sb2
+	SUB: sbih<FixedPoint>, sourceHeight, sb2
+	#ADD: sbl<FixedPoint>, sourceLeft, sourceBorder
+	#ADD: sbt<FixedPoint>, sourceTop, sourceBorder
+	SUB: sbow<FixedPoint>, sourceRight, sourceBorder
+	SUB: sboh<FixedPoint>, sourceBottom, sourceBorder
+	ADD: pl<FixedPoint>, sourceLeft, sourceBorder
+	ADD: pt<FixedPoint>, sourceTop, sourceBorder
+	ADD: tb2<FixedPoint>, targetBorder, targetBorder
+	SUB: tbiw<FixedPoint>, targetWidth, tb2
+	SUB: tbih<FixedPoint>, targetHeight, tb2
+	SUB: tbow<FixedPoint>, targetWidth, targetBorder
+	SUB: tboh<FixedPoint>, targetHeight, targetBorder
+	# Upper
+	RESIZE_BILINEAR: scaled<ImageRgbaU8>, targetBorder, targetBorder, sourceImage, sourceLeft, sourceTop, sourceBorder, sourceBorder
+	COPY: targetImage, 0, 0, scaled
+	RESIZE_BILINEAR: scaled, tbiw, targetBorder, sourceImage, pl, sourceTop, sbiw, sourceBorder
+	COPY: targetImage, targetBorder, 0, scaled
+	RESIZE_BILINEAR: scaled, targetBorder, targetBorder, sourceImage, sbow, sourceTop, sourceBorder, sourceBorder
+	COPY: targetImage, tbow, 0, scaled
+	# Middle
+	RESIZE_BILINEAR: scaled, targetBorder, tbih, sourceImage, sourceLeft, pt, sourceBorder, sbih
+	COPY: targetImage, 0, targetBorder, scaled
+	RESIZE_BILINEAR: scaled, tbiw, tbih, sourceImage, pl, pt, sbiw, sbih
+	COPY: targetImage, targetBorder, targetBorder, scaled
+	RESIZE_BILINEAR: scaled, targetBorder, tbih, sourceImage, sbow, pt, sourceBorder, sbih
+	COPY: targetImage, tbow, targetBorder, scaled
+	# Lower
+	RESIZE_BILINEAR: scaled, targetBorder, targetBorder, sourceImage, sourceLeft, sboh, sourceBorder, sourceBorder
+	COPY: targetImage, 0, tboh, scaled
+	RESIZE_BILINEAR: scaled, tbiw, targetBorder, sourceImage, pl, sboh, sbiw, sourceBorder
+	COPY: targetImage, targetBorder, tboh, scaled
+	RESIZE_BILINEAR: scaled, targetBorder, targetBorder, sourceImage, sbow, sboh, sourceBorder, sourceBorder
+	COPY: targetImage, tbow, tboh, scaled
+END:
+
+BEGIN: Button
 	INPUT: FixedPoint, width
 	INPUT: FixedPoint, height
 	INPUT: FixedPoint, red
@@ -11,6 +66,7 @@
 	INPUT: FixedPoint, sourceHeight
 	INPUT: FixedPoint, pressOffsetX
 	INPUT: FixedPoint, pressOffsetY
+	INPUT: FixedPoint, preserved
 	INPUT: ImageRgbaU8, atlas
 	OUTPUT: ImageRgbaU8, colorImage
 	# Scale by 1 / 255 so that 255 represents full intensity in atlas.
@@ -23,10 +79,10 @@
 	ADD: adjustedSourceLeft<FixedPoint>, sourceLeft, sourceOffsetX
 	ADD: adjustedSourceTop<FixedPoint>, sourceTop, sourceOffsetY
 	# Resize source region from the atlas.
-	RESIZE_BILINEAR: sourceImage<ImageRgbaU8>, width, height, atlas, adjustedSourceLeft, adjustedSourceTop, sourceWidth, sourceHeight
-	GET_RED: diffuseMap<ImageU8>, sourceImage
-	GET_GREEN: specularMap<ImageU8>, sourceImage
-	GET_ALPHA: visibilityMap<ImageU8>, sourceImage
+	CALL: Resize3x3, rescaledImage<ImageRgbaU8>, width, height, preserved, atlas, adjustedSourceLeft, adjustedSourceTop, sourceWidth, sourceHeight
+	GET_RED: diffuseMap<ImageU8>, rescaledImage
+	GET_GREEN: specularMap<ImageU8>, rescaledImage
+	GET_ALPHA: visibilityMap<ImageU8>, rescaledImage
 	MUL: redImage<ImageU8>, diffuseMap, normRed
 	MUL: greenImage<ImageU8>, diffuseMap, normGreen
 	MUL: blueImage<ImageU8>, diffuseMap, normBlue
