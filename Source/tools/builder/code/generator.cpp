@@ -68,6 +68,8 @@ static bool waitForProcess(const DsrProcess &process) {
 			return true;
 		} else if (status == DsrProcessStatus::Crashed) {
 			return false;
+		} else if (status == DsrProcessStatus::NotStarted) {
+			return false;
 		}
 		time_sleepSeconds(0.001);
 	}
@@ -96,9 +98,12 @@ static void produce_callProgram(String &generatedCode, ScriptLanguage language, 
 		// TODO: How can multiple calls be made to the compiler at the same time and only wait for all before linking?
 		//       Don't want to break control flow from the code generating a serial script, so maybe a waitForAll command before performing any linking.
 		//       Don't want error messages from multiple failed compilations to collide in the same terminal.
-		if (!waitForProcess(process_execute(programPath, arguments))) {
-			printText(U"Failed to execute ", programPath, U"!\n");
-			exit(0);
+		if (file_getEntryType(programPath) != EntryType::File) {
+			throwError(U"Failed to execute ", programPath, U", because the executable file was not found!\n");
+		} else {
+			if (!waitForProcess(process_execute(programPath, arguments))) {
+				throwError(U"Failed to execute ", programPath, U"!\n");
+			}
 		}
 	}
 }
