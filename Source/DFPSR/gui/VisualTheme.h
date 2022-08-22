@@ -28,7 +28,19 @@
 
 namespace dsr {
 
-// TODO: Move to the API folder once themes are easy to create.
+
+
+// ---------------------------------------- WARNING! ----------------------------------------
+//
+//    This API is not yet finished and may break backwards compatibility before completed.
+//    It is not yet decided if the media machine will expose virtual assembly code,
+//    which syntax to define themes using or if themes should be bundled together into archives.
+//
+// ------------------------------------------------------------------------------------------
+
+
+
+// TODO: Move to the API folder once complete.
 
 // Create a theme using a virtual machine with functions to call, style settings telling which functions to call with what arguments, and a path to load any non-embedded images from.
 VisualTheme theme_createFromText(const MediaMachine &machine, const ReadableString &styleSettings, const ReadableString &fromPath);
