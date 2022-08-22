@@ -559,9 +559,15 @@ void X11Window::resizeCanvas(int width, int height) {
 	windowLock.lock();
 		if (this->display) {
 			unsigned int defaultDepth = DefaultDepth(this->display, XDefaultScreen(this->display));
+			// Get the old canvas
+			dsr::AlignedImageRgbaU8 oldCanvas = this->canvas[this->showIndex];
 			for (int b = 0; b < bufferCount; b++) {
 				// Create a new canvas
 				this->canvas[b] = dsr::image_create_RgbaU8_native(width, height, this->packOrderIndex);
+				// Copy from any old canvas
+				if (dsr::image_exists(oldCanvas)) {
+					dsr::draw_copy(this->canvas[b], oldCanvas);
+				}
 				// Get a pointer to the pixels
 				uint8_t* rawData = dsr::image_dangerous_getData(this->canvas[b]);
 				// Create an image in XLib using the pointer
