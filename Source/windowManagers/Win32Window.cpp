@@ -344,6 +344,16 @@ static dsr::DsrKey getDsrKey(WPARAM keyCode) {
 		result = dsr::DsrKey_Y;
 	} else if (keyCode == 0x5A) {
 		result = dsr::DsrKey_Z;
+	} else if (keyCode == 0x2D) {
+		result = dsr::DsrKey_Insert;
+	} else if (keyCode == 0x24) {
+		result = dsr::DsrKey_Home;
+	} else if (keyCode == 0x23) {
+		result = dsr::DsrKey_End;
+	} else if (keyCode == 0x21) {
+		result = dsr::DsrKey_PageUp;
+	} else if (keyCode == 0x22) {
+		result = dsr::DsrKey_PageDown;
 	}
 	return result;
 }
@@ -429,11 +439,7 @@ static LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT message, WPARAM wParam, 
 					parent->queueInputEvent(new dsr::KeyboardEvent(dsr::KeyboardEventType::KeyDown, character, dsrKey));
 				}
 				// Press typing with repeat
-				// Caps lock, shift, control and insert is not something you type characters with
-				// TODO: Add more characters to the exclusion list or find a function for this filter somewhere
-				if (character != 16 && character != 17 && character != 20 && character != 37 && character != 45) {
-					parent->queueInputEvent(new dsr::KeyboardEvent(dsr::KeyboardEventType::KeyType, character, dsrKey));
-				}
+				parent->queueInputEvent(new dsr::KeyboardEvent(dsr::KeyboardEventType::KeyType, character, dsrKey));
 			} else { // message == WM_KEYUP
 				// Physical key up
 				parent->queueInputEvent(new dsr::KeyboardEvent(dsr::KeyboardEventType::KeyUp, character, dsrKey));

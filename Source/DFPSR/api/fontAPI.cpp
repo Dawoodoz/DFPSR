@@ -1,6 +1,6 @@
 ﻿// zlib open source license
 //
-// Copyright (c) 2020 David Forsgren Piuva
+// Copyright (c) 2020 to 2022 David Forsgren Piuva
 // 
 // This software is provided 'as-is', without any express or implied
 // warranty. In no event will the authors be held liable for any damages
@@ -62,11 +62,32 @@ int32_t font_getSize(const RasterFont font) {
 	return font->size;
 }
 
+int32_t font_getSpacing(const RasterFont font) {
+	if (!font_exists(font)) {
+		throwError("font_getSpacing: font must exist!");
+	}
+	return font->spacing;
+}
+
+int32_t font_getTabWidth(const RasterFont font) {
+	if (!font_exists(font)) {
+		throwError("font_getTabWidth: font must exist!");
+	}
+	return font->tabWidth;
+}
+
 int32_t font_getCharacterWidth(const RasterFont font, DsrChar unicodeValue) {
 	if (!font_exists(font)) {
 		throwError("font_getCharacterWidth: font must exist!");
 	}
 	return font->getCharacterWidth(unicodeValue);
+}
+
+int32_t font_getMonospaceWidth(const RasterFont font) {
+	if (!font_exists(font)) {
+		throwError("font_getMonospaceWidth: font must exist!");
+	}
+	return font->widest + font->spacing;
 }
 
 int32_t font_getLineWidth(const RasterFont font, const ReadableString& content) {

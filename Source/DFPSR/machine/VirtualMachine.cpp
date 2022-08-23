@@ -256,7 +256,11 @@ void VirtualMachine::addCallInstructions(const List<String>& arguments) {
 	}
 	// TODO: Allow calling methods that aren't defined yet.
 	int currentMethodIndex = this->methods.length() - 1;
-	int calledMethodIndex = findMethod(string_removeOuterWhiteSpace(arguments[0]));
+	ReadableString methodName = string_removeOuterWhiteSpace(arguments[0]);
+	int calledMethodIndex = findMethod(methodName);
+	if (calledMethodIndex == -1) {
+		throwError(U"Tried to make an internal call to the method \"", methodName, U"\", which was not previously defined in the virtual machine! Make sure that the name is spelled correctly and the method is defined above the caller.\n");
+	}
 	// Check the total number of arguments
 	Method* calledMethod = &this->methods[calledMethodIndex];
 	if (arguments.length() - 1 != calledMethod->outputCount + calledMethod->inputCount) {

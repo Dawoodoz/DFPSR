@@ -1,6 +1,6 @@
 ﻿// zlib open source license
 //
-// Copyright (c) 2018 to 2019 David Forsgren Piuva
+// Copyright (c) 2018 to 2022 David Forsgren Piuva
 // 
 // This software is provided 'as-is', without any express or implied
 // warranty. In no event will the authors be held liable for any damages
@@ -158,6 +158,16 @@ inline String dsr::getName(DsrKey v) {
 		return U"Y";
 	} else if (v == DsrKey_Z) {
 		return U"Z";
+	} else if (v == DsrKey_Insert) {
+		return U"Insert";
+	} else if (v == DsrKey_Home) {
+		return U"Home";
+	} else if (v == DsrKey_End) {
+		return U"End";
+	} else if (v == DsrKey_PageUp) {
+		return U"PageUp";
+	} else if (v == DsrKey_PageDown) {
+		return U"PageDown";
 	} else {
 		return U"Invalid virtual key code";
 	}
