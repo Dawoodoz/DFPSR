@@ -1,6 +1,6 @@
 ﻿// zlib open source license
 //
-// Copyright (c) 2018 to 2019 David Forsgren Piuva
+// Copyright (c) 2018 to 2022 David Forsgren Piuva
 // 
 // This software is provided 'as-is', without any express or implied
 // warranty. In no event will the authors be held liable for any damages
@@ -56,10 +56,11 @@ public:
 	int32_t spacing = 0; // The extra pixels between each character
 	int32_t spaceWidth = 0; // The size of a whole space character including spacing
 	int32_t tabWidth = 0; // The size of a whole tab including spacing
+	int32_t widest = 0; // The maximum character width excluding spacing
 	// A list of character images with their unicode keys
 	List<RasterCharacter> characters;
 	// TODO: A way to map all UTF-32 characters
-	// Indices to characters for UTF16
+	// Indices to characters within the 16-bit range
 	//  indices[x] = -1 for non-existing character codes
 	//  The indices[0..255] contains the Latin-1 subset
 	int32_t indices[65536];
@@ -78,7 +79,7 @@ public:
 	int32_t getCharacterWidth(DsrChar unicodeValue) const;
 	// Returns the total length of characters in pixels as if printing content
 	// If multiple lines exists it will simply keep adding to the total by ignoring line-breaks
-	int32_t getLineWidth(const ReadableString& content) const;
+	int64_t getLineWidth(const ReadableString& content) const;
 	// Prints a character and returns the horizontal stride in pixels
 	int32_t printCharacter(ImageRgbaU8& target, DsrChar unicodeValue, const IVector2D& location, const ColorRgbaI32& color) const;
 	// Prints a whole line of text from location

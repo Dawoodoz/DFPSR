@@ -1,6 +1,6 @@
 ﻿// zlib open source license
 //
-// Copyright (c) 2018 to 2019 David Forsgren Piuva
+// Copyright (c) 2018 to 2022 David Forsgren Piuva
 // 
 // This software is provided 'as-is', without any express or implied
 // warranty. In no event will the authors be held liable for any damages
@@ -33,7 +33,7 @@ RasterCharacter::RasterCharacter(const ImageU8& image, DsrChar unicodeValue, int
 
 RasterFontImpl::RasterFontImpl(const String& name, int32_t size, int32_t spacing, int32_t spaceWidth)
  : name(name), size(size), spacing(spacing), spaceWidth(spaceWidth), tabWidth(spaceWidth * 4) {
-	for (int i = 0; i < 65536; i++) {
+	for (int32_t i = 0; i < 65536; i++) {
 		this->indices[i] = -1;
 	}
 }
@@ -47,11 +47,13 @@ std::shared_ptr<RasterFontImpl> RasterFontImpl::createLatinOne(const String& nam
 	return result;
 }
 
-void RasterFontImpl::registerCharacter(const ImageU8& image, DsrChar unicodeValue, int32_t offsetY) {
+void RasterFontImpl::registerCharacter(const ImageU8& characterImage, DsrChar unicodeValue, int32_t offsetY) {
 	if (this->indices[unicodeValue] == -1) {
 		// Add the unicode character
-		this->characters.pushConstruct(image, unicodeValue, offsetY);
-		// Add to latin-1 table if inside the range
+		this->characters.pushConstruct(characterImage, unicodeValue, offsetY);
+		int32_t width = image_getWidth(characterImage);
+		if (this->widest < width) this->widest = width;
+		// Add to table if inside the range
 		if (unicodeValue < 65536) {
 			this->indices[unicodeValue] = this->characters.length() - 1;
 		}
@@ -88,8 +90,7 @@ void RasterFontImpl::registerLatinOne16x16(const ImageU8& atlas) {
 			IRect croppedRegion = getCharacterBound(atlas, searchRegion);
 			if (croppedRegion.hasArea()) {
 				int32_t offsetY = croppedRegion.top() - searchRegion.top();
-				ImageU8 fullImage = image_getSubImage(atlas, croppedRegion);
-				this->registerCharacter(fullImage, y * 16 + x, offsetY);
+				this->registerCharacter(image_getSubImage(atlas, croppedRegion), y * 16 + x, offsetY);
 			}
 		}
 	}
@@ -124,21 +125,21 @@ int32_t RasterFontImpl::printCharacter(ImageRgbaU8& target, DsrChar unicodeValue
 }
 
 // Lets the print coordinate x jump to the next tab stop starting from the left origin
-static void tabJump(int &x, int leftOrigin, int tabWidth) {
+static int64_t tabJump(int64_t oldLocation, int64_t leftOrigin, int64_t tabWidth) {
 	// Get the pixel location relative to the origin
-	int localX = x - leftOrigin;
+	int64_t localX = oldLocation - leftOrigin;
 	// Get the remaining pixels until the next tab stop
 	// If modulo returns zero at a tab stop, it will jump to the next with a full tab width
-	int remainder = tabWidth - (localX % tabWidth);
-	x += remainder;
+	int64_t remainder = tabWidth - (localX % tabWidth);
+	return oldLocation + remainder;
 }
 
 void RasterFontImpl::printLine(ImageRgbaU8& target, const ReadableString& content, const IVector2D& location, const ColorRgbaI32& color) const {
 	IVector2D currentLocation = location;
-	for (int i = 0; i < string_length(content); i++) {
+	for (int64_t i = 0; i < string_length(content); i++) {
 		DsrChar code = content[i];
-		if (code == 9) { // Tab
-			tabJump(currentLocation.x, location.x, this->tabWidth);
+		if (code == U'\t') {
+			currentLocation.x = tabJump(currentLocation.x, location.x, this->tabWidth);
 		} else {
 			// TODO: Would right to left printing of Arabic text be too advanced to have in the core framework?
 			currentLocation.x += this->printCharacter(target, code, currentLocation, color);
@@ -147,16 +148,16 @@ void RasterFontImpl::printLine(ImageRgbaU8& target, const ReadableString& conten
 }
 
 void RasterFontImpl::printMultiLine(ImageRgbaU8& target, const ReadableString& content, const IRect& bound, const ColorRgbaI32& color) const {
-	int y = bound.top(); // The upper vertical location of the currently printed row in pixels.
-	int lineWidth = 0; // The size of the currently scanned row, to make sure that it can be printed.
-	int rowStartIndex = 0; // The start of the current row or the unprinted remainder that didn't fit inside the bound.
-	int lastWordBreak = 0; // The last scanned location where the current row could've been broken off.
+	int64_t y = bound.top(); // The upper vertical location of the currently printed row in pixels.
+	int64_t lineWidth = 0; // The size of the currently scanned row, to make sure that it can be printed.
+	int64_t rowStartIndex = 0; // The start of the current row or the unprinted remainder that didn't fit inside the bound.
+	int64_t lastWordBreak = 0; // The last scanned location where the current row could've been broken off.
 	bool wordStarted = false; // True iff the physical line after word wrapping has scanned the beginning of a word.
 	if (bound.height() < this->size) {
 		// Not enough height to print anything
 		return;
 	}
-	for (int i = 0; i < string_length(content); i++) {
+	for (int64_t i = 0; i < string_length(content); i++) {
 		DsrChar code = content[i];
 		if (code == 10) {
 			// Print the completed line
@@ -167,7 +168,7 @@ void RasterFontImpl::printMultiLine(ImageRgbaU8& target, const ReadableString& c
 			lastWordBreak = rowStartIndex;
 			wordStarted = false;
 		} else {
-			int newCharWidth = this->getCharacterWidth(code);
+			int32_t newCharWidth = this->getCharacterWidth(code);
 			if (code == ' ' || code == 9) { // Space or tab
 				if (wordStarted) {
 					lastWordBreak = i;
@@ -176,13 +177,13 @@ void RasterFontImpl::printMultiLine(ImageRgbaU8& target, const ReadableString& c
 			} else {
 				wordStarted = true;
 				if (lineWidth + newCharWidth >= bound.width()) {
-					int splitIndex = lastWordBreak;
+					int64_t splitIndex = lastWordBreak;
 					if (lastWordBreak == rowStartIndex) {
 						// The word is too big to be printed as a whole
 						splitIndex = i;
 					}
 					ReadableString partialLine = string_exclusiveRange(content, rowStartIndex, splitIndex);
-					int partialLength = this->getLineWidth(partialLine);
+					int64_t partialLength = this->getLineWidth(partialLine);
 					if (partialLength <= bound.width()) {
 						this->printLine(target, partialLine, IVector2D(bound.left(), y), color);
 					}
@@ -199,7 +200,7 @@ void RasterFontImpl::printMultiLine(ImageRgbaU8& target, const ReadableString& c
 				}
 			}
 			if (code == 9) { // Tab
-				tabJump(lineWidth, bound.left(), this->tabWidth);
+				lineWidth = tabJump(lineWidth, bound.left(), this->tabWidth);
 			} else {
 				lineWidth += newCharWidth;
 			}
@@ -208,12 +209,12 @@ void RasterFontImpl::printMultiLine(ImageRgbaU8& target, const ReadableString& c
 	this->printLine(target, string_from(content, rowStartIndex), IVector2D(bound.left(), y), color);
 }
 
-int32_t RasterFontImpl::getLineWidth(const ReadableString& content) const {
-	int32_t result = 0;
-	for (int i = 0; i < string_length(content); i++) {
+int64_t RasterFontImpl::getLineWidth(const ReadableString& content) const {
+	int64_t result = 0;
+	for (int64_t i = 0; i < string_length(content); i++) {
 		DsrChar code = content[i];
 		if (code == 9) { // Tab
-			tabJump(result, 0, this->tabWidth);
+			result = tabJump(result, 0, this->tabWidth);
 		} else {
 			result += this->getCharacterWidth(code);
 		}

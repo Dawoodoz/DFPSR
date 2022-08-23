@@ -454,6 +454,16 @@ static dsr::DsrKey getDsrKey(KeySym keyCode) {
 		result = dsr::DsrKey_Y;
 	} else if (keyCode == XK_z || keyCode == XK_Z) {
 		result = dsr::DsrKey_Z;
+	} else if (keyCode == XK_Insert) {
+		result = dsr::DsrKey_Insert;
+	} else if (keyCode == XK_Home) {
+		result = dsr::DsrKey_Home;
+	} else if (keyCode == XK_End) {
+		result = dsr::DsrKey_End;
+	} else if (keyCode == XK_Page_Up) {
+		result = dsr::DsrKey_PageUp;
+	} else if (keyCode == XK_Page_Down) {
+		result = dsr::DsrKey_PageDown;
 	}
 	return result;
 }

@@ -36,7 +36,8 @@ namespace dsr {
 //   Copy, modify and compile with theme_create to get a custom theme
 static const ReadableString defaultMediaMachineCode =
 UR"QUOTE(
-# Helper methods
+# Drawing a rounded rectangle to the alpha channel and a smaller rectangle reduced by the border argument for RGB channels.
+#   This method for drawing edges works with alpha filtering enabled.
 BEGIN: generate_rounded_rectangle
 	# Dimensions of the result image.
 	INPUT: FixedPoint, width
@@ -74,6 +75,24 @@ BEGIN: generate_rounded_rectangle
 	RECTANGLE: resultImage, radius, border, w3, r2, 255
 	RECTANGLE: resultImage, radius, h2, w3, r2, 255
 	RECTANGLE: resultImage, border, radius, w4, h3, 255
+END:
+
+# Can be call directly to draw a component, or internally to add more effects.
+# Black edges are created by default initializing the background to zeroes and drawing the inside smaller.
+#   This method for drawing edges does not work if the resulting colorImage is drawn with alpha filtering, because setting alpha to zero means transparent.
+BEGIN: HardRectangle
+	INPUT: FixedPoint, width
+	INPUT: FixedPoint, height
+	INPUT: FixedPoint, red
+	INPUT: FixedPoint, green
+	INPUT: FixedPoint, blue
+	INPUT: FixedPoint, border
+	OUTPUT: ImageRgbaU8, colorImage
+	CREATE: colorImage, width, height
+	ADD: b2<FixedPoint>, border, border
+	SUB: w2<FixedPoint>, width, b2
+	SUB: h2<FixedPoint>, height, b2
+	RECTANGLE: colorImage, border, border, w2, h2, red, green, blue, 255
 END:
 
 BEGIN: generate_rounded_button
@@ -118,21 +137,6 @@ BEGIN: Button
 	CALL: generate_rounded_button, colorImage, width, height, red, green, blue, pressed, border, rounding
 END:
 
-BEGIN: ListBox
-	INPUT: FixedPoint, width
-	INPUT: FixedPoint, height
-	INPUT: FixedPoint, red
-	INPUT: FixedPoint, green
-	INPUT: FixedPoint, blue
-	INPUT: FixedPoint, border
-	OUTPUT: ImageRgbaU8, colorImage
-	CREATE: colorImage, width, height
-	ADD: b2<FixedPoint>, border, border
-	SUB: w2<FixedPoint>, width, b2
-	SUB: h2<FixedPoint>, height, b2
-	RECTANGLE: colorImage, border, border, w2, h2, red, green, blue, 255
-END:
-
 BEGIN: VerticalScrollList
 	INPUT: FixedPoint, width
 	INPUT: FixedPoint, height
@@ -146,19 +150,21 @@ BEGIN: VerticalScrollList
 	PACK_RGBA: colorImage, 0, 0, 0, visImage
 END:
 
-BEGIN: Panel
+BEGIN: TextBox
 	INPUT: FixedPoint, width
 	INPUT: FixedPoint, height
 	INPUT: FixedPoint, red
 	INPUT: FixedPoint, green
 	INPUT: FixedPoint, blue
 	INPUT: FixedPoint, border
+	INPUT: FixedPoint, focused
 	OUTPUT: ImageRgbaU8, colorImage
-	CREATE: colorImage, width, height
-	ADD: b2<FixedPoint>, border, border
-	SUB: w2<FixedPoint>, width, b2
-	SUB: h2<FixedPoint>, height, b2
-	RECTANGLE: colorImage, border, border, w2, h2, red, green, blue, 255
+	ADD: intensity<FixedPoint>, 4, focused
+	MUL: intensity, intensity, 0.2
+	MUL: red, red, intensity
+	MUL: green, green, intensity
+	MUL: blue, blue, intensity
+	CALL: HardRectangle, colorImage, width, height, red, green, blue, border
 END:
 )QUOTE";
 
@@ -167,12 +173,14 @@ END:
 static const ReadableString defaultStyleSettings =
 UR"QUOTE(
 	border = 2
-	; Fall back on the Button method if a component's class could not be recognized.
 	method = "Button"
+	; Fall back on the Button method if a component's class could not be recognized.
 	[Button]
 		rounding = 12
 	[ListBox]
-		method = "ListBox"
+		method = "HardRectangle"
+	[TextBox]
+		method = "TextBox"
 	[VerticalScrollKnob]
 		rounding = 8
 	[VerticalScrollList]
@@ -183,7 +191,7 @@ UR"QUOTE(
 		rounding = 5
 	[Panel]
 		border = 1
-		method = "Panel"
+		method = "HardRectangle"
 )QUOTE";
 
 template <typename V>
@@ -320,18 +328,15 @@ static bool assignMediaMachineArguments(ClassSettings settings, MediaMachine &ma
 			return true;
 		}
 	}
+	// The media machine currently does not support strings.
 	return false;
 }
 
 bool theme_assignMediaMachineArguments(const VisualTheme &theme, int32_t contextIndex, MediaMachine &machine, int methodIndex, int inputIndex, const ReadableString &argumentName) {
 	if (!theme.get()) { return false; }
-	// Check in the context first.
-	if (contextIndex > 0 && assignMediaMachineArguments(theme->settings[contextIndex], machine, methodIndex, inputIndex, argumentName)) {
-		return true;
-	} else {
-		// If not found in the context, check in the default settings.
-		return assignMediaMachineArguments(theme->settings[0], machine, methodIndex, inputIndex, argumentName);
-	}
+	// Check in the context first, and then in the default settings.
+	return (contextIndex > 0 && assignMediaMachineArguments(theme->settings[contextIndex], machine, methodIndex, inputIndex, argumentName))
+	                         || assignMediaMachineArguments(theme->settings[0],            machine, methodIndex, inputIndex, argumentName);
 }
 
 }

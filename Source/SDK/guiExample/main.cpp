@@ -10,6 +10,7 @@ Window window;
 Component buttonClear;
 Component buttonAdd;
 Component myListBox;
+Component textElement;
 
 DSR_MAIN_CALLER(dsrMain)
 void dsrMain(List<String> args) {
@@ -33,6 +34,7 @@ void dsrMain(List<String> args) {
 	buttonClear = window_findComponentByName(window, U"buttonClear");
 	buttonAdd = window_findComponentByName(window, U"buttonAdd");
 	myListBox = window_findComponentByName(window, U"myListBox");
+	textElement = window_findComponentByName(window, U"textElement");
 
 	// Connect components with actions
 	component_setPressedEvent(buttonClear, []() {
@@ -41,7 +43,7 @@ void dsrMain(List<String> args) {
 	});
 	component_setPressedEvent(buttonAdd, []() {
 		// Add to list
-		component_call(myListBox, U"PushElement", U"New item");
+		component_call(myListBox, U"PushElement", component_getProperty_string(textElement, U"Text", false));
 	});
 	component_setKeyDownEvent(myListBox, [](const KeyboardEvent& event) {
 		if (event.dsrKey == DsrKey_Delete) {

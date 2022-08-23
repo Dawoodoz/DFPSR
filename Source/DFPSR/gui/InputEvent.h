@@ -1,6 +1,6 @@
 ﻿// zlib open source license
 //
-// Copyright (c) 2018 to 2019 David Forsgren Piuva
+// Copyright (c) 2018 to 2022 David Forsgren Piuva
 // 
 // This software is provided 'as-is', without any express or implied
 // warranty. In no event will the authors be held liable for any damages
@@ -43,9 +43,9 @@ enum class KeyboardEventType { KeyDown, KeyUp, KeyType };
 //   * DsrKey_F1 to DsrKey_F12 are guaranteed to be in an increasing serial order (so that "key - (DsrKey_F1 - 1)" is the key's number)
 //   * DsrKey_A to DsrKey_Z are guaranteed to be in an increasing serial order
 enum DsrKey {
-	DsrKey_LeftArrow, DsrKey_RightArrow, DsrKey_UpArrow, DsrKey_DownArrow,
+	DsrKey_LeftArrow, DsrKey_RightArrow, DsrKey_UpArrow, DsrKey_DownArrow, DsrKey_PageUp, DsrKey_PageDown,
 	DsrKey_LeftControl, DsrKey_RightControl, DsrKey_LeftShift, DsrKey_RightShift, DsrKey_LeftAlt, DsrKey_RightAlt,
-	DsrKey_Escape, DsrKey_Pause, DsrKey_Space, DsrKey_Tab, DsrKey_Return, DsrKey_BackSpace, DsrKey_Delete,
+	DsrKey_Escape, DsrKey_Pause, DsrKey_Space, DsrKey_Tab, DsrKey_Return, DsrKey_BackSpace, DsrKey_Delete, DsrKey_Insert, DsrKey_Home, DsrKey_End,
 	DsrKey_0, DsrKey_1, DsrKey_2, DsrKey_3, DsrKey_4, DsrKey_5, DsrKey_6, DsrKey_7, DsrKey_8, DsrKey_9,
 	DsrKey_F1, DsrKey_F2, DsrKey_F3, DsrKey_F4, DsrKey_F5, DsrKey_F6, DsrKey_F7, DsrKey_F8, DsrKey_F9, DsrKey_F10, DsrKey_F11, DsrKey_F12,
 	DsrKey_A, DsrKey_B, DsrKey_C, DsrKey_D, DsrKey_E, DsrKey_F, DsrKey_G, DsrKey_H, DsrKey_I, DsrKey_J, DsrKey_K, DsrKey_L, DsrKey_M,

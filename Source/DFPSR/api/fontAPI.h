@@ -1,6 +1,6 @@
 ﻿// zlib open source license
 //
-// Copyright (c) 2020 David Forsgren Piuva
+// Copyright (c) 2020 to 2022 David Forsgren Piuva
 // 
 // This software is provided 'as-is', without any express or implied
 // warranty. In no event will the authors be held liable for any damages
@@ -48,12 +48,21 @@ namespace dsr {
 	String font_getName(const RasterFont font);
 	// Pre-condition: font must exist
 	// Post-condition:
-	//   Returns the font's size, which is the height of an individual character image before cropping
+	//   Returns the font's size in pixels, which is the height of an individual character image before cropping
 	//   If ceated using font_createLatinOne then it's image_getHeight(atlas) / 16
 	int32_t font_getSize(const RasterFont font);
 	// Pre-condition: font must exist
+	// Post-condition: Returns the font's empty space between characters in pixels.
+	int32_t font_getSpacing(const RasterFont font);
+	// Pre-condition: font must exist
+	// Post-condition: Returns the font's maximum tab width in pixels, which is the alignment the write location will jump to when reading a tab.
+	int32_t font_getTabWidth(const RasterFont font);
+	// Pre-condition: font must exist
 	// Post-condition: Returns the width of a character including spacing in pixels
 	int32_t font_getCharacterWidth(const RasterFont font, DsrChar unicodeValue);
+	// Pre-condition: font must exist
+	// Post-condition: Returns the width of the widest character including spacing in pixels
+	int32_t font_getMonospaceWidth(const RasterFont font);
 	// Pre-condition: font must exist
 	// Post-condition: Returns the total length of content in pixels while ignoring line-breaks
 	int32_t font_getLineWidth(const RasterFont font, const ReadableString& content);
