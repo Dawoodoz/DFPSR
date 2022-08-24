@@ -33,7 +33,8 @@ class TextBox : public VisualComponent {
 PERSISTENT_DECLARATION(TextBox)
 public:
 	// Attributes
-	PersistentColor color;
+	PersistentColor foreColor;
+	PersistentColor backColor;
 	PersistentString text;
 	void declareAttributes(StructureDefinition &target) const override;
 	Persistent* findAttribute(const ReadableString &name) override;

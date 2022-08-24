@@ -31,15 +31,20 @@ PERSISTENT_DEFINITION(TextBox)
 
 void TextBox::declareAttributes(StructureDefinition &target) const {
 	VisualComponent::declareAttributes(target);
-	target.declareAttribute(U"Color");
+	target.declareAttribute(U"BackColor");
+	target.declareAttribute(U"ForeColor");
 	target.declareAttribute(U"Text");
 }
 
 Persistent* TextBox::findAttribute(const ReadableString &name) {
-	if (string_caseInsensitiveMatch(name, U"Color")) {
-		return &(this->color);
+	if (string_caseInsensitiveMatch(name, U"BackColor")) {
+		return &(this->backColor);
+	} else if (string_caseInsensitiveMatch(name, U"ForeColor")) {
+		return &(this->foreColor);
 	} else if (string_caseInsensitiveMatch(name, U"Text")) {
 		return &(this->text);
+	} else if (string_caseInsensitiveMatch(name, U"MultiLine")) {
+		return &(this->multiLine);
 	} else {
 		return VisualComponent::findAttribute(name);
 	}
@@ -99,16 +104,16 @@ int64_t findBeamLocation(const ReadableString& text, const RasterFont &font, int
 
 // Iterate over the whole text once for both selection and characters.
 // Returns the beam's X location in pixels relative to the parent of originX.
-int64_t printMonospace(OrderedImageRgbaU8 &target, const ReadableString& text, const RasterFont &font, bool focused, int64_t originX, int64_t selectionLeft, int64_t selectionRight, int64_t beamIndex, int64_t topY, int64_t bottomY) {
+int64_t printMonospace(OrderedImageRgbaU8 &target, const ReadableString& text, const RasterFont &font, ColorRgbaI32 foreColor, bool focused, int64_t originX, int64_t selectionLeft, int64_t selectionRight, int64_t beamIndex, int64_t topY, int64_t bottomY) {
 	int64_t characterHeight = bottomY - topY;
 	int64_t beamPixelX = originX;
-	iterateCharacters(text, font, originX, [&target, &font, &beamPixelX, selectionLeft, selectionRight, beamIndex, topY, characterHeight, focused](int64_t index, DsrChar code, int64_t left, int64_t right) {
+	iterateCharacters(text, font, originX, [&target, &font, &foreColor, &beamPixelX, selectionLeft, selectionRight, beamIndex, topY, characterHeight, focused](int64_t index, DsrChar code, int64_t left, int64_t right) {
 		if (index == beamIndex) beamPixelX = left;
 		if (focused && selectionLeft <= index && index < selectionRight) {
 			draw_rectangle(target, IRect(left, topY, right - left, characterHeight), ColorRgbaI32(0, 0, 100, 255));
 			font_printCharacter(target, font, code, IVector2D(left, topY), ColorRgbaI32(255, 255, 255, 255));
 		} else {
-			font_printCharacter(target, font, code, IVector2D(left, topY), ColorRgbaI32(0, 0, 0, 255));
+			font_printCharacter(target, font, code, IVector2D(left, topY), foreColor);
 		}
 	});
 	return beamPixelX;
@@ -125,7 +130,7 @@ int64_t printMonospace(OrderedImageRgbaU8 &target, const ReadableString& text, c
 //       Separate components should be able to override any color for programmability, but default values should refer to the current color palette.
 //         If no color is assigned, the class will give it a standard color from the theme.
 //         Should classes be separate for themes and palettes?
-static OrderedImageRgbaU8 generateBoxImage(TextBox &textBox, MediaMethod imageGenerator, bool focused, int width, int height, ColorRgbI32 backColor, const ReadableString &text, const RasterFont &font) {
+static OrderedImageRgbaU8 generateBoxImage(TextBox &textBox, MediaMethod imageGenerator, bool focused, int width, int height, ColorRgbaI32 backColor, ColorRgbaI32 foreColor, const ReadableString &text, const RasterFont &font) {
 	// Create a scaled image
 	OrderedImageRgbaU8 result;
  	textBox.generateImage(imageGenerator, width, height, backColor.red, backColor.green, backColor.blue, 0, focused ? 1 : 0)(result);
@@ -143,11 +148,11 @@ static OrderedImageRgbaU8 generateBoxImage(TextBox &textBox, MediaMethod imageGe
 	int64_t selectionRight = std::max(textBox.selectionStart, textBox.beamLocation);
 	bool hasSelection = selectionLeft < selectionRight;
 	// Draw the text with selection and get the beam's pixel location.
-	int64_t beamPixelX = printMonospace(result, text, font, focused, originX, selectionLeft, selectionRight, textBox.beamLocation, topY, bottomY);
+	int64_t beamPixelX = printMonospace(result, text, font, foreColor, focused, originX, selectionLeft, selectionRight, textBox.beamLocation, topY, bottomY);
 	// Draw a beam if the textbox is focused.
 	if (focused) {
 		int64_t beamWidth = 2;
-		draw_rectangle(result, IRect(beamPixelX - 1, topY - 1, beamWidth, bottomY - topY + 2), hasSelection ? ColorRgbaI32(255, 255, 255, 255) : ColorRgbaI32(0, 0, 0, 255));
+		draw_rectangle(result, IRect(beamPixelX - 1, topY - 1, beamWidth, bottomY - topY + 2), hasSelection ? ColorRgbaI32(255, 255, 255, 255) : foreColor);
 	}
 	return result;
 }
@@ -160,7 +165,7 @@ void TextBox::generateGraphics() {
 	bool currentlyFocused = this->isFocused();
 	if (!this->hasImages || this->drawnAsFocused != currentlyFocused) {
 		completeAssets();
-		this->image = generateBoxImage(*this, this->textBox, currentlyFocused, width, height, this->color.value, this->text.value, this->font);
+		this->image = generateBoxImage(*this, this->textBox, currentlyFocused, width, height, ColorRgbaI32(this->backColor.value, 255), ColorRgbaI32(this->foreColor.value, 255), this->text.value, this->font);
 		this->hasImages = true;
 		this->drawnAsFocused = currentlyFocused;
 	}
