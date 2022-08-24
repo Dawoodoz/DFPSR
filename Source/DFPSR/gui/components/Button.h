@@ -33,7 +33,8 @@ class Button : public VisualComponent {
 PERSISTENT_DECLARATION(Button)
 public:
 	// Attributes
-	PersistentColor color;
+	PersistentColor backColor;
+	PersistentColor foreColor;
 	PersistentString text;
 	void declareAttributes(StructureDefinition &target) const override;
 	Persistent* findAttribute(const ReadableString &name) override;

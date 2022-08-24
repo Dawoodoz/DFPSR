@@ -36,7 +36,8 @@ void Panel::declareAttributes(StructureDefinition &target) const {
 Persistent* Panel::findAttribute(const ReadableString &name) {
 	if (string_caseInsensitiveMatch(name, U"Solid")) {
 		return &(this->solid);
-	} else if (string_caseInsensitiveMatch(name, U"Color")) {
+	} else if (string_caseInsensitiveMatch(name, U"Color") || string_caseInsensitiveMatch(name, U"BackColor")) {
+		// Both color and backcolor is accepted as names for the only color.
 		return &(this->color);
 	} else {
 		return VisualComponent::findAttribute(name);

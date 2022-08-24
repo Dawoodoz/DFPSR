@@ -12,7 +12,8 @@
 			Right = 100%-105
 			Top = +5
 			Bottom = +45
-			Color = 200,200,200
+			BackColor = 200,200,200
+			ForeColor = 0,0,0
 			Text = "Element"
 		End
 		Begin : Button
@@ -21,7 +22,8 @@
 			Right = 100%-5
 			Top = +5
 			Bottom = +45
-			Color = 150,160,150
+			BackColor = 150,160,150
+			ForeColor = 0,100,0
 			Text = "Add"
 		End
 	End

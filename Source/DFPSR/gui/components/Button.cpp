@@ -35,8 +35,11 @@ void Button::declareAttributes(StructureDefinition &target) const {
 }
 
 Persistent* Button::findAttribute(const ReadableString &name) {
-	if (string_caseInsensitiveMatch(name, U"Color")) {
-		return &(this->color);
+	if (string_caseInsensitiveMatch(name, U"Color") || string_caseInsensitiveMatch(name, U"BackColor")) {
+		// The short Color alias refers to the back color in Buttons, because most buttons use black text.
+		return &(this->backColor);
+	} else if (string_caseInsensitiveMatch(name, U"ForeColor")) {
+		return &(this->foreColor);
 	} else if (string_caseInsensitiveMatch(name, U"Text")) {
 		return &(this->text);
 	} else {
@@ -50,7 +53,7 @@ bool Button::isContainer() const {
 	return false;
 }
 
-static OrderedImageRgbaU8 generateButtonImage(Button &button, MediaMethod imageGenerator, int pressed, int width, int height, ColorRgbI32 backColor, String text, RasterFont font) {
+static OrderedImageRgbaU8 generateButtonImage(Button &button, MediaMethod imageGenerator, int pressed, int width, int height, ColorRgbI32 backColor, ColorRgbI32 foreColor, String text, RasterFont font) {
 	// Create a scaled image
 	OrderedImageRgbaU8 result;
  	button.generateImage(imageGenerator, width, height, backColor.red, backColor.green, backColor.blue, pressed)(result);
@@ -60,7 +63,7 @@ static OrderedImageRgbaU8 generateButtonImage(Button &button, MediaMethod imageG
 		if (pressed) {
 			top += 1;
 		}
-		font_printLine(result, font, text, IVector2D(left, top), ColorRgbaI32(0, 0, 0, 255));
+		font_printLine(result, font, text, IVector2D(left, top), ColorRgbaI32(foreColor, 255));
 	}
 	return result;
 }
@@ -72,8 +75,8 @@ void Button::generateGraphics() {
 	if (height < 1) { height = 1; }
 	if (!this->hasImages) {
 		completeAssets();
-		this->imageUp = generateButtonImage(*this, this->button, 0, width, height, this->color.value, this->text.value, this->font);
-		this->imageDown = generateButtonImage(*this, this->button, 1, width, height, this->color.value, this->text.value, this->font);
+		this->imageUp = generateButtonImage(*this, this->button, 0, width, height, this->backColor.value, this->foreColor.value, this->text.value, this->font);
+		this->imageDown = generateButtonImage(*this, this->button, 1, width, height, this->backColor.value, this->foreColor.value, this->text.value, this->font);
 		this->hasImages = true;
 	}
 }
