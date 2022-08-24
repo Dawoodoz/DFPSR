@@ -34,6 +34,7 @@ void TextBox::declareAttributes(StructureDefinition &target) const {
 	target.declareAttribute(U"BackColor");
 	target.declareAttribute(U"ForeColor");
 	target.declareAttribute(U"Text");
+	target.declareAttribute(U"MultiLine");
 }
 
 Persistent* TextBox::findAttribute(const ReadableString &name) {
@@ -69,7 +70,6 @@ static void tabJump(int64_t &x, int64_t leftOrigin, int64_t tabWidth) {
 	x += tabWidth - ((x - leftOrigin) % tabWidth);
 }
 
-// TODO: Make a separate version for multi-line textboxes.
 // To have a stable tab alignment, the whole text must be given when iterating.
 void iterateCharacters(const ReadableString& text, const RasterFont &font, int64_t originX, std::function<void(int64_t index, DsrChar code, int64_t left, int64_t right)> characterAction) {
 	int64_t right = originX;
@@ -87,24 +87,9 @@ void iterateCharacters(const ReadableString& text, const RasterFont &font, int64
 	}
 }
 
-int64_t findBeamLocation(const ReadableString& text, const RasterFont &font, int64_t originX, int64_t findPixelX) {
-	int64_t beamIndex = 0;
-	int64_t closestDistance = 1000000000000;
-	iterateCharacters(text, font, originX, [&beamIndex, &closestDistance, findPixelX](int64_t index, DsrChar code, int64_t left, int64_t right) {
-		// TODO: Why is selection not centered? Is it the origin handled differently?
-		int64_t center = (left + right) / 2;
-		int64_t newDistance = std::abs(findPixelX - center);
-		if (newDistance < closestDistance) {
-			beamIndex = index;
-			closestDistance = newDistance;
-		}
-	});
-	return beamIndex;
-}
-
 // Iterate over the whole text once for both selection and characters.
 // Returns the beam's X location in pixels relative to the parent of originX.
-int64_t printMonospace(OrderedImageRgbaU8 &target, const ReadableString& text, const RasterFont &font, ColorRgbaI32 foreColor, bool focused, int64_t originX, int64_t selectionLeft, int64_t selectionRight, int64_t beamIndex, int64_t topY, int64_t bottomY) {
+int64_t printMonospaceLine(OrderedImageRgbaU8 &target, const ReadableString& text, const RasterFont &font, ColorRgbaI32 foreColor, bool focused, int64_t originX, int64_t selectionLeft, int64_t selectionRight, int64_t beamIndex, int64_t topY, int64_t bottomY) {
 	int64_t characterHeight = bottomY - topY;
 	int64_t beamPixelX = originX;
 	iterateCharacters(text, font, originX, [&target, &font, &foreColor, &beamPixelX, selectionLeft, selectionRight, beamIndex, topY, characterHeight, focused](int64_t index, DsrChar code, int64_t left, int64_t right) {
@@ -119,6 +104,28 @@ int64_t printMonospace(OrderedImageRgbaU8 &target, const ReadableString& text, c
 	return beamPixelX;
 }
 
+void TextBox::updateLines() {
+	// Index the lines for fast scrolling and rendering.
+	this->lines.clear();
+	int64_t sectionStart = 0;
+	int64_t textLength = string_length(this->text.value);
+	for (int64_t i = 0; i < textLength; i++) {
+		if (this->text.value[i] == U'\n') {
+			this->lines.pushConstruct(sectionStart, i);
+			sectionStart = i + 1;
+		}
+	}
+	// Always include the line after a linebreak, even if it is empty.
+	this->lines.pushConstruct(sectionStart, textLength);
+}
+
+LVector2D TextBox::getTextOrigin() {
+	int64_t rowStride = font_getSize(this->font);
+	int64_t halfRowStride = rowStride / 2;
+	int64_t firstVisibleLine = this->verticalScroll / rowStride;
+	return LVector2D(halfRowStride - this->horizontalScroll, this->multiLine.value ? (halfRowStride + (firstVisibleLine * rowStride) - this->verticalScroll) : ((image_getHeight(this->image) / 2) - halfRowStride));
+}
+
 // TODO: Reuse scaled background images as a separate layer.
 // TODO: Allow using different colors for beam, selection, selected text, normal text...
 //       Maybe ask a separate color palette for specific things using the specific class of textboxes.
@@ -130,44 +137,50 @@ int64_t printMonospace(OrderedImageRgbaU8 &target, const ReadableString& text, c
 //       Separate components should be able to override any color for programmability, but default values should refer to the current color palette.
 //         If no color is assigned, the class will give it a standard color from the theme.
 //         Should classes be separate for themes and palettes?
-static OrderedImageRgbaU8 generateBoxImage(TextBox &textBox, MediaMethod imageGenerator, bool focused, int width, int height, ColorRgbaI32 backColor, ColorRgbaI32 foreColor, const ReadableString &text, const RasterFont &font) {
-	// Create a scaled image
-	OrderedImageRgbaU8 result;
- 	textBox.generateImage(imageGenerator, width, height, backColor.red, backColor.green, backColor.blue, 0, focused ? 1 : 0)(result);
- 	textBox.limitSelection();
- 	// TODO: Allow moving the viewport to follow longer input.
- 	// TODO: Allow multi-line textboxes with scrollbars.
- 	//       The logic of scrollbars must be reused as value allocated objects across components, but with different settings.
-	int64_t halfFontSize = font_getSize(font) / 2;
-	int64_t originX = halfFontSize;
-	int64_t center = image_getHeight(result) / 2;
-	int64_t topY = center - halfFontSize;
-	int64_t bottomY = center + halfFontSize;
-	// Find character indices for left and right sides.
-	int64_t selectionLeft = std::min(textBox.selectionStart, textBox.beamLocation);
-	int64_t selectionRight = std::max(textBox.selectionStart, textBox.beamLocation);
-	bool hasSelection = selectionLeft < selectionRight;
-	// Draw the text with selection and get the beam's pixel location.
-	int64_t beamPixelX = printMonospace(result, text, font, foreColor, focused, originX, selectionLeft, selectionRight, textBox.beamLocation, topY, bottomY);
-	// Draw a beam if the textbox is focused.
-	if (focused) {
-		int64_t beamWidth = 2;
-		draw_rectangle(result, IRect(beamPixelX - 1, topY - 1, beamWidth, bottomY - topY + 2), hasSelection ? ColorRgbaI32(255, 255, 255, 255) : foreColor);
-	}
-	return result;
-}
-
 void TextBox::generateGraphics() {
 	int width = this->location.width();
 	int height = this->location.height();
 	if (width < 1) { width = 1; }
 	if (height < 1) { height = 1; }
-	bool currentlyFocused = this->isFocused();
-	if (!this->hasImages || this->drawnAsFocused != currentlyFocused) {
-		completeAssets();
-		this->image = generateBoxImage(*this, this->textBox, currentlyFocused, width, height, ColorRgbaI32(this->backColor.value, 255), ColorRgbaI32(this->foreColor.value, 255), this->text.value, this->font);
+	bool focused = this->isFocused();
+	if (!this->indexedLines) {
+		this->updateLines();
+		this->indexedLines = true;
+	}
+	if (!this->hasImages || this->drawnAsFocused != focused) {
 		this->hasImages = true;
-		this->drawnAsFocused = currentlyFocused;
+		this->drawnAsFocused = focused;
+		completeAssets();
+		ColorRgbaI32 backColor = ColorRgbaI32(this->backColor.value, 255);
+		ColorRgbaI32 foreColor = ColorRgbaI32(this->foreColor.value, 255);
+
+		// Create a scaled image
+		this->generateImage(this->textBox, width, height, backColor.red, backColor.green, backColor.blue, 0, focused ? 1 : 0)(this->image);
+		this->limitSelection();
+		LVector2D origin = this->getTextOrigin();
+		int64_t rowStride = font_getSize(this->font);
+		int64_t targetHeight = image_getHeight(this->image);
+		int64_t firstVisibleLine = this->verticalScroll / rowStride;
+
+		// Find character indices for left and right sides.
+		int64_t selectionLeft = std::min(this->selectionStart, this->beamLocation);
+		int64_t selectionRight = std::max(this->selectionStart, this->beamLocation);
+		bool hasSelection = selectionLeft < selectionRight;
+
+		// Draw the text with selection and get the beam's pixel location.
+		int64_t topY = origin.y;
+		for (int row = firstVisibleLine; row < this->lines.length() && topY < targetHeight; row++) {
+			int64_t startIndex = this->lines[row].lineStartIndex;
+			int64_t endIndex = this->lines[row].lineEndIndex;
+			ReadableString currentLine = string_exclusiveRange(this->text.value, startIndex, endIndex);
+			int64_t beamPixelX = printMonospaceLine(this->image, currentLine, this->font, foreColor, focused, origin.x, selectionLeft - startIndex, selectionRight - startIndex, this->beamLocation - startIndex, topY, topY + rowStride);
+			// Draw a beam if the textbox is focused.
+			if (focused && this->beamLocation >= startIndex && this->beamLocation <= endIndex) {
+				int64_t beamWidth = 2;
+				draw_rectangle(this->image, IRect(beamPixelX - 1, topY - 1, beamWidth, rowStride + 2), hasSelection ? ColorRgbaI32(255, 255, 255, 255) : foreColor);
+			}
+			topY += rowStride;
+		}
 	}
 }
 
@@ -176,12 +189,38 @@ void TextBox::drawSelf(ImageRgbaU8& targetImage, const IRect &relativeLocation) 
 	draw_copy(targetImage, this->image, relativeLocation.left(), relativeLocation.top());
 }
 
+int64_t TextBox::findBeamLocationInLine(int64_t rowIndex, int64_t pixelX) {
+	LVector2D origin = this->getTextOrigin();
+	// Clamp to the closest row if going outside.
+	if (rowIndex < 0) rowIndex = 0;
+	if (rowIndex >= this->lines.length()) rowIndex = this->lines.length() - 1;
+	int64_t beamIndex = 0;
+	int64_t closestDistance = 1000000000000;
+	int64_t startIndex = this->lines[rowIndex].lineStartIndex;
+	int64_t endIndex = this->lines[rowIndex].lineEndIndex;
+	ReadableString currentLine = string_exclusiveRange(this->text.value, startIndex, endIndex);
+	iterateCharacters(currentLine, font, origin.x, [&beamIndex, &closestDistance, pixelX](int64_t index, DsrChar code, int64_t left, int64_t right) {
+		int64_t center = (left + right) / 2;
+		int64_t newDistance = std::abs(pixelX - center);
+		if (newDistance < closestDistance) {
+			beamIndex = index;
+			closestDistance = newDistance;
+		}
+	});
+	return startIndex + beamIndex;
+}
+
+int64_t TextBox::findBeamLocation(const LVector2D &pixelLocation) {
+	LVector2D origin = this->getTextOrigin();
+	int64_t rowStride = font_getSize(this->font);
+	int64_t rowIndex = (pixelLocation.y - origin.y) / rowStride;
+	return this->findBeamLocationInLine(rowIndex, pixelLocation.x);
+}
+
 void TextBox::receiveMouseEvent(const MouseEvent& event) {
-	int64_t originX = font_getSize(this->font) / 2;
-	int32_t localMouseX = event.position.x - this->location.left();
 	if (event.mouseEventType == MouseEventType::MouseDown) {
 		this->mousePressed = true;
-		int64_t newBeamIndex = findBeamLocation(this->text.value, this->font, originX, localMouseX);
+		int64_t newBeamIndex = findBeamLocation(LVector2D(event.position.x - this->location.left(), event.position.y - this->location.top()));
 		if (newBeamIndex != this->selectionStart || newBeamIndex != this->beamLocation) {
 			this->selectionStart = newBeamIndex;
 			this->beamLocation = newBeamIndex;
@@ -189,7 +228,7 @@ void TextBox::receiveMouseEvent(const MouseEvent& event) {
 		}
 	} else if (this->mousePressed && event.mouseEventType == MouseEventType::MouseMove) {
 		if (this->mousePressed) {
-			int64_t newBeamIndex = findBeamLocation(this->text.value, this->font, originX, localMouseX);
+			int64_t newBeamIndex = findBeamLocation(LVector2D(event.position.x - this->location.left(), event.position.y - this->location.top()));
 			if (newBeamIndex != this->beamLocation) {
 				this->beamLocation = newBeamIndex;
 				this->hasImages = false;
@@ -208,6 +247,7 @@ void TextBox::replaceSelection(const ReadableString replacingText) {
 	// Place beam on the right side of the replacement without selecting anything
 	this->selectionStart = selectionLeft + string_length(replacingText);
 	this->beamLocation = selectionStart;
+	this->indexedLines = false;
 	this->hasImages = false;
 }
 
@@ -221,15 +261,47 @@ void TextBox::replaceSelection(DsrChar replacingCharacter) {
 	// Place beam on the right side of the replacement without selecting anything
 	this->selectionStart = selectionLeft + 1;
 	this->beamLocation = selectionStart;
+	this->indexedLines = false;
 	this->hasImages = false;
 }
 
-void TextBox::placeBeam(int64_t index, bool removeSelection) {
-	this->beamLocation = index;
+void TextBox::placeBeamAtCharacter(int64_t characterIndex, bool removeSelection) {
+	this->beamLocation = characterIndex;
 	if (removeSelection) {
-		this->selectionStart = index;
+		this->selectionStart = characterIndex;
 	}
 	this->hasImages = false;
+}
+
+void TextBox::moveBeamVertically(int64_t rowIndexOffset, bool removeSelection) {
+	// Find the current beam's row index.
+	int64_t oldRowIndex = 0;
+	for (int row = 0; row < this->lines.length(); row++) {
+		int64_t startIndex = this->lines[row].lineStartIndex;
+		int64_t endIndex = this->lines[row].lineEndIndex;
+		if (this->beamLocation >= startIndex && this->beamLocation <= endIndex) {
+			oldRowIndex = row;
+		}
+	}
+	// Find another row.
+	int64_t newRowIndex = oldRowIndex + rowIndexOffset;
+	if (newRowIndex < 0) { newRowIndex = 0; }
+	if (newRowIndex >= this->lines.length()) { newRowIndex = this->lines.length() - 1; }
+	// Get the old pixel offset from the beam.
+	LVector2D origin = this->getTextOrigin();
+	int64_t beamPixelX = 0;
+	int64_t lineStartIndex = this->lines[oldRowIndex].lineStartIndex;
+	int64_t lineEndIndex = this->lines[oldRowIndex].lineEndIndex;
+	int64_t localBeamIndex = this->beamLocation - lineStartIndex;
+	ReadableString currentLine = string_exclusiveRange(this->text.value, lineStartIndex, lineEndIndex);
+	iterateCharacters(currentLine, font, origin.x, [&beamPixelX, localBeamIndex](int64_t index, DsrChar code, int64_t left, int64_t right) {
+		if (index == localBeamIndex) beamPixelX = left;
+	});
+	printText(U"beamPixelX = ", beamPixelX, U"\n");
+	// Get the closest location in the new row.
+	int64_t newCharacterIndex = findBeamLocationInLine(newRowIndex, beamPixelX);
+	printText(U"newCharacterIndex = ", newCharacterIndex, U"\n");
+	placeBeamAtCharacter(newCharacterIndex, removeSelection);
 }
 
 static const uint32_t combinationKey_leftShift = 1 << 0;
@@ -239,7 +311,25 @@ static const uint32_t combinationKey_leftControl = 1 << 2;
 static const uint32_t combinationKey_rightControl = 1 << 3;
 static const uint32_t combinationKey_control = combinationKey_leftControl | combinationKey_rightControl;
 
-// TODO: Copy and paste using a clipboard.
+static int64_t getLineStart(const ReadableString &text, int64_t searchStart) {
+	for (int64_t i = searchStart - 1; i >= 0; i--) {
+		if (text[i] == U'\n') {
+			return i + 1;
+		}
+	}
+	return 0;
+}
+
+static int64_t getLineEnd(const ReadableString &text, int64_t searchStart) {
+	for (int64_t i = searchStart; i < string_length(text); i++) {
+		if (text[i] == U'\n') {
+			return i;
+		}
+	}
+	return string_length(text);
+}
+
+// TODO: Copy and paste using a clipboard. (With automatic removal of new lines when multi-line is disabled)
 void TextBox::receiveKeyboardEvent(const KeyboardEvent& event) {
 	// Insert and scroll-lock is not supported.
 	if (event.keyboardEventType == KeyboardEventType::KeyDown) {
@@ -283,17 +373,27 @@ void TextBox::receiveKeyboardEvent(const KeyboardEvent& event) {
 			this->beamLocation++;
 			this->replaceSelection(U"");
 		} else if (event.dsrKey == DsrKey_Home || (event.dsrKey == DsrKey_LeftArrow && holdControl)) {
-			// Move to the start using Home or Ctrl + LeftArrow
-			this->placeBeam(0, removeSelection);
+			// Move to the line start using Home or Ctrl + LeftArrow
+			this->placeBeamAtCharacter(getLineStart(this->text.value, this->beamLocation), removeSelection);
 		} else if (event.dsrKey == DsrKey_End || (event.dsrKey == DsrKey_RightArrow && holdControl)) {
-			// Move to the end using End or Ctrl + RightArrow
-			this->placeBeam(textLength, removeSelection);
+			// Move to the line end using End or Ctrl + RightArrow
+			this->placeBeamAtCharacter(getLineEnd(this->text.value, this->beamLocation), removeSelection);
 		} else if (event.dsrKey == DsrKey_LeftArrow && canGoLeft) {
 			// Move left using LeftArrow
-			this->placeBeam(this->beamLocation - 1, removeSelection);
+			this->placeBeamAtCharacter(this->beamLocation - 1, removeSelection);
 		} else if (event.dsrKey == DsrKey_RightArrow && canGoRight) {
 			// Move right using RightArrow
-			this->placeBeam(this->beamLocation + 1, removeSelection);
+			this->placeBeamAtCharacter(this->beamLocation + 1, removeSelection);
+		} else if (event.dsrKey == DsrKey_UpArrow) {
+			// Move up using UpArrow
+			this->moveBeamVertically(-1, removeSelection);
+		} else if (event.dsrKey == DsrKey_DownArrow) {
+			// Move down using DownArrow
+			this->moveBeamVertically(1, removeSelection);
+		} else if (event.dsrKey == DsrKey_Return) {
+			if (this->multiLine.value) {
+				this->replaceSelection(U'\n');
+			}
 		} else if (printable) {
 			this->replaceSelection(event.character);
 		}
@@ -336,6 +436,7 @@ void TextBox::changedAttribute(const ReadableString &name) {
 		this->hasImages = false;
 		if (string_caseInsensitiveMatch(name, U"Text")) {
 			this->limitSelection();
+			this->indexedLines = false;
 		}
 	}
 }
