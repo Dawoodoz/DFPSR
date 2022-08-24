@@ -36,7 +36,8 @@ void Label::declareAttributes(StructureDefinition &target) const {
 }
 
 Persistent* Label::findAttribute(const ReadableString &name) {
-	if (string_caseInsensitiveMatch(name, U"Color")) {
+	if (string_caseInsensitiveMatch(name, U"Color") || string_caseInsensitiveMatch(name, U"ForeColor")) {
+		// Both color and forecolor is accepted as names for the text color, because labels have no background.
 		return &(this->color);
 	} else if (string_caseInsensitiveMatch(name, U"Opacity")) {
 		return &(this->opacity);
