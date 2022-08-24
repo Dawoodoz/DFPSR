@@ -26,8 +26,17 @@
 
 #include "../VisualComponent.h"
 #include "../../api/fontAPI.h"
+#include "../../math/LVector.h"
 
 namespace dsr {
+
+struct LineIndex {
+	// Exclusive interval of characters in the line.
+	int64_t lineStartIndex = 0;
+	int64_t lineEndIndex = 0;
+	LineIndex(int64_t lineStartIndex, int64_t lineEndIndex)
+	: lineStartIndex(lineStartIndex), lineEndIndex(lineEndIndex) {}
+};
 
 class TextBox : public VisualComponent {
 PERSISTENT_DECLARATION(TextBox)
@@ -36,6 +45,8 @@ public:
 	PersistentColor foreColor;
 	PersistentColor backColor;
 	PersistentString text;
+	PersistentBoolean multiLine;
+	// TODO: A setting for monospace?
 	void declareAttributes(StructureDefinition &target) const override;
 	Persistent* findAttribute(const ReadableString &name) override;
 	// Temporary
@@ -47,10 +58,23 @@ public:
 	//   From the right with beamLocation < selectionStart.
 	int64_t selectionStart = 0;
 	int64_t beamLocation = 0;
+	// TODO: Implement scrolling in pixels.
+	//       Begin by automatically following the beam and using the scroll wheel.
+	//       Panorate with right mouse button?
+	int64_t verticalScroll = 0;
+	int64_t horizontalScroll = 0;
+	// Pre-splitted version of text for fast rendering of large documents.
+	bool indexedLines = false;
+	List<LineIndex> lines;
+	void updateLines();
 	void limitSelection();
+	LVector2D getTextOrigin();
+	int64_t findBeamLocationInLine(int64_t rowIndex, int64_t pixelX);
+	int64_t findBeamLocation(const LVector2D &pixelLocation);
 	void replaceSelection(const ReadableString replacingText);
 	void replaceSelection(DsrChar replacingCharacter);
-	void placeBeam(int64_t index, bool removeSelection);
+	void placeBeamAtCharacter(int64_t characterIndex, bool removeSelection);
+	void moveBeamVertically(int64_t rowIndexOffset, bool removeSelection);
 private:
 	// Given from the style
 	MediaMethod textBox;

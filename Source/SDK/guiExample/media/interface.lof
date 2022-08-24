@@ -55,6 +55,17 @@
 			Color = 0,50,0
 			Opacity = 128
 			Left = 10%+120
+			Right = 50%-5
+			Top = 20
+			Bottom = 100%-20
+		End
+		Begin : TextBox
+			Name = "myTextBox"
+			Text = "Testing multi-line textbox.\nABCDEFGHIJKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyz 0123456789\n	indented\n  aligned\n\nEnd of test!"
+			MultiLine = 1
+			BackColor = 200,200,200
+			ForeColor = 0,0,0
+			Left = 50%+5
 			Right = 100%-20
 			Top = 20
 			Bottom = 100%-20
