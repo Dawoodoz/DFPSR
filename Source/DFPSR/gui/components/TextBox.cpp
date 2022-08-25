@@ -22,7 +22,6 @@
 //    distribution.
 
 #include "TextBox.h"
-#include <math.h>
 #include <functional>
 
 using namespace dsr;
@@ -66,20 +65,22 @@ void TextBox::limitSelection() {
 	if (this->beamLocation > textLength) this->beamLocation = textLength;
 }
 
-static void tabJump(int64_t &x, int64_t leftOrigin, int64_t tabWidth) {
-	x += tabWidth - ((x - leftOrigin) % tabWidth);
+static void tabJump(int64_t &x, int64_t tabWidth) {
+	x += tabWidth - (x % tabWidth);
 }
 
-// To have a stable tab alignment, the whole text must be given when iterating.
-void iterateCharacters(const ReadableString& text, const RasterFont &font, int64_t originX, std::function<void(int64_t index, DsrChar code, int64_t left, int64_t right)> characterAction) {
-	int64_t right = originX;
-	int64_t tabWidth = font_getTabWidth(font);
+static int64_t monospacesPerTab = 4;
+
+// Pre-condition: text does not contain any linebreak.
+void iterateCharactersInLine(const ReadableString& text, const RasterFont &font, std::function<void(int64_t index, DsrChar code, int64_t left, int64_t right)> characterAction) {
+	int64_t right = 0;
 	int64_t monospaceWidth = font_getMonospaceWidth(font);
+	int64_t tabWidth = monospaceWidth * monospacesPerTab;
 	for (int64_t i = 0; i <= string_length(text); i++) {
 		DsrChar code = text[i];
 		int64_t left = right;
 		if (code == U'\t') {
-			tabJump(right, originX, tabWidth);
+			tabJump(right, tabWidth);
 		} else {
 			right += monospaceWidth;
 		}
@@ -88,11 +89,13 @@ void iterateCharacters(const ReadableString& text, const RasterFont &font, int64
 }
 
 // Iterate over the whole text once for both selection and characters.
-// Returns the beam's X location in pixels relative to the parent of originX.
+// Returns the beam's X location in pixels.
 int64_t printMonospaceLine(OrderedImageRgbaU8 &target, const ReadableString& text, const RasterFont &font, ColorRgbaI32 foreColor, bool focused, int64_t originX, int64_t selectionLeft, int64_t selectionRight, int64_t beamIndex, int64_t topY, int64_t bottomY) {
 	int64_t characterHeight = bottomY - topY;
-	int64_t beamPixelX = originX;
-	iterateCharacters(text, font, originX, [&target, &font, &foreColor, &beamPixelX, selectionLeft, selectionRight, beamIndex, topY, characterHeight, focused](int64_t index, DsrChar code, int64_t left, int64_t right) {
+	int64_t beamPixelX = 0;
+	iterateCharactersInLine(text, font, [&target, &font, &foreColor, &beamPixelX, originX, selectionLeft, selectionRight, beamIndex, topY, characterHeight, focused](int64_t index, DsrChar code, int64_t left, int64_t right) {
+		left += originX;
+		right += originX;
 		if (index == beamIndex) beamPixelX = left;
 		if (focused && selectionLeft <= index && index < selectionRight) {
 			draw_rectangle(target, IRect(left, topY, right - left, characterHeight), ColorRgbaI32(0, 0, 100, 255));
@@ -104,26 +107,47 @@ int64_t printMonospaceLine(OrderedImageRgbaU8 &target, const ReadableString& tex
 	return beamPixelX;
 }
 
-void TextBox::updateLines() {
-	// Index the lines for fast scrolling and rendering.
-	this->lines.clear();
-	int64_t sectionStart = 0;
-	int64_t textLength = string_length(this->text.value);
-	for (int64_t i = 0; i < textLength; i++) {
-		if (this->text.value[i] == U'\n') {
-			this->lines.pushConstruct(sectionStart, i);
-			sectionStart = i + 1;
+void TextBox::indexLines() {
+	int64_t newLength = string_length(this->text.value);
+	if (newLength != this->indexedAtLength) {
+		int64_t currentLength = 0;
+		int64_t worstCaseLength = 0;
+		// Index the lines for fast scrolling and rendering.
+		this->lines.clear();
+		int64_t sectionStart = 0;
+		for (int64_t i = 0; i <= newLength; i++) {
+			DsrChar c = this->text.value[i];
+			if (c == U'\n' || c == U'\0') {
+				if (currentLength > worstCaseLength) {
+					worstCaseLength = currentLength;
+				}
+				currentLength = 0;
+				this->lines.pushConstruct(sectionStart, i);
+				sectionStart = i + 1;
+			} else if (c == U'\t') {
+				currentLength += 4;
+			} else {
+				currentLength += 1;
+			}
 		}
+		this->indexedAtLength = newLength;
+		this->worstCaseLineMonospaces = worstCaseLength;
 	}
-	// Always include the line after a linebreak, even if it is empty.
-	this->lines.pushConstruct(sectionStart, textLength);
 }
 
-LVector2D TextBox::getTextOrigin() {
+LVector2D TextBox::getTextOrigin(bool includeVerticalScroll) {
 	int64_t rowStride = font_getSize(this->font);
-	int64_t halfRowStride = rowStride / 2;
-	int64_t firstVisibleLine = this->verticalScroll / rowStride;
-	return LVector2D(halfRowStride - this->horizontalScroll, this->multiLine.value ? (halfRowStride + (firstVisibleLine * rowStride) - this->verticalScroll) : ((image_getHeight(this->image) / 2) - halfRowStride));
+	int64_t offsetX = this->borderX - this->horizontalScrollBar.getValue();
+	int64_t offsetY = 0;
+	if (this->multiLine.value) {
+		offsetY = this->borderY;
+	} else {
+		offsetY = (image_getHeight(this->image) - rowStride) / 2;
+	}
+	if (includeVerticalScroll) {
+		offsetY -= this->verticalScrollBar.getValue() * rowStride;
+	}
+	return LVector2D(offsetX, offsetY);
 }
 
 // TODO: Reuse scaled background images as a separate layer.
@@ -138,29 +162,24 @@ LVector2D TextBox::getTextOrigin() {
 //         If no color is assigned, the class will give it a standard color from the theme.
 //         Should classes be separate for themes and palettes?
 void TextBox::generateGraphics() {
-	int width = this->location.width();
-	int height = this->location.height();
+	int32_t width = this->location.width();
+	int32_t height = this->location.height();
 	if (width < 1) { width = 1; }
 	if (height < 1) { height = 1; }
 	bool focused = this->isFocused();
-	if (!this->indexedLines) {
-		this->updateLines();
-		this->indexedLines = true;
-	}
 	if (!this->hasImages || this->drawnAsFocused != focused) {
 		this->hasImages = true;
 		this->drawnAsFocused = focused;
 		completeAssets();
-		ColorRgbaI32 backColor = ColorRgbaI32(this->backColor.value, 255);
-		ColorRgbaI32 foreColor = ColorRgbaI32(this->foreColor.value, 255);
-
+		this->indexLines();
+		ColorRgbaI32 foreColorRgba = ColorRgbaI32(this->foreColor.value, 255);
 		// Create a scaled image
-		this->generateImage(this->textBox, width, height, backColor.red, backColor.green, backColor.blue, 0, focused ? 1 : 0)(this->image);
+		component_generateImage(this->theme, this->textBox, width, height, this->backColor.value.red, this->backColor.value.green, this->backColor.value.blue, 0, focused ? 1 : 0)(this->image);
 		this->limitSelection();
-		LVector2D origin = this->getTextOrigin();
+		LVector2D origin = this->getTextOrigin(false);
 		int64_t rowStride = font_getSize(this->font);
 		int64_t targetHeight = image_getHeight(this->image);
-		int64_t firstVisibleLine = this->verticalScroll / rowStride;
+		int64_t firstVisibleLine = this->verticalScrollBar.getValue();
 
 		// Find character indices for left and right sides.
 		int64_t selectionLeft = std::min(this->selectionStart, this->beamLocation);
@@ -169,18 +188,20 @@ void TextBox::generateGraphics() {
 
 		// Draw the text with selection and get the beam's pixel location.
 		int64_t topY = origin.y;
-		for (int row = firstVisibleLine; row < this->lines.length() && topY < targetHeight; row++) {
+		for (int64_t row = firstVisibleLine; row < this->lines.length() && topY < targetHeight; row++) {
 			int64_t startIndex = this->lines[row].lineStartIndex;
 			int64_t endIndex = this->lines[row].lineEndIndex;
 			ReadableString currentLine = string_exclusiveRange(this->text.value, startIndex, endIndex);
-			int64_t beamPixelX = printMonospaceLine(this->image, currentLine, this->font, foreColor, focused, origin.x, selectionLeft - startIndex, selectionRight - startIndex, this->beamLocation - startIndex, topY, topY + rowStride);
+			int64_t beamPixelX = printMonospaceLine(this->image, currentLine, this->font, foreColorRgba, focused, origin.x, selectionLeft - startIndex, selectionRight - startIndex, this->beamLocation - startIndex, topY, topY + rowStride);
 			// Draw a beam if the textbox is focused.
 			if (focused && this->beamLocation >= startIndex && this->beamLocation <= endIndex) {
 				int64_t beamWidth = 2;
-				draw_rectangle(this->image, IRect(beamPixelX - 1, topY - 1, beamWidth, rowStride + 2), hasSelection ? ColorRgbaI32(255, 255, 255, 255) : foreColor);
+				draw_rectangle(this->image, IRect(beamPixelX - 1, topY - 1, beamWidth, rowStride + 2), hasSelection ? ColorRgbaI32(255, 255, 255, 255) : foreColorRgba);
 			}
 			topY += rowStride;
 		}
+		this->verticalScrollBar.draw(this->image, this->theme, this->backColor.value);
+		this->horizontalScrollBar.draw(this->image, this->theme, this->backColor.value);
 	}
 }
 
@@ -190,7 +211,7 @@ void TextBox::drawSelf(ImageRgbaU8& targetImage, const IRect &relativeLocation) 
 }
 
 int64_t TextBox::findBeamLocationInLine(int64_t rowIndex, int64_t pixelX) {
-	LVector2D origin = this->getTextOrigin();
+	LVector2D origin = this->getTextOrigin(true);
 	// Clamp to the closest row if going outside.
 	if (rowIndex < 0) rowIndex = 0;
 	if (rowIndex >= this->lines.length()) rowIndex = this->lines.length() - 1;
@@ -199,8 +220,8 @@ int64_t TextBox::findBeamLocationInLine(int64_t rowIndex, int64_t pixelX) {
 	int64_t startIndex = this->lines[rowIndex].lineStartIndex;
 	int64_t endIndex = this->lines[rowIndex].lineEndIndex;
 	ReadableString currentLine = string_exclusiveRange(this->text.value, startIndex, endIndex);
-	iterateCharacters(currentLine, font, origin.x, [&beamIndex, &closestDistance, pixelX](int64_t index, DsrChar code, int64_t left, int64_t right) {
-		int64_t center = (left + right) / 2;
+	iterateCharactersInLine(currentLine, font, [&beamIndex, &closestDistance, &origin, pixelX](int64_t index, DsrChar code, int64_t left, int64_t right) {
+		int64_t center = origin.x + (left + right) / 2;
 		int64_t newDistance = std::abs(pixelX - center);
 		if (newDistance < closestDistance) {
 			beamIndex = index;
@@ -210,45 +231,79 @@ int64_t TextBox::findBeamLocationInLine(int64_t rowIndex, int64_t pixelX) {
 	return startIndex + beamIndex;
 }
 
-int64_t TextBox::findBeamLocation(const LVector2D &pixelLocation) {
-	LVector2D origin = this->getTextOrigin();
+BeamLocation TextBox::findBeamLocation(const LVector2D &pixelLocation) {
+	LVector2D origin = this->getTextOrigin(true);
 	int64_t rowStride = font_getSize(this->font);
 	int64_t rowIndex = (pixelLocation.y - origin.y) / rowStride;
-	return this->findBeamLocationInLine(rowIndex, pixelLocation.x);
+	return BeamLocation(rowIndex, this->findBeamLocationInLine(rowIndex, pixelLocation.x));
+}
+
+static int64_t findBeamRow(List<LineIndex> lines, int64_t beamLocation) {
+	int64_t result = 0;
+	for (int64_t row = 0; row < lines.length(); row++) {
+		int64_t startIndex = lines[row].lineStartIndex;
+		int64_t endIndex = lines[row].lineEndIndex;
+		if (beamLocation >= startIndex && beamLocation <= endIndex) {
+			result = row;
+		}
+	}
+	return result;
+}
+
+// Returns the beam's pixel offset relative to the origin.
+static int64_t getBeamPixelOffset(const ReadableString &text, const RasterFont &font, List<LineIndex> lines, const BeamLocation &beam) {
+	int64_t result = 0;
+	int64_t lineStartIndex = lines[beam.rowIndex].lineStartIndex;
+	int64_t lineEndIndex = lines[beam.rowIndex].lineEndIndex;
+	int64_t localBeamIndex = beam.characterIndex - lineStartIndex;
+	ReadableString currentLine = string_exclusiveRange(text, lineStartIndex, lineEndIndex);
+	iterateCharactersInLine(currentLine, font, [&result, localBeamIndex](int64_t index, DsrChar code, int64_t left, int64_t right) {
+		if (index == localBeamIndex) result = left;
+	});
+	return result;
 }
 
 void TextBox::receiveMouseEvent(const MouseEvent& event) {
-	if (event.mouseEventType == MouseEventType::MouseDown) {
+	bool verticalScrollIntercepted = this->verticalScrollBar.receiveMouseEvent(this->location, event);
+	bool horizontalScrollIntercepted = this->horizontalScrollBar.receiveMouseEvent(this->location, event);
+	bool scrollIntercepted = verticalScrollIntercepted || horizontalScrollIntercepted;
+	if (event.mouseEventType == MouseEventType::MouseDown && !scrollIntercepted) {
 		this->mousePressed = true;
-		int64_t newBeamIndex = findBeamLocation(LVector2D(event.position.x - this->location.left(), event.position.y - this->location.top()));
-		if (newBeamIndex != this->selectionStart || newBeamIndex != this->beamLocation) {
-			this->selectionStart = newBeamIndex;
-			this->beamLocation = newBeamIndex;
+		BeamLocation newBeam = findBeamLocation(LVector2D(event.position.x - this->location.left(), event.position.y - this->location.top()));
+		if (newBeam.characterIndex != this->selectionStart || newBeam.characterIndex != this->beamLocation) {
+			this->selectionStart = newBeam.characterIndex;
+			this->beamLocation = newBeam.characterIndex;
 			this->hasImages = false;
 		}
 	} else if (this->mousePressed && event.mouseEventType == MouseEventType::MouseMove) {
 		if (this->mousePressed) {
-			int64_t newBeamIndex = findBeamLocation(LVector2D(event.position.x - this->location.left(), event.position.y - this->location.top()));
-			if (newBeamIndex != this->beamLocation) {
-				this->beamLocation = newBeamIndex;
+			BeamLocation newBeam = findBeamLocation(LVector2D(event.position.x - this->location.left(), event.position.y - this->location.top()));
+			if (newBeam.characterIndex != this->beamLocation) {
+				this->beamLocation = newBeam.characterIndex;
 				this->hasImages = false;
 			}
 		}
 	} else if (this->mousePressed && event.mouseEventType == MouseEventType::MouseUp) {
 		this->mousePressed = false;
 	}
-	VisualComponent::receiveMouseEvent(event);
+	if (scrollIntercepted) {
+		this->hasImages = false; // Force redraw on scrollbar interception
+	} else {
+		VisualComponent::receiveMouseEvent(event);
+	}
 }
 
-void TextBox::replaceSelection(const ReadableString replacingText) {
+void TextBox::replaceSelection(const ReadableString &replacingText) {
 	int64_t selectionLeft = std::min(this->selectionStart, this->beamLocation);
 	int64_t selectionRight = std::max(this->selectionStart, this->beamLocation);
 	this->text.value = string_combine(string_before(this->text.value, selectionLeft), replacingText, string_from(this->text.value, selectionRight));
 	// Place beam on the right side of the replacement without selecting anything
 	this->selectionStart = selectionLeft + string_length(replacingText);
 	this->beamLocation = selectionStart;
-	this->indexedLines = false;
 	this->hasImages = false;
+	this->indexedAtLength = -1;
+	this->indexLines();
+	this->limitScrolling(true);
 }
 
 void TextBox::replaceSelection(DsrChar replacingCharacter) {
@@ -261,8 +316,10 @@ void TextBox::replaceSelection(DsrChar replacingCharacter) {
 	// Place beam on the right side of the replacement without selecting anything
 	this->selectionStart = selectionLeft + 1;
 	this->beamLocation = selectionStart;
-	this->indexedLines = false;
 	this->hasImages = false;
+	this->indexedAtLength = -1;
+	this->indexLines();
+	this->limitScrolling(true);
 }
 
 void TextBox::placeBeamAtCharacter(int64_t characterIndex, bool removeSelection) {
@@ -271,37 +328,24 @@ void TextBox::placeBeamAtCharacter(int64_t characterIndex, bool removeSelection)
 		this->selectionStart = characterIndex;
 	}
 	this->hasImages = false;
+	this->limitScrolling(true);
 }
 
 void TextBox::moveBeamVertically(int64_t rowIndexOffset, bool removeSelection) {
 	// Find the current beam's row index.
-	int64_t oldRowIndex = 0;
-	for (int row = 0; row < this->lines.length(); row++) {
-		int64_t startIndex = this->lines[row].lineStartIndex;
-		int64_t endIndex = this->lines[row].lineEndIndex;
-		if (this->beamLocation >= startIndex && this->beamLocation <= endIndex) {
-			oldRowIndex = row;
-		}
-	}
+	int64_t oldRowIndex = findBeamRow(this->lines, this->beamLocation);
 	// Find another row.
 	int64_t newRowIndex = oldRowIndex + rowIndexOffset;
 	if (newRowIndex < 0) { newRowIndex = 0; }
 	if (newRowIndex >= this->lines.length()) { newRowIndex = this->lines.length() - 1; }
-	// Get the old pixel offset from the beam.
-	LVector2D origin = this->getTextOrigin();
-	int64_t beamPixelX = 0;
-	int64_t lineStartIndex = this->lines[oldRowIndex].lineStartIndex;
-	int64_t lineEndIndex = this->lines[oldRowIndex].lineEndIndex;
-	int64_t localBeamIndex = this->beamLocation - lineStartIndex;
-	ReadableString currentLine = string_exclusiveRange(this->text.value, lineStartIndex, lineEndIndex);
-	iterateCharacters(currentLine, font, origin.x, [&beamPixelX, localBeamIndex](int64_t index, DsrChar code, int64_t left, int64_t right) {
-		if (index == localBeamIndex) beamPixelX = left;
-	});
-	printText(U"beamPixelX = ", beamPixelX, U"\n");
+	// Get old pixel offset from the beam.
+	LVector2D origin = this->getTextOrigin(true);
+	BeamLocation oldBeam = BeamLocation(oldRowIndex, this->beamLocation);
+	int64_t oldPixelOffset = origin.x + getBeamPixelOffset(this->text.value, this->font, this->lines, oldBeam);
 	// Get the closest location in the new row.
-	int64_t newCharacterIndex = findBeamLocationInLine(newRowIndex, beamPixelX);
-	printText(U"newCharacterIndex = ", newCharacterIndex, U"\n");
+	int64_t newCharacterIndex = findBeamLocationInLine(newRowIndex, oldPixelOffset);
 	placeBeamAtCharacter(newCharacterIndex, removeSelection);
+	limitScrolling(true);
 }
 
 static const uint32_t combinationKey_leftShift = 1 << 0;
@@ -412,22 +456,35 @@ bool TextBox::pointIsInside(const IVector2D& pixelPosition) {
 
 void TextBox::changedTheme(VisualTheme newTheme) {
 	this->textBox = theme_getScalableImage(newTheme, U"TextBox");
+	this->verticalScrollBar.loadTheme(newTheme, this->backColor.value);
+	this->horizontalScrollBar.loadTheme(newTheme, this->backColor.value);
 	this->hasImages = false;
+}
+
+void TextBox::loadFont() {
+	if (!font_exists(this->font)) {
+		this->font = font_getDefault();
+	}
+	if (!font_exists(this->font)) {
+		throwError("Failed to load the default font for a ListBox!\n");
+	}
 }
 
 void TextBox::completeAssets() {
 	if (this->textBox.methodIndex == -1) {
-		this->textBox = theme_getScalableImage(theme_getDefault(), U"TextBox");
+		VisualTheme newTheme = theme_getDefault();
+		this->textBox = theme_getScalableImage(newTheme, U"TextBox");
+		this->verticalScrollBar.loadTheme(newTheme, this->backColor.value);
+		this->horizontalScrollBar.loadTheme(newTheme, this->backColor.value);
 	}
-	if (this->font.get() == nullptr) {
-		this->font = font_getDefault();
-	}
+	this->loadFont();
 }
 
 void TextBox::changedLocation(const IRect &oldLocation, const IRect &newLocation) {
 	// If the component has changed dimensions then redraw the image
 	if (oldLocation.size() != newLocation.size()) {
 		this->hasImages = false;
+		this->limitScrolling(true);
 	}
 }
 
@@ -435,8 +492,52 @@ void TextBox::changedAttribute(const ReadableString &name) {
 	if (!string_caseInsensitiveMatch(name, U"Visible")) {
 		this->hasImages = false;
 		if (string_caseInsensitiveMatch(name, U"Text")) {
+			this->indexedAtLength = -1;
 			this->limitSelection();
-			this->indexedLines = false;
+			this->limitScrolling(true);
 		}
+	}
+}
+
+void TextBox::updateScrollRange() {
+	this->loadFont();
+	// How high is one element?
+	int64_t verticalStep = font_getSize(this->font);
+	// How many elements are visible at the same time?
+	int64_t visibleRangeY = (this->location.height() - this->borderY * 2) / verticalStep;
+	if (visibleRangeY < 1) visibleRangeY = 1;
+	// How many lines are there in total to see.
+	int64_t itemCount = this->lines.length() + 1; // Reserve an extra line for the horizontal scroll-bar.
+	// The range of indices that the listbox can start viewing from.
+	int64_t maxScrollY = itemCount - visibleRangeY;
+	// If visible range exceeds the collection, we should still allow starting element zero to get a valid range.
+	if (maxScrollY < 0) maxScrollY = 0;
+	// Apply the scroll range.
+	this->verticalScrollBar.updateScrollRange(ScrollRange(0, maxScrollY, visibleRangeY));
+	// Calculate range for horizontal scroll.
+	int64_t monospaceWidth = font_getMonospaceWidth(this->font);
+	int64_t rightMostPixel = this->worstCaseLineMonospaces * monospaceWidth;
+	int64_t visibleRangeX = this->location.width() - this->borderX * 2;
+	if (visibleRangeX < 1) visibleRangeX = 1;
+	int64_t maxScrollX = rightMostPixel; // Allow scrolling all the way out, so that one can write left to right without constantly panorating on a long line.
+	if (maxScrollX < 0) maxScrollX = 0;
+	this->horizontalScrollBar.updateScrollRange(ScrollRange(0, maxScrollX, visibleRangeX));
+}
+
+void TextBox::limitScrolling(bool keepBeamVisible) {
+	// Update the scroll range.
+	this->indexLines();
+	this->updateScrollRange();
+	// Limit scrolling with the updated range.
+	if (keepBeamVisible) {
+		int64_t beamRow = findBeamRow(this->lines, this->beamLocation);
+		BeamLocation beam = BeamLocation(beamRow, this->beamLocation);
+		// What will origin.x be used for?
+		int64_t pixelOffsetX = getBeamPixelOffset(this->text.value, this->font, this->lines, beam);
+		this->verticalScrollBar.limitScrolling(this->location, true, beamRow);
+		this->horizontalScrollBar.limitScrolling(this->location, true, pixelOffsetX);
+	} else {
+		this->verticalScrollBar.limitScrolling(this->location);
+		this->horizontalScrollBar.limitScrolling(this->location);
 	}
 }

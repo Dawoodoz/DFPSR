@@ -25,8 +25,15 @@
 #define DFPSR_GUI_COMPONENT_TEXTBOX
 
 #include "../VisualComponent.h"
+#include "helpers/ScrollBarImpl.h"
 #include "../../api/fontAPI.h"
 #include "../../math/LVector.h"
+
+// TODO: Make a theme for the horizontal scroll-bar and activate it.
+// TODO: Prevent collisions between multiple scroll-bars in the corner by reserving a square in the corner when both are enabled.
+// TODO: At least make a stub implementation for cutting, copying and pasting text within the same application.
+//       Then make it optional to integrate the clipboard with the external operating system using a window handle from somewhere.
+//       Copying within the same application is still useful if one has multiple files open at the same time or just need to move things around.
 
 namespace dsr {
 
@@ -38,14 +45,29 @@ struct LineIndex {
 	: lineStartIndex(lineStartIndex), lineEndIndex(lineEndIndex) {}
 };
 
+struct BeamLocation {
+	int64_t rowIndex; // Index of the current row.
+	int64_t characterIndex; // Index of the character in the entire text.
+	BeamLocation(int64_t rowIndex, int64_t characterIndex)
+	: rowIndex(rowIndex), characterIndex(characterIndex) {}
+};
+
 class TextBox : public VisualComponent {
 PERSISTENT_DECLARATION(TextBox)
 public:
+	// Value allocated sub-components
+	// TODO: Let them know about each other to avoid overlap in the shared corner.
+	ScrollBarImpl verticalScrollBar = ScrollBarImpl(true);
+	ScrollBarImpl horizontalScrollBar = ScrollBarImpl(false);
+	void updateScrollRange();
+	void limitScrolling(bool keepBeamVisible);
 	// Attributes
 	PersistentColor foreColor;
 	PersistentColor backColor;
 	PersistentString text;
 	PersistentBoolean multiLine;
+	int64_t borderX = 6; // Empty pixels left and right of text.
+	int64_t borderY = 4; // Empty pixels above and below text.
 	// TODO: A setting for monospace?
 	void declareAttributes(StructureDefinition &target) const override;
 	Persistent* findAttribute(const ReadableString &name) override;
@@ -58,20 +80,16 @@ public:
 	//   From the right with beamLocation < selectionStart.
 	int64_t selectionStart = 0;
 	int64_t beamLocation = 0;
-	// TODO: Implement scrolling in pixels.
-	//       Begin by automatically following the beam and using the scroll wheel.
-	//       Panorate with right mouse button?
-	int64_t verticalScroll = 0;
-	int64_t horizontalScroll = 0;
 	// Pre-splitted version of text for fast rendering of large documents.
-	bool indexedLines = false;
 	List<LineIndex> lines;
-	void updateLines();
+	int64_t indexedAtLength = -1; // Length of the last indexed text to detect changes. Assign to -1 to force an update.
+	int64_t worstCaseLineMonospaces = 0; // An approximation of the worst case line length in monospaces, counting tabs as full length to keep it simple.
+	void indexLines();
 	void limitSelection();
-	LVector2D getTextOrigin();
+	LVector2D getTextOrigin(bool includeVerticalScroll);
 	int64_t findBeamLocationInLine(int64_t rowIndex, int64_t pixelX);
-	int64_t findBeamLocation(const LVector2D &pixelLocation);
-	void replaceSelection(const ReadableString replacingText);
+	BeamLocation findBeamLocation(const LVector2D &pixelLocation);
+	void replaceSelection(const ReadableString &replacingText);
 	void replaceSelection(DsrChar replacingCharacter);
 	void placeBeamAtCharacter(int64_t characterIndex, bool removeSelection);
 	void moveBeamVertically(int64_t rowIndexOffset, bool removeSelection);
@@ -79,6 +97,7 @@ private:
 	// Given from the style
 	MediaMethod textBox;
 	RasterFont font;
+	void loadFont();
 	void completeAssets();
 	void generateGraphics();
 	// Generated

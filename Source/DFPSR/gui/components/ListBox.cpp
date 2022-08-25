@@ -22,7 +22,6 @@
 //    distribution.
 
 #include "ListBox.h"
-#include <math.h>
 
 using namespace dsr;
 
@@ -58,22 +57,20 @@ bool ListBox::isContainer() const {
 
 static const int textBorderLeft = 6;
 static const int textBorderTop = 4;
-static const int scrollWidth = 16; // The width of the scroll bar
-static const int scrollEndHeight = 16; // The height of upper and lower scroll buttons
 
 void ListBox::generateGraphics() {
-	int width = this->location.width();
-	int height = this->location.height();
+	int32_t width = this->location.width();
+	int32_t height = this->location.height();
 	if (width < 1) { width = 1; }
 	if (height < 1) { height = 1; }
 	if (!this->hasImages) {
 		this->completeAssets();
 		ColorRgbI32 color = this->color.value;
-	 	this->generateImage(this->scalableImage_listBox, width, height, color.red, color.green, color.blue)(this->image);
-		int verticalStep = font_getSize(this->font);
-		int left = textBorderLeft;
-		int top = textBorderTop;
-		for (int64_t i = this->firstVisible; i < this->list.value.length() && top < height; i++) {
+	 	component_generateImage(this->theme, this->scalableImage_listBox, width, height, color.red, color.green, color.blue)(this->image);
+		int32_t verticalStep = font_getSize(this->font);
+		int32_t left = textBorderLeft;
+		int32_t top = textBorderTop;
+		for (int64_t i = this->verticalScrollBar.getValue(); i < this->list.value.length() && top < height; i++) {
 			ColorRgbaI32 textColor;
 			if (i == this->pressedIndex) {
 				textColor = ColorRgbaI32(255, 255, 255, 255);
@@ -88,29 +85,7 @@ void ListBox::generateGraphics() {
 			font_printLine(this->image, this->font, this->list.value[i], IVector2D(left, top), textColor);
 			top += verticalStep;
 		}
-		if (this->hasVerticalScroll) {
-			IRect whole = IRect(this->location.width() - scrollWidth, 0, scrollWidth, this->location.height());
-			IRect upper = IRect(whole.left(), whole.top(), whole.width(), scrollEndHeight);
-			IRect lower = IRect(whole.left(), whole.bottom() - scrollEndHeight, whole.width(), scrollEndHeight);
-			IRect knob = this->getKnobLocation();
-			// Only redraw the knob image if its dimensions changed
-			if (!image_exists(this->scrollKnobImage)
-			  || image_getWidth(this->scrollKnobImage) != knob.width()
-			  || image_getHeight(this->scrollKnobImage) != knob.height()) {
-				this->generateImage(this->scalableImage_verticalScrollKnob, knob.width(), knob.height(), color.red, color.green, color.blue, 0)(this->scrollKnobImage);
-			}
-			// Only redraw the scroll list if its dimenstions changed
-			if (!image_exists(this->verticalScrollBarImage)
-			  || image_getWidth(this->verticalScrollBarImage) != whole.width()
-			  || image_getHeight(this->verticalScrollBarImage) != whole.height()) {
-				this->generateImage(this->scalableImage_verticalScrollBackground, whole.width(), whole.height(), color.red, color.green, color.blue, 0)(this->verticalScrollBarImage);
-			}
-			// Draw the scroll-bar
-			draw_alphaFilter(this->image, this->verticalScrollBarImage, whole.left(), whole.top());
-			draw_alphaFilter(this->image, this->scrollKnobImage, knob.left(), knob.top());
-			draw_alphaFilter(this->image, this->pressScrollUp ? this->scrollButtonTopImage_pressed : this->scrollButtonTopImage_normal, upper.left(), upper.top());
-			draw_alphaFilter(this->image, this->pressScrollDown ? this->scrollButtonBottomImage_pressed : this->scrollButtonBottomImage_normal, lower.left(), lower.top());
-		}
+		this->verticalScrollBar.draw(this->image, this->theme, color);
 		this->hasImages = true;
 	}
 }
@@ -120,93 +95,67 @@ void ListBox::drawSelf(ImageRgbaU8& targetImage, const IRect &relativeLocation) 
 	draw_copy(targetImage, this->image, relativeLocation.left(), relativeLocation.top());
 }
 
-void ListBox::pressScrollBar(int64_t localY) {
-	int64_t oldIndex = this->firstVisible;
-	int64_t maxScroll = this->list.value.length() - this->getVisibleScrollRange();
-	int64_t knobHeight = this->getKnobLocation().height();
-	int64_t endDistance = scrollEndHeight + knobHeight / 2;
-	int64_t barHeight = this->location.height() - (endDistance * 2);
-	this->firstVisible = ((localY - endDistance) * maxScroll + (barHeight / 2)) / barHeight;
-	this->limitScrolling();
-	// Avoid expensive redrawing if the index did not change
-	if (this->firstVisible != oldIndex) {
-		this->hasImages = false; // Force redraw
-	}
+void ListBox::updateScrollRange() {
+	this->loadFont();
+	// How high is one element?
+	int64_t verticalStep = font_getSize(this->font);
+	// How many elements are visible at the same time?
+	int64_t visibleRange = (this->location.height() - textBorderTop * 2) / verticalStep;
+	if (visibleRange < 1) visibleRange = 1;
+	// How many elements are there in total to see.
+	int64_t itemCount = this->list.value.length();
+	// The range of indices that the listbox can start viewing from.
+	int64_t minScroll = 0;
+	int64_t maxScroll = itemCount - visibleRange;
+	// If visible range exceeds the collection, we should still allow starting element zero to get a valid range.
+	if (maxScroll < 0) maxScroll = 0;
+	// Apply the scroll range.
+	this->verticalScrollBar.updateScrollRange(ScrollRange(minScroll, maxScroll, visibleRange));
+}
+
+void ListBox::limitScrolling(bool keepSelectedVisible) {
+	// Update the scroll range.
+	this->updateScrollRange();
+	// Limit scrolling with the updated range.
+	this->verticalScrollBar.limitScrolling(this->location, keepSelectedVisible, this->selectedIndex.value);
 }
 
 void ListBox::receiveMouseEvent(const MouseEvent& event) {
 	bool supressEvent = false;
 	this->inside = this->pointIsInside(event.position);
 	IVector2D localPosition = event.position - this->location.upperLeft();
-	bool onScrollBar = this->hasVerticalScroll && localPosition.x >= this->location.width() - scrollWidth;
+	bool verticalScrollIntercepted = this->verticalScrollBar.receiveMouseEvent(this->location, event);
 	int64_t maxIndex = this->list.value.length() - 1;
-	int64_t hoverIndex = this->firstVisible + ((localPosition.y - textBorderTop) / font_getSize(this->font));
-	if (hoverIndex > maxIndex) {
+	int64_t hoverIndex = this->verticalScrollBar.getValue() + ((localPosition.y - textBorderTop) / font_getSize(this->font));
+	if (hoverIndex < 0 || hoverIndex > maxIndex) {
 		hoverIndex = -1;
 	}
 	if (event.mouseEventType == MouseEventType::MouseDown) {
-		if (onScrollBar) {
+		if (verticalScrollIntercepted) {
 			this->pressedIndex = -1;
-			if (localPosition.y < scrollEndHeight) {
-				// Upper scroll button
-				this->pressScrollUp = true;
-				this->firstVisible--;
-			} else if (localPosition.y > this->location.height() - scrollEndHeight) {
-				// Lower scroll button
-				this->pressScrollDown = true;
-				this->firstVisible++;
-			} else {
-				// Start scrolling with the mouse using the relative height on the scroll bar.
-				IRect knobLocation = this->getKnobLocation();
-				int64_t halfKnobHeight = knobLocation.height() / 2;
-				this->knobHoldOffset = localPosition.y - (knobLocation.top() + halfKnobHeight);
-				if (this->knobHoldOffset < -halfKnobHeight || this->knobHoldOffset > halfKnobHeight) {
-					// If pressing outside of the knob, pull it directly to the pressed location before pulling from the center.
-					this->knobHoldOffset = 0;
-					this->pressScrollBar(localPosition.y - this->knobHoldOffset);
-				}
-				this->holdingScrollBar = true;
-			}
 		} else {
 			this->pressedIndex = hoverIndex;
 		}
-		this->limitScrolling();
-		this->hasImages = false; // Force redraw
+		this->hasImages = false; // Force redraw on item selection
 	} else if (event.mouseEventType == MouseEventType::MouseUp) {
-		if (this->pressedIndex > -1 && this->inside && !onScrollBar && hoverIndex == this->pressedIndex) {
+		if (this->pressedIndex > -1 && this->inside && hoverIndex == this->pressedIndex) {
 			this->setSelectedIndex(hoverIndex, false);
 			this->limitScrolling(true);
 			this->callback_pressedEvent();
 		}
-		this->pressScrollUp = false;
-		this->pressScrollDown = false;
 		this->pressedIndex = -1;
-		this->holdingScrollBar = false;
-		this->hasImages = false; // Force redraw
-	} else if (event.mouseEventType == MouseEventType::Scroll) {
-		if (event.key == MouseKeyEnum::ScrollUp) {
-			this->firstVisible--;
-		} else if (event.key == MouseKeyEnum::ScrollDown) {
-			this->firstVisible++;
-		}
-		this->holdingScrollBar = false;
-		this->limitScrolling();
-		this->hasImages = false; // Force redraw
-	} else if (event.mouseEventType == MouseEventType::MouseMove) {
-		if (this->holdingScrollBar) {
-			supressEvent = true;
-			this->pressScrollBar(localPosition.y - this->knobHoldOffset);
-		}
 	}
-	if (!supressEvent) {
+	if (verticalScrollIntercepted) {
+		this->hasImages = false; // Force redraw on scrollbar interception
+	} else {
 		VisualComponent::receiveMouseEvent(event);
 	}
 }
 
 void ListBox::receiveKeyboardEvent(const KeyboardEvent& event) {
-	if (event.keyboardEventType == KeyboardEventType::KeyDown) {
-		int contentLength = this->list.value.length();
-		int oldIndex = this->selectedIndex.value;
+	if (event.keyboardEventType == KeyboardEventType::KeyType) {
+		int64_t contentLength = this->list.value.length();
+		int64_t oldIndex = this->selectedIndex.value;
 		if (contentLength > 1) {
 			if (oldIndex > 0 && event.dsrKey == DsrKey::DsrKey_UpArrow) {
 				this->setSelectedIndex(oldIndex - 1, true);
@@ -220,16 +169,7 @@ void ListBox::receiveKeyboardEvent(const KeyboardEvent& event) {
 
 void ListBox::loadTheme(VisualTheme theme) {
 	this->scalableImage_listBox = theme_getScalableImage(theme, U"ListBox");
-	this->scalableImage_scrollTop = theme_getScalableImage(theme, U"ScrollUp");
-	this->scalableImage_scrollBottom = theme_getScalableImage(theme, U"ScrollDown");
-	this->scalableImage_verticalScrollKnob = theme_getScalableImage(theme, U"VerticalScrollKnob");
-	this->scalableImage_verticalScrollBackground = theme_getScalableImage(theme, U"VerticalScrollList");
-	// Generate fixed size buttons for the scroll buttons (because their size is currently given by constants)
-	ColorRgbI32 color = this->color.value;
-	this->generateImage(this->scalableImage_scrollTop,    scrollWidth, scrollEndHeight, color.red, color.green, color.blue, 0)(this->scrollButtonTopImage_normal);
-	this->generateImage(this->scalableImage_scrollTop,    scrollWidth, scrollEndHeight, color.red, color.green, color.blue, 1)(this->scrollButtonTopImage_pressed);	
-	this->generateImage(this->scalableImage_scrollBottom, scrollWidth, scrollEndHeight, color.red, color.green, color.blue, 0)(this->scrollButtonBottomImage_normal);
-	this->generateImage(this->scalableImage_scrollBottom, scrollWidth, scrollEndHeight, color.red, color.green, color.blue, 1)(this->scrollButtonBottomImage_pressed);
+	this->verticalScrollBar.loadTheme(theme, this->color.value);
 }
 
 void ListBox::changedTheme(VisualTheme newTheme) {
@@ -273,7 +213,7 @@ void ListBox::changedAttribute(const ReadableString &name) {
 	this->limitScrolling();
 }
 
-void ListBox::setSelectedIndex(int index, bool forceUpdate) {
+void ListBox::setSelectedIndex(int64_t index, bool forceUpdate) {
 	if (forceUpdate || this->selectedIndex.value != index) {
 		this->selectedIndex.value = index;
 		this->hasImages = false;
@@ -302,62 +242,6 @@ void ListBox::limitSelection(bool indexChangedMeaning) {
 	}
 }
 
-int64_t ListBox::getVisibleScrollRange() {
-	this->loadFont(); // We might not have the color assigned yet, but at least load the font to get the item height.
-	int64_t verticalStep = font_getSize(this->font);
-	return (this->location.height() - textBorderTop * 2) / verticalStep;
-}
-
-IRect ListBox::getScrollBarLocation_excludingButtons() {
-	return IRect(this->location.width() - scrollWidth, scrollEndHeight, scrollWidth, this->location.height() - (scrollEndHeight * 2));
-}
-
-IRect ListBox::getKnobLocation() {
-	// Eroded scroll-bar excluding buttons
-	// The final knob is a sub-set of this region corresponding to the visibility
-	IRect scrollBarRegion = this->getScrollBarLocation_excludingButtons();
-	// Item ranges
-	int64_t visibleRange = this->getVisibleScrollRange(); // 0..visibleRange-1
-	int64_t itemCount = this->list.value.length(); // 0..itemCount-1
-	int64_t maxScroll = itemCount - visibleRange; // 0..maxScroll
-	// Dimensions
-	int64_t knobHeight = (scrollBarRegion.height() * visibleRange) / itemCount;
-	if (knobHeight < scrollBarRegion.width()) {
-		knobHeight = scrollBarRegion.width();
-	}
-	// Visual range for center
-	int64_t scrollStart = scrollBarRegion.top() + knobHeight / 2;
-	int64_t scrollDistance = scrollBarRegion.height() - knobHeight;
-	int64_t knobCenterY = scrollStart + ((this->firstVisible * scrollDistance) / maxScroll);
-	return IRect(scrollBarRegion.left(), knobCenterY - (knobHeight / 2), scrollBarRegion.width(), knobHeight);
-}
-
-// Optional limit of scrolling, to be applied when the user don't explicitly scroll away from the selection
-// limitSelection should be called before limitScrolling, because scrolling limits depend on selection
-void ListBox::limitScrolling(bool keepSelectedVisible) {
-	// Try to load the font before estimating how big the view is
-	this->loadFont();
-	int64_t itemCount = this->list.value.length();
-	int64_t visibleRange = this->getVisibleScrollRange();
-	int64_t maxScroll;
-	int64_t minScroll;
-	// Big enough list to need scrolling but big enough list-box to fit two buttons inside
-	this->hasVerticalScroll = itemCount > visibleRange && this->location.width() >= scrollWidth * 2 && this->location.height() >= scrollEndHeight * 3;
-	if (keepSelectedVisible) {
-		maxScroll = this->selectedIndex.value;
-		minScroll = maxScroll + 1 - visibleRange;
-	} else {
-		maxScroll = itemCount - visibleRange;
-		minScroll = 0;
-	}
-	if (this->firstVisible > maxScroll) {
-		this->firstVisible = maxScroll;
-	}
-	if (this->firstVisible < minScroll) {
-		this->firstVisible = minScroll;
-	}
-}
-
 String ListBox::call(const ReadableString &methodName, const ReadableString &arguments) {
 	if (string_caseInsensitiveMatch(methodName, U"ClearAll")) {
 		// Remove all elements from the list
@@ -365,7 +249,7 @@ String ListBox::call(const ReadableString &methodName, const ReadableString &arg
 		this->hasImages = false;
 		this->selectedIndex.value = 0;
 		this->limitScrolling();
-		this->firstVisible = 0;
+		this->verticalScrollBar.setValue(0);
 		return U"";
 	} else if (string_caseInsensitiveMatch(methodName, U"PushElement")) {
 		// Push a new element to the list
