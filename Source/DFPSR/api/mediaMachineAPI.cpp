@@ -1175,14 +1175,14 @@ String machine_getOutputName(MediaMachine& machine, int methodIndex, int outputI
 }
 
 MediaResult MediaMethod::callUsingKeywords(std::function<void(MediaMachine &machine, int methodIndex, int inputIndex, const ReadableString &argumentName)> setInputAction) {
-	if (methodIndex < 0 || methodIndex >= this->machine->methods.length()) {
-		throwError(U"Method index ", methodIndex, U" is out of bound 0..", this->machine->methods.length() - 1, U"\n");
+	if (this->methodIndex < 0 || this->methodIndex >= this->machine->methods.length()) {
+		throwError(U"Method index ", this->methodIndex, U" is out of bound 0..", this->machine->methods.length() - 1, U"\n");
 	}
-	Method *method = &(this->machine->methods[methodIndex]);
+	Method *method = &(this->machine->methods[this->methodIndex]);
 	int inputCount = method->inputCount;
 	// TODO: Make sure that input arguments are assigned default arguments before assigning inputs as keywords.
 	for (int i = 0; i < inputCount; i++) {
-		setInputAction(this->machine, methodIndex, i, method->locals[i].name);
+		setInputAction(this->machine, this->methodIndex, i, method->locals[i].name);
 	}
 	machine_executeMethod(this->machine, this->methodIndex);
 	return MediaResult(this->machine, this->methodIndex);

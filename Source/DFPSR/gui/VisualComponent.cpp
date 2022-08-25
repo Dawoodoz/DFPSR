@@ -385,8 +385,8 @@ bool VisualComponent::isFocused() {
 	}
 }
 
-MediaResult VisualComponent::generateImage(MediaMethod &method, int width, int height, int red, int green, int blue, int pressed, int focused, int hover) {
-	return method.callUsingKeywords([this, &method, width, height, red, green, blue, pressed, focused, hover](MediaMachine &machine, int methodIndex, int inputIndex, const ReadableString &argumentName){
+MediaResult dsr::component_generateImage(VisualTheme theme, MediaMethod &method, int width, int height, int red, int green, int blue, int pressed, int focused, int hover) {
+	return method.callUsingKeywords([&theme, &method, width, height, red, green, blue, pressed, focused, hover](MediaMachine &machine, int methodIndex, int inputIndex, const ReadableString &argumentName){
 		if (string_caseInsensitiveMatch(argumentName, U"width")) {
 			machine_setInputByIndex(machine, methodIndex, inputIndex, width);
 		} else if (string_caseInsensitiveMatch(argumentName, U"height")) {
@@ -403,7 +403,7 @@ MediaResult VisualComponent::generateImage(MediaMethod &method, int width, int h
 			machine_setInputByIndex(machine, methodIndex, inputIndex, green);
 		} else if (string_caseInsensitiveMatch(argumentName, U"blue")) {
 			machine_setInputByIndex(machine, methodIndex, inputIndex, blue);
-		} else if (theme_assignMediaMachineArguments(this->theme, method.contextIndex, machine, methodIndex, inputIndex, argumentName)) {
+		} else if (theme_assignMediaMachineArguments(theme, method.contextIndex, machine, methodIndex, inputIndex, argumentName)) {
 			// Assigned by theme_assignMediaMachineArguments.
 		} else {
 			// TODO: Ask the theme for the argument using a specified style class for variations between different types of buttons, checkboxes, panels, et cetera.

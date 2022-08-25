@@ -25,6 +25,7 @@
 #define DFPSR_GUI_COMPONENT_LISTBOX
 
 #include "../VisualComponent.h"
+#include "helpers/ScrollBarImpl.h"
 #include "../../api/fontAPI.h"
 
 namespace dsr {
@@ -39,41 +40,31 @@ public:
 	void declareAttributes(StructureDefinition &target) const override;
 	Persistent* findAttribute(const ReadableString &name) override;
 private:
+	// Value allocated sub-components
+	ScrollBarImpl verticalScrollBar = ScrollBarImpl(true);
 	// Temporary
-	bool pressScrollUp = false;
-	bool pressScrollDown = false;
-	bool holdingScrollBar = false;
-	int64_t knobHoldOffset = 0; // The number of pixels down from the center that the knob grabbed last time.
 	bool inside = false;
-	bool hasVerticalScroll = false;
 	int64_t pressedIndex = -1; // Index of pressed item or -1 for none.
-	int64_t firstVisible = 0; // Index of first visible element for scrolling. May never go below zero.
 	// Given from the style
 	MediaMethod scalableImage_listBox;
-	MediaMethod scalableImage_scrollTop, scalableImage_scrollBottom;
-	MediaMethod scalableImage_verticalScrollBackground, scalableImage_verticalScrollKnob;
 	RasterFont font;
 	void loadFont();
 	void completeAssets();
 	void generateGraphics();
 	// Generated
 	bool hasImages = false;
-	OrderedImageRgbaU8 scrollButtonTopImage_normal, scrollButtonTopImage_pressed, scrollButtonBottomImage_normal, scrollButtonBottomImage_pressed;
-	OrderedImageRgbaU8 scrollKnobImage, verticalScrollBarImage;
 	OrderedImageRgbaU8 image;
 	// Helper methods
 	// Returns the selected index referring to an existing element or -1 if none is selected
 	int64_t getSelectedIndex();
 	void limitSelection(bool indexChangedMeaning); // Clamp selection to valid range
+	void updateScrollRange(); // Calculate range for scrollbar
 	void limitScrolling(bool keepSelectedVisible = false); // Clamp scrolling
 	int64_t getVisibleScrollRange(); // Return the number of items that are visible at once
-	IRect getScrollBarLocation_includingButtons(); // Return the location of the scroll-bar with buttons
-	IRect getScrollBarLocation_excludingButtons(); // Return the location of the scroll-bar without buttons
-	IRect getKnobLocation(); // Return the location of the scroll-bar's knob
 	void pressScrollBar(int64_t localY); // Press the scroll-bar at localY in pixels
 	void loadTheme(VisualTheme theme);
 	// If a new selection inherited the old index, forceUpdate will send the select event anyway
-	void setSelectedIndex(int index, bool forceUpdate);
+	void setSelectedIndex(int64_t index, bool forceUpdate);
 public:
 	ListBox();
 public:
