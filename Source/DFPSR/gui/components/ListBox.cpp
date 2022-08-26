@@ -29,14 +29,17 @@ PERSISTENT_DEFINITION(ListBox)
 
 void ListBox::declareAttributes(StructureDefinition &target) const {
 	VisualComponent::declareAttributes(target);
-	target.declareAttribute(U"Color");
+	target.declareAttribute(U"BackColor");
+	target.declareAttribute(U"ForeColor");
 	target.declareAttribute(U"List");
 	target.declareAttribute(U"SelectedIndex");
 }
 
 Persistent* ListBox::findAttribute(const ReadableString &name) {
-	if (string_caseInsensitiveMatch(name, U"Color")) {
-		return &(this->color);
+	if (string_caseInsensitiveMatch(name, U"Color") || string_caseInsensitiveMatch(name, U"BackColor")) {
+		return &(this->backColor);
+	} else if (string_caseInsensitiveMatch(name, U"ForeColor")) {
+		return &(this->foreColor);
 	} else if (string_caseInsensitiveMatch(name, U"List")) {
 		return &(this->list);
 	} else if (string_caseInsensitiveMatch(name, U"SelectedIndex")) {
@@ -65,19 +68,18 @@ void ListBox::generateGraphics() {
 	if (height < 1) { height = 1; }
 	if (!this->hasImages) {
 		this->completeAssets();
-		ColorRgbI32 color = this->color.value;
-	 	component_generateImage(this->theme, this->scalableImage_listBox, width, height, color.red, color.green, color.blue)(this->image);
+		ColorRgbI32 backColor = this->backColor.value;
+		ColorRgbI32 foreColor = this->foreColor.value;
+	 	component_generateImage(this->theme, this->scalableImage_listBox, width, height, backColor.red, backColor.green, backColor.blue)(this->image);
 		int32_t verticalStep = font_getSize(this->font);
 		int32_t left = textBorderLeft;
 		int32_t top = textBorderTop;
 		for (int64_t i = this->verticalScrollBar.getValue(); i < this->list.value.length() && top < height; i++) {
 			ColorRgbaI32 textColor;
-			if (i == this->pressedIndex) {
-				textColor = ColorRgbaI32(255, 255, 255, 255);
-			} else if (i == this->selectedIndex.value) {
+			if (i == this->pressedIndex || i == this->selectedIndex.value) {
 				textColor = ColorRgbaI32(255, 255, 255, 255);
 			} else {
-				textColor = ColorRgbaI32(0, 0, 0, 255);
+				textColor = ColorRgbaI32(foreColor, 255);
 			}
 			if (i == this->selectedIndex.value) {
 				draw_rectangle(this->image, IRect(left, top, width - (textBorderLeft * 2), verticalStep), ColorRgbaI32(0, 0, 0, 255));
@@ -85,7 +87,7 @@ void ListBox::generateGraphics() {
 			font_printLine(this->image, this->font, this->list.value[i], IVector2D(left, top), textColor);
 			top += verticalStep;
 		}
-		this->verticalScrollBar.draw(this->image, this->theme, color);
+		this->verticalScrollBar.draw(this->image, this->theme, backColor);
 		this->hasImages = true;
 	}
 }
@@ -169,7 +171,7 @@ void ListBox::receiveKeyboardEvent(const KeyboardEvent& event) {
 
 void ListBox::loadTheme(VisualTheme theme) {
 	this->scalableImage_listBox = theme_getScalableImage(theme, U"ListBox");
-	this->verticalScrollBar.loadTheme(theme, this->color.value);
+	this->verticalScrollBar.loadTheme(theme, this->backColor.value);
 }
 
 void ListBox::changedTheme(VisualTheme newTheme) {

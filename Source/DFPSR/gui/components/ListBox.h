@@ -34,7 +34,8 @@ class ListBox : public VisualComponent {
 PERSISTENT_DECLARATION(ListBox)
 public:
 	// Attributes
-	PersistentColor color;
+	PersistentColor foreColor;
+	PersistentColor backColor;
 	PersistentStringList list;
 	PersistentInteger selectedIndex; // Should always be inside of the list's 0..length-1 bound or zero.
 	void declareAttributes(StructureDefinition &target) const override;

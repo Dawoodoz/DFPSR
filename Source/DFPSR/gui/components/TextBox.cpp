@@ -37,7 +37,7 @@ void TextBox::declareAttributes(StructureDefinition &target) const {
 }
 
 Persistent* TextBox::findAttribute(const ReadableString &name) {
-	if (string_caseInsensitiveMatch(name, U"BackColor")) {
+	if (string_caseInsensitiveMatch(name, U"Color") || string_caseInsensitiveMatch(name, U"BackColor")) {
 		return &(this->backColor);
 	} else if (string_caseInsensitiveMatch(name, U"ForeColor")) {
 		return &(this->foreColor);

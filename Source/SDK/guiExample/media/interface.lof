@@ -36,7 +36,8 @@
 			Name = "myListBox"
 			Right = 10%+100
 			Bottom = 100%-50
-			Color = 180,180,180
+			BackColor = 180,180,180
+			ForeColor = 50,50,0
 			List = "Testing", "1", "2", "3", "One Two Three"
 			SelectedIndex = 2
 		End
