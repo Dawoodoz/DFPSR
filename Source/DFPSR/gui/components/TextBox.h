@@ -30,7 +30,6 @@
 #include "../../math/LVector.h"
 
 // TODO: Make a theme for the horizontal scroll-bar and activate it.
-// TODO: Prevent collisions between multiple scroll-bars in the corner by reserving a square in the corner when both are enabled.
 // TODO: At least make a stub implementation for cutting, copying and pasting text within the same application.
 //       Then make it optional to integrate the clipboard with the external operating system using a window handle from somewhere.
 //       Copying within the same application is still useful if one has multiple files open at the same time or just need to move things around.
@@ -56,9 +55,8 @@ class TextBox : public VisualComponent {
 PERSISTENT_DECLARATION(TextBox)
 public:
 	// Value allocated sub-components
-	// TODO: Let them know about each other to avoid overlap in the shared corner.
-	ScrollBarImpl verticalScrollBar = ScrollBarImpl(true);
-	ScrollBarImpl horizontalScrollBar = ScrollBarImpl(false);
+	ScrollBarImpl verticalScrollBar = ScrollBarImpl(true, true);
+	ScrollBarImpl horizontalScrollBar = ScrollBarImpl(false, true);
 	void updateScrollRange();
 	void limitScrolling(bool keepBeamVisible);
 	// Attributes

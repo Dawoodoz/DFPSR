@@ -66,18 +66,23 @@ private:
 	// Updated manually.
 	ScrollRange scrollRange; // Range of valid values.
 	int64_t value = 0; // The selected value.
+	int64_t reservedStart = 0; // How many pixels to leave empty at the left/top side to avoid collisions.
+	int64_t reservedEnd = 0; // How many pixels to leave empty at the right/bottom side to avoid collisions.
 	// Scalable parametric images.
 	MediaMethod scalableImage_scrollTop, scalableImage_scrollBottom, scalableImage_verticalScrollBackground, scalableImage_verticalScrollKnob;
 	// Generated raster images.
 	OrderedImageRgbaU8 scrollButtonTopImage_normal, scrollButtonTopImage_pressed, scrollButtonBottomImage_normal, scrollButtonBottomImage_pressed, scrollKnobImage, verticalScrollBarImage;
 private:
-	IRect getScrollBarLocation_excludingButtons(int32_t parentWidth, int32_t parentHeight);
-	IRect getKnobLocation(int32_t parentWidth, int32_t parentHeight);
+	IRect getScrollBarLocation(int32_t parentWidth, int32_t parentHeight);
+	IRect getScrollRegion(const IRect &scrollBarLocation);
+	IRect getDecreaseButton(const IRect &scrollBarLocation);
+	IRect getIncreaseButton(const IRect &scrollBarLocation);
+	IRect getKnobLocation(const IRect &scrollBarLocation);
 	// Returns true iff value updated.
 	bool pressScrollBar(const IRect &parentLocation, int64_t localY);
 public:
-	ScrollBarImpl(bool vertical)
-	: vertical(vertical) {}
+	ScrollBarImpl(bool vertical, bool reserveEnd = false)
+	: vertical(vertical), reservedStart(0), reservedEnd(reserveEnd ? 16 : 0) {}
 	void loadTheme(VisualTheme theme, const ColorRgbI32 &color);
 	// Pre-condition: range.minValue <= range.maxValue
 	void updateScrollRange(const ScrollRange &range);
