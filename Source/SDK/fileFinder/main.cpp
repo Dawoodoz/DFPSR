@@ -34,8 +34,8 @@ void dsrMain(List<String> args) {
 		}
 	} else {
 		// Test program on the current path when nothing was entered.
-		String currentPath = file_getCurrentPath();
-		printText("Exploring ", currentPath, " because no folders were given.\n");
-		exploreFolder(currentPath, U"  ");
+		String applicationFolder = file_getApplicationFolder();
+		printText("Exploring ", applicationFolder, " because no folders were given.\n");
+		exploreFolder(applicationFolder, U"  ");
 	}
 }
