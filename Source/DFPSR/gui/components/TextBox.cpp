@@ -293,6 +293,21 @@ void TextBox::receiveMouseEvent(const MouseEvent& event) {
 	}
 }
 
+// TODO: Move stub implementation to an API and allow system wrappers to override it with a real implementation copying and pasting across different applications.
+String pasteBinStub;
+void saveToClipBoard(const ReadableString &text) {
+	pasteBinStub = text;
+}
+ReadableString readFromClipBoard() {
+	return pasteBinStub;
+}
+
+ReadableString TextBox::getSelectedText() {
+	int64_t selectionLeft = std::min(this->selectionStart, this->beamLocation);
+	int64_t selectionRight = std::max(this->selectionStart, this->beamLocation);
+	return string_exclusiveRange(this->text.value, selectionLeft, selectionRight);
+}
+
 void TextBox::replaceSelection(const ReadableString &replacingText) {
 	int64_t selectionLeft = std::min(this->selectionStart, this->beamLocation);
 	int64_t selectionRight = std::max(this->selectionStart, this->beamLocation);
@@ -373,7 +388,6 @@ static int64_t getLineEnd(const ReadableString &text, int64_t searchStart) {
 	return string_length(text);
 }
 
-// TODO: Copy and paste using a clipboard. (With automatic removal of new lines when multi-line is disabled)
 void TextBox::receiveKeyboardEvent(const KeyboardEvent& event) {
 	// Insert and scroll-lock is not supported.
 	if (event.keyboardEventType == KeyboardEventType::KeyDown) {
@@ -405,41 +419,70 @@ void TextBox::receiveKeyboardEvent(const KeyboardEvent& event) {
 		bool holdShift = this->combinationKeys & combinationKey_shift;
 		bool holdControl = this->combinationKeys & combinationKey_control;
 		bool removeSelection = !holdShift;
-		if (selected && (event.dsrKey == DsrKey_BackSpace || event.dsrKey == DsrKey_Delete)) {
-			// Remove selection
-			this->replaceSelection(U"");
-		} else if (event.dsrKey == DsrKey_BackSpace && canGoLeft) {
-			// Erase left of beam
-			this->beamLocation--;
-			this->replaceSelection(U"");
-		} else if (event.dsrKey == DsrKey_Delete && canGoRight) {
-			// Erase right of beam
-			this->beamLocation++;
-			this->replaceSelection(U"");
-		} else if (event.dsrKey == DsrKey_Home || (event.dsrKey == DsrKey_LeftArrow && holdControl)) {
-			// Move to the line start using Home or Ctrl + LeftArrow
-			this->placeBeamAtCharacter(getLineStart(this->text.value, this->beamLocation), removeSelection);
-		} else if (event.dsrKey == DsrKey_End || (event.dsrKey == DsrKey_RightArrow && holdControl)) {
-			// Move to the line end using End or Ctrl + RightArrow
-			this->placeBeamAtCharacter(getLineEnd(this->text.value, this->beamLocation), removeSelection);
-		} else if (event.dsrKey == DsrKey_LeftArrow && canGoLeft) {
-			// Move left using LeftArrow
-			this->placeBeamAtCharacter(this->beamLocation - 1, removeSelection);
-		} else if (event.dsrKey == DsrKey_RightArrow && canGoRight) {
-			// Move right using RightArrow
-			this->placeBeamAtCharacter(this->beamLocation + 1, removeSelection);
-		} else if (event.dsrKey == DsrKey_UpArrow) {
-			// Move up using UpArrow
-			this->moveBeamVertically(-1, removeSelection);
-		} else if (event.dsrKey == DsrKey_DownArrow) {
-			// Move down using DownArrow
-			this->moveBeamVertically(1, removeSelection);
-		} else if (event.dsrKey == DsrKey_Return) {
-			if (this->multiLine.value) {
-				this->replaceSelection(U'\n');
+		if (holdControl) {
+			if (event.dsrKey == DsrKey_LeftArrow) {
+				// Move to the line start using Ctrl + LeftArrow instead of Home
+				this->placeBeamAtCharacter(getLineStart(this->text.value, this->beamLocation), removeSelection);
+			} else if (event.dsrKey == DsrKey_RightArrow) {
+				// Move to the line end using Ctrl + RightArrow instead of End
+				this->placeBeamAtCharacter(getLineEnd(this->text.value, this->beamLocation), removeSelection);
+			} else if (event.dsrKey == DsrKey_X) {
+				// Cut selection using Ctrl + X
+				saveToClipBoard(this->getSelectedText());
+				this->replaceSelection(U"");
+			} else if (event.dsrKey == DsrKey_C) {
+				// Copy selection using Ctrl + C
+				saveToClipBoard(this->getSelectedText());
+			} else if (event.dsrKey == DsrKey_V) {
+				// Paste selection using Ctrl + V
+				this->replaceSelection(readFromClipBoard());
+			} else if (event.dsrKey == DsrKey_A) {
+				// Select all using Ctrl + A
+				this->selectionStart = 0;
+				this->beamLocation = string_length(this->text.value);
+				this->hasImages = false;
+			} else if (event.dsrKey == DsrKey_N) {
+				// Select nothing using Ctrl + N
+				this->selectionStart = this->beamLocation;
+				this->hasImages = false;
 			}
-		} else if (printable) {
-			this->replaceSelection(event.character);
+		} else {
+			if (selected && (event.dsrKey == DsrKey_BackSpace || event.dsrKey == DsrKey_Delete)) {
+				// Remove selection
+				this->replaceSelection(U"");
+			} else if (event.dsrKey == DsrKey_BackSpace && canGoLeft) {
+				// Erase left of beam
+				this->beamLocation--;
+				this->replaceSelection(U"");
+			} else if (event.dsrKey == DsrKey_Delete && canGoRight) {
+				// Erase right of beam
+				this->beamLocation++;
+				this->replaceSelection(U"");
+			} else if (event.dsrKey == DsrKey_Home) {
+				// Move to the line start using Home
+				this->placeBeamAtCharacter(getLineStart(this->text.value, this->beamLocation), removeSelection);
+			} else if (event.dsrKey == DsrKey_End) {
+				// Move to the line end using End
+				this->placeBeamAtCharacter(getLineEnd(this->text.value, this->beamLocation), removeSelection);
+			} else if (event.dsrKey == DsrKey_LeftArrow && canGoLeft) {
+				// Move left using LeftArrow
+				this->placeBeamAtCharacter(this->beamLocation - 1, removeSelection);
+			} else if (event.dsrKey == DsrKey_RightArrow && canGoRight) {
+				// Move right using RightArrow
+				this->placeBeamAtCharacter(this->beamLocation + 1, removeSelection);
+			} else if (event.dsrKey == DsrKey_UpArrow) {
+				// Move up using UpArrow
+				this->moveBeamVertically(-1, removeSelection);
+			} else if (event.dsrKey == DsrKey_DownArrow) {
+				// Move down using DownArrow
+				this->moveBeamVertically(1, removeSelection);
+			} else if (event.dsrKey == DsrKey_Return) {
+				if (this->multiLine.value) {
+					this->replaceSelection(U'\n');
+				}
+			} else if (printable) {
+				this->replaceSelection(event.character);
+			}
 		}
 		//printText(U"KeyType char=", event.character, " key=", event.dsrKey, U"\n");
 	}

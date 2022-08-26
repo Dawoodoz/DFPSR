@@ -29,10 +29,7 @@
 #include "../../api/fontAPI.h"
 #include "../../math/LVector.h"
 
-// TODO: Make a theme for the horizontal scroll-bar and activate it.
-// TODO: At least make a stub implementation for cutting, copying and pasting text within the same application.
-//       Then make it optional to integrate the clipboard with the external operating system using a window handle from somewhere.
-//       Copying within the same application is still useful if one has multiple files open at the same time or just need to move things around.
+// TODO: Make a theme for the horizontal scroll-bar.
 
 namespace dsr {
 
@@ -87,6 +84,7 @@ public:
 	LVector2D getTextOrigin(bool includeVerticalScroll);
 	int64_t findBeamLocationInLine(int64_t rowIndex, int64_t pixelX);
 	BeamLocation findBeamLocation(const LVector2D &pixelLocation);
+	ReadableString getSelectedText();
 	void replaceSelection(const ReadableString &replacingText);
 	void replaceSelection(DsrChar replacingCharacter);
 	void placeBeamAtCharacter(int64_t characterIndex, bool removeSelection);
