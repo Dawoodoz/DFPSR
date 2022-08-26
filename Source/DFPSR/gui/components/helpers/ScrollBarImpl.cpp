@@ -63,41 +63,89 @@ void ScrollBarImpl::limitScrolling(const IRect &parentLocation, bool keepPinValu
 	if (this->value < scrollRange.minValue) this->value = scrollRange.minValue;
 }
 
-IRect ScrollBarImpl::getScrollBarLocation_excludingButtons(int32_t parentWidth, int32_t parentHeight) {
-	return this->vertical ? IRect(parentWidth - this->scrollBarThickness, this->scrollButtonLength, this->scrollBarThickness, parentHeight - (this->scrollButtonLength * 2))
-	                      : IRect(this->scrollButtonLength, parentHeight - this->scrollBarThickness, parentWidth - (this->scrollButtonLength * 2), this->scrollBarThickness);
+// Fill from the right side if vertical and bottom if horizontal.
+static IRect getWallSide(int32_t parentWidth, int32_t parentHeight, int32_t thickness, bool vertical) {
+	return vertical ? IRect(std::max(1, parentWidth - thickness), 0, thickness, parentHeight)
+	                : IRect(0, std::max(1, parentHeight - thickness), parentWidth, thickness);
 }
 
-IRect ScrollBarImpl::getKnobLocation(int32_t parentWidth, int32_t parentHeight) {
+// Get the upper part if vertical and left part if horizontal.
+static IRect getStartRect(const IRect &original, int32_t startLength, bool vertical) {
+	return vertical ? IRect(original.left(), original.top(), original.width(), startLength)
+	                : IRect(original.left(), original.top(), startLength, original.height());
+}
+
+// Get the bottom part if vertical and right part if horizontal.
+static IRect getEndRect(const IRect &original, int32_t endLength, bool vertical) {
+	return vertical ? IRect(original.left(), original.bottom() - endLength, original.width(), endLength)
+	                : IRect(original.right() - endLength, original.top(), endLength, original.height());
+}
+
+static IRect getMiddleRect(const IRect &original, int32_t startCropping, int32_t endCropping, bool vertical) {
+	return vertical ? IRect(original.left(), original.top() + startCropping, original.width(), std::max(1, original.height() - startCropping - endCropping))
+	                : IRect(original.left() + startCropping, original.top(), std::max(1, original.width() - startCropping - endCropping), original.height());
+}
+
+static int32_t getStart(const IRect &rect, bool vertical) {
+	return vertical ? rect.top() : rect.left();
+}
+
+static int32_t getEnd(const IRect &rect, bool vertical) {
+	return vertical ? rect.bottom() : rect.right();
+}
+
+static int32_t getLength(const IRect &rect, bool vertical) {
+	return vertical ? rect.height() : rect.width();
+}
+
+static int32_t getThickness(const IRect &rect, bool vertical) {
+	return vertical ? rect.width() : rect.height();
+}
+
+IRect ScrollBarImpl::getScrollBarLocation(int32_t parentWidth, int32_t parentHeight) {
+	IRect whole = getWallSide(parentWidth, parentHeight, this->scrollBarThickness, this->vertical);
+	return getMiddleRect(whole, reservedStart, reservedEnd, this->vertical);
+}
+
+IRect ScrollBarImpl::getScrollRegion(const IRect &scrollBarLocation) {
+	return getMiddleRect(scrollBarLocation, this->scrollButtonLength, this->scrollButtonLength, this->vertical);
+}
+
+IRect ScrollBarImpl::getDecreaseButton(const IRect &scrollBarLocation) {
+	return getStartRect(scrollBarLocation, this->scrollButtonLength, this->vertical);
+}
+
+IRect ScrollBarImpl::getIncreaseButton(const IRect &scrollBarLocation) {
+	return getEndRect(scrollBarLocation, this->scrollButtonLength, this->vertical);
+}
+
+IRect ScrollBarImpl::getKnobLocation(const IRect &scrollBarLocation) {
 	// Eroded scroll-bar excluding buttons
 	// The final knob is a sub-set of this region corresponding to the visibility
-	IRect scrollBarRegion = this->getScrollBarLocation_excludingButtons(parentWidth, parentHeight);
+	IRect scrollRegion = getMiddleRect(scrollBarLocation, this->scrollButtonLength, this->scrollButtonLength, this->vertical);
 	// The knob should represent the selected range within the total range.
-	int64_t barLength = this->vertical ? scrollBarRegion.height() : scrollBarRegion.width();
-	int64_t barThickness = this->vertical ? scrollBarRegion.width() : scrollBarRegion.height();
+	int64_t barLength = getLength(scrollRegion, this->vertical);
+	int64_t barThickness = getThickness(scrollRegion, this->vertical);
 	int64_t knobLength = (barLength * this->scrollRange.visibleItems) / (this->scrollRange.maxValue + this->scrollRange.visibleItems);
 	if (knobLength < barThickness) {
 		knobLength = barThickness;
 	}
 	// Visual range for center
-	int64_t scrollStart = (this->vertical ? scrollBarRegion.top() : scrollBarRegion.left()) + knobLength / 2;
+	int64_t scrollStart = (this->vertical ? scrollRegion.top() : scrollRegion.left()) + knobLength / 2;
 	int64_t scrollDistance = barLength - knobLength;
 	int64_t knobStart = scrollStart + ((this->value * scrollDistance) / this->scrollRange.maxValue) - (knobLength / 2);
-	return this->vertical ? IRect(scrollBarRegion.left(), knobStart, barThickness, knobLength)
-	                      : IRect(knobStart, scrollBarRegion.top(), knobLength, barThickness);
+	return this->vertical ? IRect(scrollRegion.left(), knobStart, barThickness, knobLength)
+	                      : IRect(knobStart, scrollRegion.top(), knobLength, barThickness);
 }
 
 void ScrollBarImpl::draw(OrderedImageRgbaU8 &target, VisualTheme &theme, const ColorRgbI32 &color) {
 	if (this->visible) {
 		int32_t parentWidth = image_getWidth(target);
 		int32_t parentHeight = image_getHeight(target);
-		IRect whole = this->vertical ? IRect(parentWidth - this->scrollBarThickness, 0, this->scrollBarThickness, parentHeight)
-		                             : IRect(0, parentHeight - this->scrollBarThickness, parentWidth, this->scrollBarThickness);
-		IRect upper = this->vertical ? IRect(whole.left(), whole.top(), whole.width(), this->scrollButtonLength)
-		                             : IRect(whole.left(), whole.top(), this->scrollButtonLength, whole.height());
-		IRect lower = this->vertical ? IRect(whole.left(), whole.bottom() - this->scrollButtonLength, whole.width(), this->scrollButtonLength)
-		                             : IRect(whole.right() - this->scrollButtonLength, whole.top(), this->scrollButtonLength, whole.height());
-		IRect knob = this->getKnobLocation(parentWidth, parentHeight);
+		IRect scrollBarLocation = this->getScrollBarLocation(parentWidth, parentHeight);
+		IRect upper = getStartRect(scrollBarLocation, this->scrollButtonLength, this->vertical);
+		IRect lower = getEndRect(scrollBarLocation, this->scrollButtonLength, this->vertical);
+		IRect knob = this->getKnobLocation(scrollBarLocation);
 		// Only redraw the knob image if its dimensions changed
 		if (!image_exists(this->scrollKnobImage)
 		  || image_getWidth(this->scrollKnobImage) != knob.width()
@@ -106,12 +154,12 @@ void ScrollBarImpl::draw(OrderedImageRgbaU8 &target, VisualTheme &theme, const C
 		}
 		// Only redraw the scroll list if its dimenstions changed
 		if (!image_exists(this->verticalScrollBarImage)
-		  || image_getWidth(this->verticalScrollBarImage) != whole.width()
-		  || image_getHeight(this->verticalScrollBarImage) != whole.height()) {
-			component_generateImage(theme, this->scalableImage_verticalScrollBackground, whole.width(), whole.height(), color.red, color.green, color.blue, 0)(this->verticalScrollBarImage);
+		  || image_getWidth(this->verticalScrollBarImage) != scrollBarLocation.width()
+		  || image_getHeight(this->verticalScrollBarImage) != scrollBarLocation.height()) {
+			component_generateImage(theme, this->scalableImage_verticalScrollBackground, scrollBarLocation.width(), scrollBarLocation.height(), color.red, color.green, color.blue, 0)(this->verticalScrollBarImage);
 		}
 		// Draw the scroll-bar
-		draw_alphaFilter(target, this->verticalScrollBarImage, whole.left(), whole.top());
+		draw_alphaFilter(target, this->verticalScrollBarImage, scrollBarLocation.left(), scrollBarLocation.top());
 		draw_alphaFilter(target, this->scrollKnobImage, knob.left(), knob.top());
 		draw_alphaFilter(target, this->pressScrollUp ? this->scrollButtonTopImage_pressed : this->scrollButtonTopImage_normal, upper.left(), upper.top());
 		draw_alphaFilter(target, this->pressScrollDown ? this->scrollButtonBottomImage_pressed : this->scrollButtonBottomImage_normal, lower.left(), lower.top());
@@ -120,11 +168,18 @@ void ScrollBarImpl::draw(OrderedImageRgbaU8 &target, VisualTheme &theme, const C
 
 bool ScrollBarImpl::pressScrollBar(const IRect &parentLocation, int64_t localCoordinate) {
 	int64_t oldValue = this->value;
-	IRect knobLocation = this->getKnobLocation(parentLocation.width(), parentLocation.height());
-	int64_t knobLength = this->vertical ? knobLocation.height() : knobLocation.width();
-	int64_t endDistance = this->scrollButtonLength + knobLength / 2;
-	int64_t barLength = (this->vertical ? parentLocation.height() : parentLocation.width()) - (endDistance * 2);
-	this->value = ((localCoordinate - endDistance) * this->scrollRange.maxValue + (barLength / 2)) / barLength;
+	IRect scrollBarLocation = this->getScrollBarLocation(parentLocation.width(), parentLocation.height());
+	IRect scrollRegion = this->getScrollRegion(scrollBarLocation);
+	IRect knobLocation = this->getKnobLocation(scrollBarLocation);
+	int64_t knobLength = getLength(knobLocation, this->vertical);
+	int64_t minimumAt = getStart(scrollRegion, this->vertical) + knobLength / 2;
+	int64_t maximumAt = getEnd(scrollRegion, this->vertical) - knobLength / 2;
+	int64_t pixelRange = maximumAt - minimumAt;
+	int64_t valueRange = this->scrollRange.maxValue - this->scrollRange.minValue;
+	this->value = this->scrollRange.minValue;
+	if (pixelRange > 0) {
+		this->value += ((localCoordinate - minimumAt) * valueRange + pixelRange / 2) / pixelRange;
+	}
 	this->limitScrolling(parentLocation);
 	// Avoid expensive redrawing if the index did not change
 	return this->value != oldValue;
@@ -133,53 +188,34 @@ bool ScrollBarImpl::pressScrollBar(const IRect &parentLocation, int64_t localCoo
 bool ScrollBarImpl::receiveMouseEvent(const IRect &parentLocation, const MouseEvent& event) {
 	bool intercepted = false;
 	IVector2D localPosition = event.position - parentLocation.upperLeft();
+	IRect scrollBarLocation = this->getScrollBarLocation(parentLocation.width(), parentLocation.height());
+	IRect cursorLocation = IRect(localPosition.x, localPosition.y, 1, 1);
 	int64_t usedCoordinate = (this->vertical ? localPosition.y : localPosition.x);
-	bool onScrollBar = this->visible && (this->vertical ? (localPosition.x >= parentLocation.width() - scrollBarThickness) : (localPosition.y >= parentLocation.height() - scrollBarThickness));
 	if (event.mouseEventType == MouseEventType::MouseDown) {
-		if (onScrollBar) {
+		if (IRect::touches(scrollBarLocation, cursorLocation)) {
+			IRect upperLocation = getStartRect(scrollBarLocation, this->scrollButtonLength, this->vertical);
+			IRect lowerLocation = getEndRect(scrollBarLocation, this->scrollButtonLength, this->vertical);
+			IRect knobLocation = this->getKnobLocation(scrollBarLocation);
 			intercepted = true;
-			if (this->vertical) {
-				if (localPosition.y < this->scrollButtonLength) {
-					// Upper scroll button
-					this->pressScrollUp = true;
-					this->value--;
-				} else if (localPosition.y > parentLocation.height() - this->scrollButtonLength) {
-					// Lower scroll button
-					this->pressScrollDown = true;
-					this->value++;
-				} else {
-					// Start scrolling with the mouse using the relative height on the scroll bar.
-					IRect knobLocation = this->getKnobLocation(parentLocation.width(), parentLocation.height());
-					int64_t halfKnobLength = knobLocation.height() / 2;
-					this->knobHoldOffset = localPosition.y - (knobLocation.top() + halfKnobLength);
-					if (this->knobHoldOffset < -halfKnobLength || this->knobHoldOffset > halfKnobLength) {
-						// If pressing outside of the knob, pull it directly to the pressed location before pulling from the center.
-						this->knobHoldOffset = 0;
-						this->pressScrollBar(parentLocation, usedCoordinate - this->knobHoldOffset);
-					}
-					this->holdingScrollBar = true;
-				}
+			if (IRect::touches(upperLocation, cursorLocation)) {
+				// Upper scroll button
+				this->pressScrollUp = true;
+				this->value--;
+			} else if (IRect::touches(lowerLocation, cursorLocation)) {
+				// Lower scroll button
+				this->pressScrollDown = true;
+				this->value++;
 			} else {
-				if (localPosition.x < this->scrollButtonLength) {
-					// Upper scroll button
-					this->pressScrollUp = true;
-					this->value--;
-				} else if (localPosition.x > parentLocation.width() - this->scrollButtonLength) {
-					// Lower scroll button
-					this->pressScrollDown = true;
-					this->value++;
-				} else {
-					// Start scrolling with the mouse using the relative width on the scroll bar.
-					IRect knobLocation = this->getKnobLocation(parentLocation.width(), parentLocation.height());
-					int64_t halfKnobLength = knobLocation.width() / 2;
-					this->knobHoldOffset = localPosition.x - (knobLocation.width() + halfKnobLength);
-					if (this->knobHoldOffset < -halfKnobLength || this->knobHoldOffset > halfKnobLength) {
-						// If pressing outside of the knob, pull it directly to the pressed location before pulling from the center.
-						this->knobHoldOffset = 0;
-						this->pressScrollBar(parentLocation, usedCoordinate - this->knobHoldOffset);
-					}
-					this->holdingScrollBar = true;
+				// Start scrolling with the mouse using the relative height on the scroll bar.
+				IRect knobLocation = this->getKnobLocation(scrollBarLocation);
+				int64_t halfKnobLength = getLength(knobLocation, this->vertical) / 2;
+				this->knobHoldOffset = usedCoordinate - (getStart(knobLocation, this->vertical) + halfKnobLength);
+				if (this->knobHoldOffset < -halfKnobLength || this->knobHoldOffset > halfKnobLength) {
+					// If pressing outside of the knob, pull it directly to the pressed location before pulling from the center.
+					this->knobHoldOffset = 0;
+					this->pressScrollBar(parentLocation, usedCoordinate - this->knobHoldOffset);
 				}
+				this->holdingScrollBar = true;
 			}
 		}
 		this->limitScrolling(parentLocation);
