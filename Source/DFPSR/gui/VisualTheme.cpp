@@ -150,6 +150,19 @@ BEGIN: VerticalScrollList
 	PACK_RGBA: colorImage, 0, 0, 0, visImage
 END:
 
+BEGIN: HorizontalScrollList
+	INPUT: FixedPoint, width
+	INPUT: FixedPoint, height
+	INPUT: FixedPoint, red
+	INPUT: FixedPoint, green
+	INPUT: FixedPoint, blue
+	OUTPUT: ImageRgbaU8, colorImage
+	CREATE: visImage<ImageU8>, width, height
+	CREATE: lumaImage<ImageU8>, width, height
+	FADE_LINEAR: visImage, 0, 0, 128, 0, height, 0
+	PACK_RGBA: colorImage, 0, 0, 0, visImage
+END:
+
 BEGIN: TextBox
 	INPUT: FixedPoint, width
 	INPUT: FixedPoint, height
@@ -183,11 +196,19 @@ UR"QUOTE(
 		method = "TextBox"
 	[VerticalScrollKnob]
 		rounding = 8
+	[HorizontalScrollKnob]
+		rounding = 8
 	[VerticalScrollList]
 		method = "VerticalScrollList"
+	[HorizontalScrollList]
+		method = "HorizontalScrollList"
 	[ScrollUp]
 		rounding = 5
 	[ScrollDown]
+		rounding = 5
+	[ScrollLeft]
+		rounding = 5
+	[ScrollRight]
 		rounding = 5
 	[Panel]
 		border = 1
