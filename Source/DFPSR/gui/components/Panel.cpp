@@ -30,12 +30,15 @@ PERSISTENT_DEFINITION(Panel)
 void Panel::declareAttributes(StructureDefinition &target) const {
 	VisualComponent::declareAttributes(target);
 	target.declareAttribute(U"Solid");
+	target.declareAttribute(U"Plain");
 	target.declareAttribute(U"Color");
 }
 
 Persistent* Panel::findAttribute(const ReadableString &name) {
 	if (string_caseInsensitiveMatch(name, U"Solid")) {
 		return &(this->solid);
+	} else if (string_caseInsensitiveMatch(name, U"Plain")) {
+		return &(this->plain);
 	} else if (string_caseInsensitiveMatch(name, U"Color") || string_caseInsensitiveMatch(name, U"BackColor")) {
 		// Both color and backcolor is accepted as names for the only color.
 		return &(this->color);
@@ -65,9 +68,12 @@ void Panel::generateGraphics() {
 // Fill the background with a solid color
 void Panel::drawSelf(ImageRgbaU8& targetImage, const IRect &relativeLocation) {
 	if (this->solid.value) {
-		this->generateGraphics();
-		draw_copy(targetImage, this->imageBackground, relativeLocation.left(), relativeLocation.top());
-		//draw_rectangle(targetImage, relativeLocation, ColorRgbaI32(this->color.value, 255));
+		if (this->plain.value) {
+			draw_rectangle(targetImage, relativeLocation, ColorRgbaI32(this->color.value, 255));
+		} else {
+			this->generateGraphics();
+			draw_copy(targetImage, this->imageBackground, relativeLocation.left(), relativeLocation.top());
+		}
 	}
 }
 

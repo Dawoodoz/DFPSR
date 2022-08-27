@@ -12,6 +12,7 @@
 		Solid = 1
 		Top = 50
 		Color = 0,0,0
+		Plain = 1
 		Begin : Picture
 			Name = "previewPicture"
 			Interpolation = 1
