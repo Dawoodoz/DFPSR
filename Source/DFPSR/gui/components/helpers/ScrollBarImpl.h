@@ -69,9 +69,12 @@ private:
 	int64_t reservedStart = 0; // How many pixels to leave empty at the left/top side to avoid collisions.
 	int64_t reservedEnd = 0; // How many pixels to leave empty at the right/bottom side to avoid collisions.
 	// Scalable parametric images.
-	MediaMethod scalableImage_scrollTop, scalableImage_scrollBottom, scalableImage_verticalScrollBackground, scalableImage_verticalScrollKnob;
+	MediaMethod scalableImage_scrollTop, scalableImage_scrollBottom, scalableImage_scrollBackground, scalableImage_scrollKnob;
 	// Generated raster images.
-	OrderedImageRgbaU8 scrollButtonTopImage_normal, scrollButtonTopImage_pressed, scrollButtonBottomImage_normal, scrollButtonBottomImage_pressed, scrollKnobImage, verticalScrollBarImage;
+	OrderedImageRgbaU8 scrollButtonTopImage_normal, scrollButtonTopImage_pressed;
+	OrderedImageRgbaU8 scrollButtonBottomImage_normal, scrollButtonBottomImage_pressed;
+	OrderedImageRgbaU8 scrollKnobImage_normal, scrollKnobImage_pressed;
+	OrderedImageRgbaU8 scrollBarImage;
 private:
 	IRect getScrollBarLocation(int32_t parentWidth, int32_t parentHeight);
 	IRect getScrollRegion(const IRect &scrollBarLocation);

@@ -29,8 +29,6 @@
 #include "../../api/fontAPI.h"
 #include "../../math/LVector.h"
 
-// TODO: Make a theme for the horizontal scroll-bar.
-
 namespace dsr {
 
 struct LineIndex {

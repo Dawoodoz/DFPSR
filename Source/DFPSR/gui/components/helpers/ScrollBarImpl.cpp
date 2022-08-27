@@ -26,10 +26,10 @@
 using namespace dsr;
 
 void ScrollBarImpl::loadTheme(VisualTheme theme, const ColorRgbI32 &color) {
-	this->scalableImage_scrollTop = theme_getScalableImage(theme, U"ScrollUp");
-	this->scalableImage_scrollBottom = theme_getScalableImage(theme, U"ScrollDown");
-	this->scalableImage_verticalScrollKnob = theme_getScalableImage(theme, U"VerticalScrollKnob");
-	this->scalableImage_verticalScrollBackground = theme_getScalableImage(theme, U"VerticalScrollList");
+	this->scalableImage_scrollTop = theme_getScalableImage(theme, this->vertical ? U"ScrollUp" : U"ScrollLeft");
+	this->scalableImage_scrollBottom = theme_getScalableImage(theme, this->vertical ? U"ScrollDown" : U"ScrollRight");
+	this->scalableImage_scrollKnob = theme_getScalableImage(theme, this->vertical ? U"VerticalScrollKnob" : U"HorizontalScrollKnob");
+	this->scalableImage_scrollBackground = theme_getScalableImage(theme, this->vertical ? U"VerticalScrollList" : U"HorizontalScrollList");
 	component_generateImage(theme, this->scalableImage_scrollTop,     this->scrollBarThickness,  this->scrollButtonLength, color.red, color.green, color.blue, 0)(this->scrollButtonTopImage_normal);
 	component_generateImage(theme, this->scalableImage_scrollTop,     this->scrollBarThickness,  this->scrollButtonLength, color.red, color.green, color.blue, 1)(this->scrollButtonTopImage_pressed);	
 	component_generateImage(theme, this->scalableImage_scrollBottom,  this->scrollBarThickness,  this->scrollButtonLength, color.red, color.green, color.blue, 0)(this->scrollButtonBottomImage_normal);
@@ -147,20 +147,21 @@ void ScrollBarImpl::draw(OrderedImageRgbaU8 &target, VisualTheme &theme, const C
 		IRect lower = getEndRect(scrollBarLocation, this->scrollButtonLength, this->vertical);
 		IRect knob = this->getKnobLocation(scrollBarLocation);
 		// Only redraw the knob image if its dimensions changed
-		if (!image_exists(this->scrollKnobImage)
-		  || image_getWidth(this->scrollKnobImage) != knob.width()
-		  || image_getHeight(this->scrollKnobImage) != knob.height()) {
-			component_generateImage(theme, this->scalableImage_verticalScrollKnob, knob.width(), knob.height(), color.red, color.green, color.blue, 0)(this->scrollKnobImage);
+		if (!image_exists(this->scrollKnobImage_normal)
+		  || image_getWidth(this->scrollKnobImage_normal) != knob.width()
+		  || image_getHeight(this->scrollKnobImage_normal) != knob.height()) {
+			component_generateImage(theme, this->scalableImage_scrollKnob, knob.width(), knob.height(), color.red, color.green, color.blue, 0)(this->scrollKnobImage_normal);
+			component_generateImage(theme, this->scalableImage_scrollKnob, knob.width(), knob.height(), color.red, color.green, color.blue, 1)(this->scrollKnobImage_pressed);
 		}
 		// Only redraw the scroll list if its dimenstions changed
-		if (!image_exists(this->verticalScrollBarImage)
-		  || image_getWidth(this->verticalScrollBarImage) != scrollBarLocation.width()
-		  || image_getHeight(this->verticalScrollBarImage) != scrollBarLocation.height()) {
-			component_generateImage(theme, this->scalableImage_verticalScrollBackground, scrollBarLocation.width(), scrollBarLocation.height(), color.red, color.green, color.blue, 0)(this->verticalScrollBarImage);
+		if (!image_exists(this->scrollBarImage)
+		  || image_getWidth(this->scrollBarImage) != scrollBarLocation.width()
+		  || image_getHeight(this->scrollBarImage) != scrollBarLocation.height()) {
+			component_generateImage(theme, this->scalableImage_scrollBackground, scrollBarLocation.width(), scrollBarLocation.height(), color.red, color.green, color.blue, 0)(this->scrollBarImage);
 		}
 		// Draw the scroll-bar
-		draw_alphaFilter(target, this->verticalScrollBarImage, scrollBarLocation.left(), scrollBarLocation.top());
-		draw_alphaFilter(target, this->scrollKnobImage, knob.left(), knob.top());
+		draw_alphaFilter(target, this->scrollBarImage, scrollBarLocation.left(), scrollBarLocation.top());
+		draw_alphaFilter(target, this->holdingScrollBar ? this->scrollKnobImage_pressed : this->scrollKnobImage_normal, knob.left(), knob.top());
 		draw_alphaFilter(target, this->pressScrollUp ? this->scrollButtonTopImage_pressed : this->scrollButtonTopImage_normal, upper.left(), upper.top());
 		draw_alphaFilter(target, this->pressScrollDown ? this->scrollButtonBottomImage_pressed : this->scrollButtonBottomImage_normal, lower.left(), lower.top());
 	}
