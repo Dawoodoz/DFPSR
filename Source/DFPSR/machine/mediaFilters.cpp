@@ -384,7 +384,6 @@ void dsr::media_fade_linear(ImageU8& targetImage, FixedPoint x1, FixedPoint y1, 
 	media_fade_region_linear(targetImage, image_getBound(targetImage), x1, y1, luma1, x2, y2, luma2);
 }
 
-// TODO: Does the radial fade allow a large enough viewport?
 void dsr::media_fade_region_radial(ImageU8& targetImage, const IRect& viewport, FixedPoint centerX, FixedPoint centerY, FixedPoint innerRadius, FixedPoint innerLuma, FixedPoint outerRadius, FixedPoint outerLuma) {
 	assertExisting(targetImage);
 	IRect safeBound = IRect::cut(viewport, image_getBound(targetImage));
@@ -392,28 +391,30 @@ void dsr::media_fade_region_radial(ImageU8& targetImage, const IRect& viewport, 
 	if (innerLuma > 255) { innerLuma = FixedPoint::fromWhole(255); }
 	if (outerLuma < 0) { outerLuma = FixedPoint::zero(); }
 	if (outerLuma > 255) { outerLuma = FixedPoint::fromWhole(255); }
-	// Subtracting half a pixel in the fade line is equivalent to adding half a pixel on X and Y
-	FixedPoint originX = centerX + safeBound.left() - FixedPoint::half();
-	FixedPoint originY = centerY + safeBound.top() - FixedPoint::half();
-	// Let outerRadius be slightly outside of innerRadius to prevent division by zero
-	if (outerRadius <= innerRadius) {
-		outerRadius = innerRadius + FixedPoint::epsilon();
+	// Subtracting half a pixel in the fade line is equivalent to adding half a pixel on X and Y.
+	int64_t originX = centerX.getMantissa() + safeBound.left() * 65536 - 32768;
+	int64_t originY = centerY.getMantissa() + safeBound.top() * 65536 - 32768;
+	// Let outerRadius be slightly outside of innerRadius to prevent division by zero and get anti-aliasing.
+	if (outerRadius <= innerRadius + FixedPoint::one()) {
+		outerRadius = innerRadius + FixedPoint::one();
 	}
-	FixedPoint reciprocalFadeLength = FixedPoint::one() / (outerRadius - innerRadius);
+	int64_t fadeSize = (outerRadius.getMantissa() - innerRadius.getMantissa());
+	int64_t fadeSlope = 4294967296ll / fadeSize;
 	SafePointer<uint8_t> targetRow = image_getSafePointer(targetImage, safeBound.top()) + safeBound.left();
 	int32_t targetStride = image_getStride(targetImage);
-	for (int32_t y = safeBound.top(); y < safeBound.bottom(); y++) {
+	for (int64_t y = safeBound.top(); y < safeBound.bottom(); y++) {
 		SafePointer<uint8_t> targetPixel = targetRow;
-		for (int32_t x = safeBound.left(); x < safeBound.right(); x++) {
-			FixedPoint diffX = x - originX;
-			FixedPoint diffY = y - originY;
-			FixedPoint length = fixedPoint_squareRoot((diffX * diffX) + (diffY * diffY));
-			FixedPoint ratio = (length - innerRadius) * reciprocalFadeLength;
-			int64_t saturatedRatio = ratio.getMantissa();
-			// TODO: Reuse this code section
+		for (int64_t x = safeBound.left(); x < safeBound.right(); x++) {
+			int64_t diffX = (x * 65536) - originX;
+			int64_t diffY = (y * 65536) - originY;
+			// Double's square root is guaranteed to be exact for integers fitting inside of its mantissa.
+			int64_t length = sqrt(((diffX * diffX) + (diffY * diffY)));
+			// Using a 64-bit integer division per pixel for good quality and high range.
+			int64_t ratio = ((length - innerRadius.getMantissa()) * fadeSlope) / 65536;
+			int64_t saturatedRatio = ratio;
 			if (saturatedRatio < 0) { saturatedRatio = 0; }
 			if (saturatedRatio > 65536) { saturatedRatio = 65536; }
-			int64_t mixedColor = ((innerLuma.getMantissa() * (65536 - ratio.getMantissa())) + (outerLuma.getMantissa() * ratio.getMantissa()) + 2147483648ll) / 4294967296ll;
+			int64_t mixedColor = ((innerLuma.getMantissa() * (65536 - saturatedRatio)) + (outerLuma.getMantissa() * saturatedRatio) + 2147483648ll) / 4294967296ll;
 			if (mixedColor < 0) { mixedColor = 0; }
 			if (mixedColor > 255) { mixedColor = 255; }
 			*targetPixel = mixedColor;
