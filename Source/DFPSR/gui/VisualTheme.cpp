@@ -55,7 +55,8 @@ BEGIN: generate_rounded_rectangle
 	MIN: radius, radius, rounding
 	ROUND: radius, radius
 	# Place the inner radius for drawing.
-	SUB: innerRadius<FixedPoint>, rounding, border
+	MIN: innerRadius<FixedPoint>, radius, rounding
+	SUB: innerRadius, innerRadius, border
 	# Use +- 0.5 pixel offsets for fake anti-aliasing.
 	ADD: radiusOut<FixedPoint>, innerRadius, 0.5
 	ADD: radiusIn<FixedPoint>, innerRadius, -0.5
