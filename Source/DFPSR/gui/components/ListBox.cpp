@@ -123,7 +123,6 @@ void ListBox::limitScrolling(bool keepSelectedVisible) {
 }
 
 void ListBox::receiveMouseEvent(const MouseEvent& event) {
-	bool supressEvent = false;
 	this->inside = this->pointIsInside(event.position);
 	IVector2D localPosition = event.position - this->location.upperLeft();
 	bool verticalScrollIntercepted = this->verticalScrollBar.receiveMouseEvent(this->location, event);
