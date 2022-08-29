@@ -187,6 +187,9 @@ bool ScrollBarImpl::pressScrollBar(const IRect &parentLocation, int64_t localCoo
 }
 
 bool ScrollBarImpl::receiveMouseEvent(const IRect &parentLocation, const MouseEvent& event) {
+	if (!this->visible) {
+		return false;
+	}
 	bool intercepted = false;
 	IVector2D localPosition = event.position - parentLocation.upperLeft();
 	IRect scrollBarLocation = this->getScrollBarLocation(parentLocation.width(), parentLocation.height());
