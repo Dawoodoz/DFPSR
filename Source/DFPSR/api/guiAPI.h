@@ -208,6 +208,8 @@ namespace dsr {
 	//     Returns ReturnCode::KeyNotFound if propertyName wasn't found in component.
 	//   Unless mustAssign forces an exception.
 	//     Returns ReturnCode::ParsingFailure if propertyName was found but value couldn't be converted to its type.
+	ReturnCode component_setProperty(const Component& component, const ReadableString& propertyName, const ReadableString& value, bool mustAssign = true);
+	// An advanced overload allowing loading of resources from a specific path using the fromPath argument.
 	ReturnCode component_setProperty(const Component& component, const ReadableString& propertyName, const ReadableString& value, const ReadableString& fromPath, bool mustAssign = true);
 	// A version for setting integers and booleans.
 	//   For integers:

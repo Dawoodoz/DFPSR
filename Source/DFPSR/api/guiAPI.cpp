@@ -269,6 +269,10 @@ ReturnCode dsr::component_setProperty(const Component& component, const Readable
 		}
 	}
 }
+ReturnCode dsr::component_setProperty(const Component& component, const ReadableString& propertyName, const ReadableString& value, bool mustAssign) {
+	return component_setProperty(component, propertyName, value, file_getCurrentPath(), mustAssign);
+}
+
 String dsr::component_getProperty(const Component& component, const ReadableString& propertyName, bool mustExist) {
 	MUST_EXIST(component, component_getProperty);
 	Persistent* target = component->findAttribute(propertyName);
