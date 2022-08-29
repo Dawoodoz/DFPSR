@@ -196,7 +196,6 @@ bool ScrollBarImpl::receiveMouseEvent(const IRect &parentLocation, const MouseEv
 		if (IRect::touches(scrollBarLocation, cursorLocation)) {
 			IRect upperLocation = getStartRect(scrollBarLocation, this->scrollButtonLength, this->vertical);
 			IRect lowerLocation = getEndRect(scrollBarLocation, this->scrollButtonLength, this->vertical);
-			IRect knobLocation = this->getKnobLocation(scrollBarLocation);
 			intercepted = true;
 			if (IRect::touches(upperLocation, cursorLocation)) {
 				// Upper scroll button
