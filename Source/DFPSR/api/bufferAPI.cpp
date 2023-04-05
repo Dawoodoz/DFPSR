@@ -39,7 +39,11 @@ public:
 	uint8_t *data;
 	std::function<void(uint8_t *)> destructor;
 public:
+	// Create head without data.
+	BufferImpl();
+	// Create head with newly allocated data.
 	explicit BufferImpl(int64_t newSize);
+	// Create head with inherited data.
 	BufferImpl(int64_t newSize, uint8_t *newData);
 	~BufferImpl();
 public:
@@ -74,6 +78,8 @@ static const int buffer_alignment = 16;
 	}
 #endif
 
+BufferImpl::BufferImpl() : size(0), bufferSize(0), data(nullptr) {}
+
 BufferImpl::BufferImpl(int64_t newSize) :
   size(newSize),
   bufferSize(roundUp(newSize, buffer_alignment)) {
@@ -88,7 +94,9 @@ BufferImpl::BufferImpl(int64_t newSize, uint8_t *newData)
 : size(newSize), bufferSize(newSize), data(newData), destructor([](uint8_t *data) { free(data); }) {}
 
 BufferImpl::~BufferImpl() {
-	this->destructor(this->data);
+	if (this->data) {
+		this->destructor(this->data);
+	}
 }
 
 // API
@@ -98,33 +106,33 @@ Buffer buffer_clone(const Buffer &buffer) {
 		return Buffer();
 	} else {
 		Buffer newBuffer = std::make_shared<BufferImpl>(buffer->size);
-		memcpy(newBuffer->data, buffer->data, buffer->size);
+		if (buffer->size > 0) {
+			memcpy(newBuffer->data, buffer->data, buffer->size);
+		}
 		return newBuffer;
 	}
 }
 
 Buffer buffer_create(int64_t newSize) {
-	if (newSize <= 0) {
-		throwError(U"buffer_create: Cannot create buffer of size ", newSize, U".\n");
-		return Buffer();
+	if (newSize < 0) newSize = 0;
+	if (newSize == 0) {
+		// Allocate empty head to indicate that an empty buffer exists.
+		return std::make_shared<BufferImpl>();
 	} else {
+		// Allocate head and data.
 		return std::make_shared<BufferImpl>(newSize);
 	}
 }
 
 Buffer buffer_create(int64_t newSize, uint8_t *newData) {
-	if (newSize <= 0) {
-		throwError(U"buffer_create: Cannot create buffer of size ", newSize, U" (with existing data).\n");
-		return Buffer();
-	} else {
-		return std::make_shared<BufferImpl>(newSize, newData);
-	}
+	if (newSize < 0) newSize = 0;
+	return std::make_shared<BufferImpl>(newSize, newData);
 }
 
 void buffer_replaceDestructor(const Buffer &buffer, const std::function<void(uint8_t *)>& newDestructor) {
 	if (!buffer_exists(buffer)) {
 		throwError(U"buffer_replaceDestructor: Cannot replace destructor for a buffer that don't exist.\n");
-	} else {
+	} else if (buffer->bufferSize > 0) {
 		buffer->destructor = newDestructor;
 	}
 }
@@ -156,7 +164,7 @@ uint8_t* buffer_dangerous_getUnsafeData(const Buffer &buffer) {
 void buffer_setBytes(const Buffer &buffer, uint8_t value) {
 	if (!buffer_exists(buffer)) {
 		throwError(U"buffer_setBytes: Cannot set bytes for a buffer that don't exist.\n");
-	} else {
+	} else if (buffer->bufferSize > 0) {
 		memset(buffer->data, value, buffer->bufferSize);
 	}
 }

@@ -29,6 +29,23 @@
 #include <functional>
 #include "../base/SafePointer.h"
 
+// The types of buffer handles to consider when designing algorithms:
+// * Null handle suggesting that there is nothing, such as when loading a file failed.
+//     Size does not exist, but is substituted with zero when asked.
+//     buffer_exists(Buffer()) == false
+//     buffer_dangerous_getUnsafeData(Buffer()) == nullptr
+//     buffer_getSize(Buffer()) == 0
+// * Empty head, used when loading a file worked but the file itself contained no data.
+//     Size equals zero, but stored in the head.
+//     buffer_exists(buffer_create(0)) == true
+//     buffer_dangerous_getUnsafeData(buffer_create(0)) == nullptr
+//     buffer_getSize(buffer_create(0)) == 0
+// * Buffer containing data, when the file contained data.
+//     When bytes is greater than zero.
+//     buffer_exists(buffer_create(bytes)) == true
+//     buffer_dangerous_getUnsafeData(buffer_create(x)) == zeroedData
+//     buffer_getSize(buffer_create(bytes)) == bytes
+
 namespace dsr {
 	// A safer replacement for raw memory allocation when you don't need to resize the content.
 	// Guarantees that internal addresses will not be invalidated during its lifetime.
@@ -36,20 +53,24 @@ namespace dsr {
 	class BufferImpl;
 	using Buffer = std::shared_ptr<BufferImpl>;
 
-	// Creates a new buffer of newSize bytes.
-	// Pre-condition: newSize > 0
+	// Side-effect: Creates a new buffer head regardless of newSize, but only allocates a zeroed data allocation if newSize > 0.
+	// Post-condition: Returns a handle to the new buffer.
+	// Creating a buffer without a size will only allocate the buffer's head referring to null data with size zero.
 	Buffer buffer_create(int64_t newSize);
 
-	// Creates a new buffer of newSize bytes inheriting ownership of newData.
+	// Side-effect: Creates a new buffer of newSize bytes inheriting ownership of newData.
 	//   If the given data cannot be freed as a C allocation, replaceDestructor must be called with the special destructor.
-	// Pre-condition: newSize > 0
+	// Pre-condition: newSize may not be larger than the size of newData in bytes.
+	//   Breaking this pre-condition may cause crashes, so only provide a newData pointer if you know what you are doing.
+	// Post-condition: Returns a handle to the manually constructed buffer.
 	Buffer buffer_create(int64_t newSize, uint8_t *newData);
 
 	// Sets the allocation's destructor, to be called when there are no more reference counted pointers to the buffer.
-	// Pre-condition: buffer exists
+	// Pre-condition: The buffer exists.
+	//   If the buffer has a head but no data allocation, the command will be ignored because there is no allocation to delete.
 	void buffer_replaceDestructor(const Buffer &buffer, const std::function<void(uint8_t *)>& newDestructor);
 
-	// Returns true iff buffer exists
+	// Returns true iff buffer exists, even if it is empty without any data allocation.
 	inline bool buffer_exists(Buffer buffer) {
 		return buffer.get() != nullptr;
 	}
@@ -59,20 +80,20 @@ namespace dsr {
 	Buffer buffer_clone(const Buffer &buffer);
 
 	// Returns the buffer's size in bytes, as given when allocating it excluding allocation padding.
-	// Returns zero if buffer doesn't exist.
+	// Returns zero if buffer doesn't exist or has no data allocated.
 	int64_t buffer_getSize(const Buffer &buffer);
 
 	// Returns the number of reference counted handles to the buffer, or 0 if the buffer does not exist.
 	int64_t buffer_getUseCount(const Buffer &buffer);
 
 	// Returns a raw pointer to the data.
-	// An empty handle will return nullptr.
+	// An empty handle or buffer of length zero without data will return nullptr.
 	uint8_t* buffer_dangerous_getUnsafeData(const Buffer &buffer);
 
 	// A wrapper for getting a bound-checked pointer of the correct element type.
 	//   Only cast to trivially packed types with power of two dimensions so that the compiler does not add padding.
 	// The name must be an ansi encoded constant literal, because each String contains a Buffer which would cause a cyclic dependency.
-	// Returns a safe null pointer if buffer does not exist.
+	// Returns a safe null pointer if buffer does not exist or there is no data allocation.
 	template <typename T>
 	SafePointer<T> buffer_getSafeData(const Buffer &buffer, const char* name) {
 		if (!buffer_exists(buffer)) {
@@ -85,6 +106,7 @@ namespace dsr {
 
 	// Set all bytes to the same value.
 	// Pre-condition: buffer exists, or else an exception is thrown to warn you.
+	//   If the buffer has a head but no data allocation, the command will be ignored because there are no bytes to set.
 	void buffer_setBytes(const Buffer &buffer, uint8_t value);
 }
 
