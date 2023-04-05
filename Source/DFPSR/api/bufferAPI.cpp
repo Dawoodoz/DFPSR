@@ -103,13 +103,18 @@ BufferImpl::~BufferImpl() {
 
 Buffer buffer_clone(const Buffer &buffer) {
 	if (!buffer_exists(buffer)) {
+		// If the original buffer does not exist, just return another null handle.
 		return Buffer();
 	} else {
-		Buffer newBuffer = std::make_shared<BufferImpl>(buffer->size);
-		if (buffer->size > 0) {
+		if (buffer->size <= 0) {
+			// No need to clone when there is no shared data.
+			return buffer;
+		} else {
+			// Clone the data so that the allocations can be modified individually.
+			Buffer newBuffer = std::make_shared<BufferImpl>(buffer->size);
 			memcpy(newBuffer->data, buffer->data, buffer->size);
+			return newBuffer;
 		}
-		return newBuffer;
 	}
 }
 
