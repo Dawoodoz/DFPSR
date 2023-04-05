@@ -26,7 +26,7 @@ A:active { color: #FFFFFF; background: #444444; }
 </P><P>
 </P><H1> Buffers</H1><P>Every file that is saved or loaded in the framework will pass through a Buffer.
 Buffers can not refer to each other in cycles and are automatically reference counted and deleted, so that you don't have to worry about memory leaks from them unless you explicitly call buffer_replaceDestructor.
-They store a fixed size allocation of 128-bit padded and aligned memory to work well with 128-bit SIMD intrinsics for realtime software rendering.
+They store a fixed size allocation of 128-bit padded and aligned memory to work well with 128-bit SIMD intrinsics.
 
 </P><P>
 </P><IMG SRC="Images/Border.png"><P>
@@ -38,10 +38,14 @@ Returning an empty buffer handle is common when something went wrong with an ope
 </P><P>
 To create a buffer that actually stores something, call buffer_create with the number of bytes to contain as the only argument.
 The memory always start initialized to zero, which prevents random bugs.
+
+</P><P>
+If you create a buffer of size zero, it will allocate the head but not the data.
+Trying to clone an empty buffer head will just return the same handle without cloning, because empty buffers are immutable.
 </P><IMG SRC="Images/Border.png"><P>
 </P><H2> Read and write data access</H2><P>
 </P><P>
-Trying to get the pointer of a non-existing Buffer will safely return a null pointer, no matter if you use buffer_getSafeData<type>(buffer, "Buffer name") or buffer_dangerous_getUnsafeData(buffer).
+Trying to get the pointer of a non-existing or zero length Buffer will safely return a null pointer, no matter if you use buffer_getSafeData<type>(buffer, "Buffer name") or buffer_dangerous_getUnsafeData(buffer).
 You access the data by getting a SafePointer, which can later be sliced into smaller parts.
 Sometimes you can't use the SafePointer because an operating system wants a regular C pointer.
 </P><IMG SRC="Images/Border.png"><P>
