@@ -37,6 +37,8 @@
 //     buffer_getSize(Buffer()) == 0
 // * Empty head, used when loading a file worked but the file itself contained no data.
 //     Size equals zero, but stored in the head.
+//     Empty buffer heads will be reused when cloning, because they do not share any side-effects
+//       when there is no shared data allocation and replacing the destructor will be blocked.
 //     buffer_exists(buffer_create(0)) == true
 //     buffer_dangerous_getUnsafeData(buffer_create(0)) == nullptr
 //     buffer_getSize(buffer_create(0)) == 0
