@@ -8,7 +8,9 @@ START_TEST(Flex)
 	ASSERT_EQUAL(FlexValue(346, -54), FlexValue(100, -54)); // Limited to 100%
 	ASSERT_NOT_EQUAL(FlexValue(67, 34), FlexValue(57, 34));
 	ASSERT_NOT_EQUAL(FlexValue(14, 24), FlexValue(14, 84));
-	ASSERT_EQUAL(FlexValue(U"67%+34"), FlexValue(67, 34));
+	FlexValue a;
+	a.assignValue(U"67%+34", U"");
+	ASSERT_EQUAL(a, FlexValue(67, 34));
 	ASSERT_MATCH(FlexValue(67, 34).toString(), U"67%+34");
 END_TEST
 
