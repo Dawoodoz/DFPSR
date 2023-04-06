@@ -85,7 +85,7 @@ static bool imageIsPadded(const ImageRgbaU8 &image) {
 }
 
 Buffer dsr::image_encode(const ImageRgbaU8 &image, ImageFileFormat format, int quality) {
-	if (buffer_exists) {
+	if (image_exists(image)) {
 		ImageRgbaU8 orderedImage;
 		if (image_getPackOrderIndex(image) != PackOrderIndex::RGBA) {
 			// Repack into RGBA.
