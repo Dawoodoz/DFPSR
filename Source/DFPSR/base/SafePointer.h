@@ -109,7 +109,9 @@ public:
 	inline bool isNotNull() const {
 		return this->data != nullptr;
 	}
-	// Get a new safe pointer from data to data + size
+	// Get a new safe pointer from a sub-set of data
+	//  byteOffset is which byte in the source will be index zero in the new pointer
+	//  size is the new pointer's size, which may not exceed the remaining available space
 	inline SafePointer<T> slice(const char* name, int byteOffset, int size) {
 		T *newStart = (T*)(((uint8_t*)(this->data)) + (intptr_t)byteOffset);
 		#ifdef SAFE_POINTER_CHECKS

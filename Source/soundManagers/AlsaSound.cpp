@@ -11,12 +11,16 @@ using namespace dsr;
 
 snd_pcm_t *pcm = nullptr;
 static int bufferElements = 0;
-static int16_t *outputBuffer = nullptr;
-static float *floatBuffer = nullptr;
+static Buffer outputBuffer, floatBuffer;
+static SafePointer<int16_t> outputData;
+static SafePointer<float> floatData;
+
 static void allocateBuffers(int neededElements) {
-	// TODO: Use aligned memory with Buffer
-	outputBuffer = (int16_t *)calloc(roundUp(neededElements, 8), sizeof(int16_t));
-	floatBuffer = (float *)calloc(roundUp(neededElements, 8), sizeof(float));
+	int64_t roundedElements = roundUp(neededElements, 8); // Using the same padding for both allow loading two whole SIMD vectors for large input and writing a single output vector.
+	outputBuffer = buffer_create(roundedElements * sizeof(int16_t));
+	floatBuffer = buffer_create(roundedElements * sizeof(float));
+	outputData = buffer_getSafeData<int16_t>(outputBuffer, "Output data");
+	floatData = buffer_getSafeData<float>(floatBuffer, "Output data");
 	bufferElements = neededElements;
 }
 
@@ -27,8 +31,6 @@ static void terminateSound() {
 		snd_pcm_close(pcm);
 		pcm = nullptr;
 	}
-	if (outputBuffer) { free(outputBuffer); }
-	if (floatBuffer) { free(floatBuffer); }
 }
 
 bool sound_streamToSpeakers(int channels, int sampleRate, std::function<bool(float*, int)> soundOutput) {
@@ -72,14 +74,41 @@ bool sound_streamToSpeakers(int channels, int sampleRate, std::function<bool(flo
 	int totalSamples = samplesPerChannel * channels;
 	allocateBuffers(totalSamples);
 	while (true) {
-		memset(floatBuffer, 0, totalSamples * sizeof(float));
-		bool keepRunning = soundOutput(floatBuffer, samplesPerChannel);
+		safeMemorySet(floatData, 0, totalSamples * sizeof(float));
+		//memset(floatBuffer, 0, totalSamples * sizeof(float));
+		bool keepRunning = soundOutput(floatData.getUnsafe(), samplesPerChannel);
 		// Convert to target format so that the sound can be played
-		// TODO: Use SIMD
-		for (uint32_t t = 0; t < samplesPerChannel * channels; t++) {
-			outputBuffer[t] = sound_convertF32ToI16(floatBuffer[t]);
+		for (uint32_t t = 0; t < samplesPerChannel * channels; t+=8) {
+			// SIMD vectorized sound conversion with scaling and clamping to signed 16-bit integers.
+			F32x4 lowerFloats = F32x4::readAligned(floatData + t, "sound_streamToSpeakers: Reading lower floats");
+			F32x4 upperFloats = F32x4::readAligned(floatData + t + 4, "sound_streamToSpeakers: Reading upper floats");
+			I32x4 lowerInts = truncateToI32((lowerFloats * 32767.0f).clamp(-32768.0f, 32767.0f));
+			I32x4 upperInts = truncateToI32((upperFloats * 32767.0f).clamp(-32768.0f, 32767.0f));
+			// TODO: Create I16x8 SIMD vectors for processing sound as 16-bit integers?
+			//       Or just move unzip into simd.h with a fallback solution and remove simdExtra.h.
+			//       Or just implement reading and writing of 16-bit signed integers using multiple SIMD registers or smaller memory regions.
+			IVector4D lower = lowerInts.get();
+			IVector4D upper = upperInts.get();
+			outputData[t+0] = (int16_t)lower.x;
+			outputData[t+1] = (int16_t)lower.y;
+			outputData[t+2] = (int16_t)lower.z;
+			outputData[t+3] = (int16_t)lower.w;
+			outputData[t+4] = (int16_t)upper.x;
+			outputData[t+5] = (int16_t)upper.y;
+			outputData[t+6] = (int16_t)upper.z;
+			outputData[t+7] = (int16_t)upper.w;
+			/* Reference implementation without SIMD
+			outputData[t+0] = sound_convertF32ToI16(floatData[t+0]);
+			outputData[t+1] = sound_convertF32ToI16(floatData[t+1]);
+			outputData[t+2] = sound_convertF32ToI16(floatData[t+2]);
+			outputData[t+3] = sound_convertF32ToI16(floatData[t+3]);
+			outputData[t+4] = sound_convertF32ToI16(floatData[t+4]);
+			outputData[t+5] = sound_convertF32ToI16(floatData[t+5]);
+			outputData[t+6] = sound_convertF32ToI16(floatData[t+6]);
+			outputData[t+7] = sound_convertF32ToI16(floatData[t+7]);
+			*/
 		}
-		errorCode = snd_pcm_writei(pcm, outputBuffer, samplesPerChannel);
+		errorCode = snd_pcm_writei(pcm, outputData.getUnsafe(), samplesPerChannel);
 		if (errorCode == -EPIPE) {
 			// Came too late! Not enough written samples to play.
 			snd_pcm_prepare(pcm);
