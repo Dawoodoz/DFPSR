@@ -134,7 +134,7 @@ START_TEST(Persistent)
 	ASSERT_MATCH(myText, exampleOne);
 
 	// MyClass from text
-	std::shared_ptr<Persistent> myObjectCopy = createPersistentClassFromText(myText);
+	std::shared_ptr<Persistent> myObjectCopy = createPersistentClassFromText(myText, U"");
 	ASSERT_MATCH(myObjectCopy->toString(), myText);
 
 	// MySubClass to text
@@ -143,7 +143,7 @@ START_TEST(Persistent)
 	ASSERT_MATCH(MySubText, exampleTwo);
 
 	// MySubClass from text
-	std::shared_ptr<Persistent> mySubObjectCopy = createPersistentClassFromText(MySubText);
+	std::shared_ptr<Persistent> mySubObjectCopy = createPersistentClassFromText(MySubText, U"");
 	ASSERT_MATCH(mySubObjectCopy->toString(), MySubText);
 
 	// Tree structure to text
@@ -156,7 +156,7 @@ START_TEST(Persistent)
 	ASSERT_MATCH(tree.toString(), exampleThree);
 
 	// Tree structure from text
-	std::shared_ptr<Persistent> treeCopy = createPersistentClassFromText(exampleThree);
+	std::shared_ptr<Persistent> treeCopy = createPersistentClassFromText(exampleThree, U"");
 	ASSERT_MATCH(treeCopy->toString(), exampleThree);
 
 	// Persistent string lists
@@ -164,27 +164,27 @@ START_TEST(Persistent)
 	ASSERT_EQUAL(myList.value.length(), 0);
 	ASSERT_MATCH(myList.toString(), U"");
 
-	myList = PersistentStringList(U"\"\"");
+	myList = PersistentStringList(U"\"\"", U"");
 	ASSERT_EQUAL(myList.value.length(), 1);
 	ASSERT_MATCH(myList.value[0], U"");
 	ASSERT_MATCH(myList.toString(), U"\"\"");
 
-	myList = PersistentStringList(U"\"A\", \"B\"");
+	myList = PersistentStringList(U"\"A\", \"B\"", U"");
 	ASSERT_EQUAL(myList.value.length(), 2);
 	ASSERT_MATCH(myList.value[0], U"A");
 	ASSERT_MATCH(myList.value[1], U"B");
 	ASSERT_MATCH(myList.toString(), U"\"A\", \"B\"");
 
-	myList.assignValue(U"\"Only element\"");
+	myList.assignValue(U"\"Only element\"", U"");
 	ASSERT_EQUAL(myList.value.length(), 1);
 	ASSERT_MATCH(myList.value[0], U"Only element");
 	ASSERT_MATCH(myList.toString(), U"\"Only element\"");
 
-	myList = PersistentStringList(U"");
+	myList = PersistentStringList(U"", U"");
 	ASSERT_EQUAL(myList.value.length(), 0);
 	ASSERT_MATCH(myList.toString(), U"");
 
-	myList.assignValue(U"\"Zero 0\", \"One 1\", \"Two 2\", \"Three 3\"");
+	myList.assignValue(U"\"Zero 0\", \"One 1\", \"Two 2\", \"Three 3\"", U"");
 	ASSERT_EQUAL(myList.value.length(), 4);
 	ASSERT_MATCH(myList.value[0], U"Zero 0");
 	ASSERT_MATCH(myList.value[1], U"One 1");
