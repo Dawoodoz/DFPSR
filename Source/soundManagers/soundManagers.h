@@ -2,19 +2,7 @@
 #ifndef DFPSR_SOUND_API
 #define DFPSR_SOUND_API
 
-#include <functional>
-#include <stdint.h>
-
-inline float sound_convertI16ToF32(int64_t input) {
-	return input * (1.0f / 32767.0f);
-}
-
-inline int sound_convertF32ToI16(float input) {
-	int64_t result = input * 32767.0f;
-	if (result > 32767) { result = 32767; }
-	if (result < -32768) { result = -32768; }
-	return result;
-}
+#include "../DFPSR/includeFramework.h"
 
 // TODO: The float array should be padded to at least 16 bytes for 128-bit SIMD.
 
@@ -23,6 +11,6 @@ inline int sound_convertF32ToI16(float input) {
 // Channels from the same point in time are packed together without any padding in between.
 // Returns false if the backend could not be created.
 // Returns true iff the backend completed all work and terminated safely.
-bool sound_streamToSpeakers(int channels, int sampleRate, std::function<bool(float*, int)> soundOutput);
+bool sound_streamToSpeakers(int channels, int sampleRate, std::function<bool(dsr::SafePointer<float> data, int length)> soundOutput);
 
 #endif
