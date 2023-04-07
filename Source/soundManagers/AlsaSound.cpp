@@ -75,7 +75,6 @@ bool sound_streamToSpeakers(int channels, int sampleRate, std::function<bool(flo
 	allocateBuffers(totalSamples);
 	while (true) {
 		safeMemorySet(floatData, 0, totalSamples * sizeof(float));
-		//memset(floatBuffer, 0, totalSamples * sizeof(float));
 		bool keepRunning = soundOutput(floatData.getUnsafe(), samplesPerChannel);
 		// Convert to target format so that the sound can be played
 		for (uint32_t t = 0; t < samplesPerChannel * channels; t+=8) {
