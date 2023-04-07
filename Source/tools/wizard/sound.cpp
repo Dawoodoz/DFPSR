@@ -7,6 +7,17 @@ using namespace dsr;
 #include <future>
 #include <atomic>
 
+inline float sound_convertI16ToF32(int64_t input) {
+	return input * (1.0f / 32767.0f);
+}
+
+inline int sound_convertF32ToI16(float input) {
+	int64_t result = input * 32767.0f;
+	if (result > 32767) { result = 32767; }
+	if (result < -32768) { result = -32768; }
+	return result;
+}
+
 static const int outputChannels = 2;
 static const int outputSampleRate = 44100;
 double outputSoundStep = 1.0 / (double)outputSampleRate;
@@ -398,7 +409,7 @@ void stopAllSounds() {
 void sound_initialize() {
 	// Start a worker thread mixing sounds in realtime
 	std::function<void()> task = []() {
-		sound_streamToSpeakers(outputChannels, outputSampleRate, [](float *target, int requestedSamples) -> bool {
+		sound_streamToSpeakers(outputChannels, outputSampleRate, [](SafePointer<float> target, int requestedSamples) -> bool {
 			// Anyone wanting to change the played sounds from another thread will have to wait until this section has finished processing
 			soundMutex.lock();
 				// TODO: Create a graph of filters for different instruments

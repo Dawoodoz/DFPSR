@@ -1,7 +1,6 @@
 ﻿
 // Use -lwinmm for linking to the winmm library in GCC/G++
 
-#include "../DFPSR/includeFramework.h"
 #include "soundManagers.h"
 #include <windows.h>
 #include <mmsystem.h>
@@ -49,7 +48,7 @@ static void terminateSound() {
 	}
 }
 
-bool sound_streamToSpeakers(int channels, int sampleRate, std::function<bool(float*, int)> soundOutput) {
+bool sound_streamToSpeakers(int channels, int sampleRate, std::function<bool(SafePointer<float> data, int length)> soundOutput) {
 	bufferEndEvent = CreateEvent(0, FALSE, FALSE, 0);
 	if (bufferEndEvent == 0) {
 		terminateSound();
@@ -89,7 +88,7 @@ bool sound_streamToSpeakers(int channels, int sampleRate, std::function<bool(flo
 			if ((header[b].dwFlags & WHDR_INQUEUE) == 0) {
 				// When one of the buffers is done playing, generate new sound and write more data to the output.
 				safeMemorySet(floatData, 0, totalSamples * sizeof(float));
-				running = soundOutput(floatData.getUnsafe(), samplesPerChannel);
+				running = soundOutput(floatData, samplesPerChannel);
 				//for (int i = 0; i < totalSamples; i++) {
 				//	outputData[b][i] = sound_convertF32ToI16(floatBuffer[i]);
 				//}

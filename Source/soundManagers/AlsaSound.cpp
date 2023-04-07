@@ -3,7 +3,6 @@
 //   Install on Arch: sudo pacman -S libasound-dev
 //   Install on Debian: sudo apt-get install libasound-dev
 
-#include "../DFPSR/includeFramework.h"
 #include "soundManagers.h"
 #include <alsa/asoundlib.h>
 
@@ -33,7 +32,7 @@ static void terminateSound() {
 	}
 }
 
-bool sound_streamToSpeakers(int channels, int sampleRate, std::function<bool(float*, int)> soundOutput) {
+bool sound_streamToSpeakers(int channels, int sampleRate, std::function<bool(SafePointer<float> data, int length)> soundOutput) {
 	int errorCode;
 	if ((errorCode = snd_pcm_open(&pcm, "default", SND_PCM_STREAM_PLAYBACK, 0)) < 0) {
 		terminateSound();
@@ -75,7 +74,7 @@ bool sound_streamToSpeakers(int channels, int sampleRate, std::function<bool(flo
 	allocateBuffers(totalSamples);
 	while (true) {
 		safeMemorySet(floatData, 0, totalSamples * sizeof(float));
-		bool keepRunning = soundOutput(floatData.getUnsafe(), samplesPerChannel);
+		bool keepRunning = soundOutput(floatData, samplesPerChannel);
 		// Convert to target format so that the sound can be played
 		for (uint32_t t = 0; t < samplesPerChannel * channels; t+=8) {
 			// SIMD vectorized sound conversion with scaling and clamping to signed 16-bit integers.
@@ -96,16 +95,6 @@ bool sound_streamToSpeakers(int channels, int sampleRate, std::function<bool(flo
 			outputData[t+5] = (int16_t)upper.y;
 			outputData[t+6] = (int16_t)upper.z;
 			outputData[t+7] = (int16_t)upper.w;
-			/* Reference implementation without SIMD
-			outputData[t+0] = sound_convertF32ToI16(floatData[t+0]);
-			outputData[t+1] = sound_convertF32ToI16(floatData[t+1]);
-			outputData[t+2] = sound_convertF32ToI16(floatData[t+2]);
-			outputData[t+3] = sound_convertF32ToI16(floatData[t+3]);
-			outputData[t+4] = sound_convertF32ToI16(floatData[t+4]);
-			outputData[t+5] = sound_convertF32ToI16(floatData[t+5]);
-			outputData[t+6] = sound_convertF32ToI16(floatData[t+6]);
-			outputData[t+7] = sound_convertF32ToI16(floatData[t+7]);
-			*/
 		}
 		errorCode = snd_pcm_writei(pcm, outputData.getUnsafe(), samplesPerChannel);
 		if (errorCode == -EPIPE) {

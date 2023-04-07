@@ -22,7 +22,8 @@ Real-time dynamic light with depth-based casted shadows and normal mapping at 45
 It is a rendering API, image processing framework and graphical user interface system in a static C++14 library meant to minimize the use of dynamic dependencies in long-term projects while still offering the power to make your own abstractions on top of low-level rendering operations. The core library itself is pure math on a hardware abstraction and can be compiled on most systems using GNU's C++14.
 
 ## Still a public beta
-Don't use it for safety-critical projects unless you verify correctness yourself and take all responsibility. Either way, it's probably a lot safer than using OpenGL, OpenCL or Direct3D simply by being a single implementation where bugs will be mostly the same on each platform. Stack memory for VLA may vary. Test everything with billions of cases.
+Theme, GUI, font and sound APIs are still under active development and may have significant changes before a stable version 1.0 is ready.
+Buffer, file, image, draw, filter, string and time APIs are already quite version stable.
 
 ## Supported CPU hardware:
 * **Intel/AMD** using **SSE2** intrinsics and optional extensions.
