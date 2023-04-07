@@ -11,13 +11,19 @@ using namespace dsr;
 static const int samplesPerChannel = 2048;
 
 static int bufferElements = 0;
-static int16_t *outputBuffer[2] = {nullptr, nullptr};
-static float *floatBuffer = nullptr;
+static Buffer outputBuffer, floatBuffer;
+static SafePointer<int16_t> outputData[2];
+static SafePointer<float> floatData;
+
 static void allocateBuffers(int neededElements) {
-	// TODO: Use aligned memory with Buffer
-	outputBuffer[0] = (int16_t *)calloc(roundUp(neededElements, 8), sizeof(int16_t));
-	outputBuffer[1] = (int16_t *)calloc(roundUp(neededElements, 8), sizeof(int16_t));
-	floatBuffer = (float *)calloc(roundUp(neededElements, 8), sizeof(float));
+	int64_t roundedElements = roundUp(neededElements, 8); // Using the same padding for both allow loading two whole SIMD vectors for large input and writing a single output vector.
+	int64_t outputSize = roundedElements * sizeof(int16_t);
+	outputBuffer = buffer_create(outputSize * 2);
+	floatBuffer = buffer_create(roundedElements * sizeof(float));
+	SafePointer<int16_t> allOutputData = buffer_getSafeData<int16_t>(outputBuffer, "Output data");
+	outputData[0] = allOutputData.slice("Output data 0", 0, outputSize);
+	outputData[1] = allOutputData.slice("Output data 1", outputSize, outputSize);
+	floatData = buffer_getSafeData<float>(floatBuffer, "Output data");
 	bufferElements = neededElements;
 }
 
@@ -41,10 +47,6 @@ static void terminateSound() {
 		CloseHandle(bufferEndEvent);
 		bufferEndEvent = 0;
 	}
-	for (int b = 0; b < 2; b++) {
-		if (outputBuffer[b]) { free(outputBuffer[b]); }
-	}
-	if (floatBuffer) { free(floatBuffer); }
 }
 
 bool sound_streamToSpeakers(int channels, int sampleRate, std::function<bool(float*, int)> soundOutput) {
@@ -75,7 +77,7 @@ bool sound_streamToSpeakers(int channels, int sampleRate, std::function<bool(flo
 	for (int b = 0; b < 2; b++) {
 		ZeroMemory(&header[b], sizeof(WAVEHDR));
 		header[b].dwBufferLength = totalSamples * sizeof(int16_t);
-		header[b].lpData = (LPSTR)(outputBuffer[b]);
+		header[b].lpData = (LPSTR)(outputData[b].getUnsafe());
 		if (waveOutPrepareHeader(waveOutput, &header[b], sizeof(WAVEHDR)) != MMSYSERR_NOERROR) {
 			terminateSound();
 			throwError(U"Failed to prepare buffer for streaming!");
@@ -86,12 +88,32 @@ bool sound_streamToSpeakers(int channels, int sampleRate, std::function<bool(flo
 		for (int b = 0; b < 2; b++) {
 			if ((header[b].dwFlags & WHDR_INQUEUE) == 0) {
 				// When one of the buffers is done playing, generate new sound and write more data to the output.
-				memset(floatBuffer, 0, totalSamples * sizeof(float));
-				// TODO: Use 128-bit aligned memory
-				running = soundOutput(floatBuffer, samplesPerChannel);
-				// TODO: Use SIMD
-				for (int i = 0; i < totalSamples; i++) {
-					outputBuffer[b][i] = sound_convertF32ToI16(floatBuffer[i]);
+				safeMemorySet(floatData, 0, totalSamples * sizeof(float));
+				running = soundOutput(floatData.getUnsafe(), samplesPerChannel);
+				//for (int i = 0; i < totalSamples; i++) {
+				//	outputData[b][i] = sound_convertF32ToI16(floatBuffer[i]);
+				//}
+				SafePointer<int16_t> target = outputData[b];
+				// Convert to target format so that the sound can be played
+				for (uint32_t t = 0; t < totalSamples; t+=8) {
+					// SIMD vectorized sound conversion with scaling and clamping to signed 16-bit integers.
+					F32x4 lowerFloats = F32x4::readAligned(floatData + t, "sound_streamToSpeakers: Reading lower floats");
+					F32x4 upperFloats = F32x4::readAligned(floatData + t + 4, "sound_streamToSpeakers: Reading upper floats");
+					I32x4 lowerInts = truncateToI32((lowerFloats * 32767.0f).clamp(-32768.0f, 32767.0f));
+					I32x4 upperInts = truncateToI32((upperFloats * 32767.0f).clamp(-32768.0f, 32767.0f));
+					// TODO: Create I16x8 SIMD vectors for processing sound as 16-bit integers?
+					//       Or just move unzip into simd.h with a fallback solution and remove simdExtra.h.
+					//       Or just implement reading and writing of 16-bit signed integers using multiple SIMD registers or smaller memory regions.
+					IVector4D lower = lowerInts.get();
+					IVector4D upper = upperInts.get();
+					target[t+0] = (int16_t)lower.x;
+					target[t+1] = (int16_t)lower.y;
+					target[t+2] = (int16_t)lower.z;
+					target[t+3] = (int16_t)lower.w;
+					target[t+4] = (int16_t)upper.x;
+					target[t+5] = (int16_t)upper.y;
+					target[t+6] = (int16_t)upper.z;
+					target[t+7] = (int16_t)upper.w;
 				}
 				if (waveOutWrite(waveOutput, &header[b], sizeof(WAVEHDR)) != MMSYSERR_NOERROR) {
 					terminateSound(); throwError(U"Failed to write wave output!");
