@@ -46,6 +46,26 @@ ELEMENT_TYPE& operator[] (int index) { \
 	} else { \
 		return this->y; \
 	} \
+} \
+inline VECTOR_TYPE& operator+=(const VECTOR_TYPE &offset) { \
+	this->x += offset.x; \
+	this->y += offset.y; \
+	return *this; \
+} \
+inline VECTOR_TYPE& operator+=(const ELEMENT_TYPE &offset) { \
+	this->x += offset; \
+	this->y += offset; \
+	return *this; \
+} \
+inline VECTOR_TYPE& operator-=(const VECTOR_TYPE &offset) { \
+	this->x -= offset.x; \
+	this->y -= offset.y; \
+	return *this; \
+} \
+inline VECTOR_TYPE& operator-=(const ELEMENT_TYPE &offset) { \
+	this->x -= offset; \
+	this->y -= offset; \
+	return *this; \
 }
 
 #define VECTOR_BODY_3D(VECTOR_TYPE, ELEMENT_TYPE, DEFAULT_VALUE) \
@@ -62,6 +82,30 @@ ELEMENT_TYPE& operator[] (int index) { \
 	} else { \
 		return this->z; \
 	} \
+} \
+inline VECTOR_TYPE& operator+=(const VECTOR_TYPE &offset) { \
+	this->x += offset.x; \
+	this->y += offset.y; \
+	this->z += offset.z; \
+	return *this; \
+} \
+inline VECTOR_TYPE& operator+=(const ELEMENT_TYPE &offset) { \
+	this->x += offset; \
+	this->y += offset; \
+	this->z += offset; \
+	return *this; \
+} \
+inline VECTOR_TYPE& operator-=(const VECTOR_TYPE &offset) { \
+	this->x -= offset.x; \
+	this->y -= offset.y; \
+	this->z -= offset.z; \
+	return *this; \
+} \
+inline VECTOR_TYPE& operator-=(const ELEMENT_TYPE &offset) { \
+	this->x -= offset; \
+	this->y -= offset; \
+	this->z -= offset; \
+	return *this; \
 }
 
 #define VECTOR_BODY_4D(VECTOR_TYPE, ELEMENT_TYPE, DEFAULT_VALUE) \
@@ -80,6 +124,34 @@ ELEMENT_TYPE& operator[] (int index) { \
 	} else { \
 		return this->w; \
 	} \
+} \
+inline VECTOR_TYPE& operator+=(const VECTOR_TYPE &offset) { \
+	this->x += offset.x; \
+	this->y += offset.y; \
+	this->z += offset.z; \
+	this->w += offset.w; \
+	return *this; \
+} \
+inline VECTOR_TYPE& operator+=(const ELEMENT_TYPE &offset) { \
+	this->x += offset; \
+	this->y += offset; \
+	this->z += offset; \
+	this->w += offset; \
+	return *this; \
+} \
+inline VECTOR_TYPE& operator-=(const VECTOR_TYPE &offset) { \
+	this->x -= offset.x; \
+	this->y -= offset.y; \
+	this->z -= offset.z; \
+	this->w -= offset.w; \
+	return *this; \
+} \
+inline VECTOR_TYPE& operator-=(const ELEMENT_TYPE &offset) { \
+	this->x -= offset; \
+	this->y -= offset; \
+	this->z -= offset; \
+	this->w -= offset; \
+	return *this; \
 }
 
 #define OPERATORS_2D(VECTOR_TYPE, ELEMENT_TYPE) \
