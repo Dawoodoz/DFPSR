@@ -184,7 +184,7 @@ void analyzeFile(Dependency &result, ReadableString absolutePath, Extension exte
 	List<String> tokens;
 	bool continuingLine = false;
 	int64_t lineNumber = 0;
-	string_split_callback(sourceCode, U'\n', true, [&result, &parentFolder, &tokens, &continuingLine, &lineNumber](ReadableString line) {
+	string_split_callback(sourceCode, U'\n', true, [&result, &parentFolder, &tokens, &continuingLine, &absolutePath, &lineNumber](ReadableString line) {
 		lineNumber++;
 		if (line[0] == U'#' || continuingLine) {
 			tokenize(tokens, line);
@@ -198,8 +198,12 @@ void analyzeFile(Dependency &result, ReadableString absolutePath, Extension exte
 				if (string_match(tokens[1], U"include")) {
 					if (tokens[2][0] == U'\"') {
 						String relativePath = string_unmangleQuote(tokens[2]);
-						String absolutePath = file_getTheoreticalAbsolutePath(relativePath, parentFolder, LOCAL_PATH_SYNTAX);
-						result.includes.pushConstruct(absolutePath, lineNumber);
+						String absoluteHeaderPath = file_getTheoreticalAbsolutePath(relativePath, parentFolder, LOCAL_PATH_SYNTAX);
+						if (file_getEntryType(absoluteHeaderPath) != EntryType::File) {
+							throwError(U"Failed to find ", absoluteHeaderPath, U" from line ", lineNumber, U" in ", absolutePath, U"\n");
+						} else {
+							result.includes.pushConstruct(absoluteHeaderPath, lineNumber);
+						}
 					}
 				}
 			}
