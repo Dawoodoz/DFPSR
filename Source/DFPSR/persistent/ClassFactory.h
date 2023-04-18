@@ -40,27 +40,27 @@ inline std::shared_ptr<Persistent> classConstructor() {
 
 // Must be used in each class inheriting from Persistent (both directly and indirectly)
 #define PERSISTENT_DECLARATION(CLASS) \
-	std::shared_ptr<StructureDefinition> getStructure() const override; \
-	decltype(&classConstructor) getConstructor() const override; \
-	explicit CLASS(const ReadableString &content, const ReadableString &fromPath);
+	std::shared_ptr<dsr::StructureDefinition> getStructure() const override; \
+	decltype(&dsr::classConstructor) getConstructor() const override; \
+	explicit CLASS(const dsr::ReadableString &content, const dsr::ReadableString &fromPath);
 
 // Must be used in the implementation of each class inheriting from Persistent
 #define PERSISTENT_DEFINITION(CLASS) \
-	std::shared_ptr<StructureDefinition> CLASS##Type; \
-	std::shared_ptr<StructureDefinition> CLASS::getStructure() const { \
+	std::shared_ptr<dsr::StructureDefinition> CLASS##Type; \
+	std::shared_ptr<dsr::StructureDefinition> CLASS::getStructure() const { \
 		if (CLASS##Type.get() == nullptr) { \
-			CLASS##Type = std::make_shared<StructureDefinition>(U ## #CLASS); \
+			CLASS##Type = std::make_shared<dsr::StructureDefinition>(U ## #CLASS); \
 			this->declareAttributes(*(CLASS##Type)); \
 		} \
 		return CLASS##Type; \
 	} \
-	CLASS::CLASS(const ReadableString &content, const ReadableString &fromPath) { \
+	CLASS::CLASS(const dsr::ReadableString &content, const dsr::ReadableString &fromPath) { \
 		this->assignValue(content, fromPath); \
 	} \
-	std::shared_ptr<Persistent> CLASS##Constructor() { \
-		return std::dynamic_pointer_cast<Persistent>(std::make_shared<CLASS>()); \
+	std::shared_ptr<dsr::Persistent> CLASS##Constructor() { \
+		return std::dynamic_pointer_cast<dsr::Persistent>(std::make_shared<CLASS>()); \
 	} \
-	decltype(&classConstructor) CLASS::getConstructor() const { \
+	decltype(&dsr::classConstructor) CLASS::getConstructor() const { \
 		return &CLASS##Constructor; \
 	}
 
