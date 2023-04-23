@@ -63,7 +63,9 @@ Model createCubeModel(const FVector3D &min, const FVector3D &max) {
 DSR_MAIN_CALLER(dsrMain)
 void dsrMain(List<String> args) {
 	// Create a window
-	window = window_create(U"Basic 3D template", 1600, 900);
+	window = window_create_fullscreen(U"Basic 3D template");
+	// Hide the cursor
+	window_setCursorVisibility(window, false);
 
 	// Tell the application to terminate when the window is closed
 	window_setCloseEvent(window, []() {
@@ -77,7 +79,9 @@ void dsrMain(List<String> args) {
 			if (key >= DsrKey_1 && key <= DsrKey_9) {
 				window_setPixelScale(window, key - DsrKey_0);
 			} else if (key == DsrKey_F11) {
-				window_setFullScreen(window, !window_isFullScreen(window));
+				bool makeWindowed = window_isFullScreen(window);
+				window_setFullScreen(window, !makeWindowed);
+				window_setCursorVisibility(window, makeWindowed);
 			} else if (key == DsrKey_Escape) {
 				running = false;
 			}

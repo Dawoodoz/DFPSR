@@ -18,6 +18,11 @@ class Win32Window : public dsr::BackendWindow {
 public:
 	// The native windows handle
 	HWND hwnd;
+	// The cursors
+	HCURSOR noCursor, defaultCursor;
+	// Keep track of when the cursor is inside of the window,
+	// so that we can show it again when leaving the window
+	bool cursorIsInside = false;
 	// Double buffering to allow drawing to a canvas while displaying the previous one
 	// The image which can be drawn to
 	dsr::AlignedImageRgbaU8 canvas;
@@ -28,6 +33,9 @@ private:
 	// Called before the application fetches events from the input queue
 	//   Closing the window, moving the mouse, pressing a key, et cetera
 	void prefetchEvents() override;
+
+	// Called to change the cursor visibility and returning true on success
+	bool setCursorVisibility(bool visible) override;
 private:
 	// Helper methods specific to calling XLib
 	void updateTitle();
@@ -68,6 +76,13 @@ void Win32Window::updateTitle() {
 	if (!SetWindowTextA(this->hwnd, this->title.toStdString().c_str())) {
 		dsr::printText("Warning! Could not assign the window title ", dsr::string_mangleQuote(this->title), ".\n");
 	}
+}
+
+bool Win32Window::setCursorVisibility(bool visible) {
+	// Remember the cursor's visibility for anyone asking
+	this->visibleCursor = visible;
+	// Indicate that the feature is implemented
+	return true;
 }
 
 void Win32Window::setFullScreen(bool enabled) {
@@ -203,6 +218,14 @@ Win32Window::Win32Window(const dsr::String& title, int width, int height) {
 
 	// Remember the title
 	this->title = title;
+
+	// Get the default cursor
+	this->defaultCursor = LoadCursor(0, IDC_ARROW);
+
+	// Create an invisible cursor using masks padded to 32 bits for safety
+	uint32_t cursorAndMask = 0b11111111;
+	uint32_t cursorXorMask = 0b00000000;
+	this->noCursor = CreateCursor(NULL, 0, 0, 1, 1, (const void*)&cursorAndMask, (const void*)&cursorXorMask);
 
 	// Create a window
 	if (fullScreen) {
@@ -410,6 +433,15 @@ static LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT message, WPARAM wParam, 
 	case WM_MOUSEMOVE:
 		parent->queueInputEvent(new dsr::MouseEvent(dsr::MouseEventType::MouseMove, dsr::MouseKeyEnum::NoKey, dsr::IVector2D(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam))));
 		break;
+	case WM_SETCURSOR:
+		if (LOWORD(lParam) == HTCLIENT) {
+			if (parent->visibleCursor) {
+				SetCursor(parent->defaultCursor);
+			} else {
+				SetCursor(parent->noCursor);
+			}
+		}
+		break;
 	case WM_MOUSEWHEEL:
 		{
 			int delta = GET_WHEEL_DELTA_WPARAM(wParam);
@@ -488,6 +520,8 @@ void Win32Window::resizeCanvas(int width, int height) {
 	this->canvas = dsr::image_create_RgbaU8_native(width, height, dsr::PackOrderIndex::BGRA);
 }
 Win32Window::~Win32Window() {
+	// Destroy the invisible cursor
+	DestroyCursor(this->noCursor);
 	// Destroy the native window
 	DestroyWindow(this->hwnd);
 }
