@@ -80,6 +80,11 @@ public:
 	virtual void resizeCanvas(int width, int height) = 0;
 	virtual String getTitle() { return this->title; }
 	virtual void setTitle(const String &newTitle) = 0;
+public:
+	// Cursor interface
+	bool visibleCursor = true; // Written to by setCursorVisibility on success.
+	virtual bool setCursorVisibility(bool visible) { return false; } // Returns true on success.
+public:
 	// Each callback declaration has a public variable and a public getter and setter
 	DECLARE_CALLBACK(closeEvent, emptyCallback);
 	DECLARE_CALLBACK(resizeEvent, sizeCallback);

@@ -40,9 +40,10 @@ namespace dsr {
 void gui_initialize();
 
 class DsrWindow {
-private:
-	// Window backend
+public:
+	// Window backend, which the API is allowed to call directly to bypass DsrWindow for trivial operations.
 	std::shared_ptr<BackendWindow> backend;
+private:
 	// The root component
 	std::shared_ptr<VisualComponent> mainPanel;
 	AlignedImageF32 depthBuffer;

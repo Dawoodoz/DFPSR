@@ -158,6 +158,16 @@ void dsr::window_setPixelScale(const Window& window, int scale) {
 	window->setPixelScale(scale);
 }
 
+bool dsr::window_setCursorVisibility(const Window& window, bool visible) {
+	MUST_EXIST(window, window_setCursorVisibility);
+	return window->backend->setCursorVisibility(visible);
+}
+
+bool dsr::window_getCursorVisibility(const Window& window) {
+	MUST_EXIST(window, window_getCursorVisibility);
+	return window->backend->visibleCursor;
+}
+
 void dsr::window_setFullScreen(const Window& window, bool enabled) {
 	MUST_EXIST(window, window_setFullScreen);
 	window->setFullScreen(enabled);
