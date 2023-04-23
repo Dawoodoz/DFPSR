@@ -31,6 +31,8 @@ private:
 	Window window;
 	// Holds settings for drawing to the window
 	GC graphicsContext;
+	// Invisible cursor for hiding it over the window
+	Cursor noCursor;
 
 	// Double buffering to allow drawing to a canvas while displaying the previous one
 	// The image which can be drawn to, sharing memory with the X11 image
@@ -53,6 +55,9 @@ private:
 	// Called before the application fetches events from the input queue
 	//   Closing the window, moving the mouse, pressing a key, et cetera
 	void prefetchEvents() override;
+
+	// Called to change the cursor visibility and returning true on success
+	bool setCursorVisibility(bool visible) override;
 
 	// Color format
 	dsr::PackOrderIndex packOrderIndex = dsr::PackOrderIndex::RGBA;
@@ -88,6 +93,22 @@ public:
 	bool isFullScreen() override { return this->windowState == 2; }
 	void showCanvas() override;
 };
+
+bool X11Window::setCursorVisibility(bool visible) {
+	windowLock.lock();
+		if (visible) {
+			// Reset to parent cursor
+			XUndefineCursor(this->display, this->window);
+		} else {
+			// Let the window display an empty cursor
+			XDefineCursor(this->display, this->window, this->noCursor);
+		}
+	windowLock.unlock();
+	// Remember the cursor's visibility for anyone asking
+	this->visibleCursor = visible;
+	// Indicate success
+	return true;
+}
 
 void X11Window::updateTitle_locked() {
 	windowLock.lock();
@@ -193,12 +214,9 @@ void X11Window::createGCWindow_locked(const dsr::String& title, int width, int h
 		this->windowWidth = width;
 		this->windowHeight = height;
 		this->receivedWindowResize(width, height);
-
-		// Screen handle
-		int defaultScreenIndex = DefaultScreen(this->display);
-		unsigned long black = BlackPixel(this->display, defaultScreenIndex);
-		unsigned long white = WhitePixel(this->display, defaultScreenIndex);
-
+		int screenIndex = DefaultScreen(this->display);
+		unsigned long black = BlackPixel(this->display, screenIndex);
+		unsigned long white = WhitePixel(this->display, screenIndex);
 		// Create a new window
 		this->window = XCreateSimpleWindow(this->display, DefaultRootWindow(this->display), 0, 0, width, height, 0, white, black);
 	windowLock.unlock();
@@ -299,6 +317,18 @@ X11Window::X11Window(const dsr::String& title, int width, int height) {
 	} else {
 		this->createWindowed_locked(title, width, height);
 	}
+
+	// Create a hidden cursor stored as noCursor
+	// Create a black color using zero bits, which will not be visible anyway
+	XColor black; memset(&black, 0, sizeof(XColor));
+	// Store all 8x8 pixels in a 64-bit unsigned integer
+	uint64_t zeroBits = 0u;
+	// Create a temporary image for both 1-bit color selection and a visibility mask
+	Pixmap zeroBitmap = XCreateBitmapFromData(this->display, this->window, (char*)&zeroBits, 8, 8);
+	// Create the cursor
+	this->noCursor = XCreatePixmapCursor(this->display, zeroBitmap, zeroBitmap, &black, &black, 0, 0);
+	// Free the temporary bitmap used to create the cursor
+	XFreePixmap(this->display, zeroBitmap);
 }
 
 // Convert keycodes from XLib to DSR
@@ -603,6 +633,7 @@ X11Window::~X11Window() {
 	#endif
 	windowLock.lock();
 		if (this->display) {
+			XFreeCursor(this->display, this->noCursor);
 			XFreeGC(this->display, this->graphicsContext);
 			XDestroyWindow(this->display, this->window);
 			XCloseDisplay(this->display);

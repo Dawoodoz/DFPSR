@@ -126,6 +126,11 @@ namespace dsr {
 	//   Just like when handling a window resize, this will replace the canvas and depth buffer.
 	//     Any old handles to canvas and depth buffer will become useless, so fetch new image handles from the window to avoid black flickering.
 	void window_setPixelScale(const Window& window, int scale);
+	// Sets the cursor visibility for window, hiding if visible is false and showing if visible is true.
+	// Returns true on success and false on failure.
+	bool window_setCursorVisibility(const Window& window, bool visible);
+	// Returns true iff the cursor is allowed to be displayed over window.
+	bool window_getCursorVisibility(const Window& window);
 
 // Full screen
 	void window_setFullScreen(const Window& window, bool enabled);
