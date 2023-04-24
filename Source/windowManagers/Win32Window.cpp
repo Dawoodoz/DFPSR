@@ -36,6 +36,9 @@ private:
 
 	// Called to change the cursor visibility and returning true on success
 	bool setCursorVisibility(bool visible) override;
+
+	// Place the cursor within the window
+	void setCursorPosition(int x, int y) override;
 private:
 	// Helper methods specific to calling XLib
 	void updateTitle();
@@ -76,6 +79,12 @@ void Win32Window::updateTitle() {
 	if (!SetWindowTextA(this->hwnd, this->title.toStdString().c_str())) {
 		dsr::printText("Warning! Could not assign the window title ", dsr::string_mangleQuote(this->title), ".\n");
 	}
+}
+
+void Win32Window::setCursorPosition(int x, int y) {
+	POINT point; point.x = x; point.y = y;
+	ClientToScreen(this->hwnd, &point);
+	SetCursorPos(point.x, point.y);
 }
 
 bool Win32Window::setCursorVisibility(bool visible) {

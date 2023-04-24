@@ -84,6 +84,7 @@ public:
 	// Cursor interface
 	bool visibleCursor = true; // Written to by setCursorVisibility on success.
 	virtual bool setCursorVisibility(bool visible) { return false; } // Returns true on success.
+	virtual void setCursorPosition(int x, int y) {} // Does nothing unless implemented.
 public:
 	// Each callback declaration has a public variable and a public getter and setter
 	DECLARE_CALLBACK(closeEvent, emptyCallback);
