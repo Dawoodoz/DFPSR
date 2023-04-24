@@ -59,6 +59,9 @@ private:
 	// Called to change the cursor visibility and returning true on success
 	bool setCursorVisibility(bool visible) override;
 
+	// Place the cursor within the window
+	void setCursorPosition(int x, int y) override;
+
 	// Color format
 	dsr::PackOrderIndex packOrderIndex = dsr::PackOrderIndex::RGBA;
 	dsr::PackOrderIndex getColorFormat_locked();
@@ -93,6 +96,12 @@ public:
 	bool isFullScreen() override { return this->windowState == 2; }
 	void showCanvas() override;
 };
+
+void X11Window::setCursorPosition(int x, int y) {
+	windowLock.lock();
+		XWarpPointer(this->display, this->window, this->window, 0, 0, this->windowWidth, this->windowHeight, x, y);
+	windowLock.unlock();
+}
 
 bool X11Window::setCursorVisibility(bool visible) {
 	windowLock.lock();
