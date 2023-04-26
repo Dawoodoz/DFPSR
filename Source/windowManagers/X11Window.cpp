@@ -57,6 +57,7 @@ private:
 	void prefetchEvents() override;
 
 	// Called to change the cursor visibility and returning true on success
+	void applyCursorVisibility_locked();
 	bool setCursorVisibility(bool visible) override;
 
 	// Place the cursor within the window
@@ -103,9 +104,9 @@ void X11Window::setCursorPosition(int x, int y) {
 	windowLock.unlock();
 }
 
-bool X11Window::setCursorVisibility(bool visible) {
+void X11Window::applyCursorVisibility_locked() {
 	windowLock.lock();
-		if (visible) {
+		if (this->visibleCursor) {
 			// Reset to parent cursor
 			XUndefineCursor(this->display, this->window);
 		} else {
@@ -113,8 +114,13 @@ bool X11Window::setCursorVisibility(bool visible) {
 			XDefineCursor(this->display, this->window, this->noCursor);
 		}
 	windowLock.unlock();
+}
+
+bool X11Window::setCursorVisibility(bool visible) {
 	// Remember the cursor's visibility for anyone asking
 	this->visibleCursor = visible;
+	// Use the stored visibility to update the cursor
+	this->applyCursorVisibility_locked();
 	// Indicate success
 	return true;
 }
@@ -186,6 +192,7 @@ void X11Window::setFullScreen(bool enabled) {
 		// Create the new window and graphics context
 		this->createWindowed_locked(this->title, 800, 600); // TODO: Remember the dimensions from last windowed mode
 	}
+	this->applyCursorVisibility_locked();
 }
 
 void X11Window::removeOldWindow_locked() {
