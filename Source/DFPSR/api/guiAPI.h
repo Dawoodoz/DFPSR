@@ -210,6 +210,16 @@ namespace dsr {
 	// identifierName is used to find the component.
 	// index can be used to identify multiple components with the same name without having to generate numbered names.
 	Component component_create(const Component& parent, const ReadableString& className, const ReadableString& identifierName, int index = 0);
+	// An alternative to window_loadInterfaceFromString when you want the interface loaded into a panel instead of the whole window.
+	// Useful for dynamically creating and destroying interfaces to save memory and load the application faster.
+	// Loading an interface by parsing a layout file's content, with any external resources loaded relative to fromPath.
+	//   Embedded images do not count as external resources, but file paths need fromPath in order to know from where they will be loaded.
+	// Raises an exception if parent doesn't exist.
+	Component component_createWithInterfaceFromString(Component& parent, const String& content, const ReadableString &fromPath);
+	// With fromPath implicitly being the current path.
+	Component component_createWithInterfaceFromString(Component& parent, const String& content);
+	// Loading the interface from a file and loading resources relative to filename's parent folder.
+	Component component_createWithInterfaceFromFile(Component& parent, const String& filename);
 	// Returns true iff the component exists.
 	bool component_exists(const Component& component);
 	// Removed the component from the parent.
