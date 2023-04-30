@@ -254,7 +254,7 @@ void dsr::component_setKeyTypeEvent(const Component& component, const KeyboardCa
 	component->keyTypeEvent() = keyboardEvent;
 }
 void dsr::component_setSelectEvent(const Component& component, const IndexCallback& selectEvent) {
-	MUST_EXIST(component, component_setKeyTypeEvent);
+	MUST_EXIST(component, component_setSelectEvent);
 	component->selectEvent() = selectEvent;
 }
 
