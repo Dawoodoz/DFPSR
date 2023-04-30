@@ -119,6 +119,7 @@ public:
 public:
 	// Callbacks
 	DECLARE_CALLBACK(pressedEvent, emptyCallback);
+	DECLARE_CALLBACK(destroyEvent, emptyCallback);
 	DECLARE_CALLBACK(mouseDownEvent, mouseCallback);
 	DECLARE_CALLBACK(mouseUpEvent, mouseCallback);
 	DECLARE_CALLBACK(mouseMoveEvent, mouseCallback);

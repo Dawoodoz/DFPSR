@@ -225,6 +225,10 @@ void dsr::component_setPressedEvent(const Component& component, const EmptyCallb
 	MUST_EXIST(component, component_setPressedEvent);
 	component->pressedEvent() = event;
 }
+void dsr::component_setDestroyEvent(const Component& component, const EmptyCallback& event) {
+	MUST_EXIST(component, component_setDestroyEvent);
+	component->destroyEvent() = event;
+}
 void dsr::component_setMouseDownEvent(const Component& component, const MouseCallback& mouseEvent) {
 	MUST_EXIST(component, component_setMouseDownEvent);
 	component->mouseDownEvent() = mouseEvent;
