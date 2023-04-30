@@ -32,6 +32,7 @@ PERSISTENT_DEFINITION(VisualComponent)
 VisualComponent::VisualComponent() {}
 
 VisualComponent::~VisualComponent() {
+	this->callback_destroyEvent();
 	// Let the children know that the parent component no longer exists.
 	for (int i = 0; i < this->getChildCount(); i++) {
 		this->children[i]->parent = nullptr;

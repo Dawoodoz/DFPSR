@@ -276,6 +276,10 @@ namespace dsr {
 	// The main activation of clickable components.
 	//   The pressed callback doesn't take any arguments, because it should be possible to generate from multiple input methods.
 	void component_setPressedEvent(const Component& component, const EmptyCallback& event);
+	// Called before the component and it's child components are destructed.
+	// The event is called when there are no more handles to component.
+	//   Be careful not to forget any extra handles to the component if a memory leak would significantly change the behavior.
+	void component_setDestroyEvent(const Component& component, const EmptyCallback& event);
 	// Mouse-down activates when any mouse button is pressed down within the component
 	//   Raises an exception if component doesn't exist.
 	//   The component itself decides if the mouse is inside, which allow rounded components to act as their true shape.
