@@ -84,6 +84,16 @@ Component dsr::window_getRoot(const Window& window) {
 	return window->getRootComponent();
 }
 
+Component dsr::component_findChildByName(const Component& parent, const ReadableString& name, bool mustExist) {
+	MUST_EXIST(parent, component_findChildByName);
+	return parent->findChildByName(name);
+}
+
+Component dsr::component_findChildByNameAndIndex(const Component& parent, const ReadableString& name, int index, bool mustExist) {
+	MUST_EXIST(parent, component_findChildByNameAndIndex);
+	return parent->findChildByNameAndIndex(name, index);
+}
+
 Component dsr::window_findComponentByName(const Window& window, const ReadableString& name, bool mustExist) {
 	MUST_EXIST(window, window_findComponentByName);
 	Component result = window->findComponentByName(name);

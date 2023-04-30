@@ -223,6 +223,17 @@ namespace dsr {
 	//   Child indices go from 0 to count - 1.
 	//   The child index refers to the parent's list of children, not the child's index attribute.
 	Component component_getChild(const Component& parent, int childIndex);
+	// Returns a handle to the first matching component of the name in parent recursively.
+	// Can be used instead of window_findComponentByName to further reduce the risk of name collisions, by only looking for recursive child components of a specific parent component.
+	// If mustExist is true, not finding any component with the name within parent throws an exception.
+	// Raises an exception if parent doesn't exist.
+	// Component names are case sensitive to reduce the risk of accidental naming conflicts among many components.
+	Component component_findChildByName(const Component& parent, const ReadableString& name, bool mustExist = true);
+	// Returns a handle to the first matching component of the name and index in parent recursively.
+	// If mustExist is true, not finding any component with the name within parent throws an exception.
+	// Raises an exception if parent doesn't exist.
+	// Component names are case sensitive to reduce the risk of accidental naming conflicts among many components.
+	Component component_findChildByNameAndIndex(const Component& parent, const ReadableString& name, int index, bool mustExist = true);
 	// Returns true iff propertyName exists in component.
 	//   Property names are case insensitive, to give more flexibility for the few property names.
 	bool component_hasProperty(const Component& component, const ReadableString& propertyName);
