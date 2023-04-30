@@ -84,6 +84,25 @@ Component dsr::window_getRoot(const Window& window) {
 	return window->getRootComponent();
 }
 
+Component dsr::component_createWithInterfaceFromString(Component& parent, const String& content, const ReadableString &fromPath) {
+	MUST_EXIST(parent, component_createWithInterfaceFromString);
+	Component result = std::dynamic_pointer_cast<VisualComponent>(createPersistentClassFromText(content, fromPath));
+	if (result.get() == nullptr) {
+		throwError(U"component_createWithInterfaceFromString: The component could not be created!\n\nLayout:\n", content, "\n");
+	}
+	parent->addChildComponent(result);
+	result->applyLayout(parent->getSize());
+	return result;
+}
+
+Component dsr::component_createWithInterfaceFromString(Component& parent, const String& content) {
+	return component_createWithInterfaceFromString(parent, content, file_getCurrentPath());
+}
+
+Component dsr::component_createWithInterfaceFromFile(Component& parent, const String& filename) {
+	return component_createWithInterfaceFromString(parent, string_load(filename), file_getRelativeParentFolder(filename));
+}
+
 Component dsr::component_findChildByName(const Component& parent, const ReadableString& name, bool mustExist) {
 	MUST_EXIST(parent, component_findChildByName);
 	return parent->findChildByName(name);
