@@ -35,8 +35,9 @@ public:
 	PersistentBoolean solid; // If true, the panel itself will be drawn.
 	PersistentBoolean plain; // If true, a solid color will be drawn instead of a buffered image to save time and memory.
 	PersistentColor color; // The color being used when drawn is set to true.
-	PersistentInteger padding; // Empty space around child components.
-	PersistentInteger spacing; // Empty space between child components.
+	PersistentInteger padding = PersistentInteger(2); // Empty space around child components.
+	PersistentInteger spacing = PersistentInteger(3); // Empty space between child components.
+	// TODO: Start, center, end and fill alignment options.
 	void declareAttributes(StructureDefinition &target) const override;
 	Persistent* findAttribute(const ReadableString &name) override;
 private:

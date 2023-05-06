@@ -36,6 +36,7 @@ public:
 	PersistentColor backColor;
 	PersistentColor foreColor;
 	PersistentString text;
+	PersistentInteger padding = PersistentInteger(5); // How many pixels of padding are applied on each side of the text when calculating desired dimensions for placing in toolbars.
 	void declareAttributes(StructureDefinition &target) const override;
 	Persistent* findAttribute(const ReadableString &name) override;
 private:
@@ -61,6 +62,7 @@ public:
 	void changedTheme(VisualTheme newTheme) override;
 	void changedLocation(const IRect &oldLocation, const IRect &newLocation) override;
 	void changedAttribute(const ReadableString &name) override;
+	IVector2D getDesiredDimensions() override;
 };
 
 }

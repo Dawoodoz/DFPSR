@@ -186,7 +186,7 @@ public:
 	//   If the parent has decorations around the child components, the region may include some padding from which the flexible regions calculate the locations from in percents.
 	//     For example: A given space from 10 to 90 pixels will have 0% at 10 and 100% at 90.
 	//   A toolbar may give non-overlapping spaces that are assigned automatically to simplify the process of maintaining the layout while adding and removing child components.
-	// TODO: How can internal changes to inner dimensions be detected by the parent to run this method again? Call the parent and tell it to update next time something needs drawing or mouse input?
+	// TODO: How can internal changes to inner dimensions be detected by the parent to run this method again?
 	virtual void applyLayout(const IRect& givenSpace);
 	// Update layout when the component moved but the parent has the same dimensions
 	void updateLayout();
