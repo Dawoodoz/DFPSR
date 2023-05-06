@@ -57,38 +57,37 @@ inline bool operator!=(const FlexValue &left, const FlexValue &right) {
 
 struct FlexRegion {
 public:
-	// Indices: 0 = left, 1 = top, 2 = right, 3 = bottom
-	FlexValue sides[4];
+	FlexValue left, top, right, bottom;
 public:
-	void setLeft(const FlexValue &left) { this->sides[0] = left; }
-	void setTop(const FlexValue &top) { this->sides[1] = top; }
-	void setRight(const FlexValue &right) { this->sides[2] = right; }
-	void setBottom(const FlexValue &bottom) { this->sides[3] = bottom; }
-	void setLeft(const ReadableString &left) { this->sides[0] = FlexValue(left, U""); }
-	void setTop(const ReadableString &top) { this->sides[1] = FlexValue(top, U""); }
-	void setRight(const ReadableString &right) { this->sides[2] = FlexValue(right, U""); }
-	void setBottom(const ReadableString &bottom) { this->sides[3] = FlexValue(bottom, U""); }
+	void setLeft(const FlexValue &left) { this->left = left; }
+	void setTop(const FlexValue &top) { this->top = top; }
+	void setRight(const FlexValue &right) { this->right = right; }
+	void setBottom(const FlexValue &bottom) { this->bottom = bottom; }
+	void setLeft(const ReadableString &left) { this->left = FlexValue(left, U""); }
+	void setTop(const ReadableString &top) { this->top = FlexValue(top, U""); }
+	void setRight(const ReadableString &right) { this->right = FlexValue(right, U""); }
+	void setBottom(const ReadableString &bottom) { this->bottom = FlexValue(bottom, U""); }
 public:
 	// Full region
 	FlexRegion() {
-		this->sides[0] = FlexValue(0, 0);
-		this->sides[1] = FlexValue(0, 0);
-		this->sides[2] = FlexValue(100, 0);
-		this->sides[3] = FlexValue(100, 0);
+		this->left = FlexValue(0, 0);
+		this->top = FlexValue(0, 0);
+		this->right = FlexValue(100, 0);
+		this->bottom = FlexValue(100, 0);
 	}
 	// Upper left aligned region
 	explicit FlexRegion(const IRect &location) {
-		this->sides[0] = FlexValue(0, location.left());
-		this->sides[1] = FlexValue(0, location.top());
-		this->sides[2] = FlexValue(0, location.right());
-		this->sides[3] = FlexValue(0, location.bottom());
+		this->left = FlexValue(0, location.left());
+		this->top = FlexValue(0, location.top());
+		this->right = FlexValue(0, location.right());
+		this->bottom = FlexValue(0, location.bottom());
 	}
 	// Flexible region
 	FlexRegion(int leftRatio, int leftOffset, int topRatio, int topOffset, int rightRatio, int rightOffset, int bottomRatio, int bottomOffset) {
-		this->sides[0] = FlexValue(leftRatio, leftOffset);
-		this->sides[1] = FlexValue(topRatio, topOffset);
-		this->sides[2] = FlexValue(rightRatio, rightOffset);
-		this->sides[3] = FlexValue(bottomRatio, bottomOffset);
+		this->left = FlexValue(leftRatio, leftOffset);
+		this->top = FlexValue(topRatio, topOffset);
+		this->right = FlexValue(rightRatio, rightOffset);
+		this->bottom = FlexValue(bottomRatio, bottomOffset);
 	}
 	// Parse individual flex values from text
 	FlexRegion(const ReadableString &left, const ReadableString &top, const ReadableString &right, const ReadableString &bottom) {

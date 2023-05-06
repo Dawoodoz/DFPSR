@@ -108,8 +108,10 @@ void Toolbar::changedAttribute(const ReadableString &name) {
 }
 
 void Toolbar::updateLocationEvent(const IRect& oldLocation, const IRect& newLocation) {
-	// TODO: Find out if the toolbar is vertical or horizontal from its dimensions.
-	bool vertical = newLocation.width() < newLocation.height();
+	int widthStretch = this->region.right.getRatio() - this->region.left.getRatio();
+	int heightStretch = this->region.bottom.getRatio() - this->region.top.getRatio();
+	// Place members vertically if the toolbar mostly stretches vertically or if it has uniform stretch and is taller than wide.
+	bool vertical = (widthStretch < heightStretch) || ((widthStretch == heightStretch) && (newLocation.width() < newLocation.height()));
 	if (vertical) {
 		// TODO: Add scroll buttons on the sides if there is not enough space for all child components.
 		// Place each child component in order.

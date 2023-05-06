@@ -59,10 +59,10 @@ String& FlexValue::toStreamIndented(String& out, const ReadableString& indentati
 
 IRect FlexRegion::getNewLocation(const IRect &givenSpace) {
 	return IRect::FromBounds(
-		this->sides[0].getValue(givenSpace.left(), givenSpace.right()),
-		this->sides[1].getValue(givenSpace.top(), givenSpace.bottom()),
-		this->sides[2].getValue(givenSpace.left(), givenSpace.right()),
-		this->sides[3].getValue(givenSpace.top(), givenSpace.bottom())
+		this->left.getValue(givenSpace.left(), givenSpace.right()),
+		this->top.getValue(givenSpace.top(), givenSpace.bottom()),
+		this->right.getValue(givenSpace.left(), givenSpace.right()),
+		this->bottom.getValue(givenSpace.top(), givenSpace.bottom())
 	);
 }
 
