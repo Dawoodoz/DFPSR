@@ -76,16 +76,16 @@ public:
 			return &(this->visible);
 		} else if (string_caseInsensitiveMatch(name, U"Left")) {
 			this->regionAccessed = true;
-			return &(this->region.sides[0]);
+			return &(this->region.left);
 		} else if (string_caseInsensitiveMatch(name, U"Top")) {
 			this->regionAccessed = true;
-			return &(this->region.sides[1]);
+			return &(this->region.top);
 		} else if (string_caseInsensitiveMatch(name, U"Right")) {
 			this->regionAccessed = true;
-			return &(this->region.sides[2]);
+			return &(this->region.right);
 		} else if (string_caseInsensitiveMatch(name, U"Bottom")) {
 			this->regionAccessed = true;
-			return &(this->region.sides[3]);
+			return &(this->region.bottom);
 		} else {
 			return nullptr;
 		}
@@ -205,7 +205,7 @@ public:
 	virtual bool pointIsInside(const IVector2D& pixelPosition);
 	// Get a pointer to the topmost child
 	// Invisible components are ignored by default, but includeInvisible can be enabled to change that.
-	// Returns an empty reference if the pixel position didn't hit anything inside.
+	// Returns an empty reference if the pixel position didn't hit anything in
 	// Since the root component might not be heap allocated, it cannot return itself by reference.
 	//   Use pointIsInside if your root component doesn't cover the whole window.
 	std::shared_ptr<VisualComponent> getTopChild(const IVector2D& pixelPosition, bool includeInvisible = false);
