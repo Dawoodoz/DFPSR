@@ -32,6 +32,7 @@ void Button::declareAttributes(StructureDefinition &target) const {
 	VisualComponent::declareAttributes(target);
 	target.declareAttribute(U"Color");
 	target.declareAttribute(U"Text");
+	target.declareAttribute(U"Padding");
 }
 
 Persistent* Button::findAttribute(const ReadableString &name) {
@@ -42,6 +43,8 @@ Persistent* Button::findAttribute(const ReadableString &name) {
 		return &(this->foreColor);
 	} else if (string_caseInsensitiveMatch(name, U"Text")) {
 		return &(this->text);
+	} else if (string_caseInsensitiveMatch(name, U"Padding")) {
+		return &(this->padding);
 	} else {
 		return VisualComponent::findAttribute(name);
 	}
@@ -132,4 +135,10 @@ void Button::changedAttribute(const ReadableString &name) {
 	if (!string_caseInsensitiveMatch(name, U"Visible")) {
 		this->hasImages = false;
 	}
+}
+
+IVector2D Button::getDesiredDimensions() {
+	this->completeAssets();
+	int sizeAdder = this->padding.value * 2;
+	return IVector2D(font_getLineWidth(this->font, this->text.value) + sizeAdder, font_getSize(this->font) + sizeAdder);
 }

@@ -33,6 +33,7 @@ void Label::declareAttributes(StructureDefinition &target) const {
 	target.declareAttribute(U"Color");
 	target.declareAttribute(U"Opacity");
 	target.declareAttribute(U"Text");
+	target.declareAttribute(U"Padding");
 }
 
 Persistent* Label::findAttribute(const ReadableString &name) {
@@ -43,6 +44,8 @@ Persistent* Label::findAttribute(const ReadableString &name) {
 		return &(this->opacity);
 	} else if (string_caseInsensitiveMatch(name, U"Text")) {
 		return &(this->text);
+	} else if (string_caseInsensitiveMatch(name, U"Padding")) {
+		return &(this->padding);
 	} else {
 		return VisualComponent::findAttribute(name);
 	}
@@ -75,3 +78,8 @@ void Label::completeAssets() {
 	}
 }
 
+IVector2D Label::getDesiredDimensions() {
+	this->completeAssets();
+	int sizeAdder = this->padding.value * 2;
+	return IVector2D(font_getLineWidth(this->font, this->text.value) + sizeAdder, font_getSize(this->font) + sizeAdder);
+}
