@@ -30,6 +30,7 @@
 #include "components/TextBox.h"
 #include "components/Label.h"
 #include "components/Picture.h"
+#include "components/Toolbar.h"
 // <<<< Include new components here
 
 #include "../math/scalar.h"
@@ -49,6 +50,7 @@ void dsr::gui_initialize() {
 		REGISTER_PERSISTENT_CLASS(TextBox)
 		REGISTER_PERSISTENT_CLASS(Label)
 		REGISTER_PERSISTENT_CLASS(Picture)
+		REGISTER_PERSISTENT_CLASS(Toolbar)
 		// <<<< Register new components here
 
 		initialized = true;

@@ -214,6 +214,9 @@ UR"QUOTE(
 	[Panel]
 		border = 1
 		method = "HardRectangle"
+	[Toolbar]
+		border = 1
+		method = "HardRectangle"
 )QUOTE";
 
 template <typename V>
