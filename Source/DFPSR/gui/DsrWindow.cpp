@@ -89,7 +89,7 @@ DsrWindow::DsrWindow(std::shared_ptr<BackendWindow> backend)
 DsrWindow::~DsrWindow() {}
 
 void DsrWindow::applyLayout() {
-	this->mainPanel->applyLayout(IVector2D(this->getCanvasWidth(), this->getCanvasHeight()));
+	this->mainPanel->applyLayout(IRect(0, 0, this->getCanvasWidth(), this->getCanvasHeight()));
 }
 
 std::shared_ptr<VisualComponent> DsrWindow::findComponentByName(ReadableString name) const {

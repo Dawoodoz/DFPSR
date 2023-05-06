@@ -39,6 +39,11 @@ VisualComponent::~VisualComponent() {
 	}
 }
 
+IVector2D VisualComponent::getDesiredDimensions() {
+	// Unless this virtual method is overridden, toolbars and such will try to give these dimensions to the component.
+	return IVector2D(32, 32);
+}
+
 bool VisualComponent::isContainer() const {
 	return true;
 }
@@ -51,10 +56,6 @@ IRect VisualComponent::getLocation() {
 		this->regionAccessed = false;
 	}
 	return this->location;
-}
-
-IVector2D VisualComponent::getSize() {
-	return this->getLocation().size();
 }
 
 void VisualComponent::setRegion(const FlexRegion &newRegion) {
@@ -99,24 +100,34 @@ void VisualComponent::setLocation(const IRect &newLocation) {
 }
 
 void VisualComponent::updateLayout() {
-	this->setLocation(this->region.getNewLocation(this->parentSize));
+	this->setLocation(this->region.getNewLocation(this->givenSpace));
 }
 
-void VisualComponent::applyLayout(IVector2D parentSize) {
-	this->parentSize = parentSize;
+void VisualComponent::applyLayout(const IRect& givenSpace) {
+	this->givenSpace = givenSpace;
 	this->updateLayout();
 }
 
 void VisualComponent::updateLocationEvent(const IRect& oldLocation, const IRect& newLocation) {
 	// Place each child component
 	for (int i = 0; i < this->getChildCount(); i++) {
-		this->children[i]->applyLayout(newLocation.size());
+		this->children[i]->applyLayout(IRect(0, 0, newLocation.width(), newLocation.height()));
+	}
+}
+
+// Check if any change requires the child layout to update.
+//   Used to realign members of toolbars after a desired dimension changed.
+void VisualComponent::updateChildLocations() {
+	if (this->childChanged) {
+		this->updateLocationEvent(this->location, this->location);
+		this->childChanged = false;
 	}
 }
 
 // Offset may become non-zero when the origin is outside of targetImage from being clipped outside of the parent region
 void VisualComponent::draw(ImageRgbaU8& targetImage, const IVector2D& offset) {
 	if (this->getVisible()) {
+		this->updateChildLocations();
 		IRect containerBound = this->getLocation() + offset;
 		this->drawSelf(targetImage, containerBound);
 		// Draw each child component
@@ -153,9 +164,10 @@ void VisualComponent::addChildComponent(std::shared_ptr<VisualComponent> child) 
 		// Remove from any previous parent
 		child->detachFromParent();
 		// Update layout based on the new parent size
-		child->applyLayout(this->getSize());
+		child->applyLayout(IRect(0, 0, this->location.width(), this->location.height()));
 		// Connect to the new parent
 		this->children.push(child);
+		this->childChanged = true;
 		child->parent = this;
 	}
 }
@@ -188,6 +200,7 @@ void VisualComponent::detachFromParent() {
 	// Check if there's a parent component
 	VisualComponent *parent = this->parent;
 	if (parent != nullptr) {
+		parent->childChanged = true;
 		// If the removed component is focused from the parent, then remove focus so that the parent is focused instead.
 		if (parent->focusComponent.get() == this) {
 			parent->focusComponent = std::shared_ptr<VisualComponent>();
@@ -292,6 +305,8 @@ std::shared_ptr<VisualComponent> VisualComponent::getTopChild(const IVector2D& p
 }
 
 void VisualComponent::sendMouseEvent(const MouseEvent& event) {
+	// Update the layout if needed
+	this->updateChildLocations();
 	// Convert to local coordinates recursively
 	MouseEvent localEvent = event - this->getLocation().upperLeft();
 	std::shared_ptr<VisualComponent> childComponent;

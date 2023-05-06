@@ -91,7 +91,6 @@ Component dsr::component_createWithInterfaceFromString(Component& parent, const 
 		throwError(U"component_createWithInterfaceFromString: The component could not be created!\n\nLayout:\n", content, "\n");
 	}
 	parent->addChildComponent(result);
-	result->applyLayout(parent->getSize());
 	return result;
 }
 

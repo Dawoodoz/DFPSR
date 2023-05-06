@@ -42,7 +42,7 @@ PERSISTENT_DECLARATION(VisualComponent)
 protected:
 	// Parent component
 	VisualComponent *parent = nullptr;
-	IVector2D parentSize; // Remembering the parent's size so that the root component can remember the window's size when moving
+	IRect givenSpace; // Remembering the local region that was reserved inside of the parent component
 	bool regionAccessed = false; // If someone requested access to the region, remember to update layout in case of new settings
 	// Child components
 	List<std::shared_ptr<VisualComponent>> children;
@@ -107,7 +107,6 @@ public:
 public:
 	virtual bool isContainer() const;
 	IRect getLocation();
-	IVector2D getSize();
 	void setRegion(const FlexRegion &newRegion);
 	FlexRegion getRegion() const;
 	void setVisible(bool visible);
@@ -182,15 +181,24 @@ public:
 	// Detach the component from any parent
 	void detachFromParent();
 
-	// Adapt the location based on the region
-	//   parentWidth must be the current width of the parent container
-	//   parentHeight must be the current height of the parent container
-	// Override to apply a custom behaviour, which may be useful for fixed size components.
-	virtual void applyLayout(IVector2D parentSize);
+	// Adapt the location based on the space given by the parent.
+	//   The given space is usually a rectangle starting at the origin with the same dimensions as the parent component.
+	//   If the parent has decorations around the child components, the region may include some padding from which the flexible regions calculate the locations from in percents.
+	//     For example: A given space from 10 to 90 pixels will have 0% at 10 and 100% at 90.
+	//   A toolbar may give non-overlapping spaces that are assigned automatically to simplify the process of maintaining the layout while adding and removing child components.
+	// TODO: How can internal changes to inner dimensions be detected by the parent to run this method again? Call the parent and tell it to update next time something needs drawing or mouse input?
+	virtual void applyLayout(const IRect& givenSpace);
 	// Update layout when the component moved but the parent has the same dimensions
 	void updateLayout();
+	// Parent components that place child components automatically can ask them what their minimum useful dimensions are in pixels, so that their text will be visible.
+	// The component can still be resized to less than these dimensions, because the outer components can't give more space than what is given by the window.
+	virtual IVector2D getDesiredDimensions();
 	// Called after the component has been created, moved or resized.
 	virtual void updateLocationEvent(const IRect& oldLocation, const IRect& newLocation);
+	// Calling updateLocationEvent without changing the location, to be used when a child component changed its desired dimensions from altering attributes.
+	bool childChanged = false;
+	// Called before rendering or getting mouse input in case that a child component changed desired dimensions.
+	void updateChildLocations();
 	// Returns true iff the pixel with its upper left corner at pixelPosition is inside the component.
 	// A rectangular bound check with location is used by default.
 	// The caller is responsible for checking if the component is visible when needed.

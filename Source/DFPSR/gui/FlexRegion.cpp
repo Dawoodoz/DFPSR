@@ -57,12 +57,12 @@ String& FlexValue::toStreamIndented(String& out, const ReadableString& indentati
 	return out;
 }
 
-IRect FlexRegion::getNewLocation(const IVector2D &parentSize) {
+IRect FlexRegion::getNewLocation(const IRect &givenSpace) {
 	return IRect::FromBounds(
-		this->sides[0].getValue(parentSize.x),
-		this->sides[1].getValue(parentSize.y),
-		this->sides[2].getValue(parentSize.x),
-		this->sides[3].getValue(parentSize.y)
+		this->sides[0].getValue(givenSpace.left(), givenSpace.right()),
+		this->sides[1].getValue(givenSpace.top(), givenSpace.bottom()),
+		this->sides[2].getValue(givenSpace.left(), givenSpace.right()),
+		this->sides[3].getValue(givenSpace.top(), givenSpace.bottom())
 	);
 }
 

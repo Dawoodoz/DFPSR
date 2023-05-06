@@ -46,7 +46,7 @@ public:
 public:
 	int32_t getRatio() const { return this->ratio; }
 	int32_t getOffset() const { return this->offset; }
-	int32_t getValue(int32_t parentValue) const { return (parentValue * this->ratio) / 100 + this->offset; }
+	int32_t getValue(int32_t minimum, int32_t maximum) const { return ((minimum * (100 - this->ratio)) + (maximum * this->ratio)) / 100 + this->offset; }
 };
 inline bool operator==(const FlexValue &left, const FlexValue &right) {
 	return left.getRatio() == right.getRatio() && left.getOffset() == right.getOffset();
@@ -98,7 +98,7 @@ public:
 		this->setBottom(bottom);
 	}
 public:
-	virtual IRect getNewLocation(const IVector2D &parentSize);
+	virtual IRect getNewLocation(const IRect &givenSpace);
 };
 
 }
