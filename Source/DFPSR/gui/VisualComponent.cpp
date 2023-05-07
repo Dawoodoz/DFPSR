@@ -134,6 +134,10 @@ void VisualComponent::draw(ImageRgbaU8& targetImage, const IVector2D& offset) {
 		for (int i = 0; i < this->getChildCount(); i++) {
 			this->children[i]->drawClipped(targetImage, containerBound.upperLeft(), containerBound);
 		}
+		// Draw the overlays
+		if (this->overlayComponent.get() != nullptr) {
+			this->overlayComponent->drawOverlay(targetImage);
+		}
 	}
 }
 
@@ -151,6 +155,8 @@ void VisualComponent::drawClipped(ImageRgbaU8 targetImage, const IVector2D& offs
 void VisualComponent::drawSelf(ImageRgbaU8& targetImage, const IRect &relativeLocation) {
 	draw_rectangle(targetImage, relativeLocation, ColorRgbaI32(200, 50, 50, 255));
 }
+
+void VisualComponent::drawOverlay(ImageRgbaU8& targetImage) {}
 
 // Manual use with the correct type
 void VisualComponent::addChildComponent(std::shared_ptr<VisualComponent> child) {
@@ -394,9 +400,26 @@ bool VisualComponent::isFocused() {
 		//   One cannot just check if the parent points back directly, because old pointers may be left from a previous route.
 		VisualComponent *root = this; while (root->parent != nullptr) { root = root->parent; }
 		VisualComponent *leaf = root; while (leaf->focusComponent.get() != nullptr) { leaf = leaf->focusComponent.get(); }
-		return leaf == this; // Focused if the root component points back to this component.
+		return leaf == this; // Focused if the root component points back to this component and not any further.
 	} else {
 		// Root component is focused if it does not redirect its focus to a child component.
+		return this->focusComponent.get() == nullptr; // Focused if no child is focused.
+	}
+}
+
+bool VisualComponent::containsFocused() {
+	if (this->parent != nullptr) {
+		// For child component, go back to the root and then follow the focus pointers to find out which component is focused within the whole tree.
+		//   One cannot just check if the parent points back directly, because old pointers may be left from a previous route.
+		VisualComponent *root = this; while (root->parent != nullptr) { root = root->parent; }
+		VisualComponent *current = root;
+		while (current->focusComponent.get() != nullptr) {
+			current = current->focusComponent.get();
+			if (current == this) return true; // Focused if the root component points back to this component somewhere along the way.
+		}
+		return false;
+	} else {
+		// Root component always contains the focused component is focused if it does not redirect its focus to a child component.
 		return this->focusComponent.get() == nullptr; // Focused if no child is focused.
 	}
 }

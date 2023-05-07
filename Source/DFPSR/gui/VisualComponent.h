@@ -39,19 +39,26 @@ MediaResult component_generateImage(VisualTheme theme, MediaMethod &method, int 
 
 class VisualComponent : public Persistent {
 PERSISTENT_DECLARATION(VisualComponent)
-protected:
+public:
 	// Parent component
 	VisualComponent *parent = nullptr;
-	IRect givenSpace; // Remembering the local region that was reserved inside of the parent component
-	bool regionAccessed = false; // If someone requested access to the region, remember to update layout in case of new settings
+	IRect givenSpace; // Remembering the local region that was reserved inside of the parent component.
+	bool regionAccessed = false; // If someone requested access to the region, remember to update layout in case of new settings.
 	// Child components
 	List<std::shared_ptr<VisualComponent>> children;
-	// Remember the component used for a drag event
-	//   Ensures that mouse down events are followed by mouse up events on the same component
+	// Remember the component used for a drag event.
+	//   Ensures that mouse down events are followed by mouse up events on the same component.
 	int holdCount = 0;
+	// Remember the pressed component for sending mouse move events outside of its region.
 	std::shared_ptr<VisualComponent> dragComponent;
-	// Remember the focused component for keyboard input
+	// Remember the focused component for keyboard input.
 	std::shared_ptr<VisualComponent> focusComponent;
+	// The next overlay component, which may refer to one of its children as the next overlay to draw itself on top of other components.
+	//   The linked list goes from the root component in the window, across each component with an active overlay.
+	//   Examples:
+	//     Root -> ToolTipText
+	//     Root -> TopMenu -> SubMenu -> SubMenu
+	std::shared_ptr<VisualComponent> overlayComponent;
 	// Saved properties
 	FlexRegion region;
 	PersistentString name;
@@ -90,7 +97,7 @@ public:
 			return nullptr;
 		}
 	}
-protected:
+public:
 	// Generated automatically from region in applyLayout
 	IRect location;
 	void setLocation(const IRect &newLocation);
@@ -127,7 +134,7 @@ public:
 	DECLARE_CALLBACK(keyUpEvent, keyboardCallback);
 	DECLARE_CALLBACK(keyTypeEvent, keyboardCallback);
 	DECLARE_CALLBACK(selectEvent, indexCallback);
-private:
+public:
 	std::shared_ptr<VisualComponent> getDirectChild(const IVector2D& pixelPosition, bool includeInvisible);
 public:
 	// Draw the component
@@ -140,10 +147,12 @@ public:
 	// offset is the upper left corner of the parent container relative to the image.
 	//   Clipping will affect the offset by being relative to the new sub-image.
 	void draw(ImageRgbaU8& targetImage, const IVector2D& offset);
-	// A basic request to have the component itself drawn to targetImage at relativeLocation.
+	// Draw the component itself to targetImage at relativeLocation.
 	//   The method is responsible for clipping without a warning when bound is outside of targetImage.
-	//   Clipping will be common if the component is drawn using multiple dirty rectangles to save time.
 	virtual void drawSelf(ImageRgbaU8& targetImage, const IRect &relativeLocation);
+	// Draw the component's overlays on top of other components in the window.
+	//   Overlays are drawn using absolute positions in the window, without caring about any parent location.
+	virtual void drawOverlay(ImageRgbaU8& targetImage);
 	// Draw the component while skipping pixels outside of clipRegion
 	//   Multiple calls with non-overlapping clip regions should be equivalent to one call with the union of all clip regions.
 	//     This means that the draw methods should handle border clipping so that no extra borderlines or rounded edges appear from nowhere.
@@ -228,8 +237,12 @@ public:
 	// Custom call handler to manipulate components across a generic API
 	virtual String call(const ReadableString &methodName, const ReadableString &arguments);
 	// Returns true iff the component is focused.
+	//   Used for textboxes to know if they should be drawn as active.
 	//   The root component is considered focused if none of its children are focused.
 	bool isFocused();
+	// Returns true iff itself, a direct child or an indirect child has focus.
+	//   Used for menus to keep the whole path of sub-menus alive all the way down to the focused component.
+	bool containsFocused();
 };
 
 }
