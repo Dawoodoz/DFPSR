@@ -30,7 +30,8 @@ PERSISTENT_DEFINITION(Button)
 
 void Button::declareAttributes(StructureDefinition &target) const {
 	VisualComponent::declareAttributes(target);
-	target.declareAttribute(U"Color");
+	target.declareAttribute(U"BackColor");
+	target.declareAttribute(U"ForeColor");
 	target.declareAttribute(U"Text");
 	target.declareAttribute(U"Padding");
 }
