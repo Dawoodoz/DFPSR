@@ -1,6 +1,6 @@
 ﻿// zlib open source license
 //
-// Copyright (c) 2018 to 2019 David Forsgren Piuva
+// Copyright (c) 2018 to 2023 David Forsgren Piuva
 // 
 // This software is provided 'as-is', without any express or implied
 // warranty. In no event will the authors be held liable for any damages
@@ -124,6 +124,18 @@ void VisualComponent::updateChildLocations() {
 	}
 }
 
+// Overlays are only cropped by the entire canvas, so the offset is the upper left corner of component relative to the upper left corner of the canvas.
+static void drawOverlays(ImageRgbaU8& targetImage, VisualComponent &component, const IVector2D& offset) {
+	if (component.getVisible()) {
+		// Draw the component's own overlays at the bottom. 
+		component.drawOverlay(targetImage, offset - component.location.upperLeft());
+		// Draw overlays in each child component on top.
+		for (int i = 0; i < component.getChildCount(); i++) {
+			drawOverlays(targetImage, *(component.children[i]), offset + component.children[i]->location.upperLeft());
+		}
+	}
+}
+
 // Offset may become non-zero when the origin is outside of targetImage from being clipped outside of the parent region
 void VisualComponent::draw(ImageRgbaU8& targetImage, const IVector2D& offset) {
 	if (this->getVisible()) {
@@ -131,12 +143,14 @@ void VisualComponent::draw(ImageRgbaU8& targetImage, const IVector2D& offset) {
 		IRect containerBound = this->getLocation() + offset;
 		this->drawSelf(targetImage, containerBound);
 		// Draw each child component
-		for (int i = 0; i < this->getChildCount(); i++) {
-			this->children[i]->drawClipped(targetImage, containerBound.upperLeft(), containerBound);
+		if (!this->managesChildren()) {
+			for (int i = 0; i < this->getChildCount(); i++) {
+				this->children[i]->drawClipped(targetImage, containerBound.upperLeft(), containerBound);
+			}
 		}
-		// Draw the overlays
-		if (this->overlayComponent.get() != nullptr) {
-			this->overlayComponent->drawOverlay(targetImage);
+		// When drawing the root, start recursive drawing of all overlays.
+		if (this->parent == nullptr) {
+			drawOverlays(targetImage, *this, this->location.upperLeft());
 		}
 	}
 }
@@ -156,7 +170,7 @@ void VisualComponent::drawSelf(ImageRgbaU8& targetImage, const IRect &relativeLo
 	draw_rectangle(targetImage, relativeLocation, ColorRgbaI32(200, 50, 50, 255));
 }
 
-void VisualComponent::drawOverlay(ImageRgbaU8& targetImage) {}
+void VisualComponent::drawOverlay(ImageRgbaU8& targetImage, const IVector2D &absoluteOffset) {}
 
 // Manual use with the correct type
 void VisualComponent::addChildComponent(std::shared_ptr<VisualComponent> child) {
@@ -209,17 +223,21 @@ void VisualComponent::detachFromParent() {
 		parent->childChanged = true;
 		// If the removed component is focused from the parent, then remove focus so that the parent is focused instead.
 		if (parent->focusComponent.get() == this) {
-			parent->focusComponent = std::shared_ptr<VisualComponent>();
+			parent->defocusChildren();
 		}
-		// Iterate over all children in the parent component
+		// Find the component to detach among the child components.
 		for (int i = 0; i < parent->getChildCount(); i++) {
 			std::shared_ptr<VisualComponent> current = parent->children[i];
 			if (current.get() == this) {
-				current->parent = nullptr; // Assign null
+				// Disconnect parent from child.
+				current->parent = nullptr;
+				// Disconnect child from parent.
 				parent->children.remove(i);
 				return;
 			}
 		}
+		// Any ongoing drag action will allow the component to get the mouse up event to finish transactions safely before being deleted by reference counting.
+		//   Otherwise it may break program logic or cause crashes.
 	}
 }
 
@@ -276,13 +294,17 @@ bool VisualComponent::pointIsInside(const IVector2D& pixelPosition) {
 	    && pixelPosition.y > this->location.top() && pixelPosition.y < this->location.bottom();
 }
 
+bool VisualComponent::pointIsInsideOfOverlay(const IVector2D& pixelPosition) {
+	return false;
+}
+
 // Non-recursive top-down search
-std::shared_ptr<VisualComponent> VisualComponent::getDirectChild(const IVector2D& pixelPosition, bool includeInvisible) {
+std::shared_ptr<VisualComponent> VisualComponent::getDirectChild(const IVector2D& pixelPosition) {
 	// Iterate child components in reverse drawing order
 	for (int i = this->getChildCount() - 1; i >= 0; i--) {
 		std::shared_ptr<VisualComponent> currentChild = this->children[i];
 		// Check if the point is inside the child component
-		if ((currentChild->getVisible() || includeInvisible) && currentChild->pointIsInside(pixelPosition)) {
+		if (currentChild->getVisible() && currentChild->pointIsInside(pixelPosition)) {
 			return currentChild;
 		}
 	}
@@ -290,57 +312,178 @@ std::shared_ptr<VisualComponent> VisualComponent::getDirectChild(const IVector2D
 	return std::shared_ptr<VisualComponent>();
 }
 
-// Recursive top-down search
-std::shared_ptr<VisualComponent> VisualComponent::getTopChild(const IVector2D& pixelPosition, bool includeInvisible) {
-	// Iterate child components in reverse drawing order
-	for (int i = this->getChildCount() - 1; i >= 0; i--) {
-		std::shared_ptr<VisualComponent> currentChild = this->children[i];
-		// Check if the point is inside the child component
-		if ((currentChild->getVisible() || includeInvisible) && currentChild->pointIsInside(pixelPosition)) {
-			// Check if a component inside the child component is even higher up
-			std::shared_ptr<VisualComponent> subChild = currentChild->getTopChild(pixelPosition - this->getLocation().upperLeft(), includeInvisible);
-			if (subChild.get() != nullptr) {
-				return subChild;
+// TODO: Store a pointer to the window in each visual component, so that one can get the shared pointer to the root and get access to clipboard functionality.
+std::shared_ptr<VisualComponent> VisualComponent::getShared() {
+	VisualComponent *parent = this->parent;
+	if (parent == nullptr) {
+		// Not working for the root component, because that would require access to the window.
+		return std::shared_ptr<VisualComponent>();
+	} else {
+		for (int c = 0; c < parent->children.length(); c++) {
+			if (parent->children[c].get() == this) {
+				return parent->children[c];
+			}
+		}
+		// Not found in its own parent if the component tree is broken.
+		return std::shared_ptr<VisualComponent>();
+	}
+}
+
+// Remove its pointer to its child and the whole trail of focus.
+void VisualComponent::defocusChildren() {
+	// Using raw pointers because the this pointer is not reference counted.
+	//   Components should not call arbitrary events that might detach components during processing, until a better way to handle this has been implemented.
+	VisualComponent* parent = this;
+	while (true) {
+		// Get the parent's focused direct child.
+		VisualComponent* child = parent->focusComponent.get();
+		if (child == nullptr) {
+			return; // Reached the end.
+		} else {
+			parent->focusComponent = std::shared_ptr<VisualComponent>(); // The parent removes the focus pointer from the child.
+			child->focused = false; // Remember that it is not focused, for quick access.
+			parent = child; // Prepare for the next iteration.
+		}
+	}
+}
+
+// Pre-condition: component != nullptr
+// Post-condition: Returns the root of component
+VisualComponent *getRoot(VisualComponent *component) {
+	assert(component != nullptr);
+	while (component->parent != nullptr) {
+		component = component->parent;
+	}
+	return component;
+}
+
+// Create a chain of pointers from the root to this component
+//   Any focus pointers that are not along the chain will not count but work as a memory for when one of its parents get focus again.
+void VisualComponent::makeFocused() {
+	VisualComponent* current = this;
+	// Remove any focus tail behind the new focus end.
+	current->defocusChildren();
+	while (current != nullptr) {
+		VisualComponent* parent = current->parent;
+		if (parent == nullptr) {
+			return;
+		} else {
+			VisualComponent* oldFocus = parent->focusComponent.get();
+			if (oldFocus == current) {
+				// When reaching a parent that already points back at the component being focused, there is nothing more to do.
+				return;
 			} else {
-				return currentChild;
+				if (oldFocus != nullptr) {
+					// When reaching a parent that deviated to the old focus branch, follow it and defocus the old components.
+					parent->defocusChildren();
+				}
+				parent->focusComponent = current->getShared();
+				current->focused = true;
+				current = parent;
 			}
 		}
 	}
-	// Return nothing if the point missed all child components
-	return std::shared_ptr<VisualComponent>();
 }
 
-void VisualComponent::sendMouseEvent(const MouseEvent& event) {
-	// Update the layout if needed
+void VisualComponent::sendNotifications() {
+	if (this->focused && !this->previouslyFocused) {
+		this->gotFocus();
+	} else if (!this->focused && this->previouslyFocused) {
+		this->lostFocus();
+	}
+	this->previouslyFocused = this->focused;
+	for (int i = this->getChildCount() - 1; i >= 0; i--) {
+		this->children[i]->sendNotifications();
+	}
+}
+
+// Find the topmost overlay by searching backwards with the parent last and returning a pointer to the component.
+// The point is relative to the upper left corner of component.
+static VisualComponent *getTopmostOverlay(VisualComponent *component, const IVector2D &point) {
+	// Go through child components in reverse draw order to stop when reaching the one that is visible.
+	for (int i = component->getChildCount() - 1; i >= 0; i--) {
+		VisualComponent *result = getTopmostOverlay(component->children[i].get(), point - component->children[i]->location.upperLeft());
+		if (result != nullptr) return result;
+	}
+	// Check itself behind child overlays.
+	if (component->showingOverlay && component->pointIsInsideOfOverlay(point + component->location.upperLeft())) {
+		return component;
+	} else {
+		return nullptr;
+	}
+}
+
+// Get the upper left corner of child relative to the upper left corner of parent.
+//   If parent is null or not a parent of child, then child's offset is relative to the window's canvas.
+static IVector2D getTotalOffset(const VisualComponent *child, const VisualComponent *parent = nullptr) {
+	IVector2D result;
+	while ((child != nullptr) && (child != parent)) {
+		result += child->location.upperLeft();
+		child = child->parent;
+	}
+	return result;
+}
+
+// Takes events with points relative to the upper left corner of the called component.
+void VisualComponent::sendMouseEvent(const MouseEvent& event, bool recursive) {
+	// Update the layout if needed.
 	this->updateChildLocations();
-	// Convert to local coordinates recursively
-	MouseEvent localEvent = event - this->getLocation().upperLeft();
-	std::shared_ptr<VisualComponent> childComponent;
-	// Grab a component on mouse down
-	if (event.mouseEventType == MouseEventType::MouseDown) {
-		childComponent = this->dragComponent = this->focusComponent = this->getDirectChild(localEvent.position, false);
+	// Get the point of interaction within the component being sent to,
+	//   so that it can be used to find direct child components expressed
+	//   relative to their container's upper left corner.
+	// If a button is pressed down, this method will try to grab a component to begin mouse interaction.
+	//   Grabbing with the dragComponent pointer makes sure that move and up events can be given even if the cursor moves outside of the component.
+	VisualComponent *childComponent = nullptr;
+	// Find the component to interact with, from pressing down or hovering.
+	if (event.mouseEventType == MouseEventType::MouseDown || this->dragComponent.get() == nullptr) {
+		// Check the overlays first when getting mouse events to the root component.
+		if (this->parent == nullptr) {
+			childComponent = getTopmostOverlay(this, event.position);
+		}
+		// Check for direct child components for passing on the event recursively.
+		//   The sendMouseEvent method can be called recursively from a member of an overlay, so we can't know
+		//   which component is at the top without asking the components that manage interaction with their children.
+		if (childComponent == nullptr && !this->managesChildren()) {
+			std::shared_ptr<VisualComponent> nextContainer = this->getDirectChild(event.position);
+			if (nextContainer.get() != nullptr) {
+				childComponent = nextContainer.get();
+			}
+		}
+	} else if (dragComponent.get() != nullptr) {
+		// If we're grabbing a component, keep sending events to it.
+		childComponent = this->dragComponent.get();
+	}
+	// Grab any detected component on mouse down events.
+	if (event.mouseEventType == MouseEventType::MouseDown && childComponent != nullptr) {
+		childComponent->makeFocused();
+		this->dragComponent = childComponent->getShared();
 		this->holdCount++;
 	}
-	if (this->holdCount > 0) {
-		// If we're grabbing a component, keep sending events to it
-		childComponent = this->dragComponent;
-	} else if (this->getVisible() && this->pointIsInside(event.position)) {
-		// If we're not grabbing a component, see if we can send the action to another component
-		childComponent = this->getDirectChild(localEvent.position, false);
-	}
-	// Send the signal to a child component or itself
-	if (childComponent.get() != nullptr) {
+	// Send the signal to a child component or itself.
+	if (childComponent != nullptr) {		
+		// Recalculate local offset through one or more levels of ownership.
+		IVector2D offset = getTotalOffset(childComponent, this);
+		MouseEvent localEvent = event;
+		localEvent.position = event.position - offset;
 		childComponent->sendMouseEvent(localEvent);
 	} else {
-		this->receiveMouseEvent(event);
+		// If there is no child component found, interact directly with the parent.
+		MouseEvent parentEvent = event;
+		parentEvent.position += this->location.upperLeft();
+		this->receiveMouseEvent(parentEvent);
 	}
-	// Release a component on mouse up
+	// Release a component on mouse up.
 	if (event.mouseEventType == MouseEventType::MouseUp) {
 		this->holdCount--;
 		if (this->holdCount <= 0) {
-			this->dragComponent = std::shared_ptr<VisualComponent>(); // Abort drag
+			this->dragComponent = std::shared_ptr<VisualComponent>(); // Abort drag.
+			// Reset when we had more up than down events, in case that the root panel was created with a button already pressed.
 			this->holdCount = 0;
 		}
+	}
+	// Once all focusing and defocusing with arbitrary callbacks is over, send the focus notifications to the components that actually changed focus.
+	if (this->parent == nullptr && !recursive) {
+		this->sendNotifications();
 	}
 }
 
@@ -362,6 +505,10 @@ void VisualComponent::sendKeyboardEvent(const KeyboardEvent& event) {
 		this->focusComponent->sendKeyboardEvent(event);
 	} else {
 		this->receiveKeyboardEvent(event);
+	}
+	// Send focus events in case that any component changed focus.
+	if (this->parent == nullptr) {
+		this->sendNotifications();
 	}
 }
 
@@ -395,33 +542,19 @@ String VisualComponent::call(const ReadableString &methodName, const ReadableStr
 }
 
 bool VisualComponent::isFocused() {
-	if (this->parent != nullptr) {
-		// For child component, go back to the root and then follow the focus pointers to find out which component is focused within the whole tree.
-		//   One cannot just check if the parent points back directly, because old pointers may be left from a previous route.
-		VisualComponent *root = this; while (root->parent != nullptr) { root = root->parent; }
-		VisualComponent *leaf = root; while (leaf->focusComponent.get() != nullptr) { leaf = leaf->focusComponent.get(); }
-		return leaf == this; // Focused if the root component points back to this component and not any further.
-	} else {
-		// Root component is focused if it does not redirect its focus to a child component.
-		return this->focusComponent.get() == nullptr; // Focused if no child is focused.
-	}
+	return this->focused && this->focusComponent.get() == nullptr;
 }
 
-bool VisualComponent::containsFocused() {
-	if (this->parent != nullptr) {
-		// For child component, go back to the root and then follow the focus pointers to find out which component is focused within the whole tree.
-		//   One cannot just check if the parent points back directly, because old pointers may be left from a previous route.
-		VisualComponent *root = this; while (root->parent != nullptr) { root = root->parent; }
-		VisualComponent *current = root;
-		while (current->focusComponent.get() != nullptr) {
-			current = current->focusComponent.get();
-			if (current == this) return true; // Focused if the root component points back to this component somewhere along the way.
-		}
-		return false;
-	} else {
-		// Root component always contains the focused component is focused if it does not redirect its focus to a child component.
-		return this->focusComponent.get() == nullptr; // Focused if no child is focused.
-	}
+bool VisualComponent::ownsFocus() {
+	return this->focused;
+}
+
+// Override these in components to handle changes of focus without having to remember the previous focus.
+void VisualComponent::gotFocus() {}
+void VisualComponent::lostFocus() {}
+
+bool VisualComponent::managesChildren() {
+	return false;
 }
 
 MediaResult dsr::component_generateImage(VisualTheme theme, MediaMethod &method, int width, int height, int red, int green, int blue, int pressed, int focused, int hover) {

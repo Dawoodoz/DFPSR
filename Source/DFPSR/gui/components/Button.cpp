@@ -108,7 +108,7 @@ bool Button::pointIsInside(const IVector2D& pixelPosition) {
 	// Get the point relative to the component instead of its direct container
 	IVector2D localPoint = pixelPosition - this->location.upperLeft();
 	// Sample opacity at the location
-	return dsr::image_readPixel_border(this->imageUp, localPoint.x, localPoint.y).alpha > 127;
+	return image_readPixel_border(this->imageUp, localPoint.x, localPoint.y).alpha > 127;
 }
 
 void Button::changedTheme(VisualTheme newTheme) {

@@ -217,6 +217,15 @@ UR"QUOTE(
 	[Toolbar]
 		border = 1
 		method = "HardRectangle"
+	[MenuTop]
+		border = 1
+		method = "HardRectangle"
+	[MenuSub]
+		border = 1
+		method = "HardRectangle"
+	[MenuList]
+		border = 1
+		method = "HardRectangle"
 )QUOTE";
 
 template <typename V>
