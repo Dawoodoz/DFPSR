@@ -1,6 +1,6 @@
 ﻿// zlib open source license
 //
-// Copyright (c) 2018 to 2019 David Forsgren Piuva
+// Copyright (c) 2018 to 2023 David Forsgren Piuva
 // 
 // This software is provided 'as-is', without any express or implied
 // warranty. In no event will the authors be held liable for any damages
@@ -40,10 +40,12 @@ MediaResult component_generateImage(VisualTheme theme, MediaMethod &method, int 
 class VisualComponent : public Persistent {
 PERSISTENT_DECLARATION(VisualComponent)
 public:
+	// TODO: Make as much as possible private using methods for access, so that things won't break when changes are made.
 	// Parent component
 	VisualComponent *parent = nullptr;
 	IRect givenSpace; // Remembering the local region that was reserved inside of the parent component.
 	bool regionAccessed = false; // If someone requested access to the region, remember to update layout in case of new settings.
+	bool showingOverlay = false; // Should be true when the component is currently projecting an overlay, which requires it to be own focus (be along the focusComponent pointer path from root).
 	// Child components
 	List<std::shared_ptr<VisualComponent>> children;
 	// Remember the component used for a drag event.
@@ -51,14 +53,18 @@ public:
 	int holdCount = 0;
 	// Remember the pressed component for sending mouse move events outside of its region.
 	std::shared_ptr<VisualComponent> dragComponent;
-	// Remember the focused component for keyboard input.
+	// Remember the focused component for keyboard input and showing overlays.
+	// Focus is a trail of pointers from the root to the component that was clicked on.
+	// When makeFocused is called, the old trail will be removed until reaching a common parent with the new focus trail.
+	// When a component's focus changes, changedFocus will be called on it with the new value. 
 	std::shared_ptr<VisualComponent> focusComponent;
-	// The next overlay component, which may refer to one of its children as the next overlay to draw itself on top of other components.
-	//   The linked list goes from the root component in the window, across each component with an active overlay.
-	//   Examples:
-	//     Root -> ToolTipText
-	//     Root -> TopMenu -> SubMenu -> SubMenu
-	std::shared_ptr<VisualComponent> overlayComponent;
+private:
+	// Temporary boolean flags
+	//   Should be private, so that it can later be implemented as bit flags without breaking compatibility.
+	// Keeping track on if the component is focused
+	bool previouslyFocused = false;
+	bool focused = false;
+public:
 	// Saved properties
 	FlexRegion region;
 	PersistentString name;
@@ -135,7 +141,12 @@ public:
 	DECLARE_CALLBACK(keyTypeEvent, keyboardCallback);
 	DECLARE_CALLBACK(selectEvent, indexCallback);
 public:
-	std::shared_ptr<VisualComponent> getDirectChild(const IVector2D& pixelPosition, bool includeInvisible);
+	// Returning a shader pointer to the topmost direct visible child that contains pixelPosition.
+	//   The pixelPosition is relative to the called component's upper left corner.
+	std::shared_ptr<VisualComponent> getDirectChild(const IVector2D& pixelPosition);
+	// Returning a shared pointer to itself.
+	//   Currently not working for the root component because of limitations in C++.
+	std::shared_ptr<VisualComponent> getShared();
 public:
 	// Draw the component
 	//   The component is responsible for drawing the component at this->location + offset.
@@ -151,8 +162,10 @@ public:
 	//   The method is responsible for clipping without a warning when bound is outside of targetImage.
 	virtual void drawSelf(ImageRgbaU8& targetImage, const IRect &relativeLocation);
 	// Draw the component's overlays on top of other components in the window.
-	//   Overlays are drawn using absolute positions in the window, without caring about any parent location.
-	virtual void drawOverlay(ImageRgbaU8& targetImage);
+	//   Overlays are drawn using absolute positions on the canvas.
+	//   The absoluteOffset is the location of the component's upper left corner relative to the whole window's canvas.
+	// Use for anything that needs to be drawn on top of other components without being clipped by any parent components.
+	virtual void drawOverlay(ImageRgbaU8& targetImage, const IVector2D &absoluteOffset);
 	// Draw the component while skipping pixels outside of clipRegion
 	//   Multiple calls with non-overlapping clip regions should be equivalent to one call with the union of all clip regions.
 	//     This means that the draw methods should handle border clipping so that no extra borderlines or rounded edges appear from nowhere.
@@ -202,33 +215,35 @@ public:
 	// Parent components that place child components automatically can ask them what their minimum useful dimensions are in pixels, so that their text will be visible.
 	// The component can still be resized to less than these dimensions, because the outer components can't give more space than what is given by the window.
 	virtual IVector2D getDesiredDimensions();
+	// Return true to turn off automatic drawing of and interaction with child components.
+	virtual bool managesChildren();
 	// Called after the component has been created, moved or resized.
 	virtual void updateLocationEvent(const IRect& oldLocation, const IRect& newLocation);
+	// Get the component's absolute position relative to the window's client region.
+	//IVector2D getAbsolutePosition();
 	// Calling updateLocationEvent without changing the location, to be used when a child component changed its desired dimensions from altering attributes.
 	bool childChanged = false;
 	// Called before rendering or getting mouse input in case that a child component changed desired dimensions.
 	void updateChildLocations();
-	// Returns true iff the pixel with its upper left corner at pixelPosition is inside the component.
-	// A rectangular bound check with location is used by default.
-	// The caller is responsible for checking if the component is visible when needed.
+	// Returns true iff the pixel relative to the parent container's upper left corner is inside of the component.
+	//   By default, it returns true when pixelPosition is within the component's location, because most component are solid.
+	// The caller is responsible for checking if the component is visible (this->visible.value), so this method would return true if the pixelPosition is inside of an invisible component.
 	virtual bool pointIsInside(const IVector2D& pixelPosition);
-	// Get a pointer to the topmost child
-	// Invisible components are ignored by default, but includeInvisible can be enabled to change that.
-	// Returns an empty reference if the pixel position didn't hit anything in
-	// Since the root component might not be heap allocated, it cannot return itself by reference.
-	//   Use pointIsInside if your root component doesn't cover the whole window.
-	std::shared_ptr<VisualComponent> getTopChild(const IVector2D& pixelPosition, bool includeInvisible = false);
+	// Returns true iff the pixelPosition relative to the parent container's upper left corner is inside of the component's overlay.
+	// The caller is responsible for checking if the component is showing an overlay (this->showOverlay).
+	virtual bool pointIsInsideOfOverlay(const IVector2D& pixelPosition);
 	// Send a mouse down event to the component
-	//   pixelPosition is relative to the parent container.
+	//   pixelPosition is relative to the component's own upper left corner. TODO: Does this make sense, or should it use parent coordinates?
 	//   The component is reponsible for bound checking, which can be used to either block the signal or pass to components below.
-	void sendMouseEvent(const MouseEvent& event);
+	// If recursive is true, notifications will be supressed to prevent duplicate events when called from within receiveMouseEvent.
+	void sendMouseEvent(const MouseEvent& event, bool recursive = false);
 	void sendKeyboardEvent(const KeyboardEvent& event);
 	// Defines what the component does when it has received an event that didn't hit any sub components on the way.
-	//   pixelPosition is relative to the parent container.
-	//   This is not a callback event.
+	//   pixelPosition is relative to the parent's (this->parent) upper left corner.
+	//   This is not a callback event, but a way for the component to handle events.
 	virtual void receiveMouseEvent(const MouseEvent& event);
 	virtual void receiveKeyboardEvent(const KeyboardEvent& event);
-	// Notifies when the theme has been changed, so that temporary data depending on the theme can be replaced
+	// Notifies when the theme has been changed, so that temporary data depending on the theme can be replaced.
 	virtual void changedTheme(VisualTheme newTheme);
 	// Override to be notified about individual attribute changes
 	virtual void changedAttribute(const ReadableString &name) {};
@@ -236,13 +251,26 @@ public:
 	virtual void changedLocation(const IRect &oldLocation, const IRect &newLocation) {};
 	// Custom call handler to manipulate components across a generic API
 	virtual String call(const ReadableString &methodName, const ReadableString &arguments);
-	// Returns true iff the component is focused.
-	//   Used for textboxes to know if they should be drawn as active.
-	//   The root component is considered focused if none of its children are focused.
+	// TODO: Rename to something better.
+	// Returns true iff the component is at the end of the focus trail, not referring to any of its children for focus.
 	bool isFocused();
 	// Returns true iff itself, a direct child or an indirect child has focus.
 	//   Used for menus to keep the whole path of sub-menus alive all the way down to the focused component.
-	bool containsFocused();
+	bool ownsFocus();
+	// Remove focus from all of the component's children and call lostFocus() on them.
+	void defocusChildren();
+	// Give focus to a trail from root to the component and call gotFocus() on them.
+	void makeFocused();
+	// Looking for recent state changes and sending notifications.
+	//   Deferring update notifications using this makes sure that events that trigger updates get to finish before the next one starts.
+	//   This reduces the risk of dead-locks, race-conditions, pointer errors...
+	void sendNotifications();
+	// Called after the component's focus went from false to true.
+	//   Currently not safe to make arbitrary event callbacks that might detach components, due to raw pointer traversal.
+	virtual void gotFocus();
+	// Called after the component's focus went from true to false.
+	//   Currently not safe to make arbitrary event callbacks that might detach components, due to raw pointer traversal.
+	virtual void lostFocus();
 };
 
 }

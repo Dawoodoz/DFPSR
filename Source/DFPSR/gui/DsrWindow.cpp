@@ -31,6 +31,7 @@
 #include "components/Label.h"
 #include "components/Picture.h"
 #include "components/Toolbar.h"
+#include "components/Menu.h"
 // <<<< Include new components here
 
 #include "../math/scalar.h"
@@ -51,6 +52,7 @@ void dsr::gui_initialize() {
 		REGISTER_PERSISTENT_CLASS(Label)
 		REGISTER_PERSISTENT_CLASS(Picture)
 		REGISTER_PERSISTENT_CLASS(Toolbar)
+		REGISTER_PERSISTENT_CLASS(Menu)
 		// <<<< Register new components here
 
 		initialized = true;
@@ -147,8 +149,12 @@ void DsrWindow::sendMouseEvent(const MouseEvent& event) {
 	MouseEvent scaledEvent = event / this->pixelScale;
 	// Send the global event
 	this->callback_windowMouseEvent(scaledEvent);
-	// Send to the main panel and its components
-	this->mainPanel->sendMouseEvent(scaledEvent);
+	if (this->mainPanel->getVisible() && this->mainPanel->pointIsInside(scaledEvent.position)) {
+		// In case of the root panel not covering the entire window, adjust input coordinates to the panel's local system.
+		scaledEvent.position -= this->mainPanel->location.upperLeft();
+		// Send to the main panel and its components
+		this->mainPanel->sendMouseEvent(scaledEvent);
+	}
 }
 
 void DsrWindow::sendKeyboardEvent(const KeyboardEvent& event) {

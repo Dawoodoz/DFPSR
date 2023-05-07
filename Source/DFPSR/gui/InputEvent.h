@@ -37,7 +37,7 @@ public:
 
 enum class KeyboardEventType { KeyDown, KeyUp, KeyType };
 
-// The DsrKey enumeration is convertible to integers allow certain well defined math operations
+// The DsrKey enumeration is convertible to integers and allow certain well defined math operations
 // Safe assumptions:
 //   * DsrKey_0 to DsrKey_9 are guaranteed to be in an increasing serial order (so that "key - DsrKey_0" is the key's number)
 //   * DsrKey_F1 to DsrKey_F12 are guaranteed to be in an increasing serial order (so that "key - (DsrKey_F1 - 1)" is the key's number)
