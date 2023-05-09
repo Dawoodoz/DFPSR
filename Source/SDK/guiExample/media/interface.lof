@@ -1,9 +1,105 @@
 ﻿Begin : Panel
 	Name = "mainPanel"
 	Solid = 0
-	Begin : Panel
+	Begin : Toolbar
 		Name = "menuBar"
-		Bottom = +50
+		Bottom = 50
+		Solid = 1
+		Begin : Menu
+			Name = "menuFile"
+			Text = "File"
+			Begin : Menu
+				Name = "menuNew"
+				Text = "New"
+			End
+			Begin : Menu
+				Name = "menuLoad"
+				Text = "Load"
+			End
+			Begin : Menu
+				Name = "menuSave"
+				Text = "Save"
+			End
+			Begin : Menu
+				Name = "menuExit"
+				Text = "Exit"
+			End
+		End
+		Begin : Menu
+			Name = "menuEdit"
+			Text = "Edit"
+			Begin : Menu
+				Name = "menuUndo"
+				Text = "Undo"
+			End
+			Begin : Menu
+				Name = "menuRedo"
+				Text = "Redo"
+				Begin : Menu
+					Name = "menuRedoAction"
+					Index = 0
+					Text = "Redo some thing you did recently"
+				End
+				Begin : Menu
+					Name = "menuRedoAction"
+					Index = 1
+					Text = "Redo some thing you undid and redid"
+				End
+			End
+			Begin : Menu
+				Name = "menuCut"
+				Text = "Cut"
+			End
+			Begin : Menu
+				Name = "menuCopy"
+				Text = "Copy"
+			End
+			Begin : Menu
+				Name = "menuPaste"
+				Text = "Paste"
+			End
+		End
+		Begin : Menu
+			Name = "menuHelp"
+			Text = "Help"
+			Begin : Menu
+				Name = "menuDocumentation"
+				Text = "Documentation"
+				Begin : Menu
+					Name = "menuChapter"
+					Index = 0
+					Text = "Getting started"
+				End
+				Begin : Menu
+					Name = "menuChapter"
+					Index = 1
+					Text = "Just filling out this dummy sub-menu"
+				End
+				Begin : Menu
+					Name = "menuChapter"
+					Index = 2
+					Text = "More nonsense options that don't do anything"
+				End
+				Begin : Menu
+					Name = "menuChapter"
+					Index = 3
+					Text = "Just to show how menus are created"
+				End
+			End
+			Begin : Menu
+				Name = "menuLegal"
+				Text = "Legal"
+			End
+			Begin : Menu
+				Name = "menuAbout"
+				Text = "About"
+			End
+		End
+	End
+	Begin : Panel
+		Name = "actionBar"
+		Top = 50
+		Bottom = 100
 		Solid = 1
 		Color = 180,180,180
 		Begin : TextBox
@@ -29,7 +125,7 @@
 	End
 	Begin : Panel
 		Name = "workspace"
-		Top = +50
+		Top = 100
 		Solid = 1
 		Color = 100,100,100
 		Begin : ListBox
