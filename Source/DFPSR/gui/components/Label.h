@@ -33,7 +33,7 @@ class Label : public VisualComponent {
 PERSISTENT_DECLARATION(Label)
 public:
 	// Attributes
-	PersistentColor color;
+	PersistentColor color = PersistentColor(0, 0, 0);
 	// TODO: Why is "PersistentInteger opacity(255);" not recognizing the constructor?
 	PersistentInteger opacity = PersistentInteger(255); // 0 is fully invisible, 255 is fully opaque
 	PersistentString text;

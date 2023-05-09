@@ -69,6 +69,7 @@ static OrderedImageRgbaU8 generateHeadImage(Menu &menu, MediaMethod imageGenerat
 		if (pressed) {
 			top += 1;
 		}
+		// TODO: Mark sub-menus as expandable using a right facing triangle.
 		font_printLine(result, font, text, IVector2D(left, top), ColorRgbaI32(foreColor, 255));
 	}
 	return result;

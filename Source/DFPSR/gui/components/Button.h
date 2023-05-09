@@ -33,8 +33,8 @@ class Button : public VisualComponent {
 PERSISTENT_DECLARATION(Button)
 public:
 	// Attributes
-	PersistentColor backColor;
-	PersistentColor foreColor;
+	PersistentColor backColor = PersistentColor(130, 130, 130);
+	PersistentColor foreColor = PersistentColor(0, 0, 0);
 	PersistentString text;
 	PersistentInteger padding = PersistentInteger(5); // How many pixels of padding are applied on each side of the text when calculating desired dimensions for placing in toolbars.
 	void declareAttributes(StructureDefinition &target) const override;
