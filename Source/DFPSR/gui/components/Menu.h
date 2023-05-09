@@ -33,8 +33,8 @@ class Menu : public VisualComponent {
 PERSISTENT_DECLARATION(Menu)
 public:
 	// Attributes
-	PersistentColor backColor;
-	PersistentColor foreColor;
+	PersistentColor backColor = PersistentColor(130, 130, 130);
+	PersistentColor foreColor = PersistentColor(0, 0, 0);
 	PersistentString text;
 	PersistentInteger padding = PersistentInteger(4); // Empty space around child components and its own text.
 	PersistentInteger spacing = PersistentInteger(2); // Empty space between child components.

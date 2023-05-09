@@ -34,7 +34,7 @@ public:
 	// Attributes
 	PersistentBoolean solid; // If true, the panel itself will be drawn.
 	PersistentBoolean plain; // If true, a solid color will be drawn instead of a buffered image to save time and memory.
-	PersistentColor color; // The color being used when drawn is set to true.
+	PersistentColor color = PersistentColor(130, 130, 130); // The color being used when solid is set to true.
 	void declareAttributes(StructureDefinition &target) const override;
 	Persistent* findAttribute(const ReadableString &name) override;
 private:

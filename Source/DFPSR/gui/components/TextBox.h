@@ -55,8 +55,8 @@ public:
 	void updateScrollRange();
 	void limitScrolling(bool keepBeamVisible);
 	// Attributes
-	PersistentColor foreColor;
-	PersistentColor backColor;
+	PersistentColor foreColor = PersistentColor(0, 0, 0);
+	PersistentColor backColor = PersistentColor(200, 200, 200);
 	PersistentString text;
 	PersistentBoolean multiLine;
 	int64_t borderX = 6; // Empty pixels left and right of text.
