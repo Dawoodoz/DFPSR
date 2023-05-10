@@ -27,6 +27,15 @@ using namespace dsr;
 
 PERSISTENT_DEFINITION(Menu)
 
+static AlignedImageU8 arrowImage = image_fromAscii(
+	"< .xX>"
+	"<.x.  >"
+	"< XX. >"
+	"< xXX.>"
+	"< XX. >"
+	"<.x.  >"
+);
+
 void Menu::declareAttributes(StructureDefinition &target) const {
 	VisualComponent::declareAttributes(target);
 	target.declareAttribute(U"BackColor");
@@ -59,18 +68,32 @@ bool Menu::isContainer() const {
 	return true;
 }
 
+bool Menu::hasArrow() {
+	return this->subMenu && this->getChildCount() > 0;
+}
+
 static OrderedImageRgbaU8 generateHeadImage(Menu &menu, MediaMethod imageGenerator, int pressed, int width, int height, ColorRgbI32 backColor, ColorRgbI32 foreColor, const ReadableString &text, RasterFont font) {
 	// Create a scaled image
 	OrderedImageRgbaU8 result;
  	component_generateImage(menu.getTheme(), imageGenerator, width, height, backColor.red, backColor.green, backColor.blue, pressed)(result);
 	if (string_length(text) > 0) {
-		int left = (image_getWidth(result) - font_getLineWidth(font, text)) / 2;
-		int top = (image_getHeight(result) - font_getSize(font)) / 2;
+		int backWidth = image_getWidth(result);
+		int backHeight = image_getHeight(result);
+		int left = menu.padding.value;
+		int top = (backHeight - font_getSize(font)) / 2;
 		if (pressed) {
 			top += 1;
 		}
-		// TODO: Mark sub-menus as expandable using a right facing triangle.
+		// Print the text
 		font_printLine(result, font, text, IVector2D(left, top), ColorRgbaI32(foreColor, 255));
+		// Draw the arrow
+		if (menu.hasArrow()) {
+			int arrowWidth = image_getWidth(arrowImage);
+			int arrowHeight = image_getHeight(arrowImage);
+			int arrowLeft = backWidth - arrowWidth - 4;
+			int arrowTop = (backHeight - arrowHeight) / 2;
+			draw_silhouette(result, arrowImage, ColorRgbaI32(foreColor, 255), arrowLeft, arrowTop);
+		}
 	}
 	return result;
 }
@@ -183,11 +206,13 @@ void Menu::updateLocationEvent(const IRect& oldLocation, const IRect& newLocatio
 	} else {
 		top += newLocation.height() - overlap;
 	}
-	int maxWidth = newLocation.width() - (this->padding.value * 2);
+	int maxWidth = 80; // Minimum usable with.
+	// Expand list with to fit child components.
 	for (int i = 0; i < this->getChildCount(); i++) {
 		int width = this->children[i]->getDesiredDimensions().x;
 		if (maxWidth < width) maxWidth = width;
 	}
+	// Stretch out the child components to use the whole width.
 	for (int i = 0; i < this->getChildCount(); i++) {
 		int height = this->children[i]->getDesiredDimensions().y;
 		this->children[i]->applyLayout(IRect(left, top, maxWidth, height));
@@ -262,6 +287,11 @@ void Menu::receiveMouseEvent(const MouseEvent& event) {
 
 IVector2D Menu::getDesiredDimensions() {
 	this->completeAssets();
-	int sizeAdder = this->padding.value * 2;
-	return IVector2D(font_getLineWidth(this->font, this->text.value) + sizeAdder, font_getSize(this->font) + sizeAdder);
+	int widthAdder = this->padding.value * 2;
+	int heightAdder = widthAdder;
+	if (this->hasArrow()) {
+		// Make extra space for the expansion arrowhead when containing a list of members.
+		widthAdder += 24;
+	}
+	return IVector2D(font_getLineWidth(this->font, this->text.value) + widthAdder, font_getSize(this->font) + heightAdder);
 }
