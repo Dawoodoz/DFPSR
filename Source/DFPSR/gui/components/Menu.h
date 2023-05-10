@@ -67,6 +67,8 @@ public:
 	IVector2D getDesiredDimensions() override;
 	bool managesChildren() override;
 public:
+	// Helper functions for decorations.
+	bool hasArrow();
 	// Helper functions for overlay projecting components.
 	void showOverlay();
 	void lostFocus() override;
