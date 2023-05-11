@@ -41,15 +41,23 @@ class VisualComponent;
 
 // Bit flags for component states.
 //  The size of ComponentState may change if running out of bits for new flags.
+//  Each state should have a direct state and an indirect state, so that bitwise operations can be used to scan all states at once.
 using ComponentState = uint32_t;
-static const ComponentState componentState_focusTail = 1 << 0;
-static const ComponentState componentState_hoverTail = 1 << 1;
-static const ComponentState componentState_showingOverlay = 1 << 2;
+static const ComponentState componentState_focusDirect = 1 << 0; // Component being directly focused.
+static const ComponentState componentState_focusIndirect = 1 << 1; // Contains the component being focused.
+static const ComponentState componentState_hoverDirect = 1 << 2; // Component being hovered.
+static const ComponentState componentState_hoverIndirect = 1 << 3; // Contains the component being hovered.
+static const ComponentState componentState_showingOverlayDirect = 1 << 4; // The component will have drawOverlay called, if also visible.
+static const ComponentState componentState_showingOverlayIndirect = 1 << 5; // The component contains a component drawing overlays.
+static const ComponentState componentState_focus = componentState_focusDirect | componentState_focusIndirect; // Direct or indirect focus.
+static const ComponentState componentState_hover = componentState_hoverDirect | componentState_hoverIndirect; // Direct or indirect hover.
+static const ComponentState componentState_showingOverlay = componentState_showingOverlayDirect | componentState_showingOverlayIndirect; // Direct or indirect overlay.
+static const ComponentState componentState_direct   = 0b01010101010101010101010101010101;
+static const ComponentState componentState_indirect = 0b10101010101010101010101010101010;
 
 class VisualComponent : public Persistent {
 PERSISTENT_DECLARATION(VisualComponent)
 public: // Relations
-	// TODO: Make as much as possible private using methods for access, so that things won't break when changes are made.
 	// Parent component
 	VisualComponent *parent = nullptr;
 	IRect givenSpace; // Remembering the local region that was reserved inside of the parent component.
@@ -62,45 +70,46 @@ public: // Relations
 	// Remember the pressed component for sending mouse move events outside of its region.
 	std::shared_ptr<VisualComponent> dragComponent;
 private: // States
-	// Use methods to set the current state, then have it copied to previousState after calling stateChanged in sendNotifications.
+	// Use methods to set the current state, then have it copied to previousState after calling updateStateEvent in sendNotifications.
 	ComponentState currentState, previousState;
-public: // State updates
-	// Looking for recent state changes and sending notifications through stateChanged for each components that had a state change.
+private: // State updates
+	// TODO: Can a faster update be made using a limited traversal from changed component to root, while reusing the same code for the update?
+	// Called after changing direct states.
+	void updateIndirectStates();
+	// Looking for recent state changes and sending notifications through updateStateEvent for each components that had a state change.
 	//   Deferring update notifications using this makes sure that events that trigger updates get to finish before the next one starts.
 	//   This reduces the risk of dead-locks, race-conditions, pointer errors...
 	void sendNotifications();
-	// Called after a component's state changed, when it is deemed safe to do so.
-	//   All state changes will be sent at the same time, because state changes are often used to trigger other changes.
-	//   Changes to the state made within the notification will not trigger new notifications, because the old state is saved after the call is finished.
-	virtual void stateChanged(ComponentState oldState, ComponentState newState);
-public: // Focus
-	// Remember the focused component for keyboard input and showing overlays.
-	// Focus is a trail of pointers from the root to the component that was clicked on.
-	// When makeFocused is called, the old trail will be removed until reaching a common parent with the new focus trail.
-	// When a component's focus changes, changedFocus will be called on it with the new value. 
-	std::shared_ptr<VisualComponent> focusComponent;
-	// All components from root to the clicked component will have the focus flag set, isFocused only care about the focused component holding no more focused child components.
-	inline bool isFocused() { return (this->currentState & componentState_focusTail) && (this->focusComponent.get() == nullptr); }
-	// ownsFOcus is for nested focus, such as automatically closing menu overlays that no longer have focus within them.
-	inline bool ownsFocus() { return (this->currentState & componentState_focusTail) != 0; }
+	// Remove the zeroes in addMask from ones in the component and all child components.
+	void applyStateAndMask(ComponentState keepMask);
+	// Clears directStates from all other components sharing the root, iff unique is true.
+	// Adds directStates to the component.
+	// Updates indirect states based on direct states.
+	void addStateBits(ComponentState directStates, bool unique);
+	// Removes directStates to the component.
+	// Updates indirect states based on direct states.
+	void removeStateBits(ComponentState directStates);
+public: // Focus is reset when a new component is focused.
+	// It was clicked directly last time.
+	inline bool isFocused() { return (this->currentState & componentState_focusDirect) != 0; }
+	// One of its recursive children was clicked last time.
+	inline bool ownsFocus() { return (this->currentState & (componentState_focusDirect | componentState_focusIndirect)) != 0; }
 	// Remove focus from all of the component's children.
 	void defocusChildren();
 	// Give focus to a trail from root to the component.
 	void makeFocused();
+public: // Hover is reset before assigned again using a bit mask.
+	// The cursor hovered within this component without being occluded.
+	bool isHovered() { return (this->currentState & componentState_hoverDirect) != 0; }
+	// The cursor hovered within its region, but one of its recursive children got the direct hover state.
+	bool ownsHover() { return (this->currentState & (componentState_hoverDirect | componentState_hoverIndirect)) != 0; }
+	// Make the component directly hovered and its parents indirectly hovered.
+	void hover();
 public: // Showing overlay
-	inline bool showingOverlay() { return (this->currentState & componentState_showingOverlay) != 0; }
-	inline void showOverlay() { this->currentState |= componentState_showingOverlay; }
-	inline void hideOverlay() { this->currentState &= ~componentState_showingOverlay; }
-public: // Hover
-	// TODO: Implement hover in the same way as grabbing and focus, by always checking which components are hovered.
-	//       One component will be the visibly hovered component and others will keep track of when the mouse enters and exits.
-	//       Come up with a good naming convention for this.
-	// TODO: How can the state be noted if only the tail has a bit.
-	//       Should the directly hovered and focused components have their own head bits?
-	//       One can have combined bit masks for checking if something is a head or tail, for focus and hover flags.
-	// TODO: Make a permanent debug mode where selected states in a mask are drawn on top of components.
-	// bool isHovered() { return (this->currentState & componentState_hoverTail) && (this->hoverComponent.get() == nullptr); }
-	// bool ownsHover() { return (this->currentState & componentState_hoverTail) != 0; }
+	inline bool showingOverlay() { return (this->currentState & componentState_showingOverlayDirect) != 0; }
+	inline bool ownsOverlay() { return (this->currentState & componentState_showingOverlay) != 0; }
+	void showOverlay();
+	void hideOverlay();
 public:
 	// Saved properties
 	FlexRegion region;
@@ -135,8 +144,14 @@ public:
 	String getName() const;
 	void setIndex(int index);
 	int getIndex() const;
-public:
-	// Callbacks
+public: // Internal events that component classes override to know when something has changed.
+	// Called after the component has been created, moved or resized.
+	virtual void updateLocationEvent(const IRect& oldLocation, const IRect& newLocation);
+	// Called after a component's state changed, when it is relatively safe to do so.
+	//   All state changes will be sent at the same time, because state changes are often used to trigger other changes.
+	//   Changes to the state made within the notification will not trigger new notifications, because the old state is saved after the call is finished.
+	virtual void updateStateEvent(ComponentState oldState, ComponentState newState);
+public: // Callbacks that the application use by assigning lambdas to specific components in the interface.
 	DECLARE_CALLBACK(pressedEvent, emptyCallback);
 	DECLARE_CALLBACK(destroyEvent, emptyCallback);
 	DECLARE_CALLBACK(mouseDownEvent, mouseCallback);
@@ -185,7 +200,6 @@ public:
 	//     draw(i, o) <=> drawClipped(i, o, IRect(0, 0, i.width(), i.height()))
 	void drawClipped(ImageRgbaU8 targetImage, const IVector2D& offset, const IRect& clipRegion);
 
-// TODO: Distinguish from the generic version
 	// Add a child component
 	//   Preconditions:
 	//     The parent's component type is a container.
@@ -197,7 +211,6 @@ public:
 	int getChildCount() const override;
 	std::shared_ptr<Persistent> getChild(int index) const override;
 
-// TODO: Reuse in Persistent
 	// Returns true iff child is a member of the component
 	//   Searches recursively
 	bool hasChild(VisualComponent *child) const;
@@ -225,8 +238,6 @@ public:
 	virtual IVector2D getDesiredDimensions();
 	// Return true to turn off automatic drawing of and interaction with child components.
 	virtual bool managesChildren();
-	// Called after the component has been created, moved or resized.
-	virtual void updateLocationEvent(const IRect& oldLocation, const IRect& newLocation);
 	// Get the component's absolute position relative to the window's client region.
 	//IVector2D getAbsolutePosition();
 	// Calling updateLocationEvent without changing the location, to be used when a child component changed its desired dimensions from altering attributes.

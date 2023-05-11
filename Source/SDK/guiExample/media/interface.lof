@@ -69,6 +69,26 @@
 					Name = "menuChapter"
 					Index = 0
 					Text = "Getting started"
+					Begin : Menu
+						Name = "menuChapterStarted"
+						Index = 0
+						Text = "Why you should want to get started"
+					End
+					Begin : Menu
+						Name = "menuChapterStarted"
+						Index = 1
+						Text = "Why do you want to get started"
+					End
+					Begin : Menu
+						Name = "menuChapterStarted"
+						Index = 2
+						Text = "You do not want to get started"
+						Begin : Menu
+							Name = "menuChapterStarted"
+							Index = 3
+							Text = "It's just a mockup application"
+						End
+					End
 				End
 				Begin : Menu
 					Name = "menuChapter"
