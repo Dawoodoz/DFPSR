@@ -70,8 +70,8 @@ public:
 	// Helper functions for decorations.
 	bool hasArrow();
 	// Helper functions for overlay projecting components.
-	void showOverlay();
-	void lostFocus() override;
+	void createOverlay();
+	void stateChanged(ComponentState oldState, ComponentState newState) override;
 	bool pointIsInsideOfOverlay(const IVector2D& pixelPosition) override;
 };
 
