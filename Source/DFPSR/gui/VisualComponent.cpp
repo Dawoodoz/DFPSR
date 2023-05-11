@@ -39,6 +39,40 @@ VisualComponent::~VisualComponent() {
 	}
 }
 
+void VisualComponent::declareAttributes(StructureDefinition &target) const {
+	target.declareAttribute(U"Name");
+	target.declareAttribute(U"Index");
+	target.declareAttribute(U"Visible");
+	target.declareAttribute(U"Left");
+	target.declareAttribute(U"Top");
+	target.declareAttribute(U"Right");
+	target.declareAttribute(U"Bottom");
+}
+
+Persistent* VisualComponent::findAttribute(const ReadableString &name) {
+	if (string_caseInsensitiveMatch(name, U"Name")) {
+		return &(this->name);
+	} else if (string_caseInsensitiveMatch(name, U"Index")) {
+		return &(this->index);
+	} else if (string_caseInsensitiveMatch(name, U"Visible")) {
+		return &(this->visible);
+	} else if (string_caseInsensitiveMatch(name, U"Left")) {
+		this->regionAccessed = true;
+		return &(this->region.left);
+	} else if (string_caseInsensitiveMatch(name, U"Top")) {
+		this->regionAccessed = true;
+		return &(this->region.top);
+	} else if (string_caseInsensitiveMatch(name, U"Right")) {
+		this->regionAccessed = true;
+		return &(this->region.right);
+	} else if (string_caseInsensitiveMatch(name, U"Bottom")) {
+		this->regionAccessed = true;
+		return &(this->region.bottom);
+	} else {
+		return nullptr;
+	}
+}
+
 IVector2D VisualComponent::getDesiredDimensions() {
 	// Unless this virtual method is overridden, toolbars and such will try to give these dimensions to the component.
 	return IVector2D(32, 32);
@@ -126,9 +160,14 @@ void VisualComponent::updateChildLocations() {
 
 // Overlays are only cropped by the entire canvas, so the offset is the upper left corner of component relative to the upper left corner of the canvas.
 static void drawOverlays(ImageRgbaU8& targetImage, VisualComponent &component, const IVector2D& offset) {
+	// Invisible components are not allowed to display overlays, because the component system is
+	//   responsible for visibility settings that specific components are likely to forget about.
 	if (component.getVisible()) {
-		// Draw the component's own overlays at the bottom. 
-		component.drawOverlay(targetImage, offset - component.location.upperLeft());
+		// Check if the component has the overlay shown.
+		if (component.showingOverlay()) {
+			// Draw the component's own overlay below child overlays. 
+			component.drawOverlay(targetImage, offset - component.location.upperLeft());
+		}
 		// Draw overlays in each child component on top.
 		for (int i = 0; i < component.getChildCount(); i++) {
 			drawOverlays(targetImage, *(component.children[i]), offset + component.children[i]->location.upperLeft());
@@ -341,7 +380,7 @@ void VisualComponent::defocusChildren() {
 			return; // Reached the end.
 		} else {
 			parent->focusComponent = std::shared_ptr<VisualComponent>(); // The parent removes the focus pointer from the child.
-			child->focused = false; // Remember that it is not focused, for quick access.
+			child->currentState &= ~componentState_focusTail; // Remember that it is not focused, for quick access.
 			parent = child; // Prepare for the next iteration.
 		}
 	}
@@ -378,20 +417,21 @@ void VisualComponent::makeFocused() {
 					parent->defocusChildren();
 				}
 				parent->focusComponent = current->getShared();
-				current->focused = true;
+				this->currentState |= componentState_focusTail;
 				current = parent;
 			}
 		}
 	}
 }
 
+void VisualComponent::stateChanged(ComponentState oldState, ComponentState newState) {}
+
 void VisualComponent::sendNotifications() {
-	if (this->focused && !this->previouslyFocused) {
-		this->gotFocus();
-	} else if (!this->focused && this->previouslyFocused) {
-		this->lostFocus();
+	// Detect differences for all flags at once using bits in the integers.
+	if (this->currentState != this->previousState) {
+		stateChanged(this->previousState, this->currentState);
+		this->previousState = this->currentState;
 	}
-	this->previouslyFocused = this->focused;
 	for (int i = this->getChildCount() - 1; i >= 0; i--) {
 		this->children[i]->sendNotifications();
 	}
@@ -400,14 +440,19 @@ void VisualComponent::sendNotifications() {
 // Find the topmost overlay by searching backwards with the parent last and returning a pointer to the component.
 // The point is relative to the upper left corner of component.
 static VisualComponent *getTopmostOverlay(VisualComponent *component, const IVector2D &point) {
-	// Go through child components in reverse draw order to stop when reaching the one that is visible.
-	for (int i = component->getChildCount() - 1; i >= 0; i--) {
-		VisualComponent *result = getTopmostOverlay(component->children[i].get(), point - component->children[i]->location.upperLeft());
-		if (result != nullptr) return result;
-	}
-	// Check itself behind child overlays.
-	if (component->showingOverlay && component->pointIsInsideOfOverlay(point + component->location.upperLeft())) {
-		return component;
+	// Only visible component may show its overlay or child components.
+	if (component->getVisible()) {
+		// Go through child components in reverse draw order to stop when reaching the one that is visible.
+		for (int i = component->getChildCount() - 1; i >= 0; i--) {
+			VisualComponent *result = getTopmostOverlay(component->children[i].get(), point - component->children[i]->location.upperLeft());
+			if (result != nullptr) return result;
+		}
+		// Check itself behind child overlays.
+		if (component->showingOverlay() && component->pointIsInsideOfOverlay(point + component->location.upperLeft())) {
+			return component;
+		} else {
+			return nullptr;
+		}
 	} else {
 		return nullptr;
 	}
@@ -540,18 +585,6 @@ String VisualComponent::call(const ReadableString &methodName, const ReadableStr
 	throwError("Unimplemented custom call received");
 	return U"";
 }
-
-bool VisualComponent::isFocused() {
-	return this->focused && this->focusComponent.get() == nullptr;
-}
-
-bool VisualComponent::ownsFocus() {
-	return this->focused;
-}
-
-// Override these in components to handle changes of focus without having to remember the previous focus.
-void VisualComponent::gotFocus() {}
-void VisualComponent::lostFocus() {}
 
 bool VisualComponent::managesChildren() {
 	return false;

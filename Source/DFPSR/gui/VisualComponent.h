@@ -37,15 +37,23 @@ namespace dsr {
 // A reusable method for calling the media machine that allow providing additional variables as style flags.
 MediaResult component_generateImage(VisualTheme theme, MediaMethod &method, int width, int height, int red, int green, int blue, int pressed = 0, int focused = 0, int hover = 0);
 
+class VisualComponent;
+
+// Bit flags for component states.
+//  The size of ComponentState may change if running out of bits for new flags.
+using ComponentState = uint32_t;
+static const ComponentState componentState_focusTail = 1 << 0;
+static const ComponentState componentState_hoverTail = 1 << 1;
+static const ComponentState componentState_showingOverlay = 1 << 2;
+
 class VisualComponent : public Persistent {
 PERSISTENT_DECLARATION(VisualComponent)
-public:
+public: // Relations
 	// TODO: Make as much as possible private using methods for access, so that things won't break when changes are made.
 	// Parent component
 	VisualComponent *parent = nullptr;
 	IRect givenSpace; // Remembering the local region that was reserved inside of the parent component.
 	bool regionAccessed = false; // If someone requested access to the region, remember to update layout in case of new settings.
-	bool showingOverlay = false; // Should be true when the component is currently projecting an overlay, which requires it to be own focus (be along the focusComponent pointer path from root).
 	// Child components
 	List<std::shared_ptr<VisualComponent>> children;
 	// Remember the component used for a drag event.
@@ -53,56 +61,55 @@ public:
 	int holdCount = 0;
 	// Remember the pressed component for sending mouse move events outside of its region.
 	std::shared_ptr<VisualComponent> dragComponent;
+private: // States
+	// Use methods to set the current state, then have it copied to previousState after calling stateChanged in sendNotifications.
+	ComponentState currentState, previousState;
+public: // State updates
+	// Looking for recent state changes and sending notifications through stateChanged for each components that had a state change.
+	//   Deferring update notifications using this makes sure that events that trigger updates get to finish before the next one starts.
+	//   This reduces the risk of dead-locks, race-conditions, pointer errors...
+	void sendNotifications();
+	// Called after a component's state changed, when it is deemed safe to do so.
+	//   All state changes will be sent at the same time, because state changes are often used to trigger other changes.
+	//   Changes to the state made within the notification will not trigger new notifications, because the old state is saved after the call is finished.
+	virtual void stateChanged(ComponentState oldState, ComponentState newState);
+public: // Focus
 	// Remember the focused component for keyboard input and showing overlays.
 	// Focus is a trail of pointers from the root to the component that was clicked on.
 	// When makeFocused is called, the old trail will be removed until reaching a common parent with the new focus trail.
 	// When a component's focus changes, changedFocus will be called on it with the new value. 
 	std::shared_ptr<VisualComponent> focusComponent;
-private:
-	// Temporary boolean flags
-	//   Should be private, so that it can later be implemented as bit flags without breaking compatibility.
-	// Keeping track on if the component is focused
-	bool previouslyFocused = false;
-	bool focused = false;
+	// All components from root to the clicked component will have the focus flag set, isFocused only care about the focused component holding no more focused child components.
+	inline bool isFocused() { return (this->currentState & componentState_focusTail) && (this->focusComponent.get() == nullptr); }
+	// ownsFOcus is for nested focus, such as automatically closing menu overlays that no longer have focus within them.
+	inline bool ownsFocus() { return (this->currentState & componentState_focusTail) != 0; }
+	// Remove focus from all of the component's children.
+	void defocusChildren();
+	// Give focus to a trail from root to the component.
+	void makeFocused();
+public: // Showing overlay
+	inline bool showingOverlay() { return (this->currentState & componentState_showingOverlay) != 0; }
+	inline void showOverlay() { this->currentState |= componentState_showingOverlay; }
+	inline void hideOverlay() { this->currentState &= ~componentState_showingOverlay; }
+public: // Hover
+	// TODO: Implement hover in the same way as grabbing and focus, by always checking which components are hovered.
+	//       One component will be the visibly hovered component and others will keep track of when the mouse enters and exits.
+	//       Come up with a good naming convention for this.
+	// TODO: How can the state be noted if only the tail has a bit.
+	//       Should the directly hovered and focused components have their own head bits?
+	//       One can have combined bit masks for checking if something is a head or tail, for focus and hover flags.
+	// TODO: Make a permanent debug mode where selected states in a mask are drawn on top of components.
+	// bool isHovered() { return (this->currentState & componentState_hoverTail) && (this->hoverComponent.get() == nullptr); }
+	// bool ownsHover() { return (this->currentState & componentState_hoverTail) != 0; }
 public:
 	// Saved properties
 	FlexRegion region;
 	PersistentString name;
 	PersistentInteger index;
 	PersistentBoolean visible = PersistentBoolean(true);
-	void declareAttributes(StructureDefinition &target) const override {
-		target.declareAttribute(U"Name");
-		target.declareAttribute(U"Index");
-		target.declareAttribute(U"Visible");
-		target.declareAttribute(U"Left");
-		target.declareAttribute(U"Top");
-		target.declareAttribute(U"Right");
-		target.declareAttribute(U"Bottom");
-	}
+	void declareAttributes(StructureDefinition &target) const override;
 public:
-	Persistent* findAttribute(const ReadableString &name) override {
-		if (string_caseInsensitiveMatch(name, U"Name")) {
-			return &(this->name);
-		} else if (string_caseInsensitiveMatch(name, U"Index")) {
-			return &(this->index);
-		} else if (string_caseInsensitiveMatch(name, U"Visible")) {
-			return &(this->visible);
-		} else if (string_caseInsensitiveMatch(name, U"Left")) {
-			this->regionAccessed = true;
-			return &(this->region.left);
-		} else if (string_caseInsensitiveMatch(name, U"Top")) {
-			this->regionAccessed = true;
-			return &(this->region.top);
-		} else if (string_caseInsensitiveMatch(name, U"Right")) {
-			this->regionAccessed = true;
-			return &(this->region.right);
-		} else if (string_caseInsensitiveMatch(name, U"Bottom")) {
-			this->regionAccessed = true;
-			return &(this->region.bottom);
-		} else {
-			return nullptr;
-		}
-	}
+	Persistent* findAttribute(const ReadableString &name) override;
 public:
 	// Generated automatically from region in applyLayout
 	IRect location;
@@ -212,6 +219,7 @@ public:
 	virtual void applyLayout(const IRect& givenSpace);
 	// Update layout when the component moved but the parent has the same dimensions
 	void updateLayout();
+	// TODO: Remake desiredDimensions into a private variable, so that one can update it when attributes are changed and notify parents that they need to change size and redraw images.
 	// Parent components that place child components automatically can ask them what their minimum useful dimensions are in pixels, so that their text will be visible.
 	// The component can still be resized to less than these dimensions, because the outer components can't give more space than what is given by the window.
 	virtual IVector2D getDesiredDimensions();
@@ -251,26 +259,6 @@ public:
 	virtual void changedLocation(const IRect &oldLocation, const IRect &newLocation) {};
 	// Custom call handler to manipulate components across a generic API
 	virtual String call(const ReadableString &methodName, const ReadableString &arguments);
-	// TODO: Rename to something better.
-	// Returns true iff the component is at the end of the focus trail, not referring to any of its children for focus.
-	bool isFocused();
-	// Returns true iff itself, a direct child or an indirect child has focus.
-	//   Used for menus to keep the whole path of sub-menus alive all the way down to the focused component.
-	bool ownsFocus();
-	// Remove focus from all of the component's children and call lostFocus() on them.
-	void defocusChildren();
-	// Give focus to a trail from root to the component and call gotFocus() on them.
-	void makeFocused();
-	// Looking for recent state changes and sending notifications.
-	//   Deferring update notifications using this makes sure that events that trigger updates get to finish before the next one starts.
-	//   This reduces the risk of dead-locks, race-conditions, pointer errors...
-	void sendNotifications();
-	// Called after the component's focus went from false to true.
-	//   Currently not safe to make arbitrary event callbacks that might detach components, due to raw pointer traversal.
-	virtual void gotFocus();
-	// Called after the component's focus went from true to false.
-	//   Currently not safe to make arbitrary event callbacks that might detach components, due to raw pointer traversal.
-	virtual void lostFocus();
 };
 
 }

@@ -114,7 +114,7 @@ void Menu::generateGraphics() {
 // Fill the listBackgroundImageMethod with a solid color
 void Menu::drawSelf(ImageRgbaU8& targetImage, const IRect &relativeLocation) {
 	this->generateGraphics();
-	draw_alphaFilter(targetImage, this->showingOverlay ? this->imageDown : this->imageUp, relativeLocation.left(), relativeLocation.top());
+	draw_alphaFilter(targetImage, this->showingOverlay() ? this->imageDown : this->imageUp, relativeLocation.left(), relativeLocation.top());
 }
 
 void Menu::generateBackground() {
@@ -127,15 +127,17 @@ void Menu::generateBackground() {
 	}
 }
 
-void Menu::showOverlay() {
-	// Both showingOverlay and makeFocused are currently required for the overlay to be visible.
-	this->showingOverlay = true;
-	this->makeFocused();
-	IRect memberBound = this->children[0]->location;
-	for (int i = 1; i < this->getChildCount(); i++) {
-		memberBound = IRect::merge(memberBound, this->children[i]->location);
+void Menu::createOverlay() {
+	if (!this->showingOverlay()) {
+		this->showOverlay();
+		this->makeFocused();
+		IRect memberBound = this->children[0]->location;
+		for (int i = 1; i < this->getChildCount(); i++) {
+			memberBound = IRect::merge(memberBound, this->children[i]->location);
+		}
+		// Calculate the new list bound.
+		this->overlayLocation = memberBound.expanded(this->padding.value) + this->location.upperLeft();
 	}
-	this->overlayLocation = memberBound.expanded(this->padding.value) + this->location.upperLeft();
 }
 
 bool Menu::managesChildren() {
@@ -146,16 +148,13 @@ bool Menu::pointIsInsideOfOverlay(const IVector2D& pixelPosition) {
 	return pixelPosition.x > this->overlayLocation.left() && pixelPosition.x < this->overlayLocation.right() && pixelPosition.y > this->overlayLocation.top() && pixelPosition.y < this->overlayLocation.bottom();
 }
 
-// TODO: Draw decorations using headImage.
 void Menu::drawOverlay(ImageRgbaU8& targetImage, const IVector2D &absoluteOffset) {
-	if (this->showingOverlay) {
-		this->generateBackground();
-		// TODO: Let the theme select between solid and alpha filtered drawing.
-		IVector2D overlayOffset = absoluteOffset + this->overlayLocation.upperLeft();
-		draw_copy(targetImage, this->listBackgroundImage, overlayOffset.x, overlayOffset.y);
-		for (int i = 0; i < this->getChildCount(); i++) {
-			this->children[i]->draw(targetImage, absoluteOffset + this->location.upperLeft());
-		}
+	this->generateBackground();
+	// TODO: Let the theme select between solid and alpha filtered drawing.
+	IVector2D overlayOffset = absoluteOffset + this->overlayLocation.upperLeft();
+	draw_copy(targetImage, this->listBackgroundImage, overlayOffset.x, overlayOffset.y);
+	for (int i = 0; i < this->getChildCount(); i++) {
+		this->children[i]->draw(targetImage, absoluteOffset + this->location.upperLeft());
 	}
 }
 
@@ -190,11 +189,19 @@ void Menu::changedAttribute(const ReadableString &name) {
 	}
 }
 
-void Menu::lostFocus() {
-	// Hide the menu when losing focus.
-	this->showingOverlay = false;
-	// Erase the list image to save memory.
-	this->listBackgroundImage = OrderedImageRgbaU8();
+void Menu::stateChanged(ComponentState oldState, ComponentState newState) {
+	// The states lost what they don't have now but had before.
+	ComponentState lostStates = ~newState & oldState;
+	if (lostStates & componentState_focusTail) {
+		// Hide the menu when losing focus.
+		this->hideOverlay();
+		// State notifications are not triggered from within the same notification, so that one can handle all the updates safely in the desired order.
+		this->listBackgroundImage = OrderedImageRgbaU8();
+	}
+	if (lostStates & componentState_showingOverlay) {		
+		// Clean up the background image to save memory and allow it to be regenerated in another size later.
+		this->listBackgroundImage = OrderedImageRgbaU8();
+	}
 }
 
 void Menu::updateLocationEvent(const IRect& oldLocation, const IRect& newLocation) {	
@@ -222,7 +229,9 @@ void Menu::updateLocationEvent(const IRect& oldLocation, const IRect& newLocatio
 
 static void closeEntireMenu(VisualComponent* menu) {
 	while (menu->parent != nullptr) {
-		menu->showingOverlay = false;
+		// Hide the menu when closing the menu. Notifications to stateChanged will do the proper cleanup for each component's type.
+		menu->hideOverlay();
+		// Move on to the parent component.
 		menu = menu->parent;
 	}
 }
@@ -232,7 +241,7 @@ void Menu::receiveMouseEvent(const MouseEvent& event) {
 	IVector2D positionFromParent = event.position;
 	MouseEvent localEvent = event;
 	localEvent.position -= this->location.upperLeft();
-	if (this->showingOverlay && this->pointIsInsideOfOverlay(event.position)) {
+	if (this->showingOverlay() && this->pointIsInsideOfOverlay(event.position)) {
 		for (int i = childCount - 1; i >= 0; i--) {
 			if (this->children[i]->pointIsInside(localEvent.position)) {
 				this->children[i]->makeFocused();
@@ -246,28 +255,28 @@ void Menu::receiveMouseEvent(const MouseEvent& event) {
 		if (childCount > 0) { // Has a list of members to open, toggle expansion when clicked.
 			if (this->subMenu) { // Menu within another menu.
 				// Hover to expand sub-menu's list.
-				if (event.mouseEventType == MouseEventType::MouseMove && !this->showingOverlay) {
-					this->showOverlay();
+				if (event.mouseEventType == MouseEventType::MouseMove && !this->showingOverlay()) {
+					this->createOverlay();
 				}
 			} else { // Top menu, which is usually placed in a toolbar.
 				bool toggleExpansion = false;
 				if (event.mouseEventType == MouseEventType::MouseDown) {
 					// Toggle expansion when headImageMethod is clicked.
 					toggleExpansion = true;
-				} else if (event.mouseEventType == MouseEventType::MouseMove && !this->showingOverlay) {
+				} else if (event.mouseEventType == MouseEventType::MouseMove && !this->showingOverlay()) {
 					// Automatically expand hovered top-menus neighboring an opened top menu.
 					if (this->parent != nullptr) {
-						if (this->parent->focusComponent.get() != nullptr && this->parent->focusComponent->showingOverlay) {
+						if (this->parent->focusComponent.get() != nullptr && this->parent->focusComponent->showingOverlay()) {
 							toggleExpansion = true;
 						}
 					}
 				}
 				if (toggleExpansion) {
 					// Menu components with child members will toggle visibility for its list when pressed.
-					if (this->showingOverlay) {
+					if (this->showingOverlay()) {
 						closeEntireMenu(this);
 					} else {
-						this->showOverlay();
+						this->createOverlay();
 					}
 				}
 			}
