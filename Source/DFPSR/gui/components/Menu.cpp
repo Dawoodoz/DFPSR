@@ -130,7 +130,7 @@ void Menu::generateBackground() {
 void Menu::createOverlay() {
 	if (!this->showingOverlay()) {
 		this->showOverlay();
-		this->makeFocused();
+		this->makeFocused(); // Focus on the current menu path to make others lose focus.
 		IRect memberBound = this->children[0]->location;
 		for (int i = 1; i < this->getChildCount(); i++) {
 			memberBound = IRect::merge(memberBound, this->children[i]->location);
@@ -189,16 +189,15 @@ void Menu::changedAttribute(const ReadableString &name) {
 	}
 }
 
-void Menu::stateChanged(ComponentState oldState, ComponentState newState) {
-	// The states lost what they don't have now but had before.
-	ComponentState lostStates = ~newState & oldState;
-	if (lostStates & componentState_focusTail) {
+void Menu::updateStateEvent(ComponentState oldState, ComponentState newState) {
+	// If no longer having any type of focus, hide the overlay.
+	if ((oldState & componentState_focus) && !(newState & componentState_focus)) {
 		// Hide the menu when losing focus.
 		this->hideOverlay();
 		// State notifications are not triggered from within the same notification, so that one can handle all the updates safely in the desired order.
 		this->listBackgroundImage = OrderedImageRgbaU8();
 	}
-	if (lostStates & componentState_showingOverlay) {		
+	if (!(newState & componentState_showingOverlayDirect)) {		
 		// Clean up the background image to save memory and allow it to be regenerated in another size later.
 		this->listBackgroundImage = OrderedImageRgbaU8();
 	}
@@ -229,7 +228,7 @@ void Menu::updateLocationEvent(const IRect& oldLocation, const IRect& newLocatio
 
 static void closeEntireMenu(VisualComponent* menu) {
 	while (menu->parent != nullptr) {
-		// Hide the menu when closing the menu. Notifications to stateChanged will do the proper cleanup for each component's type.
+		// Hide the menu when closing the menu. Notifications to updateStateEvent will do the proper cleanup for each component's type.
 		menu->hideOverlay();
 		// Move on to the parent component.
 		menu = menu->parent;
@@ -266,8 +265,14 @@ void Menu::receiveMouseEvent(const MouseEvent& event) {
 				} else if (event.mouseEventType == MouseEventType::MouseMove && !this->showingOverlay()) {
 					// Automatically expand hovered top-menus neighboring an opened top menu.
 					if (this->parent != nullptr) {
-						if (this->parent->focusComponent.get() != nullptr && this->parent->focusComponent->showingOverlay()) {
-							toggleExpansion = true;
+						VisualComponent *toolbar = this->parent;
+						if (toolbar->ownsFocus()) {
+							for (int i = 0; i < toolbar->getChildCount(); i++) {
+								if (toolbar->children[i]->showingOverlay()) {
+									toggleExpansion = true;
+									break;
+								}
+							}
 						}
 					}
 				}

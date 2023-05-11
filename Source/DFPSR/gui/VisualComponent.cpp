@@ -73,6 +73,16 @@ Persistent* VisualComponent::findAttribute(const ReadableString &name) {
 	}
 }
 
+// Pre-condition: component != nullptr
+// Post-condition: Returns the root of component
+static VisualComponent *getRoot(VisualComponent *component) {
+	assert(component != nullptr);
+	while (component->parent != nullptr) {
+		component = component->parent;
+	}
+	return component;
+}
+
 IVector2D VisualComponent::getDesiredDimensions() {
 	// Unless this virtual method is overridden, toolbars and such will try to give these dimensions to the component.
 	return IVector2D(32, 32);
@@ -162,7 +172,7 @@ void VisualComponent::updateChildLocations() {
 static void drawOverlays(ImageRgbaU8& targetImage, VisualComponent &component, const IVector2D& offset) {
 	// Invisible components are not allowed to display overlays, because the component system is
 	//   responsible for visibility settings that specific components are likely to forget about.
-	if (component.getVisible()) {
+	if (component.getVisible() && component.ownsOverlay()) {
 		// Check if the component has the overlay shown.
 		if (component.showingOverlay()) {
 			// Draw the component's own overlay below child overlays. 
@@ -260,10 +270,6 @@ void VisualComponent::detachFromParent() {
 	VisualComponent *parent = this->parent;
 	if (parent != nullptr) {
 		parent->childChanged = true;
-		// If the removed component is focused from the parent, then remove focus so that the parent is focused instead.
-		if (parent->focusComponent.get() == this) {
-			parent->defocusChildren();
-		}
 		// Find the component to detach among the child components.
 		for (int i = 0; i < parent->getChildCount(); i++) {
 			std::shared_ptr<VisualComponent> current = parent->children[i];
@@ -275,6 +281,8 @@ void VisualComponent::detachFromParent() {
 				return;
 			}
 		}
+		// Update indirect states.
+		getRoot(this)->updateIndirectStates();
 		// Any ongoing drag action will allow the component to get the mouse up event to finish transactions safely before being deleted by reference counting.
 		//   Otherwise it may break program logic or cause crashes.
 	}
@@ -368,72 +376,29 @@ std::shared_ptr<VisualComponent> VisualComponent::getShared() {
 	}
 }
 
-// Remove its pointer to its child and the whole trail of focus.
-void VisualComponent::defocusChildren() {
-	// Using raw pointers because the this pointer is not reference counted.
-	//   Components should not call arbitrary events that might detach components during processing, until a better way to handle this has been implemented.
-	VisualComponent* parent = this;
-	while (true) {
-		// Get the parent's focused direct child.
-		VisualComponent* child = parent->focusComponent.get();
-		if (child == nullptr) {
-			return; // Reached the end.
-		} else {
-			parent->focusComponent = std::shared_ptr<VisualComponent>(); // The parent removes the focus pointer from the child.
-			child->currentState &= ~componentState_focusTail; // Remember that it is not focused, for quick access.
-			parent = child; // Prepare for the next iteration.
-		}
-	}
-}
+void VisualComponent::updateStateEvent(ComponentState oldState, ComponentState newState) {}
 
-// Pre-condition: component != nullptr
-// Post-condition: Returns the root of component
-VisualComponent *getRoot(VisualComponent *component) {
-	assert(component != nullptr);
-	while (component->parent != nullptr) {
-		component = component->parent;
+void VisualComponent::updateIndirectStates() {
+	// Call recursively for child components while checking what they contain.
+	ComponentState childStates = 0;
+	for (int i = this->getChildCount() - 1; i >= 0; i--) {
+		this->children[i]->updateIndirectStates();
+		childStates |= this->children[i]->currentState;
 	}
-	return component;
+	// Direct and indirect inheritance.
+	ComponentState expectedIndirectStates = ((childStates & componentState_direct) << 1) | childStates & componentState_indirect;
+	this->currentState = (this->currentState & componentState_direct) | expectedIndirectStates;
 }
-
-// Create a chain of pointers from the root to this component
-//   Any focus pointers that are not along the chain will not count but work as a memory for when one of its parents get focus again.
-void VisualComponent::makeFocused() {
-	VisualComponent* current = this;
-	// Remove any focus tail behind the new focus end.
-	current->defocusChildren();
-	while (current != nullptr) {
-		VisualComponent* parent = current->parent;
-		if (parent == nullptr) {
-			return;
-		} else {
-			VisualComponent* oldFocus = parent->focusComponent.get();
-			if (oldFocus == current) {
-				// When reaching a parent that already points back at the component being focused, there is nothing more to do.
-				return;
-			} else {
-				if (oldFocus != nullptr) {
-					// When reaching a parent that deviated to the old focus branch, follow it and defocus the old components.
-					parent->defocusChildren();
-				}
-				parent->focusComponent = current->getShared();
-				this->currentState |= componentState_focusTail;
-				current = parent;
-			}
-		}
-	}
-}
-
-void VisualComponent::stateChanged(ComponentState oldState, ComponentState newState) {}
 
 void VisualComponent::sendNotifications() {
-	// Detect differences for all flags at once using bits in the integers.
-	if (this->currentState != this->previousState) {
-		stateChanged(this->previousState, this->currentState);
-		this->previousState = this->currentState;
-	}
+	// Call recursively for child components while checking what they contain.
 	for (int i = this->getChildCount() - 1; i >= 0; i--) {
 		this->children[i]->sendNotifications();
+	}
+	// Detect differences for all flags at once using bits in the integers.
+	if (this->currentState != this->previousState) {
+		updateStateEvent(this->previousState, this->currentState);
+		this->previousState = this->currentState;
 	}
 }
 
@@ -469,17 +434,72 @@ static IVector2D getTotalOffset(const VisualComponent *child, const VisualCompon
 	return result;
 }
 
+// Remove its pointer to its child and the whole trail of focus.
+void VisualComponent::defocusChildren() {
+	for (int i = 0; i < this->getChildCount(); i++) {
+		this->children[i]->applyStateAndMask(~componentState_focus);
+	}
+}
+
+void VisualComponent::addStateBits(ComponentState directStates, bool unique) {
+	VisualComponent *root = getRoot(this);
+	// Remove all focus in the window if unique.
+	if (unique) root->applyStateAndMask(~directStates);
+	// Apply focus directly to itself and indirectly to parents.
+	this->currentState |= directStates;
+	// Update indirect states, so that parent components know what happens to their child components.
+	root->updateIndirectStates();
+}
+
+void VisualComponent::removeStateBits(ComponentState directStates) {
+	VisualComponent *root = getRoot(this);
+	// Apply focus directly to itself and indirectly to parents.
+	this->currentState &= ~directStates;
+	// Update indirect states, so that parent components know what happens to their child components.
+	root->updateIndirectStates();
+}
+
+// Create a chain of pointers from the root to this component
+//   Any focus pointers that are not along the chain will not count but work as a memory for when one of its parents get focus again.
+void VisualComponent::makeFocused() {
+	this->addStateBits(componentState_focus, true);
+}
+
+void VisualComponent::hover() {
+	this->addStateBits(componentState_hoverDirect, true);
+}
+
+void VisualComponent::showOverlay() {
+	this->addStateBits(componentState_showingOverlayDirect, false);
+}
+
+// When multiple components are allowed to have the direct flag set, one needs to clean it up like a tree.
+void VisualComponent::hideOverlay() {
+	this->removeStateBits(componentState_showingOverlayDirect);
+}
+
+void VisualComponent::applyStateAndMask(ComponentState keepMask) {
+	this->currentState &= keepMask;
+	for (int i = 0; i < this->getChildCount(); i++) {
+		this->children[i]->applyStateAndMask(keepMask);
+	}
+}
+
 // Takes events with points relative to the upper left corner of the called component.
 void VisualComponent::sendMouseEvent(const MouseEvent& event, bool recursive) {
-	// Update the layout if needed.
-	this->updateChildLocations();
+	if (this->parent == nullptr && !recursive) {
+		// Use a combined bit mask for any state that needs to be reset at this time.
+		this->applyStateAndMask(~(componentState_hover));
+		// Update the layout if needed.
+		this->updateChildLocations();
+	}
 	// Get the point of interaction within the component being sent to,
 	//   so that it can be used to find direct child components expressed
 	//   relative to their container's upper left corner.
 	// If a button is pressed down, this method will try to grab a component to begin mouse interaction.
 	//   Grabbing with the dragComponent pointer makes sure that move and up events can be given even if the cursor moves outside of the component.
 	VisualComponent *childComponent = nullptr;
-	// Find the component to interact with, from pressing down or hovering.
+	// Find the component to interact with.
 	if (event.mouseEventType == MouseEventType::MouseDown || this->dragComponent.get() == nullptr) {
 		// Check the overlays first when getting mouse events to the root component.
 		if (this->parent == nullptr) {
@@ -515,6 +535,9 @@ void VisualComponent::sendMouseEvent(const MouseEvent& event, bool recursive) {
 		// If there is no child component found, interact directly with the parent.
 		MouseEvent parentEvent = event;
 		parentEvent.position += this->location.upperLeft();
+		// Itself is directly hovered.
+		this->hover();
+		// If the event receiver pass it on to child components, it can just reset the hover flags again.
 		this->receiveMouseEvent(parentEvent);
 	}
 	// Release a component on mouse up.
@@ -528,6 +551,7 @@ void VisualComponent::sendMouseEvent(const MouseEvent& event, bool recursive) {
 	}
 	// Once all focusing and defocusing with arbitrary callbacks is over, send the focus notifications to the components that actually changed focus.
 	if (this->parent == nullptr && !recursive) {
+		//Should not be needed if everything works. this->updateIndirectStates();
 		this->sendNotifications();
 	}
 }
@@ -545,14 +569,19 @@ void VisualComponent::receiveMouseEvent(const MouseEvent& event) {
 }
 
 void VisualComponent::sendKeyboardEvent(const KeyboardEvent& event) {
-	// Send the signal to a focused component or itself
-	if (this->focusComponent.get() != nullptr) {
-		this->focusComponent->sendKeyboardEvent(event);
-	} else {
-		this->receiveKeyboardEvent(event);
+	for (int i = 0; i < this->getChildCount(); i++) {
+		ComponentState state = this->children[i]->currentState;
+		if (state & componentState_focus) {
+			if (state & componentState_focusDirect) {
+				this->children[i]->receiveKeyboardEvent(event);
+			} else if (state & componentState_focusIndirect) {
+				this->children[i]->sendKeyboardEvent(event);
+			}
+		}
 	}
-	// Send focus events in case that any component changed focus.
+	// Check for any state updates.
 	if (this->parent == nullptr) {
+		//Should not be needed if everything works. this->updateIndirectStates();
 		this->sendNotifications();
 	}
 }

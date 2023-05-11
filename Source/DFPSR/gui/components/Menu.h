@@ -71,7 +71,7 @@ public:
 	bool hasArrow();
 	// Helper functions for overlay projecting components.
 	void createOverlay();
-	void stateChanged(ComponentState oldState, ComponentState newState) override;
+	void updateStateEvent(ComponentState oldState, ComponentState newState) override;
 	bool pointIsInsideOfOverlay(const IVector2D& pixelPosition) override;
 };
 
