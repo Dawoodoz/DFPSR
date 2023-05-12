@@ -474,7 +474,7 @@ String dsr::component_call(const Component& component, const ReadableString& met
 
 void dsr::component_detachFromParent(const Component& component) {
 	MUST_EXIST(component, component_detachFromParent);
-	component->detachFromParent();
+	component->detach = true;
 }
 
 Component dsr::component_create(const Component& parent, const ReadableString& className, const ReadableString& identifierName, int index) {

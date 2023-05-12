@@ -67,6 +67,8 @@ public: // Relations
 	// Remember the component used for a drag event.
 	//   Ensures that mouse down events are followed by mouse up events on the same component.
 	int holdCount = 0;
+	// Marked for removal from the parent when set to true.
+	bool detach = false;
 	// Remember the pressed component for sending mouse move events outside of its region.
 	std::shared_ptr<VisualComponent> dragComponent;
 private: // States
@@ -79,6 +81,7 @@ private: // State updates
 	// Looking for recent state changes and sending notifications through updateStateEvent for each components that had a state change.
 	//   Deferring update notifications using this makes sure that events that trigger updates get to finish before the next one starts.
 	//   This reduces the risk of dead-locks, race-conditions, pointer errors...
+	// Also checking which components are marked for removal and detaching them, so that the object is not deleted while a memeber method is being called.
 	void sendNotifications();
 	// Remove the zeroes in addMask from ones in the component and all child components.
 	void applyStateAndMask(ComponentState keepMask);

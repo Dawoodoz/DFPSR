@@ -187,6 +187,12 @@ static void drawOverlays(ImageRgbaU8& targetImage, VisualComponent &component, c
 
 // Offset may become non-zero when the origin is outside of targetImage from being clipped outside of the parent region
 void VisualComponent::draw(ImageRgbaU8& targetImage, const IVector2D& offset) {
+	// TODO: Any more good places to send notifications to make the GUI respond faster?
+	// When about to start drawing from the root, check for state changes and handle events before drawing,
+	//   so that anything needed for visuals is handled without further delay.
+	if (this->parent == nullptr) {
+		this->sendNotifications();
+	}
 	if (this->getVisible()) {
 		this->updateChildLocations();
 		IRect containerBound = this->getLocation() + offset;
@@ -392,8 +398,16 @@ void VisualComponent::updateIndirectStates() {
 
 void VisualComponent::sendNotifications() {
 	// Call recursively for child components while checking what they contain.
+	//   Run the loop backwards, so that no components are missed when once is detached.
 	for (int i = this->getChildCount() - 1; i >= 0; i--) {
-		this->children[i]->sendNotifications();
+		// Use a reference counted pointer to the child, so that it can be removed safely outside of custom events.
+		std::shared_ptr<VisualComponent> child = this->children[i];
+		if (child->detach) {
+			child->detach = false;
+			child->detachFromParent();
+		} else {
+			child->sendNotifications();
+		}
 	}
 	// Detect differences for all flags at once using bits in the integers.
 	if (this->currentState != this->previousState) {
