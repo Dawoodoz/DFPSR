@@ -74,7 +74,6 @@ namespace dsr {
 	// Pre-condition: file_getEntryType(path) == EntryType::SymbolicLink
 	// Post-condition: Returns the destination of a symbolic link as an absolute path.
 	// Shortcuts with file extensions are counted as files, not links.
-	// TODO: Should shortcuts of known formats be supported anyway by parsing them?
 	String file_followSymbolicLink(const ReadableString &path, bool mustExist = true);
 
 	// Path-syntax: According to the local computer.
@@ -120,6 +119,13 @@ namespace dsr {
 	// Can be used to get the full path of a file in a folder or add another folder to the path.
 	// b may not begin with a separator, because only a is allowed to contain the root.
 	String file_combinePaths(const ReadableString &a, const ReadableString &b, PathSyntax pathSyntax IMPLICIT_PATH_SYNTAX);
+	// Extended to allow combining three or more paths.
+	// Example:
+	//   String fullPath = file_combinePaths(myApplicationPath, U"myFolder", U"myOtherFolder, U"myFile.txt");
+	template<typename... TAIL>
+	inline String file_combinePaths(const ReadableString &a, const ReadableString &b, TAIL... tail) {
+		return file_combinePaths(file_combinePaths(a, b), tail...);
+	}
 
 	// Path-syntax: Depends on pathSyntax argument.
 	// Post-condition: Returns true iff path starts from a root, according to the path syntax.
