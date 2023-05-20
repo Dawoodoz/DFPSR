@@ -35,10 +35,10 @@ IRect dsr::getTriangleBound(LVector2D a, LVector2D b, LVector2D c) {
 	int32_t rY2 = (b.y + constants::unitsPerHalfPixel) / constants::unitsPerPixel;
 	int32_t rX3 = (c.x + constants::unitsPerHalfPixel) / constants::unitsPerPixel;
 	int32_t rY3 = (c.y + constants::unitsPerHalfPixel) / constants::unitsPerPixel;
-	int leftBound = std::min(std::min(rX1, rX2), rX3) - 1;
-	int topBound = std::min(std::min(rY1, rY2), rY3) - 1;
-	int rightBound = std::max(std::max(rX1, rX2), rX3) + 1;
-	int bottomBound = std::max(std::max(rY1, rY2), rY3) + 1;
+	int leftBound = min(rX1, rX2, rX3) - 1;
+	int topBound = min(rY1, rY2, rY3) - 1;
+	int rightBound = max(rX1, rX2, rX3) + 1;
+	int bottomBound = max(rY1, rY2, rY3) + 1;
 	return IRect(leftBound, topBound, rightBound - leftBound, bottomBound - topBound);
 }
 
@@ -60,11 +60,11 @@ bool ITriangle2D::isFrontfacing() const {
 }
 
 inline static void cutRight(int32_t& rightBound, int32_t value) {
-	rightBound = std::min(rightBound, value);
+	rightBound = min(rightBound, value);
 }
 
 inline static void cutLeft(int32_t& leftBound, int32_t value) {
-	leftBound = std::max(leftBound, value);
+	leftBound = max(leftBound, value);
 }
 
 IRect ITriangle2D::getAlignedRasterBound(const IRect& clipBound, int alignX, int alignY) const {
@@ -119,7 +119,7 @@ static void cutConvexEdge(const LVector2D& startPoint, const LVector2D& endPoint
 			for (int32_t y = topBound; y < bottomBound; y++) {
 				int32_t rowIndex = y - topBound;
 				// Find the highest x where offsetX * x > limit
-				int32_t leftSide = std::min(std::max(leftBound, (int32_t)((limit + 1) / offsetX + 1)), rightBound);
+				int32_t leftSide = min(max(leftBound, (int32_t)((limit + 1) / offsetX + 1)), rightBound);
 				cutLeft(rows[rowIndex].left, leftSide);
 				limit -= offsetY;
 			}
@@ -127,7 +127,7 @@ static void cutConvexEdge(const LVector2D& startPoint, const LVector2D& endPoint
 			for (int32_t y = topBound; y < bottomBound; y++) {
 				int32_t rowIndex = y - topBound;
 				// Find the lowest x where offsetX * x > limit
-				int32_t rightSide = std::min(std::max(leftBound, (int32_t)(limit / offsetX + 1)), rightBound);
+				int32_t rightSide = min(max(leftBound, (int32_t)(limit / offsetX + 1)), rightBound);
 				cutRight(rows[rowIndex].right, rightSide);
 				limit -= offsetY;
 			}

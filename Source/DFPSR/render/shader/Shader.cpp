@@ -261,10 +261,10 @@ inline static void fillShapeSuper(const Shader& shader, ImageRgbaU8Impl *colorBu
 		int y2 = y1 + 1;
 		RowInterval upperRow = shape.rows[y1 - shape.startRow];
 		RowInterval lowerRow = shape.rows[y2 - shape.startRow];
-		int outerStart = std::min(upperRow.left, lowerRow.left);
-		int outerEnd = std::max(upperRow.right, lowerRow.right);
-		int innerStart = std::max(upperRow.left, lowerRow.left);
-		int innerEnd = std::min(upperRow.right, lowerRow.right);
+		int outerStart = min(upperRow.left, lowerRow.left);
+		int outerEnd = max(upperRow.right, lowerRow.right);
+		int innerStart = max(upperRow.left, lowerRow.left);
+		int innerEnd = min(upperRow.right, lowerRow.right);
 		// Round exclusive intervals to multiples of two pixels
 		int outerBlockStart = roundDownEven(outerStart);
 		int outerBlockEnd = roundUpEven(outerEnd);

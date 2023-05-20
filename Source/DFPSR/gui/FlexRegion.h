@@ -27,6 +27,7 @@
 #include <stdint.h>
 #include "../math/IVector.h"
 #include "../math/IRect.h"
+#include "../math/scalar.h"
 #include "../api/stringAPI.h"
 #include "../persistent/ClassFactory.h"
 
@@ -39,7 +40,7 @@ private:
 	int32_t offset = 0; // +- offset
 public:
 	FlexValue() {}
-	FlexValue(int ratio, int offset) : ratio(std::min(std::max(0, ratio), 100)), offset(offset) {}
+	FlexValue(int ratio, int offset) : ratio(min(max(0, ratio), 100)), offset(offset) {}
 public:
 	bool assignValue(const ReadableString &text, const ReadableString &fromPath) override;
 	String& toStreamIndented(String& out, const ReadableString& indentation) const override;

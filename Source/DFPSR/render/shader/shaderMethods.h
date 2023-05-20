@@ -26,6 +26,7 @@
 
 #include <stdint.h>
 #include "../../math/FVector.h"
+#include "../../math/scalar.h"
 #include "../../base/simd3D.h"
 #include "../../image/ImageRgbaU8.h"
 #include "shaderTypes.h"
@@ -119,9 +120,9 @@ namespace shaderMethods {
 		float offsetUY = fabs(ua.x - ua.z);
 		float offsetVX = fabs(va.x - va.y);
 		float offsetVY = fabs(va.x - va.z);
-		float offsetU = std::max(offsetUX, offsetUY) * source->width;
-		float offsetV = std::max(offsetVX, offsetVY) * source->height;
-		float offset = std::max(offsetU, offsetV);
+		float offsetU = max(offsetUX, offsetUY) * source->width;
+		float offsetV = max(offsetVX, offsetVY) * source->height;
+		float offset = max(offsetU, offsetV);
 
 		// This log2 approximation has to be adapted if the number of mip levels changes.
 		static_assert(MIP_BIN_COUNT == 5, "Changing MIP_BIN_COUNT must also adapt shaderMethods::getMipLevelOffset");
