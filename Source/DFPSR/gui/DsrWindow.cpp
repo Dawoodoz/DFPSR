@@ -177,11 +177,11 @@ int DsrWindow::getInnerHeight() {
 }
 
 int DsrWindow::getCanvasWidth() {
-	return std::max(1, this->innerWidth / this->pixelScale);
+	return max(1, this->innerWidth / this->pixelScale);
 }
 
 int DsrWindow::getCanvasHeight() {
-	return std::max(1, this->innerHeight / this->pixelScale);
+	return max(1, this->innerHeight / this->pixelScale);
 }
 
 AlignedImageF32 DsrWindow::getDepthBuffer() {

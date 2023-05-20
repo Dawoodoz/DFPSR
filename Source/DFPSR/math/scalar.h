@@ -1,6 +1,6 @@
 ﻿// zlib open source license
 //
-// Copyright (c) 2017 to 2019 David Forsgren Piuva
+// Copyright (c) 2017 to 2023 David Forsgren Piuva
 // 
 // This software is provided 'as-is', without any express or implied
 // warranty. In no event will the authors be held liable for any damages
@@ -27,6 +27,28 @@
 #include <cmath>
 
 namespace dsr {
+
+// A minimum function that can take more than two arguments.
+// Post-condition: Returns the smallest of all given values, which must be comparable using the < operator and have the same type.
+template <typename T>
+inline T min(const T &a, const T &b) {
+	return (a < b) ? a : b;
+}
+template <typename T, typename... TAIL>
+inline T min(const T &a, const T &b, TAIL... tail) {
+	return min(min(a, b), tail...);
+}
+
+// A maximum function that can take more than two arguments.
+// Post-condition: Returns the largest of all given values, which must be comparable using the > operator and have the same type.
+template <typename T>
+inline T max(const T &a, const T &b) {
+	return (a > b) ? a : b;
+}
+template <typename T, typename... TAIL>
+inline T max(const T &a, const T &b, TAIL... tail) {
+	return max(max(a, b), tail...);
+}
 
 // Preconditions:
 //   0 <= a <= 255
