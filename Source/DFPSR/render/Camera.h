@@ -44,23 +44,25 @@ private:
 public:
 	ViewFrustum() : planeCount(0) {}
 	// Orthogonal view frustum in camera space
-	ViewFrustum(float halfWidth, float halfHeight) : planeCount(4) {
+	ViewFrustum(float halfWidth, float halfHeight)
+	: planeCount(4) {
 		// Sides
-		planes[0] = FPlane3D(FVector3D(1.0f, 0.0f, 0.0f), halfWidth * 1.01);
-		planes[1] = FPlane3D(FVector3D(-1.0f, 0.0f, 0.0f), halfWidth * 1.01);
-		planes[2] = FPlane3D(FVector3D(0.0f, 1.0f, 0.0f), halfHeight * 1.01);
-		planes[3] = FPlane3D(FVector3D(0.0f, -1.0f, 0.0f), halfHeight * 1.01);
+		planes[0] = FPlane3D(FVector3D(1.0f, 0.0f, 0.0f), halfWidth);
+		planes[1] = FPlane3D(FVector3D(-1.0f, 0.0f, 0.0f), halfWidth);
+		planes[2] = FPlane3D(FVector3D(0.0f, 1.0f, 0.0f), halfHeight);
+		planes[3] = FPlane3D(FVector3D(0.0f, -1.0f, 0.0f), halfHeight);
 	}
 	// Perspective view frustum in camera space
-	ViewFrustum(float nearClip, float farClip, float widthSlope, float heightSlope) : planeCount(6) {
+	ViewFrustum(float nearClip, float farClip, float widthSlope, float heightSlope)
+	: planeCount(farClip == std::numeric_limits<float>::infinity() ? 5 : 6) { // Skip the far clip plane if its distance is infinite.
 		// Sides
-		planes[0] = FPlane3D(FVector3D(1.0f, 0.0f, -widthSlope - 0.01f), 0.0f);
-		planes[1] = FPlane3D(FVector3D(-1.0f, 0.0f, -widthSlope - 0.01f), 0.0f);
-		planes[2] = FPlane3D(FVector3D(0.0f, 1.0f, -heightSlope - 0.01f), 0.0f);
-		planes[3] = FPlane3D(FVector3D(0.0f, -1.0f, -heightSlope - 0.01f), 0.0f);
+		planes[0] = FPlane3D(FVector3D(1.0f, 0.0f, -widthSlope), 0.0f);
+		planes[1] = FPlane3D(FVector3D(-1.0f, 0.0f, -widthSlope), 0.0f);
+		planes[2] = FPlane3D(FVector3D(0.0f, 1.0f, -heightSlope), 0.0f);
+		planes[3] = FPlane3D(FVector3D(0.0f, -1.0f, -heightSlope), 0.0f);
 		// Near and far clip planes
-		planes[4] = FPlane3D(FVector3D(0.0f, 0.0f, 1.0f), farClip);
-		planes[5] = FPlane3D(FVector3D(0.0f, 0.0f, -1.0f), -nearClip);
+		planes[4] = FPlane3D(FVector3D(0.0f, 0.0f, -1.0f), -nearClip);
+		planes[5] = FPlane3D(FVector3D(0.0f, 0.0f, 1.0f), farClip);
 	}
 	int getPlaneCount() const {
 		return this->planeCount;
@@ -71,9 +73,18 @@ public:
 	}
 };
 
+// How much is the image region magnified for skipping entire triangles.
+//   A small margin is needed to prevent missing pixels from rounding errors along the borders in high image resolutions.
+static const float cullRatio = 1.0001f;
+// How much is the image region magnified for clipping triangles.
+//   The larger you make the clip region, the less triangles you have to apply clipping to.
+//   The triangle rasterization can handle clipping triangles in integer coordinates,
+//     but there are limits to how large those integers can become before overflowing.
+static const float clipRatio = 2.0f;
+// To prevent division by zero, a near clipping distance is slightly above zero to
+//   clip triangles in 3D camera space before projecting the coordinates to the target image.
 static const float defaultNearClip = 0.01f;
 static const float defaultFarClip = 1000.0f;
-static const float clipRatio = 2.0f;
 
 // Just create a new camera on stack memory every time you need to render something
 class Camera {
@@ -94,14 +105,14 @@ public:
 	static Camera createPerspective(const Transform3D &location, float imageWidth, float imageHeight, float widthSlope = 1.0f, float nearClip = defaultNearClip, float farClip = defaultFarClip) {
 		float heightSlope = widthSlope * imageHeight / imageWidth;
 		return Camera(true, location, imageWidth, imageHeight, widthSlope, heightSlope, nearClip, farClip,
-		  ViewFrustum(nearClip, farClip, widthSlope, heightSlope),
+		  ViewFrustum(nearClip, farClip, widthSlope * cullRatio, heightSlope * cullRatio),
 		  ViewFrustum(nearClip, farClip, widthSlope * clipRatio, heightSlope * clipRatio));
 	}
 	// Orthogonal cameras doesn't have any near or far clip planes
 	static Camera createOrthogonal(const Transform3D &location, float imageWidth, float imageHeight, float halfWidth) {
 		float halfHeight = halfWidth * imageHeight / imageWidth;
 		return Camera(false, location, imageWidth, imageHeight, halfWidth, halfHeight, -std::numeric_limits<float>::max(), std::numeric_limits<float>::max(),
-		  ViewFrustum(halfWidth, halfHeight),
+		  ViewFrustum(halfWidth * cullRatio, halfHeight * cullRatio),
 		  ViewFrustum(halfWidth * clipRatio, halfHeight * clipRatio));
 	}
 	FVector3D worldToCamera(const FVector3D &worldSpace) const {
