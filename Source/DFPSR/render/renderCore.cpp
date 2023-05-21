@@ -50,9 +50,21 @@ public:
 	}
 };
 
+// Returns 0 when value = a
+// Returns 0.5 when value = (a + b) / 2
+// Returns 1 when value = b
+static float inverseLerp(float a, float b, float value) {
+	float c = b - a;
+	if (c == 0.0f) {
+		return 0.5f;
+	} else {
+		return (value - a) / c;
+	}
+}
+
+static const int maxPoints = 9; // If a triangle starts with 3 points and each of 6 planes in the view frustum can add one point each then the maximum is 9 points
 class ClippedTriangle {
 private:
-	static const int maxPoints = 9; // If a triangle starts with 3 points and each of 6 planes in the view frustum can add one point each then the maximum is 9 points
 	int vertexCount = 0;
 public:
 	int getVertexCount() {
@@ -91,17 +103,6 @@ public:
 	}
 	void deleteAll() {
 		this->vertexCount = 0;
-	}
-	// Returns 0 when value = a
-	// Returns 0.5 when value = (a + b) / 2
-	// Returns 1 when value = b
-	static float inverseLerp(float a, float b, float value) {
-		float c = b - a;
-		if (c == 0.0f) {
-			return 0.5f;
-		} else {
-			return (value - a) / c;
-		}
 	}
 	// Cut away parts of the triangle that are on the positive side of the plane
 	void clip(const FPlane3D &plane) {
