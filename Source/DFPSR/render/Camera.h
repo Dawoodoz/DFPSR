@@ -46,10 +46,10 @@ public:
 	// Orthogonal view frustum in camera space
 	ViewFrustum(float halfWidth, float halfHeight) : planeCount(4) {
 		// Sides
-		planes[0] = FPlane3D(FVector3D(1.0f, 0.0f, 0.0f), halfWidth + 0.1f);
-		planes[1] = FPlane3D(FVector3D(-1.0f, 0.0f, 0.0f), halfWidth + 0.1f);
-		planes[2] = FPlane3D(FVector3D(0.0f, 1.0f, 0.0f), halfHeight + 0.1f);
-		planes[3] = FPlane3D(FVector3D(0.0f, -1.0f, 0.0f), halfHeight + 0.1f);
+		planes[0] = FPlane3D(FVector3D(1.0f, 0.0f, 0.0f), halfWidth * 1.01);
+		planes[1] = FPlane3D(FVector3D(-1.0f, 0.0f, 0.0f), halfWidth * 1.01);
+		planes[2] = FPlane3D(FVector3D(0.0f, 1.0f, 0.0f), halfHeight * 1.01);
+		planes[3] = FPlane3D(FVector3D(0.0f, -1.0f, 0.0f), halfHeight * 1.01);
 	}
 	// Perspective view frustum in camera space
 	ViewFrustum(float nearClip, float farClip, float widthSlope, float heightSlope) : planeCount(6) {
