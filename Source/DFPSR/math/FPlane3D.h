@@ -50,6 +50,11 @@ struct FPlane3D {
 	}
 };
 
+inline String& string_toStreamIndented(String& target, const FPlane3D& source, const ReadableString& indentation) {
+	string_append(target, indentation, U"Normal(", source.normal, U"), Offset(", source.offset, U")");
+	return target;
+}
+
 }
 
 #endif

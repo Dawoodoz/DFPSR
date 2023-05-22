@@ -75,6 +75,11 @@ inline FMatrix2x2 inverse(const FMatrix2x2& m) {
 	return FMatrix2x2(FVector2D(m.yAxis.y, -m.xAxis.y), FVector2D(-m.yAxis.x, m.xAxis.x)) * (1.0f / determinant(m));
 }
 
+inline String& string_toStreamIndented(String& target, const FMatrix2x2& source, const ReadableString& indentation) {
+	string_append(target, indentation, U"XAxis(", source.xAxis, U"), YAxis(", source.yAxis, U")");
+	return target;
+}
+
 }
 
 #endif

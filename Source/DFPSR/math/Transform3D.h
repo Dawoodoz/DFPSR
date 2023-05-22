@@ -85,6 +85,11 @@ inline Transform3D inverse(const Transform3D& m) {
 	return inverseUsingInvDet(m, 1.0f / determinant(m));
 }
 
+inline String& string_toStreamIndented(String& target, const Transform3D& source, const ReadableString& indentation) {
+	string_append(target, indentation, U"XAxis(", source.transform.xAxis, U"), YAxis(", source.transform.yAxis, U"), ZAxis(", source.transform.zAxis, U"), Position(", source.position, U")");
+	return target;
+}
+
 }
 
 #endif

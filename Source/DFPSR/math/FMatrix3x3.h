@@ -120,6 +120,11 @@ inline FMatrix3x3 transpose(const FMatrix3x3& m) {
 	return result;
 }
 
+inline String& string_toStreamIndented(String& target, const FMatrix3x3& source, const ReadableString& indentation) {
+	string_append(target, indentation, U"XAxis(", source.xAxis, U"), YAxis(", source.yAxis, U"), ZAxis(", source.zAxis, U")");
+	return target;
+}
+
 }
 
 #endif

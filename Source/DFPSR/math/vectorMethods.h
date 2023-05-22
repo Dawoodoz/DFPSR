@@ -308,19 +308,19 @@ OPPOSITE_COMPARE_2D(VECTOR_TYPE)
 
 #define SERIALIZATION_2D(VECTOR_TYPE) \
 inline String& string_toStreamIndented(String& target, const VECTOR_TYPE& source, const ReadableString& indentation) { \
-	string_append(target, indentation, source.x, U",", source.y); \
+	string_append(target, indentation, source.x, U", ", source.y); \
 	return target; \
 }
 
 #define SERIALIZATION_3D(VECTOR_TYPE) \
 inline String& string_toStreamIndented(String& target, const VECTOR_TYPE& source, const ReadableString& indentation) { \
-	string_append(target, indentation, source.x, U",", source.y, U",", source.z); \
+	string_append(target, indentation, source.x, U", ", source.y, U", ", source.z); \
 	return target; \
 }
 
 #define SERIALIZATION_4D(VECTOR_TYPE) \
 inline String& string_toStreamIndented(String& target, const VECTOR_TYPE& source, const ReadableString& indentation) { \
-	string_append(target, indentation, source.x, U",", source.y, U",", source.z, U",", source.w); \
+	string_append(target, indentation, source.x, U", ", source.y, U", ", source.z, U", ", source.w); \
 	return target; \
 }
 
