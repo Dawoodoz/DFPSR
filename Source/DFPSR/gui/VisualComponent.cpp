@@ -102,8 +102,17 @@ IRect VisualComponent::getLocation() {
 	return this->location;
 }
 
+void VisualComponent::changedAttribute(const ReadableString &name) {
+	if (this->parent) {
+		this->parent->childChanged = true;
+	}
+}
+
 void VisualComponent::setRegion(const FlexRegion &newRegion) {
 	this->region = newRegion;
+	if (this->parent) {
+		this->parent->childChanged = true;
+	}
 }
 
 FlexRegion VisualComponent::getRegion() const {
@@ -112,6 +121,9 @@ FlexRegion VisualComponent::getRegion() const {
 
 void VisualComponent::setVisible(bool visible) {
 	this->visible.value = visible;
+	if (this->parent) {
+		this->parent->childChanged = true;
+	}
 }
 
 bool VisualComponent::getVisible() const {
@@ -120,6 +132,9 @@ bool VisualComponent::getVisible() const {
 
 void VisualComponent::setName(const String& newName) {
 	this->name.value = newName;
+	if (this->parent) {
+		this->parent->childChanged = true;
+	}
 }
 
 String VisualComponent::getName() const {
@@ -128,6 +143,9 @@ String VisualComponent::getName() const {
 
 void VisualComponent::setIndex(int newIndex) {
 	this->index.value = newIndex;
+	if (this->parent) {
+		this->parent->childChanged = true;
+	}
 }
 
 int VisualComponent::getIndex() const {
