@@ -105,6 +105,7 @@ void Toolbar::changedAttribute(const ReadableString &name) {
 	if (!string_caseInsensitiveMatch(name, U"Visible")) {
 		this->hasImages = false;
 	}
+	VisualComponent::changedAttribute(name);
 }
 
 void Toolbar::updateLocationEvent(const IRect& oldLocation, const IRect& newLocation) {

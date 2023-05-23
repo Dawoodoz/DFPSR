@@ -187,6 +187,7 @@ void Menu::changedAttribute(const ReadableString &name) {
 	if (!string_caseInsensitiveMatch(name, U"Visible")) {
 		this->hasImages = false;
 	}
+	VisualComponent::changedAttribute(name);
 }
 
 void Menu::updateStateEvent(ComponentState oldState, ComponentState newState) {

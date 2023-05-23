@@ -212,6 +212,7 @@ void ListBox::changedAttribute(const ReadableString &name) {
 	}
 	this->limitSelection(false);
 	this->limitScrolling();
+	VisualComponent::changedAttribute(name);
 }
 
 void ListBox::setSelectedIndex(int64_t index, bool forceUpdate) {

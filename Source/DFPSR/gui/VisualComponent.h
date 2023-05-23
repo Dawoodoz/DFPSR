@@ -268,7 +268,7 @@ public:
 	// Notifies when the theme has been changed, so that temporary data depending on the theme can be replaced.
 	virtual void changedTheme(VisualTheme newTheme);
 	// Override to be notified about individual attribute changes
-	virtual void changedAttribute(const ReadableString &name) {};
+	virtual void changedAttribute(const ReadableString &name);
 	// Override to be notified about location changes
 	virtual void changedLocation(const IRect &oldLocation, const IRect &newLocation) {};
 	// Custom call handler to manipulate components across a generic API

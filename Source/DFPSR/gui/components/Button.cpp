@@ -136,6 +136,7 @@ void Button::changedAttribute(const ReadableString &name) {
 	if (!string_caseInsensitiveMatch(name, U"Visible")) {
 		this->hasImages = false;
 	}
+	VisualComponent::changedAttribute(name);
 }
 
 IVector2D Button::getDesiredDimensions() {

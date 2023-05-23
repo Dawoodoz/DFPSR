@@ -540,6 +540,7 @@ void TextBox::changedAttribute(const ReadableString &name) {
 			this->limitScrolling(true);
 		}
 	}
+	VisualComponent::changedAttribute(name);
 }
 
 void TextBox::updateScrollRange() {
