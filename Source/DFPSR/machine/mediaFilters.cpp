@@ -354,8 +354,8 @@ void dsr::media_fade_region_linear(ImageU8& targetImage, const IRect& viewport, 
 			}
 			// Copy the rest from the first line.
 			for (int32_t y = viewport.top() + 1; y < viewport.bottom(); y++) {
-				safeMemoryCopy<uint8_t>(targetRow, sourceRow, widthInBytes);
 				targetRow.increaseBytes(targetStride);
+				safeMemoryCopy<uint8_t>(targetRow, sourceRow, widthInBytes);
 			}
 		} else {
 			// Each pixel needs to be evaluated in this fade.
