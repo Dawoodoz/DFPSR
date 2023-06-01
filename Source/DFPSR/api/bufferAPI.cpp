@@ -26,6 +26,7 @@
 #include "bufferAPI.h"
 #include "stringAPI.h"
 #include "../math/scalar.h"
+#include "../base/simd.h"
 
 namespace dsr {
 
@@ -54,8 +55,8 @@ public:
 
 // Internal methods
 
-// buffer_alignment must be a power of two for buffer_alignment_mask to work
-static const int buffer_alignment = 16;
+// Buffers are aligned and padded for the deafult SIMD vector size, so that vectorization can be efficient.
+static const int buffer_alignment = DSR_DEFAULT_ALIGNMENT;
 
 // If this C++ version additionally includes the C11 features then we may assume that aligned_alloc is available
 #ifdef _ISOC11_SOURCE

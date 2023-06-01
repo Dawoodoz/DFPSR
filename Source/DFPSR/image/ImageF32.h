@@ -35,7 +35,7 @@ public:
 	// Inherit constructors
 	using ImageImpl::ImageImpl;
 	ImageF32Impl(int32_t newWidth, int32_t newHeight, int32_t newStride, Buffer buffer, intptr_t startOffset);
-	ImageF32Impl(int32_t newWidth, int32_t newHeight, int32_t alignment = 16);
+	ImageF32Impl(int32_t newWidth, int32_t newHeight, int32_t alignment);
 	// Macro defined functions
 	IMAGE_DECLARATION(ImageF32Impl, 1, float, float);
 };

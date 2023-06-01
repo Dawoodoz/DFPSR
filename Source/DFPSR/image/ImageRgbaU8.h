@@ -65,9 +65,9 @@ public:
 	IMAGE_DECLARATION(ImageRgbaU8Impl, 4, Color4xU8, uint8_t);
 	// Constructors
 	ImageRgbaU8Impl(int32_t newWidth, int32_t newHeight, int32_t newStride, Buffer buffer, intptr_t startOffset, const PackOrder &packOrder);
-	ImageRgbaU8Impl(int32_t newWidth, int32_t newHeight, int32_t alignment = 16);
+	ImageRgbaU8Impl(int32_t newWidth, int32_t newHeight, int32_t alignment);
 	// Native canvas constructor
-	ImageRgbaU8Impl(int32_t newWidth, int32_t newHeight, PackOrderIndex packOrderIndex);
+	ImageRgbaU8Impl(int32_t newWidth, int32_t newHeight, PackOrderIndex packOrderIndex, int32_t alignment);
 	// Fast reading
 	TextureRgba texture; // The texture view
 	void initializeRgbaImage(); // Points to level 0 from all bins to allow rendering

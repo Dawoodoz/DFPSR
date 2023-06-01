@@ -238,7 +238,6 @@ static void closeEntireMenu(VisualComponent* menu) {
 
 void Menu::receiveMouseEvent(const MouseEvent& event) {
 	int childCount = this->getChildCount();
-	IVector2D positionFromParent = event.position;
 	MouseEvent localEvent = event;
 	localEvent.position -= this->location.upperLeft();
 	if (this->showingOverlay() && this->pointIsInsideOfOverlay(event.position)) {

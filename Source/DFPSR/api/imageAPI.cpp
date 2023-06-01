@@ -33,24 +33,25 @@
 #include "../image/internal/imageInternal.h"
 #include "../image/stbImage/stbImageWrapper.h"
 #include "../math/scalar.h"
+#include "../base/simd.h"
 
 using namespace dsr;
 
 // Constructors
 AlignedImageU8 dsr::image_create_U8(int32_t width, int32_t height) {
-	return AlignedImageU8(std::make_shared<ImageU8Impl>(width, height));
+	return AlignedImageU8(std::make_shared<ImageU8Impl>(width, height, DSR_DEFAULT_ALIGNMENT));
 }
 AlignedImageU16 dsr::image_create_U16(int32_t width, int32_t height) {
-	return AlignedImageU16(std::make_shared<ImageU16Impl>(width, height));
+	return AlignedImageU16(std::make_shared<ImageU16Impl>(width, height, DSR_DEFAULT_ALIGNMENT));
 }
 AlignedImageF32 dsr::image_create_F32(int32_t width, int32_t height) {
-	return AlignedImageF32(std::make_shared<ImageF32Impl>(width, height));
+	return AlignedImageF32(std::make_shared<ImageF32Impl>(width, height, DSR_DEFAULT_ALIGNMENT));
 }
 OrderedImageRgbaU8 dsr::image_create_RgbaU8(int32_t width, int32_t height) {
-	return OrderedImageRgbaU8(std::make_shared<ImageRgbaU8Impl>(width, height));
+	return OrderedImageRgbaU8(std::make_shared<ImageRgbaU8Impl>(width, height, DSR_DEFAULT_ALIGNMENT));
 }
 AlignedImageRgbaU8 dsr::image_create_RgbaU8_native(int32_t width, int32_t height, PackOrderIndex packOrderIndex) {
-	return AlignedImageRgbaU8(std::make_shared<ImageRgbaU8Impl>(width, height, packOrderIndex));
+	return AlignedImageRgbaU8(std::make_shared<ImageRgbaU8Impl>(width, height, packOrderIndex, DSR_DEFAULT_ALIGNMENT));
 }
 
 // Loading from data pointer
