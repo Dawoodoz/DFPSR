@@ -138,7 +138,7 @@ inline static void fillQuadSuper(const Shader& shader, int x, SafePointer<uint32
 			// Get the color
 			ALIGN16 U32x4 packedColor(0u); // Allow uninitialized memory?
 			// Execute the shader
-			ALIGN16 rgba_F32 planarSourceColor = shader.getPixels_2x2(weights);
+			ALIGN16 Rgba_F32 planarSourceColor = shader.getPixels_2x2(weights);
 			// Apply alpha filtering
 			if (FILTER == Filter::Alpha) {
 				// Get opacity from the source color
@@ -146,7 +146,7 @@ inline static void fillQuadSuper(const Shader& shader, int x, SafePointer<uint32
 				// Read the packed colors for alpha blending
 				ALIGN16 U32x4 packedTargetColor = clippedRead<CLIP_SIDES>(pixelDataUpper, pixelDataLower, vis0, vis1, vis2, vis3);
 				// Unpack the target color into planar RGBA format so that it can be mixed with the source color
-				ALIGN16 rgba_F32 planarTargetColor(packedTargetColor, targetPackingOrder);
+				ALIGN16 Rgba_F32 planarTargetColor(packedTargetColor, targetPackingOrder);
 				// Blend linearly using floats
 				planarSourceColor = (planarSourceColor * opacity) + (planarTargetColor * (1.0f - opacity));
 			}

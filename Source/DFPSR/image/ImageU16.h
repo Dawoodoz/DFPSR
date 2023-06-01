@@ -36,7 +36,7 @@ public:
 	// Inherit constructors
 	using ImageImpl::ImageImpl;
 	ImageU16Impl(int32_t newWidth, int32_t newHeight, int32_t newStride, Buffer buffer, intptr_t startOffset);
-	ImageU16Impl(int32_t newWidth, int32_t newHeight, int32_t alignment = 16);
+	ImageU16Impl(int32_t newWidth, int32_t newHeight, int32_t alignment);
 	// Macro defined functions
 	IMAGE_DECLARATION(ImageU16Impl, 1, uint16_t, uint16_t);
 };

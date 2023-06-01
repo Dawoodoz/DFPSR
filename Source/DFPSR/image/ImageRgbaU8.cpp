@@ -25,6 +25,7 @@
 #include "internal/imageInternal.h"
 #include "internal/imageTemplate.h"
 #include <algorithm>
+#include "../base/simd.h"
 
 using namespace dsr;
 
@@ -42,7 +43,7 @@ ImageRgbaU8Impl::ImageRgbaU8Impl(int32_t newWidth, int32_t newHeight, int32_t al
 }
 
 // Native canvas constructor
-ImageRgbaU8Impl::ImageRgbaU8Impl(int32_t newWidth, int32_t newHeight, PackOrderIndex packOrderIndex) :
+ImageRgbaU8Impl::ImageRgbaU8Impl(int32_t newWidth, int32_t newHeight, PackOrderIndex packOrderIndex, int32_t alignment) :
   ImageImpl(newWidth, newHeight, roundUp(newWidth * sizeof(Color4xU8), 16), sizeof(Color4xU8)) {
 	this->packOrder = PackOrder::getPackOrder(packOrderIndex);
 	this->initializeRgbaImage();
@@ -62,7 +63,7 @@ ImageRgbaU8Impl ImageRgbaU8Impl::getWithoutPadding() const {
 		return *this;
 	} else {
 		// Copy each row without padding
-		ImageRgbaU8Impl result = ImageRgbaU8Impl(this->width, this->height, this->packOrder.packOrderIndex);
+		ImageRgbaU8Impl result = ImageRgbaU8Impl(this->width, this->height, this->packOrder.packOrderIndex, DSR_DEFAULT_ALIGNMENT);
 		const SafePointer<uint8_t> sourceRow = imageInternal::getSafeData<uint8_t>(*this);
 		int32_t sourceStride = this->stride;
 		SafePointer<uint8_t> targetRow = imageInternal::getSafeData<uint8_t>(result);
@@ -98,7 +99,7 @@ ImageU8Impl ImageRgbaU8Impl::getChannel(int32_t channelIndex) const {
 	// Safety for release mode
 	if (channelIndex < 0) { channelIndex = 0; }
 	if (channelIndex > channelCount) { channelIndex = channelCount; }
-	ImageU8Impl result(this->width, this->height);
+	ImageU8Impl result(this->width, this->height, DSR_DEFAULT_ALIGNMENT);
 	extractChannel(imageInternal::getSafeData<uint8_t>(result), result.stride, imageInternal::getSafeData<uint8_t>(*this), this->stride, channelCount, channelIndex, this->width, this->height);
 	return result;
 }

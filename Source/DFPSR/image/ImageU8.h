@@ -36,7 +36,7 @@ public:
 	using ImageImpl::ImageImpl;
 	// Constructors
 	ImageU8Impl(int32_t newWidth, int32_t newHeight, int32_t newStride, Buffer buffer, intptr_t startOffset);
-	ImageU8Impl(int32_t newWidth, int32_t newHeight, int32_t alignment = 16);
+	ImageU8Impl(int32_t newWidth, int32_t newHeight, int32_t alignment);
 	// Macro defined functions
 	IMAGE_DECLARATION(ImageU8Impl, 1, uint8_t, uint8_t);
 };

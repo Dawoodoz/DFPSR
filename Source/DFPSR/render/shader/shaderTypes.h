@@ -31,22 +31,22 @@
 
 namespace dsr {
 
-struct rgba_F32 {
+struct Rgba_F32 {
 	F32x4 red;
 	F32x4 green;
 	F32x4 blue;
 	F32x4 alpha;
-	explicit rgba_F32(const U32x4 &color) :
+	explicit Rgba_F32(const U32x4 &color) :
 	  red(  floatFromU32(getRed(  color))),
 	  green(floatFromU32(getGreen(color))),
 	  blue( floatFromU32(getBlue( color))),
 	  alpha(floatFromU32(getAlpha(color))) {}
-	rgba_F32(const U32x4 &color, const PackOrder &order) :
+	Rgba_F32(const U32x4 &color, const PackOrder &order) :
 	  red(  floatFromU32(getRed(  color, order))),
 	  green(floatFromU32(getGreen(color, order))),
 	  blue( floatFromU32(getBlue( color, order))),
 	  alpha(floatFromU32(getAlpha(color, order))) {}
-	rgba_F32(const F32x4 &red, const F32x4 &green, const F32x4 &blue, const F32x4 &alpha) : red(red), green(green), blue(blue), alpha(alpha) {}
+	Rgba_F32(const F32x4 &red, const F32x4 &green, const F32x4 &blue, const F32x4 &alpha) : red(red), green(green), blue(blue), alpha(alpha) {}
 	// TODO: Use a template argument for deciding the packing order for external image formats
 	U32x4 toSaturatedByte() const {
 		return floatToSaturatedByte(this->red, this->green, this->blue, this->alpha);
@@ -55,17 +55,17 @@ struct rgba_F32 {
 		return floatToSaturatedByte(this->red, this->green, this->blue, this->alpha, order);
 	}
 };
-inline rgba_F32 operator+(const rgba_F32 &left, const rgba_F32 &right) {
-	return rgba_F32(left.red + right.red, left.green + right.green, left.blue + right.blue, left.alpha + right.alpha);
+inline Rgba_F32 operator+(const Rgba_F32 &left, const Rgba_F32 &right) {
+	return Rgba_F32(left.red + right.red, left.green + right.green, left.blue + right.blue, left.alpha + right.alpha);
 }
-inline rgba_F32 operator-(const rgba_F32 &left, const rgba_F32 &right) {
-	return rgba_F32(left.red - right.red, left.green - right.green, left.blue - right.blue, left.alpha - right.alpha);
+inline Rgba_F32 operator-(const Rgba_F32 &left, const Rgba_F32 &right) {
+	return Rgba_F32(left.red - right.red, left.green - right.green, left.blue - right.blue, left.alpha - right.alpha);
 }
-inline rgba_F32 operator*(const rgba_F32 &left, const rgba_F32 &right) {
-	return rgba_F32(left.red * right.red, left.green * right.green, left.blue * right.blue, left.alpha * right.alpha);
+inline Rgba_F32 operator*(const Rgba_F32 &left, const Rgba_F32 &right) {
+	return Rgba_F32(left.red * right.red, left.green * right.green, left.blue * right.blue, left.alpha * right.alpha);
 }
-inline rgba_F32 operator*(const rgba_F32 &left, const F32x4 &right) {
-	return rgba_F32(left.red * right, left.green * right, left.blue * right, left.alpha * right);
+inline Rgba_F32 operator*(const Rgba_F32 &left, const F32x4 &right) {
+	return Rgba_F32(left.red * right, left.green * right, left.blue * right, left.alpha * right);
 }
 
 }

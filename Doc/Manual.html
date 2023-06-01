@@ -32,10 +32,6 @@ This library is entirely statically linked, so that your source code can be save
 By being compiled from source code automatically when making changes to the library, it is easy to mix different versions of the library if something eventually has to be removed to reduce bloat.
 
 </P><P>
-SIMD registers are expected to get bigger in the future, but the library does not use any inline assembly, so the old intrinsics will simply be translated into the equivalent machine instructions on the next version of the instruction set.
-If larger SIMD registers become so widely adopted that it can be used as a minimum requirement in the future, the default alignment of Buffer will likely become a multiple of the old alignment to support both new and old SIMD vectors.
-
-</P><P>
 Anything with "impl" in the name is expected to change at any time, so don't do hacks with the internals unless you copy the code into your own project or stay with the same version of the library.
 Anything that requires defining DFPSR_INTERNAL_ACCESS before a header is also considered internal.
 

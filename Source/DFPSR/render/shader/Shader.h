@@ -88,7 +88,7 @@ class Shader {
 public:
 	void fillShape(ImageRgbaU8Impl *colorBuffer, ImageF32Impl *depthBuffer, const ITriangle2D &triangle, const Projection &projection, const RowShape &shape, Filter filter);
 	// The main call that defines the pixel shader
-	virtual rgba_F32 getPixels_2x2(const F32x4x3 &vertexWeights) const = 0;
+	virtual Rgba_F32 getPixels_2x2(const F32x4x3 &vertexWeights) const = 0;
 };
 
 }

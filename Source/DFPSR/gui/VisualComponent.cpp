@@ -410,7 +410,7 @@ void VisualComponent::updateIndirectStates() {
 		childStates |= this->children[i]->currentState;
 	}
 	// Direct and indirect inheritance.
-	ComponentState expectedIndirectStates = ((childStates & componentState_direct) << 1) | childStates & componentState_indirect;
+	ComponentState expectedIndirectStates = ((childStates & componentState_direct) << 1) | (childStates & componentState_indirect);
 	this->currentState = (this->currentState & componentState_direct) | expectedIndirectStates;
 }
 

@@ -43,8 +43,8 @@ namespace shaderMethods {
 		return vMA + vMB + vMC;
 	}
 
-	inline rgba_F32 interpolateVertexColor(const FVector3D &red, const FVector3D &green, const FVector3D &blue, const FVector3D &alpha, const F32x4x3 &vertexWeights) {
-		return rgba_F32(
+	inline Rgba_F32 interpolateVertexColor(const FVector3D &red, const FVector3D &green, const FVector3D &blue, const FVector3D &alpha, const F32x4x3 &vertexWeights) {
+		return Rgba_F32(
 		  interpolate(red,   vertexWeights),
 		  interpolate(green, vertexWeights),
 		  interpolate(blue,  vertexWeights),
@@ -87,10 +87,10 @@ namespace shaderMethods {
 
 	inline U32x4 mix_BL(const U32x4 &colorA, const U32x4 &colorB, const U32x4 &colorC, const U32x4 &colorD, const U32x4 &weightX, const U32x4 &weightY) {
 		// Get inverse weights
-		ALIGN16 U16x8 weightXR = repeatAs16Bits(weightX);
-		ALIGN16 U16x8 weightYB = repeatAs16Bits(weightY);
-		ALIGN16 U16x8 weightXL = invertWeight(weightXR);
-		ALIGN16 U16x8 weightYT = invertWeight(weightYB);
+		U16x8 weightXR = repeatAs16Bits(weightX);
+		U16x8 weightYB = repeatAs16Bits(weightY);
+		U16x8 weightXL = invertWeight(weightXR);
+		U16x8 weightYT = invertWeight(weightYB);
 		// Multiply
 		return weightColors(weightColors(colorA, weightXL, colorB, weightXR), weightYT, weightColors(colorC, weightXL, colorD, weightXR), weightYB);
 	}
@@ -98,8 +98,9 @@ namespace shaderMethods {
 	// Single layer sampling methods
 	inline U32x4 sample_U32(const TextureRgbaLayer *source, const U32x4 &col, const U32x4 &row) {
 		#ifdef USE_AVX2
-			ALIGN16 U32x4 pixelOffset((col + (row << (source->strideShift - 2)))); // PixelOffset = Column + Row * PixelStride
-			return U32x4(GATHER_U32_AVX2(source->data, pixelOffset.v, 4));
+			U32x4 pixelOffset((col + (row << (source->strideShift - 2)))); // PixelOffset = Column + Row * PixelStride
+			return U32x4(GATHER_U32x4_AVX2(source->data, pixelOffset.v, 4));
+			// return gather(source->data, pixelOffset.v); TODO: Needs SafePointer, so that this function can use the gather function with automatic emulation instead of hardcoding for AVX2
 		#else
 			UVector4D byteOffset = ((col << 2) + (row << source->strideShift)).get(); // ByteOffset = Column * 4 + Row * ByteStride
 			return U32x4(
@@ -143,70 +144,69 @@ namespace shaderMethods {
 	template<Interpolation INTERPOLATION>
 	inline U32x4 sample_U32(const TextureRgbaLayer *source, const F32x4 &u, const F32x4 &v) {
 		if (INTERPOLATION == Interpolation::BL) {
-			ALIGN16 F32x4 uLow(u + source->halfPixelOffsetU);
-			ALIGN16 F32x4 vLow(v + source->halfPixelOffsetV);
-			ALIGN16 U32x4 subPixLowX(truncateToU32(uLow * source->subWidth)); // SubPixelLowX = ULow * (Width * 256)
-			ALIGN16 U32x4 subPixLowY(truncateToU32(vLow * source->subHeight)); // SubPixelLowY = VLow * (Height * 256)
-			ALIGN16 U32x4 weightX = subPixLowX & 255; // WeightX = SubPixelLowX % 256
-			ALIGN16 U32x4 weightY = subPixLowY & 255; // WeightY = SubPixelLowY % 256
-			ALIGN16 U32x4 pixLowX(subPixLowX >> 8); // PixelLowX = SubPixelLowX / 256
-			ALIGN16 U32x4 pixLowY(subPixLowY >> 8); // PixelLowY = SubPixelLowY / 256
-			ALIGN16 U32x4 wMask(source->widthMask);
-			ALIGN16 U32x4 hMask(source->heightMask);
-			ALIGN16 U32x4 colLow(pixLowX & wMask); // ColumnLow = PixelLowX % Width
-			ALIGN16 U32x4 rowLow(pixLowY & hMask); // RowLow = PixelLowY % Height
-			ALIGN16 U32x4 colHigh(((colLow + 1) & wMask)); // ColumnHigh = (ColumnLow + 1) % Width
-			ALIGN16 U32x4 rowHigh(((rowLow + 1) & hMask)); // RowHigh = (RowLow + 1) % Height
+			F32x4 uLow(u + source->halfPixelOffsetU);
+			F32x4 vLow(v + source->halfPixelOffsetV);
+			U32x4 subPixLowX(truncateToU32(uLow * source->subWidth)); // SubPixelLowX = ULow * (Width * 256)
+			U32x4 subPixLowY(truncateToU32(vLow * source->subHeight)); // SubPixelLowY = VLow * (Height * 256)
+			U32x4 weightX = subPixLowX & 255; // WeightX = SubPixelLowX % 256
+			U32x4 weightY = subPixLowY & 255; // WeightY = SubPixelLowY % 256
+			U32x4 pixLowX(subPixLowX >> 8); // PixelLowX = SubPixelLowX / 256
+			U32x4 pixLowY(subPixLowY >> 8); // PixelLowY = SubPixelLowY / 256
+			U32x4 wMask(source->widthMask);
+			U32x4 hMask(source->heightMask);
+			U32x4 colLow(pixLowX & wMask); // ColumnLow = PixelLowX % Width
+			U32x4 rowLow(pixLowY & hMask); // RowLow = PixelLowY % Height
+			U32x4 colHigh(((colLow + 1) & wMask)); // ColumnHigh = (ColumnLow + 1) % Width
+			U32x4 rowHigh(((rowLow + 1) & hMask)); // RowHigh = (RowLow + 1) % Height
 			// Sample colors in the 4 closest pixels
-			ALIGN16 U32x4 colorA(sample_U32(source, colLow, rowLow));
-			ALIGN16 U32x4 colorB(sample_U32(source, colHigh, rowLow));
-			ALIGN16 U32x4 colorC(sample_U32(source, colLow, rowHigh));
-			ALIGN16 U32x4 colorD(sample_U32(source, colHigh, rowHigh));
+			U32x4 colorA(sample_U32(source, colLow, rowLow));
+			U32x4 colorB(sample_U32(source, colHigh, rowLow));
+			U32x4 colorC(sample_U32(source, colLow, rowHigh));
+			U32x4 colorD(sample_U32(source, colHigh, rowHigh));
 			// Take a weighted average
 			return shaderMethods::mix_BL(colorA, colorB, colorC, colorD, weightX, weightY);
 		} else { // Interpolation::NN or unhandled
-			ALIGN16 U32x4 pixX(truncateToU32(u * source->width)); // PixelX = U * Width
-			ALIGN16 U32x4 pixY(truncateToU32(v * source->height)); // PixelY = V * Height
-			ALIGN16 U32x4 col(pixX & source->widthMask); // Column = PixelX % Width
-			ALIGN16 U32x4 row(pixY & source->heightMask); // Row = PixelY % Height
+			U32x4 pixX(truncateToU32(u * source->width)); // PixelX = U * Width
+			U32x4 pixY(truncateToU32(v * source->height)); // PixelY = V * Height
+			U32x4 col(pixX & source->widthMask); // Column = PixelX % Width
+			U32x4 row(pixY & source->heightMask); // Row = PixelY % Height
 			return sample_U32(source, col, row);
 		}
 	}
 
 	// Precondition: u, v > -0.875f = 1 - (0.5 / minimumMipSize)
 	template<Interpolation INTERPOLATION, bool HIGH_QUALITY>
-	inline rgba_F32 sample_F32(const TextureRgbaLayer *source, const F32x4 &u, const F32x4 &v) {
+	inline Rgba_F32 sample_F32(const TextureRgbaLayer *source, const F32x4 &u, const F32x4 &v) {
 		if (INTERPOLATION == Interpolation::BL) {
 			if (HIGH_QUALITY) { // High quality interpolation
-				ALIGN16 F32x4 uLow(u + source->halfPixelOffsetU);
-				ALIGN16 F32x4 vLow(v + source->halfPixelOffsetV);
-				ALIGN16 F32x4 pixX = uLow * source->width; // PixelX = ULow * Width
-				ALIGN16 F32x4 pixY = vLow * source->height; // PixelY = VLow * Height
+				F32x4 uLow(u + source->halfPixelOffsetU);
+				F32x4 vLow(v + source->halfPixelOffsetV);
+				F32x4 pixX = uLow * source->width; // PixelX = ULow * Width
+				F32x4 pixY = vLow * source->height; // PixelY = VLow * Height
 				// Truncation can be used as floor for positive input
-				ALIGN16 U32x4 pixLowX(truncateToU32(pixX)); // PixelLowX = floor(PixelX)
-				ALIGN16 U32x4 pixLowY(truncateToU32(pixY)); // PixelLowY = floor(PixelY)
-				ALIGN16 U32x4 wMask(source->widthMask);
-				ALIGN16 U32x4 hMask(source->heightMask);
-				ALIGN16 U32x4 colLow(pixLowX & wMask); // ColumnLow = PixelLowX % Width
-				ALIGN16 U32x4 rowLow(pixLowY & hMask); // RowLow = PixelLowY % Height
-				ALIGN16 U32x4 colHigh(((colLow + 1) & wMask)); // ColumnHigh = (ColumnLow + 1) % Width
-				ALIGN16 U32x4 rowHigh(((rowLow + 1) & hMask)); // RowHigh = (RowLow + 1) % Height
+				U32x4 pixLowX(truncateToU32(pixX)); // PixelLowX = floor(PixelX)
+				U32x4 pixLowY(truncateToU32(pixY)); // PixelLowY = floor(PixelY)
+				U32x4 wMask(source->widthMask);
+				U32x4 hMask(source->heightMask);
+				U32x4 colLow(pixLowX & wMask); // ColumnLow = PixelLowX % Width
+				U32x4 rowLow(pixLowY & hMask); // RowLow = PixelLowY % Height
+				U32x4 colHigh(((colLow + 1) & wMask)); // ColumnHigh = (ColumnLow + 1) % Width
+				U32x4 rowHigh(((rowLow + 1) & hMask)); // RowHigh = (RowLow + 1) % Height
 				// Sample colors in the 4 closest pixels
-				ALIGN16 rgba_F32 colorA(rgba_F32(sample_U32(source, colLow, rowLow)));
-				ALIGN16 rgba_F32 colorB(rgba_F32(sample_U32(source, colHigh, rowLow)));
-				ALIGN16 rgba_F32 colorC(rgba_F32(sample_U32(source, colLow, rowHigh)));
-				ALIGN16 rgba_F32 colorD(rgba_F32(sample_U32(source, colHigh, rowHigh)));
-
-				ALIGN16 F32x4 weightX = pixX - floatFromU32(pixLowX);
-				ALIGN16 F32x4 weightY = pixY - floatFromU32(pixLowY);
-				ALIGN16 F32x4 invWeightX = 1.0f - weightX;
-				ALIGN16 F32x4 invWeightY = 1.0f - weightY;
+				Rgba_F32 colorA(Rgba_F32(sample_U32(source, colLow, rowLow)));
+				Rgba_F32 colorB(Rgba_F32(sample_U32(source, colHigh, rowLow)));
+				Rgba_F32 colorC(Rgba_F32(sample_U32(source, colLow, rowHigh)));
+				Rgba_F32 colorD(Rgba_F32(sample_U32(source, colHigh, rowHigh)));
+				F32x4 weightX = pixX - floatFromU32(pixLowX);
+				F32x4 weightY = pixY - floatFromU32(pixLowY);
+				F32x4 invWeightX = 1.0f - weightX;
+				F32x4 invWeightY = 1.0f - weightY;
 				return (colorA * invWeightX + colorB * weightX) * invWeightY + (colorC * invWeightX + colorD * weightX) * weightY;
 			} else { // Fast interpolation
-				return rgba_F32(sample_U32<Interpolation::BL>(source, u, v));
+				return Rgba_F32(sample_U32<Interpolation::BL>(source, u, v));
 			}
 		} else { // Interpolation::NN or unhandled
-			return rgba_F32(sample_U32<Interpolation::NN>(source, u, v));
+			return Rgba_F32(sample_U32<Interpolation::NN>(source, u, v));
 		}
 	}
 
@@ -220,7 +220,7 @@ namespace shaderMethods {
 
 	// Precondition: u, v > -0.875f = 1 - (0.5 / minimumMipSize)
 	template<Interpolation INTERPOLATION, bool HIGH_QUALITY>
-	inline rgba_F32 sample_F32(const TextureRgba *source, const F32x4 &u, const F32x4 &v) {
+	inline Rgba_F32 sample_F32(const TextureRgba *source, const F32x4 &u, const F32x4 &v) {
 		int mipLevel = getMipLevel(source, u, v);
 		return sample_F32<INTERPOLATION, HIGH_QUALITY>(&(source->mips[mipLevel]), u, v);
 	}
