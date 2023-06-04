@@ -3249,26 +3249,33 @@
 	//   U8xX
 	//     The longest available SIMD vector for storing unsigned 8-bit integer values.
 	#if defined USE_256BIT_SIMD || defined EMULATE_256BIT_SIMD
-		// Align memory with 256 bits to allow overwriting padding at the end of each pixel row.
-		//   Otherwise you would have to preserve data at the end of each row with slow and bloated duplicated code in every filter.
-		#define DSR_DEFAULT_ALIGNMENT 32
+		// Using 256-bit SIMD
+		#define DSR_DEFAULT_VECTOR_SIZE 32
 		using F32xX = F32x8; // Longest available SIMD vector of 32-bit floats.
 		using I32xX = I32x8; // Longest available SIMD vector of signed 32-bit integers.
 		using U32xX = U32x8; // Longest available SIMD vector of unsigned 32-bit integers.
 		using U16xX = U16x16; // Longest available SIMD vector of unsigned 16-bit integers.
 		using U8xX = U8x32; // Longest available SIMD vector of unsigned 8-bit integers.
+		// Align memory with 256 bits to allow overwriting padding at the end of each pixel row.
+		//   Otherwise you would have to preserve data at the end of each row with slow and bloated duplicated code in every filter.
+		#define DSR_DEFAULT_ALIGNMENT 32
 	#else
 		// If there is no hardware support for 256-bit vectors, the emulation of 256-bit vectors when used explicitly, is allowed to be aligned with just 128 bits.
-		#define DSR_DEFAULT_ALIGNMENT 16
+		#define DSR_DEFAULT_VECTOR_SIZE 16
 		using F32xX = F32x4; // Longest available SIMD vector of 32-bit floats.
 		using I32xX = I32x4; // Longest available SIMD vector of signed 32-bit integers.
 		using U32xX = U32x4; // Longest available SIMD vector of unsigned 32-bit integers.
 		using U16xX = U16x8; // Longest available SIMD vector of unsigned 16-bit integers.
 		using U8xX = U8x16; // Longest available SIMD vector of unsigned 8-bit integers.
+		// TODO: Should AVX without AVX2 increase memory alignment to 256 bits to allow manual AVX optimizations?
+		//       Having to skip blocks of memory when alignment is larger than default vector size could lead to poor performance from cache misses.
+		#define DSR_DEFAULT_ALIGNMENT 16
 	#endif
+	// In case that we want to exploit partial type support for a vector length in the future, alignment and vector length should have two separate names.
+	//   This might also be useful for overriding memory alignment in the framework for a manual vectorizations.
 	// How many lanes do the longest available vector have for a specified lane size.
 	//   Used to iterate indices and pointers using whole elements.
-	static const int laneCountX_32Bit = DSR_DEFAULT_ALIGNMENT / 4;
-	static const int laneCountX_16Bit = DSR_DEFAULT_ALIGNMENT / 2;
-	static const int laneCountX_8Bit = DSR_DEFAULT_ALIGNMENT;
+	static const int laneCountX_32Bit = DSR_DEFAULT_VECTOR_SIZE / 4;
+	static const int laneCountX_16Bit = DSR_DEFAULT_VECTOR_SIZE / 2;
+	static const int laneCountX_8Bit = DSR_DEFAULT_VECTOR_SIZE;
 #endif
