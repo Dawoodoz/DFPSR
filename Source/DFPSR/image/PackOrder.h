@@ -1,6 +1,6 @@
 ﻿// zlib open source license
 //
-// Copyright (c) 2017 to 2019 David Forsgren Piuva
+// Copyright (c) 2017 to 2023 David Forsgren Piuva
 // 
 // This software is provided 'as-is', without any express or implied
 // warranty. In no event will the authors be held liable for any damages
@@ -93,22 +93,26 @@ inline bool operator==(const PackOrder &left, const PackOrder &right) {
 }
 
 // Each input 32-bit element is from 0 to 255. Otherwise, the remainder will leak to other elements.
-inline static U32x4 packBytes(const U32x4 &s0, const U32x4 &s1, const U32x4 &s2) {
+template<typename T> // Accepting uint32_t, U32x4, U32x8...
+T packBytes(const T &s0, const T &s1, const T &s2) {
 	return s0 | ENDIAN_POS_ADDR(s1, 8) | ENDIAN_POS_ADDR(s2, 16);
 }
 // Using a specified packing order
-inline U32x4 packBytes(const U32x4 &s0, const U32x4 &s1, const U32x4 &s2, const PackOrder &order) {
+template<typename T> // Accepting uint32_t, U32x4, U32x8...
+T packBytes(const T &s0, const T &s1, const T &s2, const PackOrder &order) {
 	return ENDIAN_POS_ADDR(s0, order.redOffset)
 	     | ENDIAN_POS_ADDR(s1, order.greenOffset)
 	     | ENDIAN_POS_ADDR(s2, order.blueOffset);
 }
 
 // Each input 32-bit element is from 0 to 255. Otherwise, the remainder will leak to other elements.
-inline static U32x4 packBytes(const U32x4 &s0, const U32x4 &s1, const U32x4 &s2, const U32x4 &s3) {
+template<typename T> // Accepting uint32_t, U32x4, U32x8...
+T packBytes(const T &s0, const T &s1, const T &s2, const T &s3) {
 	return s0 | ENDIAN_POS_ADDR(s1, 8) | ENDIAN_POS_ADDR(s2, 16) | ENDIAN_POS_ADDR(s3, 24);
 }
 // Using a specified packing order
-inline U32x4 packBytes(const U32x4 &s0, const U32x4 &s1, const U32x4 &s2, const U32x4 &s3, const PackOrder &order) {
+template<typename T> // Accepting uint32_t, U32x4, U32x8...
+T packBytes(const T &s0, const T &s1, const T &s2, const T &s3, const PackOrder &order) {
 	return ENDIAN_POS_ADDR(s0, order.redOffset)
 	     | ENDIAN_POS_ADDR(s1, order.greenOffset)
 	     | ENDIAN_POS_ADDR(s2, order.blueOffset)
@@ -116,7 +120,15 @@ inline U32x4 packBytes(const U32x4 &s0, const U32x4 &s1, const U32x4 &s2, const 
 }
 
 // Pack separate floats into saturated bytes
-inline static U32x4 floatToSaturatedByte(const F32x4 &s0, const F32x4 &s1, const F32x4 &s2, const F32x4 &s3) {
+inline U32x4 floatToSaturatedByte(const F32x4 &s0, const F32x4 &s1, const F32x4 &s2, const F32x4 &s3) {
+	return packBytes(
+	  truncateToU32(s0.clamp(0.1f, 255.1f)),
+	  truncateToU32(s1.clamp(0.1f, 255.1f)),
+	  truncateToU32(s2.clamp(0.1f, 255.1f)),
+	  truncateToU32(s3.clamp(0.1f, 255.1f))
+	);
+}
+inline U32x8 floatToSaturatedByte(const F32x8 &s0, const F32x8 &s1, const F32x8 &s2, const F32x8 &s3) {
 	return packBytes(
 	  truncateToU32(s0.clamp(0.1f, 255.1f)),
 	  truncateToU32(s1.clamp(0.1f, 255.1f)),
@@ -134,54 +146,46 @@ inline U32x4 floatToSaturatedByte(const F32x4 &s0, const F32x4 &s1, const F32x4 
 	  order
 	);
 }
-
-inline uint32_t getRed(uint32_t color) {
-	return color & ENDIAN32_BYTE_0;
-}
-inline uint32_t getRed(uint32_t color, const PackOrder &order) {
-	return ENDIAN_NEG_ADDR(color & order.redMask, order.redOffset);
-}
-inline uint32_t getGreen(uint32_t color) {
-	return ENDIAN_NEG_ADDR(color & ENDIAN32_BYTE_1, 8);
-}
-inline uint32_t getGreen(uint32_t color, const PackOrder &order) {
-	return ENDIAN_NEG_ADDR(color & order.greenMask, order.greenOffset);
-}
-inline uint32_t getBlue(uint32_t color) {
-	return ENDIAN_NEG_ADDR(color & ENDIAN32_BYTE_2, 16);
-}
-inline uint32_t getBlue(uint32_t color, const PackOrder &order) {
-	return ENDIAN_NEG_ADDR(color & order.blueMask, order.blueOffset);
-}
-inline uint32_t getAlpha(uint32_t color) {
-	return ENDIAN_NEG_ADDR(color & ENDIAN32_BYTE_3, 24);
-}
-inline uint32_t getAlpha(uint32_t color, const PackOrder &order) {
-	return ENDIAN_NEG_ADDR(color & order.alphaMask, order.alphaOffset);
+inline U32x8 floatToSaturatedByte(const F32x8 &s0, const F32x8 &s1, const F32x8 &s2, const F32x8 &s3, const PackOrder &order) {
+	return packBytes(
+	  truncateToU32(s0.clamp(0.1f, 255.1f)),
+	  truncateToU32(s1.clamp(0.1f, 255.1f)),
+	  truncateToU32(s2.clamp(0.1f, 255.1f)),
+	  truncateToU32(s3.clamp(0.1f, 255.1f)),
+	  order
+	);
 }
 
-inline U32x4 getRed(const U32x4 &color) {
+template<typename T> // Accepting uint32_t, U32x4, U32x8...
+inline T getRed(T color) {
 	return color & ENDIAN32_BYTE_0;
 }
-inline U32x4 getRed(const U32x4 &color, const PackOrder &order) {
+template<typename T> // Accepting uint32_t, U32x4, U32x8...
+inline T getRed(T color, const PackOrder &order) {
 	return ENDIAN_NEG_ADDR(color & order.redMask, order.redOffset);
 }
-inline U32x4 getGreen(const U32x4 &color) {
+template<typename T> // Accepting uint32_t, U32x4, U32x8...
+inline T getGreen(T color) {
 	return ENDIAN_NEG_ADDR(color & ENDIAN32_BYTE_1, 8);
 }
-inline U32x4 getGreen(const U32x4 &color, const PackOrder &order) {
+template<typename T> // Accepting uint32_t, U32x4, U32x8...
+inline T getGreen(T color, const PackOrder &order) {
 	return ENDIAN_NEG_ADDR(color & order.greenMask, order.greenOffset);
 }
-inline U32x4 getBlue(const U32x4 &color) {
+template<typename T> // Accepting uint32_t, U32x4, U32x8...
+inline T getBlue(T color) {
 	return ENDIAN_NEG_ADDR(color & ENDIAN32_BYTE_2, 16);
 }
-inline U32x4 getBlue(const U32x4 &color, const PackOrder &order) {
+template<typename T> // Accepting uint32_t, U32x4, U32x8...
+inline T getBlue(T color, const PackOrder &order) {
 	return ENDIAN_NEG_ADDR(color & order.blueMask, order.blueOffset);
 }
-inline U32x4 getAlpha(const U32x4 &color) {
+template<typename T> // Accepting uint32_t, U32x4, U32x8...
+inline T getAlpha(T color) {
 	return ENDIAN_NEG_ADDR(color & ENDIAN32_BYTE_3, 24);
 }
-inline U32x4 getAlpha(const U32x4 &color, const PackOrder &order) {
+template<typename T> // Accepting uint32_t, U32x4, U32x8...
+inline T getAlpha(T color, const PackOrder &order) {
 	return ENDIAN_NEG_ADDR(color & order.alphaMask, order.alphaOffset);
 }
 
