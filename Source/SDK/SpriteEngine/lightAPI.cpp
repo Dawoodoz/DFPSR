@@ -6,24 +6,24 @@
 namespace dsr {
 
 // Precondition: The packed color must be in the standard RGBA order, meaning no native packing
-inline F32x4x3 unpackRgb_U32x4_to_F32x4x3(const U32x4& color) {
-	return F32x4x3(floatFromU32(getRed(color)), floatFromU32(getGreen(color)), floatFromU32(getBlue(color)));
+inline F32xXx3 unpackRgb_U32xX_to_F32xXx3(const U32xX& color) {
+	return F32xXx3(floatFromU32(getRed(color)), floatFromU32(getGreen(color)), floatFromU32(getBlue(color)));
 }
 
-static inline void setLight(SafePointer<uint8_t> lightPixel, U8x16 newlight) {
+static inline void setLight(SafePointer<uint8_t> lightPixel, U8xX newlight) {
 	newlight.writeAligned(lightPixel, "setLight: writing light");
 }
 
-static inline void addLight(SafePointer<uint8_t> lightPixel, U8x16 addedlight) {
-	U8x16 oldLight = U8x16::readAligned(lightPixel, "addLight: reading light");
-	U8x16 newlight = saturatedAddition(oldLight, addedlight);
+static inline void addLight(SafePointer<uint8_t> lightPixel, U8xX addedlight) {
+	U8xX oldLight = U8xX::readAligned(lightPixel, "addLight: reading light");
+	U8xX newlight = saturatedAddition(oldLight, addedlight);
 	newlight.writeAligned(lightPixel, "addLight: writing light");
 }
 
 template <bool ADD_LIGHT>
 void directedLight(const FMatrix3x3& normalToWorldSpace, OrderedImageRgbaU8& lightBuffer, const OrderedImageRgbaU8& normalBuffer, const FVector3D& lightDirection, float lightIntensity, const ColorRgbI32& lightColor) {
 	// Normals in range 0..255 - 128 have lengths of 127 and 128, so if we double the reverse light direction we'll end up near 0..255 again for colors
-	F32x4x3 reverseLightDirection = F32x4x3(-normalize(normalToWorldSpace.transformTransposed(lightDirection)) * lightIntensity * 2.0f);
+	F32xXx3 reverseLightDirection = F32xXx3(-normalize(normalToWorldSpace.transformTransposed(lightDirection)) * lightIntensity * 2.0f);
 	IRect rectangleBound = image_getBound(lightBuffer);
 	float colorR = std::max(0.0f, (float)lightColor.red / 255.0f);
 	float colorG = std::max(0.0f, (float)lightColor.green / 255.0f);
@@ -37,27 +37,29 @@ void directedLight(const FMatrix3x3& normalToWorldSpace, OrderedImageRgbaU8& lig
 		for (int y = bound.top(); y < bound.bottom(); y++) {
 			SafePointer<uint8_t> lightPixel = lightRow;
 			SafePointer<uint32_t> normalPixel = normalRow;
-			for (int x4 = bound.left(); x4 < bound.right(); x4+=4) {
+			for (int x = bound.left(); x < bound.right(); x += laneCountX_32Bit) {
 				// Read surface normals
-				U32x4 normalColor = U32x4::readAligned(normalPixel, "directedLight: reading normal");
-				F32x4x3 negativeSurfaceNormal = unpackRgb_U32x4_to_F32x4x3(normalColor) - 128.0f;
+				U32xX normalColor = U32xX::readAligned(normalPixel, "directedLight: reading normal");
+				// TODO: Port SIMD3D to handle arbitrary vector lengths.
+				F32xXx3 negativeSurfaceNormal = unpackRgb_U32xX_to_F32xXx3(normalColor) - 128.0f;
 				// Calculate light intensity
 				//   Normalization and negation is already pre-multiplied into reverseLightDirection
-				F32x4 intensity = dotProduct(negativeSurfaceNormal, reverseLightDirection).clampLower(0.0f);
-				F32x4 red = intensity * colorR;
-				F32x4 green = intensity * colorG;
-				F32x4 blue = intensity * colorB;
+				F32xX intensity = dotProduct(negativeSurfaceNormal, reverseLightDirection).clampLower(0.0f);
+				F32xX red = intensity * colorR;
+				F32xX green = intensity * colorG;
+				F32xX blue = intensity * colorB;
 				red = red.clampUpper(255.1f);
 				green = green.clampUpper(255.1f);
 				blue = blue.clampUpper(255.1f);
-				U8x16 light = reinterpret_U8FromU32(packBytes(truncateToU32(red), truncateToU32(green), truncateToU32(blue)));
+				// TODO: Let color packing handle arbitrary vector lengths.
+				U8xX light = reinterpret_U8FromU32(packBytes(truncateToU32(red), truncateToU32(green), truncateToU32(blue)));
 				if (ADD_LIGHT) {
 					addLight(lightPixel, light);
 				} else {
 					setLight(lightPixel, light);
 				}
-				lightPixel += 16;
-				normalPixel += 4;
+				lightPixel += laneCountX_8Bit;
+				normalPixel += laneCountX_32Bit;
 			}
 			lightRow.increaseBytes(lightStride);
 			normalRow.increaseBytes(normalStride);
@@ -136,16 +138,33 @@ static float getShadowTransparency(SafePointer<float> pixelData, int32_t width, 
 	return reciDepth * 1.02f > shadowReciDepth ? 1.0f : 0.0f;
 }
 
-static inline F32x4 getShadowTransparency(SafePointer<float> pixelData, int32_t width, float halfWidth, const F32x4x3& lightOffset) {
-	FVector4D offsetX = lightOffset.v1.get();
-	FVector4D offsetY = lightOffset.v2.get();
-	FVector4D offsetZ = lightOffset.v3.get();
-	return F32x4(
-		getShadowTransparency(pixelData, width, halfWidth, FVector3D(offsetX.x, offsetY.x, offsetZ.x)),
-		getShadowTransparency(pixelData, width, halfWidth, FVector3D(offsetX.y, offsetY.y, offsetZ.y)),
-		getShadowTransparency(pixelData, width, halfWidth, FVector3D(offsetX.z, offsetY.z, offsetZ.z)),
-		getShadowTransparency(pixelData, width, halfWidth, FVector3D(offsetX.w, offsetY.w, offsetZ.w))
-	);
+static inline F32xX getShadowTransparency(SafePointer<float> pixelData, int32_t width, float halfWidth, const F32xXx3& lightOffset) {
+	// TODO: Create a way to quickly iterate over elements in a SIMD vector for interfacing with scalar operations.
+	ALIGN_BYTES(DSR_DEFAULT_ALIGNMENT) float offsetX[DSR_DEFAULT_VECTOR_SIZE];
+	ALIGN_BYTES(DSR_DEFAULT_ALIGNMENT) float offsetY[DSR_DEFAULT_VECTOR_SIZE];
+	ALIGN_BYTES(DSR_DEFAULT_ALIGNMENT) float offsetZ[DSR_DEFAULT_VECTOR_SIZE];
+	lightOffset.v1.writeAlignedUnsafe(offsetX);
+	lightOffset.v2.writeAlignedUnsafe(offsetY);
+	lightOffset.v3.writeAlignedUnsafe(offsetZ);
+	#if DSR_DEFAULT_VECTOR_SIZE == 16
+		return F32x4(
+			getShadowTransparency(pixelData, width, halfWidth, FVector3D(offsetX[0], offsetY[0], offsetZ[0])),
+			getShadowTransparency(pixelData, width, halfWidth, FVector3D(offsetX[1], offsetY[1], offsetZ[1])),
+			getShadowTransparency(pixelData, width, halfWidth, FVector3D(offsetX[2], offsetY[2], offsetZ[2])),
+			getShadowTransparency(pixelData, width, halfWidth, FVector3D(offsetX[3], offsetY[3], offsetZ[3]))
+		);
+	#elif DSR_DEFAULT_VECTOR_SIZE == 32
+		return F32x8(
+			getShadowTransparency(pixelData, width, halfWidth, FVector3D(offsetX[0], offsetY[0], offsetZ[0])),
+			getShadowTransparency(pixelData, width, halfWidth, FVector3D(offsetX[1], offsetY[1], offsetZ[1])),
+			getShadowTransparency(pixelData, width, halfWidth, FVector3D(offsetX[2], offsetY[2], offsetZ[2])),
+			getShadowTransparency(pixelData, width, halfWidth, FVector3D(offsetX[3], offsetY[3], offsetZ[3])),
+			getShadowTransparency(pixelData, width, halfWidth, FVector3D(offsetX[4], offsetY[4], offsetZ[4])),
+			getShadowTransparency(pixelData, width, halfWidth, FVector3D(offsetX[5], offsetY[5], offsetZ[5])),
+			getShadowTransparency(pixelData, width, halfWidth, FVector3D(offsetX[6], offsetY[6], offsetZ[6])),
+			getShadowTransparency(pixelData, width, halfWidth, FVector3D(offsetX[7], offsetY[7], offsetZ[7]))
+		);
+	#endif
 }
 
 template <bool SHADOW_CASTING>
@@ -154,11 +173,11 @@ static void addPointLightSuper(const OrthoView& camera, const IVector2D& worldCe
 	//   Normal-space defines the rotation for light-space
 	FVector3D lightSpaceSourcePosition = camera.normalToWorldSpace.transformTransposed(lightPosition);
 	// Align the rectangle with 8 pixels, because that's the widest read to align in the 16-bit height buffer
-	IRect rectangleBound = calculateBound(camera, worldCenter, lightBuffer, lightSpaceSourcePosition, lightRadius, 4);
+	IRect rectangleBound = calculateBound(camera, worldCenter, lightBuffer, lightSpaceSourcePosition, lightRadius, laneCountX_32Bit);
 	if (rectangleBound.hasArea()) {
 		// Uniform values
 		// How much closer to your face in light-space does the pixel go per depth unit
-		F32x4x3 inYourFaceAxis = F32x4x3(camera.screenDepthToLightSpace.zAxis);
+		F32xXx3 inYourFaceAxis = F32xXx3(camera.screenDepthToLightSpace.zAxis);
 		// Light color
 		float colorR = std::max(0.0f, (float)lightColor.red * lightIntensity);
 		float colorG = std::max(0.0f, (float)lightColor.green * lightIntensity);
@@ -173,14 +192,14 @@ static void addPointLightSuper(const OrthoView& camera, const IVector2D& worldCe
 			FVector3D dx = camera.screenDepthToLightSpace.xAxis;
 			FVector3D dy = camera.screenDepthToLightSpace.yAxis;
 			// Pack the offset for each of the 4 first pixels into a transposing constructor
-			F32x4x3 lightBaseRowX4 = F32x4x3(lightBaseRow, lightBaseRow + dx, lightBaseRow + dx * 2.0f, lightBaseRow + dx * 3.0f);
+			F32xXx3 lightBaseRowX = F32xXx3::createGradient(lightBaseRow, dx);
 			// Derivatives for moving four pixels to the right in parallel
 			//    (n+0, y0), (n+1, y0), (n+2, y0), (n+3, y0) -> (n+4, y0), (n+5, y0), (n+6, y0), (n+7, y0)
-			F32x4x3 dx4 = F32x4x3(dx * 4.0f);
+			F32xXx3 dxX = F32xXx3(dx * (float)laneCountX_32Bit);
 			// Derivatives for moving one pixel down in parallel
 			//    (x0, n+0), (x1, n+0), (x2, n+0), (x3, n+0)
 			// -> (x0, n+1), (x1, n+1), (x2, n+1), (x3, n+1)
-			F32x4x3 dy1 = F32x4x3(dy);
+			F32xXx3 dy1 = F32xXx3(dy);
 			// Get strides
 			int lightStride = image_getStride(lightBuffer);
 			int normalStride = image_getStride(normalBuffer);
@@ -194,56 +213,56 @@ static void addPointLightSuper(const OrthoView& camera, const IVector2D& worldCe
 			SafePointer<float> shadowCubeData;
 			float shadowCubeCenter;
 			if (SHADOW_CASTING) {
-				shadowCubeWidth = image_getWidth(shadowCubeMap); assert(shadowCubeWidth % 4 == 0);
+				shadowCubeWidth = image_getWidth(shadowCubeMap); assert(shadowCubeWidth % laneCountX_32Bit == 0);
 				shadowCubeData = image_getSafePointer(shadowCubeMap);
 				shadowCubeCenter = (float)shadowCubeWidth * 0.5f;
 			}
 			// Loop over the pixels to add light
 			for (int y = bound.top(); y < bound.bottom(); y++) {
 				// Initiate the leftmost pixels before iterating to the right
-				F32x4x3 lightBasePixelx4 = lightBaseRowX4;
+				F32xXx3 lightBasePixelxX = lightBaseRowX;
 				SafePointer<uint8_t> lightPixel = lightRow;
 				SafePointer<uint32_t> normalPixel = normalRow;
 				SafePointer<float> heightPixel = heightRow;
 				// Iterate over 16-bit pixels 8 at a time
-				for (int x4 = bound.left(); x4 < bound.right(); x4+=4) {
+				for (int x = bound.left(); x < bound.right(); x += laneCountX_32Bit) {
 					// Read pixel height
-					F32x4 depthOffset = F32x4::readAligned(heightPixel, "addPointLight: reading height");
+					F32xX depthOffset = F32xX::readAligned(heightPixel, "addPointLight: reading height");
 					// Extrude the pixel using positive values towards the camera to represent another height
 					//   This will solve X and Z positions based on the height Y
-					F32x4x3 lightOffset = lightBasePixelx4 + (inYourFaceAxis * depthOffset);
+					F32xXx3 lightOffset = lightBasePixelxX + (inYourFaceAxis * depthOffset);
 					// Get the linear distance, divide by sphere radius and limit to length 1 at intensity 0
-					F32x4 lightRatio = min(F32x4(1.0f), length(lightOffset) * reciprocalRadius);
+					F32xX lightRatio = min(F32xX(1.0f), length(lightOffset) * reciprocalRadius);
 					// Read surface normal
-					U32x4 normalColor = U32x4::readAligned(normalPixel, "addPointLight: reading normal");
+					U32xX normalColor = U32xX::readAligned(normalPixel, "addPointLight: reading normal");
 					// normalScale is used to negate the normals in advance so that opposing directions get positive values
-					F32x4x3 negativeSurfaceNormal = (unpackRgb_U32x4_to_F32x4x3(normalColor) - 128.0f) * (-1.0f / 128.0f);
+					F32xXx3 negativeSurfaceNormal = (unpackRgb_U32xX_to_F32xXx3(normalColor) - 128.0f) * (-1.0f / 128.0f);
 					// Fade from 0 to 1 using 1 - 2x + x²
-					F32x4 distanceIntensity = 1.0f - 2.0f * lightRatio + lightRatio * lightRatio;
-					F32x4 angleIntensity = max(F32x4(0.0f), dotProduct(normalize(lightOffset), negativeSurfaceNormal));
-					F32x4 intensity = angleIntensity * distanceIntensity;
+					F32xX distanceIntensity = 1.0f - 2.0f * lightRatio + lightRatio * lightRatio;
+					F32xX angleIntensity = max(F32xX(0.0f), dotProduct(normalize(lightOffset), negativeSurfaceNormal));
+					F32xX intensity = angleIntensity * distanceIntensity;
 					if (SHADOW_CASTING) {
 						intensity = intensity * getShadowTransparency(shadowCubeData, shadowCubeWidth, shadowCubeCenter, lightOffset);
 					}
 					// TODO: Make an optimized version for white light replacing red, green and blue with a single LUMA
-					F32x4 red = intensity * colorR;
-					F32x4 green = intensity * colorG;
-					F32x4 blue = intensity * colorB;
+					F32xX red = intensity * colorR;
+					F32xX green = intensity * colorG;
+					F32xX blue = intensity * colorB;
 					red = red.clampUpper(255.1f);
 					green = green.clampUpper(255.1f);
 					blue = blue.clampUpper(255.1f);
 					// Add light to the image
-					U8x16 morelight = reinterpret_U8FromU32(packBytes(truncateToU32(red), truncateToU32(green), truncateToU32(blue)));
+					U8xX morelight = reinterpret_U8FromU32(packBytes(truncateToU32(red), truncateToU32(green), truncateToU32(blue)));
 					addLight(lightPixel, morelight);
 					// Go to the next four pixels in light-space
-					lightBasePixelx4 += dx4;
+					lightBasePixelxX += dxX;
 					// Go to the next 4 pixels of image data
-					lightPixel += 16;
-					normalPixel += 4;
-					heightPixel += 4;
+					lightPixel += laneCountX_8Bit;
+					normalPixel += laneCountX_32Bit;
+					heightPixel += laneCountX_32Bit;
 				}
 				// Go to the next row in light-space
-				lightBaseRowX4 += dy1;
+				lightBaseRowX += dy1;
 				// Go to the next row of image data
 				lightRow.increaseBytes(lightStride);
 				normalRow.increaseBytes(normalStride);
@@ -276,25 +295,25 @@ void blendLight(AlignedImageRgbaU8& colorBuffer, const OrderedImageRgbaU8& diffu
 		int targetStride = image_getStride(colorBuffer);
 		int diffuseStride = image_getStride(diffuseBuffer);
 		int lightStride = image_getStride(lightBuffer);
-		F32x4 scale = F32x4(1.0 / 128.0f);
+		F32xX scale = F32xX(1.0 / 128.0f);
 		for (int y = startIndex; y < stopIndex; y++) {
 			SafePointer<uint32_t> targetPixel = targetRow;
 			SafePointer<uint32_t> diffusePixel = diffuseRow;
 			SafePointer<uint32_t> lightPixel = lightRow;
-			for (int x4 = 0; x4 < width; x4 += 4) {
-				U32x4 diffuse = U32x4::readAligned(diffusePixel, "blendLight: reading diffuse");
-				U32x4 light = U32x4::readAligned(lightPixel, "blendLight: reading light");
-				F32x4 red = (floatFromU32(getRed(diffuse)) * floatFromU32(getRed(light))) * scale;
-				F32x4 green = (floatFromU32(getGreen(diffuse)) * floatFromU32(getGreen(light))) * scale;
-				F32x4 blue = (floatFromU32(getBlue(diffuse)) * floatFromU32(getBlue(light))) * scale;
+			for (int x = 0; x < width; x += laneCountX_32Bit) {
+				U32xX diffuse = U32xX::readAligned(diffusePixel, "blendLight: reading diffuse");
+				U32xX light = U32xX::readAligned(lightPixel, "blendLight: reading light");
+				F32xX red = (floatFromU32(getRed(diffuse)) * floatFromU32(getRed(light))) * scale;
+				F32xX green = (floatFromU32(getGreen(diffuse)) * floatFromU32(getGreen(light))) * scale;
+				F32xX blue = (floatFromU32(getBlue(diffuse)) * floatFromU32(getBlue(light))) * scale;
 				red = red.clampUpper(255.1f);
 				green = green.clampUpper(255.1f);
 				blue = blue.clampUpper(255.1f);
-				U32x4 color = packBytes(truncateToU32(red), truncateToU32(green), truncateToU32(blue), targetOrder);
+				U32xX color = packBytes(truncateToU32(red), truncateToU32(green), truncateToU32(blue), targetOrder);
 				color.writeAligned(targetPixel, "blendLight: writing color");
-				targetPixel += 4;
-				diffusePixel += 4;
-				lightPixel += 4;
+				targetPixel += laneCountX_32Bit;
+				diffusePixel += laneCountX_32Bit;
+				lightPixel += laneCountX_32Bit;
 			}
 			targetRow.increaseBytes(targetStride);
 			diffuseRow.increaseBytes(diffuseStride);
