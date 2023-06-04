@@ -434,6 +434,10 @@
 				this->emulated[3] = scalar;
 			}
 		#endif
+		// Create a gradient vector using start and increment, so that arbitrary length vectors have a way to initialize linear iterations.
+		static inline F32x4 createGradient(float start, float increment) {
+			return F32x4(start, start + increment, start + increment * 2.0f, start + increment * 3.0f);
+		}
 		// Construct a portable SIMD vector from a pointer to aligned data
 		// data must be aligned with at least 8 bytes, but preferrably 16 bytes
 		static inline F32x4 readAlignedUnsafe(const float* data) {
@@ -644,6 +648,10 @@
 				this->emulated[3] = scalar;
 			}
 		#endif
+		// Create a gradient vector using start and increment, so that arbitrary length vectors have a way to initialize linear iterations.
+		static inline I32x4 createGradient(int32_t start, int32_t increment) {
+			return I32x4(start, start + increment, start + increment * 2, start + increment * 3);
+		}
 		// Construct a portable SIMD vector from a pointer to aligned data
 		// data must be aligned with at least 8 bytes, but preferrably 16 bytes
 		static inline I32x4 readAlignedUnsafe(const int32_t* data) {
@@ -737,6 +745,10 @@
 				this->emulated[3] = scalar;
 			}
 		#endif
+		// Create a gradient vector using start and increment, so that arbitrary length vectors have a way to initialize linear iterations.
+		static inline U32x4 createGradient(uint32_t start, uint32_t increment) {
+			return U32x4(start, start + increment, start + increment * 2, start + increment * 3);
+		}
 		// Construct a portable SIMD vector from a pointer to aligned data
 		// data must be aligned with at least 8 bytes, but preferrably 16 bytes
 		static inline U32x4 readAlignedUnsafe(const uint32_t* data) {
@@ -875,6 +887,19 @@
 				return result;
 			}
 		#endif
+		// Create a gradient vector using start and increment, so that arbitrary length vectors have a way to initialize linear iterations.
+		static inline U16x8 createGradient(uint16_t start, uint16_t increment) {
+			return U16x8(
+			  start,
+			  start + increment,
+			  start + increment * 2,
+			  start + increment * 3,
+			  start + increment * 4,
+			  start + increment * 5,
+			  start + increment * 6,
+			  start + increment * 7
+			);
+		}
 		static inline U16x8 readAlignedUnsafe(const uint16_t* data) {
 			#ifdef USE_BASIC_SIMD
 				#ifdef USE_SSE2
@@ -989,6 +1014,27 @@
 				this->emulated[15] = scalar;
 			}
 		#endif
+		// Create a gradient vector using start and increment, so that arbitrary length vectors have a way to initialize linear iterations.
+		static inline U8x16 createGradient(uint8_t start, uint8_t increment) {
+			return U8x16(
+			  start,
+			  start + increment,
+			  start + increment * 2,
+			  start + increment * 3,
+			  start + increment * 4,
+			  start + increment * 5,
+			  start + increment * 6,
+			  start + increment * 7,
+			  start + increment * 8,
+			  start + increment * 9,
+			  start + increment * 10,
+			  start + increment * 11,
+			  start + increment * 12,
+			  start + increment * 13,
+			  start + increment * 14,
+			  start + increment * 15
+			);
+		}
 		static inline U8x16 readAlignedUnsafe(const uint8_t* data) {
 			#ifdef USE_BASIC_SIMD
 				#ifdef USE_SSE2
@@ -1097,6 +1143,19 @@
 				this->emulated[7] = scalar;
 			}
 		#endif
+		// Create a gradient vector using start and increment, so that arbitrary length vectors have a way to initialize linear iterations.
+		static inline F32x8 createGradient(float start, float increment) {
+			return F32x8(
+			  start,
+			  start + increment,
+			  start + increment * 2.0f,
+			  start + increment * 3.0f,
+			  start + increment * 4.0f,
+			  start + increment * 5.0f,
+			  start + increment * 6.0f,
+			  start + increment * 7.0f
+			);
+		}
 		// Construct a portable SIMD vector from a pointer to aligned data
 		// data must be aligned with at least 8 bytes, but preferrably 16 bytes
 		static inline F32x8 readAlignedUnsafe(const float* data) {
@@ -1332,6 +1391,19 @@
 				this->emulated[7] = scalar;
 			}
 		#endif
+		// Create a gradient vector using start and increment, so that arbitrary length vectors have a way to initialize linear iterations.
+		static inline I32x8 createGradient(int32_t start, int32_t increment) {
+			return I32x8(
+			  start,
+			  start + increment,
+			  start + increment * 2,
+			  start + increment * 3,
+			  start + increment * 4,
+			  start + increment * 5,
+			  start + increment * 6,
+			  start + increment * 7
+			);
+		}
 		// Construct a portable SIMD vector from a pointer to aligned data
 		// data must be aligned with at least 8 bytes, but preferrably 16 bytes
 		static inline I32x8 readAlignedUnsafe(const int32_t* data) {
@@ -1424,6 +1496,19 @@
 				this->emulated[7] = scalar;
 			}
 		#endif
+		// Create a gradient vector using start and increment, so that arbitrary length vectors have a way to initialize linear iterations.
+		static inline U32x8 createGradient(uint32_t start, uint32_t increment) {
+			return U32x8(
+			  start,
+			  start + increment,
+			  start + increment * 2,
+			  start + increment * 3,
+			  start + increment * 4,
+			  start + increment * 5,
+			  start + increment * 6,
+			  start + increment * 7
+			);
+		}
 		// Construct a portable SIMD vector from a pointer to aligned data
 		// data must be aligned with at least 8 bytes, but preferrably 16 bytes
 		static inline U32x8 readAlignedUnsafe(const uint32_t* data) {
@@ -1579,6 +1664,27 @@
 				return result;
 			}
 		#endif
+		// Create a gradient vector using start and increment, so that arbitrary length vectors have a way to initialize linear iterations.
+		static inline U16x16 createGradient(uint16_t start, uint16_t increment) {
+			return U16x16(
+			  start,
+			  start + increment,
+			  start + increment * 2,
+			  start + increment * 3,
+			  start + increment * 4,
+			  start + increment * 5,
+			  start + increment * 6,
+			  start + increment * 7,
+			  start + increment * 8,
+			  start + increment * 9,
+			  start + increment * 10,
+			  start + increment * 11,
+			  start + increment * 12,
+			  start + increment * 13,
+			  start + increment * 14,
+			  start + increment * 15
+			);
+		}
 		// data must be aligned with at least 8 bytes, but preferrably 16 bytes
 		//static inline U16x16 readSlow(uint16_t* data) {
 		//	return U16x16(data[0], data[1], data[2], data[3], data[4], data[5], data[6], data[7]);
@@ -1725,6 +1831,43 @@
 				}
 			}
 		#endif
+		// Create a gradient vector using start and increment, so that arbitrary length vectors have a way to initialize linear iterations.
+		static inline U8x32 createGradient(uint8_t start, uint8_t increment) {
+			return U8x32(
+			  start,
+			  start + increment,
+			  start + increment * 2,
+			  start + increment * 3,
+			  start + increment * 4,
+			  start + increment * 5,
+			  start + increment * 6,
+			  start + increment * 7,
+			  start + increment * 8,
+			  start + increment * 9,
+			  start + increment * 10,
+			  start + increment * 11,
+			  start + increment * 12,
+			  start + increment * 13,
+			  start + increment * 14,
+			  start + increment * 15,
+			  start + increment * 16,
+			  start + increment * 17,
+			  start + increment * 18,
+			  start + increment * 19,
+			  start + increment * 20,
+			  start + increment * 21,
+			  start + increment * 22,
+			  start + increment * 23,
+			  start + increment * 24,
+			  start + increment * 25,
+			  start + increment * 26,
+			  start + increment * 27,
+			  start + increment * 28,
+			  start + increment * 29,
+			  start + increment * 30,
+			  start + increment * 31
+			);
+		}
 		static inline U8x32 readAlignedUnsafe(const uint8_t* data) {
 			#ifdef USE_AVX2
 				return U8x32(_mm256_load_si256((const __m256i*)data));
