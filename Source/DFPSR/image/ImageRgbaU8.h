@@ -1,6 +1,6 @@
 ﻿// zlib open source license
 //
-// Copyright (c) 2017 to 2019 David Forsgren Piuva
+// Copyright (c) 2017 to 2023 David Forsgren Piuva
 // 
 // This software is provided 'as-is', without any express or implied
 // warranty. In no event will the authors be held liable for any damages
@@ -30,72 +30,67 @@
 
 namespace dsr {
 
+// TODO: Figure out how to handle very small textures where the full resolution is smaller than the smallest allowed MIP level.
+//       Larger SIMD vectors will change the smallest allowed textures if the bit pattern is used, which may be inconsistent if it keeps growing.
+//       Having 32x32 pixels as the minimum size would allow using up to 1024-bit SIMD without a problem.
 // TODO: Reallocate the image's buffer, so that the pyramid images are placed into the same allocation.
 //       This allow reading a texture with multiple mip levels using different 32-bit offsets in the same SIMD vector holding multiple groups of 2x2 pixels.
 // TODO: Adapt how far down to go in mip resolutions based on DSR_DEFAULT_ALIGNMENT, so that no mip level is padded in memory.
 //       This is needed so that the stride can be calculated using bit shifting from the mip level.
 //       The visual appearance may differ between SIMD lengths for low resolution textures, but not between computers running the same executable.
-// TODO: Store the smallest layer first in memory, so that the offset is a multiple of the smallest size following a pre-determined bit pattern.
-//       If one s is the number of pixels in the smallest mip layer, then the size of each layer n equals s * 2^n.
-//       The offset in s units is then the sum of all previous unpadded dimensions.
-//         0000000000000000 0
-//         0000000000000001 1
-//         0000000000000101 5
-//         0000000000010101 21
-//         0000000001010101 85
-//         0000000101010101 341
-//         0000010101010101 1365
-//         0001010101010101 5461
-//         0101010101010101 21845
-//       Then one can start with the offset to the largest mip layer in pixels or bytes as the initial mask and then mask out initial ones using a mask directly from the MIP calculation.
-//         0000000000000000 4x2 pixels at offset 0
-//         0000000000001000 8x4 pixels at offset 8
-//         0000000000101000 16x32 pixels at offset 40
-//         0000000010101000 32x64 pixels at offset 168
-//         0000001010101000 64x128 pixels at offset 680
-//         0000101010101000 128x256 pixels at offset 2728 (Full unmasked offset leading to the highest mip level)
-//       Masks for different visibility.
-//         0000000000000011 Very far away or seen from the side
-//         0000000000111111 Far away or seen from the side
-//         0000001111111111 Normal viewing
-//         0011111111111111 Close with many screen pixels per texels.
-//       The difficult part is how to generate a good mip level offset mask from the pixel coordinate derivation from groups of 2x2 pixels.
-//         The offset is not exactly exponential, so there will be visual tradeoffs between artifacts in this approximation.
-//       One could take the texture coordinate offset per pixel as the initial value and
-//         then repeat shifting and or masking at power of two offsets to only get ones after the initial one, but this would require many cycles.
-//           Pixels per texel in full resolution times full resolution offset:
-//             00000000000010101000110110011001
-//           Mip offset mask:
-//             00000000000011111111111111111111
-//           Full resolution mip offset:
-//             00000000001010101010101010000000
-//           Final mip offset containing half width and height:
-//             00000000000010101010101010000000
+// TODO: Begin by replacing the lookup table for pyramid layers with template inline functions, because figuring out how to get start offset and stride consistently may take time.
+//       Pixel loops will later look up the masks once and store it in SIMD vectors to avoid fetching it from memory multiple times from potential memory aliasing.
+// IDEA: Keep the same order of mip layers, but mask out offset bits from the right side.
+//       When the most significant bit is masked out, it jumps to the full resoultion image at offset zero.
+//       Offsets
+//         00000000000000000000000000000000 Full resolution of 64x64
+//         00000000000000000000010000000000 Half resolution of 32x32
+//         00000000000000000000010100000000 Quarter resolution of 16x16
+//         00000000000000000000010101000000 Low resolution of 8x8
+//         00000000000000000000010101010000 Lowest resolution of 4x4
+//       Power of 4 offset masks
+//         11111111111111111100000000000000 Show at most 16384 pixels (clamped to full resolution because no more bits are masked out)
+//         11111111111111111111000000000000 Show at most 4096 pixels (full resolution for the image)
+//         11111111111111111111110000000000 Show at most 1024 pixels
+//         11111111111111111111111100000000 Show at most 256 pixels
+//         11111111111111111111111111000000 Show at most 64 pixels
+//         11111111111111111111111111110000 Show at most 16 pixels
+// PROBLEMS:
+//   * How can stride be calculated in the same way as the start offset?
+//     - Consistently in base two, not using the base 4 mask.
+//     - Limited to the range of available resolutions, not going to stride 512 when the full resolution stride is 256.
+//   * What about the width and height masks, can they reuse the same bit masking to avoid looking up data with scalar operations?
+//   * What should be done about very small textures?
+//     Automatically scale them up to the minimum resolution and leave the original image in the middle of the buffer?
+//     Change minimum size requirements?
+//       This would be the simplest approach and nobody would want their textures up-scaled anyway if one can easily redraw images in a higher resolution.
 
 // Pointing to the parent image using raw pointers for fast rendering. May not exceed the lifetime of the parent image!
 struct TextureRgbaLayer {
-	const uint8_t *data = 0;
+	SafePointer<uint32_t> data;
 	int32_t strideShift = 0;
 	uint32_t widthMask = 0, heightMask = 0;
 	int32_t width = 0, height = 0;
 	float subWidth = 0.0f, subHeight = 0.0f; // TODO: Better names?
 	float halfPixelOffsetU = 0.0f, halfPixelOffsetV = 0.0f;
 	TextureRgbaLayer();
-	TextureRgbaLayer(const uint8_t *data, int32_t width, int32_t height);
+	TextureRgbaLayer(SafePointer<uint32_t> data, int32_t width, int32_t height);
 	// Can it be sampled as a texture
-	bool exists() const { return this->data != nullptr; }
+	bool exists() const { return this->data.getUnsafe() != nullptr; }
 };
 
+// TODO: Try to replace with generated bit masks from inline functions.
 #define MIP_BIN_COUNT 5
 
-// Pointing to the parent image using raw pointers for fast rendering. Not not separate from the image!
+// Pointing to the parent image using raw pointers for fast rendering. Do not separate from the image!
 struct TextureRgba {
-	Buffer pyramidBuffer; // Storing the smaller mip levels
 	TextureRgbaLayer mips[MIP_BIN_COUNT]; // Pointing to all mip levels including the original image
+	int32_t layerCount = 0; // 0 Means that there are no pointers, 1 means that you have a pyramid but only one layer.
 	// Can it be sampled as a texture
 	bool exists() const { return this->mips[0].exists(); }
 	// Does it have a mip pyramid generated for smoother sampling
-	bool hasMipBuffer() const { return this->pyramidBuffer.get() != nullptr; }
+	// TODO: Rename once there is no separate MIP buffer, just a single pyramid buffer.
+	bool hasMipBuffer() const { return this->layerCount != 0; }
 };
 
 class ImageRgbaU8Impl : public ImageImpl {
@@ -110,13 +105,19 @@ public:
 	ImageRgbaU8Impl(int32_t newWidth, int32_t newHeight, int32_t alignment);
 	// Native canvas constructor
 	ImageRgbaU8Impl(int32_t newWidth, int32_t newHeight, PackOrderIndex packOrderIndex, int32_t alignment);
-	// Fast reading
-	TextureRgba texture; // The texture view
-	void initializeRgbaImage(); // Points to level 0 from all bins to allow rendering
+	// The texture view for fast reading
+	TextureRgba texture;
+	// Points to level 0 from all bins to allow rendering
+	void initializeRgbaImage();
+	// Resizes the image to valid texture dimensions
+	void makeIntoTexture();
 	void generatePyramid(); // Fills the following bins with smaller images
 	void removePyramid();
 	bool isTexture() const;
 	static bool isTexture(const ImageRgbaU8Impl* image); // Null cannot be sampled as a texture
+private:
+	void generatePyramidStructure(int32_t layerCount);
+	void removePyramidStructure();
 public:
 	// Conversion to monochrome by extracting a channel
 	ImageU8Impl getChannel(int32_t channelIndex) const;

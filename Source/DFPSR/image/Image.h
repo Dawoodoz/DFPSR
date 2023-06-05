@@ -38,9 +38,9 @@ namespace dsr {
 // See imageInternal.h for protected methods
 class ImageImpl {
 public:
-	const int32_t width, height, stride, pixelSize;
+	int32_t width, height, stride, pixelSize;
 	Buffer buffer; // Content
-	const intptr_t startOffset; // Byte offset of the first pixel
+	intptr_t startOffset; // Byte offset of the first pixel
 	bool isSubImage = false;
 private:
 	void validate() {
