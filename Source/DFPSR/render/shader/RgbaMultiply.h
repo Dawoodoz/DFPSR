@@ -84,8 +84,8 @@ public:
 	Rgba_F32 getPixels_2x2(const F32x4x3 &vertexWeights) const override {
 		if (HAS_DIFFUSE_MAP && !HAS_LIGHT_MAP && COLORLESS) {
 			// Optimized for diffuse only
-			ALIGN16 F32x4 u1(shaderMethods::interpolate(this->texCoords.u1, vertexWeights));
-			ALIGN16 F32x4 v1(shaderMethods::interpolate(this->texCoords.v1, vertexWeights));
+			F32x4 u1(shaderMethods::interpolate(this->texCoords.u1, vertexWeights));
+			F32x4 v1(shaderMethods::interpolate(this->texCoords.v1, vertexWeights));
 			if (DISABLE_MIPMAP) {
 				return shaderMethods::sample_F32<Interpolation::BL, false>(this->diffuseLayer, u1, v1);
 			} else {
@@ -93,18 +93,18 @@ public:
 			}
 		} else if (HAS_LIGHT_MAP && !HAS_DIFFUSE_MAP && COLORLESS) {
 			// Optimized for light only
-			ALIGN16 F32x4 u2(shaderMethods::interpolate(this->texCoords.u2, vertexWeights));
-			ALIGN16 F32x4 v2(shaderMethods::interpolate(this->texCoords.v2, vertexWeights));
+			F32x4 u2(shaderMethods::interpolate(this->texCoords.u2, vertexWeights));
+			F32x4 v2(shaderMethods::interpolate(this->texCoords.v2, vertexWeights));
 			return shaderMethods::sample_F32<Interpolation::BL, false>(this->lightLayer, u2, v2);
 		} else {
 			// Interpolate the vertex color
-			ALIGN16 Rgba_F32 color = HAS_VERTEX_FADING ?
+			Rgba_F32 color = HAS_VERTEX_FADING ?
 			  shaderMethods::interpolateVertexColor(this->colors.red, this->colors.green, this->colors.blue, this->colors.alpha, vertexWeights) :
 			  Rgba_F32(F32x4(this->colors.red.x), F32x4(this->colors.green.x), F32x4(this->colors.blue.x), F32x4(this->colors.alpha.x));
 			// Sample diffuse
 			if (HAS_DIFFUSE_MAP) {
-				ALIGN16 F32x4 u1(shaderMethods::interpolate(this->texCoords.u1, vertexWeights));
-				ALIGN16 F32x4 v1(shaderMethods::interpolate(this->texCoords.v1, vertexWeights));
+				F32x4 u1(shaderMethods::interpolate(this->texCoords.u1, vertexWeights));
+				F32x4 v1(shaderMethods::interpolate(this->texCoords.v1, vertexWeights));
 				if (DISABLE_MIPMAP) {
 					color = color * shaderMethods::sample_F32<Interpolation::BL, false>(this->diffuseLayer, u1, v1);
 				} else {
@@ -113,8 +113,8 @@ public:
 			}
 			// Sample lightmap
 			if (HAS_LIGHT_MAP) {
-				ALIGN16 F32x4 u2(shaderMethods::interpolate(this->texCoords.u2, vertexWeights));
-				ALIGN16 F32x4 v2(shaderMethods::interpolate(this->texCoords.v2, vertexWeights));
+				F32x4 u2(shaderMethods::interpolate(this->texCoords.u2, vertexWeights));
+				F32x4 v2(shaderMethods::interpolate(this->texCoords.v2, vertexWeights));
 				color = color * shaderMethods::sample_F32<Interpolation::BL, false>(this->lightLayer, u2, v2);
 			}
 			return color;

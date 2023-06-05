@@ -1,6 +1,6 @@
 ﻿// zlib open source license
 //
-// Copyright (c) 2017 to 2019 David Forsgren Piuva
+// Copyright (c) 2017 to 2023 David Forsgren Piuva
 // 
 // This software is provided 'as-is', without any express or implied
 // warranty. In no event will the authors be held liable for any damages
@@ -24,12 +24,15 @@
 #include "ImageRgbaU8.h"
 #include "internal/imageInternal.h"
 #include "internal/imageTemplate.h"
+#include "draw.h"
 #include <algorithm>
 #include "../base/simd.h"
 
 using namespace dsr;
 
-IMAGE_DEFINITION(ImageRgbaU8Impl, 4, Color4xU8, uint8_t);
+static const int pixelSize = 4;
+
+IMAGE_DEFINITION(ImageRgbaU8Impl, pixelSize, Color4xU8, uint8_t);
 
 ImageRgbaU8Impl::ImageRgbaU8Impl(int32_t newWidth, int32_t newHeight, int32_t newStride, Buffer buffer, intptr_t startOffset, const PackOrder &packOrder) :
   ImageImpl(newWidth, newHeight, newStride, sizeof(Color4xU8), buffer, startOffset), packOrder(packOrder) {
@@ -58,7 +61,7 @@ bool ImageRgbaU8Impl::isTexture(const ImageRgbaU8Impl* image) {
 }
 
 ImageRgbaU8Impl ImageRgbaU8Impl::getWithoutPadding() const {
-	if (this->stride == this->width * this->pixelSize) {
+	if (this->stride == this->width * pixelSize) {
 		// No padding
 		return *this;
 	} else {
@@ -104,20 +107,22 @@ ImageU8Impl ImageRgbaU8Impl::getChannel(int32_t channelIndex) const {
 	return result;
 }
 
+static const int32_t smallestSizeGroup = 5;
+static const int32_t largestSizeGroup = 14;
 static int32_t getSizeGroup(int32_t size) {
 	int32_t group = -1;
 	if (size == 1) {
 		group = 0; // Too small for 16-byte alignment!
 	} else if (size == 2) {
-		group = 1; // Too small for 16-byte alignment!
+		group = 1; // Too small for 16-byte alignment! (SSE2)
 	} else if (size == 4) {
-		group = 2; // Smallest allowed texture dimension
+		group = 2; // Too small for 32-byte alignment! (AVX2)
 	} else if (size == 8) {
-		group = 3;
+		group = 3; // Too small for 64-byte alignment! (AVX3)
 	} else if (size == 16) {
-		group = 4;
+		group = 4; // Too small for 128-byte alignment!
 	} else if (size == 32) {
-		group = 5;
+		group = 5; // Smallest allowed texture dimension, allowing 1024-bit SIMD.
 	} else if (size == 64) {
 		group = 6;
 	} else if (size == 128) {
@@ -140,7 +145,22 @@ static int32_t getSizeGroup(int32_t size) {
 	return group;
 }
 
-static int32_t getPyramidSize(int32_t width, int32_t height, int32_t pixelSize, int32_t levels) {
+inline int32_t sizeFromGroup(int32_t group) {
+	return 1 << group;
+}
+
+// Round the size down, unless it is already too small.
+static int32_t roundSize(int32_t size) {
+	for (int groupIndex = smallestSizeGroup; groupIndex < largestSizeGroup; groupIndex++) {
+		int currentSize = sizeFromGroup(groupIndex);
+		if (size < currentSize) {
+			return currentSize;
+		}
+	}
+	return sizeFromGroup(largestSizeGroup);
+}
+
+static int32_t getPyramidSize(int32_t width, int32_t height, int32_t levels) {
 	uint32_t result = 0;
 	uint32_t byteCount = width * height * pixelSize;
 	for (int32_t l = 0; l < levels; l++) {
@@ -150,36 +170,72 @@ static int32_t getPyramidSize(int32_t width, int32_t height, int32_t pixelSize, 
 	return (int32_t)result;
 }
 
-static void downScaleByTwo(SafePointer<uint8_t> targetData, const SafePointer<uint8_t> sourceData, int32_t targetWidth, int32_t targetHeight, int32_t pixelSize, int32_t targetStride) {
+inline U32xX averageColor(const U32xX &colorA, const U32xX &colorB) {
+	// TODO: Expand to 16 bits or use built in average intrinsics for full bit depth.
+	// 7-bit precision for speed.
+	return reinterpret_U32FromU8(reinterpret_U8FromU32((colorA >> 1) & U32xX(0b01111111011111110111111101111111)) + reinterpret_U8FromU32((colorB >> 1) & U32xX(0b01111111011111110111111101111111)));
+}
+
+inline U32xX pairwiseAverageColor(const U32xX &colorA, const U32xX &colorB) {
+	// TODO: Vectorize with 32-bit unzipping of pixels and 8-bit average of channels.
+	// Reference implementation
+	ALIGN_BYTES(DSR_DEFAULT_ALIGNMENT) uint8_t elementsA[laneCountX_8Bit];
+	ALIGN_BYTES(DSR_DEFAULT_ALIGNMENT) uint8_t elementsB[laneCountX_8Bit];
+	ALIGN_BYTES(DSR_DEFAULT_ALIGNMENT) uint8_t elementsR[laneCountX_8Bit];
+	colorA.writeAlignedUnsafe((uint32_t*)elementsA);
+	colorB.writeAlignedUnsafe((uint32_t*)elementsB);
+	int32_t halfPixels = laneCountX_32Bit / 2;
+	for (int p = 0; p < halfPixels; p++) {
+		for (int c = 0; c < 4; c++) {
+			elementsR[p * 4 + c] = uint8_t((uint16_t(elementsA[p * 8 + c]) + uint16_t(elementsA[p * 8 + 4 + c])) >> 1);
+			elementsR[(p + halfPixels) * 4 + c] = uint8_t((uint16_t(elementsB[p * 8 + c]) + uint16_t(elementsB[p * 8 + 4 + c])) >> 1);
+		}
+	}
+	return U32xX::readAlignedUnsafe((uint32_t*)elementsR);
+}
+
+static void downScaleByTwo(SafePointer<uint32_t> targetData, const SafePointer<uint32_t> sourceData, int32_t targetWidth, int32_t targetHeight, int32_t targetStride) {
 	int32_t sourceStride = targetStride * 2;
 	int32_t doubleSourceStride = sourceStride * 2;
-	SafePointer<uint8_t> targetRow = targetData;
-	const SafePointer<uint8_t> sourceRow = sourceData;
+	SafePointer<uint32_t> targetRow = targetData;
+	const SafePointer<uint32_t> sourceRow = sourceData;
 	for (int32_t y = 0; y < targetHeight; y++) {
-		const SafePointer<uint8_t> sourcePixel = sourceRow;
-		SafePointer<uint8_t> targetPixel = targetRow;
-		for (int32_t x = 0; x < targetWidth; x++) {
-			// TODO: Use pariwise and vector average functions for fixed channel counts (SSE has _mm_avg_epu8 for vector average)
-			for (int32_t c = 0; c < pixelSize; c++) {
-				uint8_t value = (uint8_t)((
-				    (uint16_t)(*sourcePixel)
-				  + (uint16_t)(*(sourcePixel + pixelSize))
-				  + (uint16_t)(*(sourcePixel + sourceStride))
-				  + (uint16_t)(*(sourcePixel + sourceStride + pixelSize))) / 4);
-				*targetPixel = value;
-				targetPixel += 1;
-				sourcePixel += 1;
-			}
-			sourcePixel += pixelSize;
+		const SafePointer<uint32_t> upperSourcePixel = sourceRow;
+		const SafePointer<uint32_t> lowerSourcePixel = sourceRow;
+		lowerSourcePixel.increaseBytes(sourceStride);
+		SafePointer<uint32_t> targetPixel = targetRow;
+		for (int32_t x = 0; x < targetWidth; x += laneCountX_32Bit) {
+			U32xX upperLeft = U32xX::readAligned(upperSourcePixel, "upperLeftSource in downScaleByTwo");
+			U32xX upperRight = U32xX::readAligned(lowerSourcePixel + laneCountX_32Bit, "upperLeftSource in downScaleByTwo");
+			U32xX lowerLeft = U32xX::readAligned(lowerSourcePixel, "upperLeftSource in downScaleByTwo");
+			U32xX lowerRight = U32xX::readAligned(lowerSourcePixel + laneCountX_32Bit, "upperLeftSource in downScaleByTwo");
+			U32xX upperAverage = pairwiseAverageColor(upperLeft, upperRight);
+			U32xX lowerAverage = pairwiseAverageColor(lowerLeft, lowerRight);
+			U32xX finalAverage = averageColor(upperAverage, lowerAverage);
+			finalAverage.writeAligned(targetPixel, "average result in downScaleByTwo");
+			targetPixel += laneCountX_32Bit;
+			upperSourcePixel += laneCountX_32Bit * 2;
+			lowerSourcePixel += laneCountX_32Bit * 2;
 		}
-		targetRow += targetStride;
-		sourceRow += doubleSourceStride;
+		targetRow.increaseBytes(targetStride);
+		sourceRow.increaseBytes(doubleSourceStride);
 	}
+}
+
+static void updatePyramid(TextureRgba &texture, int32_t layerCount) {
+	// Downscale each following layer from the previous.
+	for (int32_t targetIndex = 1; targetIndex < layerCount; targetIndex++) {
+		int32_t sourceIndex = targetIndex - 1;
+		int32_t targetWidth = texture.mips[targetIndex].width;
+		int32_t targetHeight = texture.mips[targetIndex].height;
+		downScaleByTwo(texture.mips[targetIndex].data, texture.mips[sourceIndex].data, targetWidth, targetHeight, targetWidth * pixelSize);
+	}
+	texture.layerCount = layerCount;
 }
 
 TextureRgbaLayer::TextureRgbaLayer() {}
 
-TextureRgbaLayer::TextureRgbaLayer(const uint8_t *data, int32_t width, int32_t height) :
+TextureRgbaLayer::TextureRgbaLayer(SafePointer<uint32_t> data, int32_t width, int32_t height) :
   data(data),
   strideShift(getSizeGroup(width) + 2),
   widthMask(width - 1),
@@ -191,74 +247,92 @@ TextureRgbaLayer::TextureRgbaLayer(const uint8_t *data, int32_t width, int32_t h
   halfPixelOffsetU(1.0f - (0.5f / width)),
   halfPixelOffsetV(1.0f - (0.5f / height)) {}
 
-void ImageRgbaU8Impl::generatePyramid() {
+void ImageRgbaU8Impl::generatePyramidStructure(int32_t layerCount) {
+	int32_t currentWidth = this->width;
+	int32_t currentHeight = this->height;
+	// Allocate smaller pyramid images within the buffer
+	SafePointer<uint32_t> currentStart = buffer_getSafeData<uint32_t>(this->buffer, "Pyramid generation target");
+	for (int32_t m = 0; m < layerCount; m++) {
+		this->texture.mips[m] = TextureRgbaLayer(currentStart, currentWidth, currentHeight);
+		currentStart += currentWidth * currentHeight;
+		currentWidth /= 2;
+		currentHeight /= 2;
+	}
+	// Fill unused mip levels with duplicates of the last mip level
+	for (int32_t m = layerCount; m < MIP_BIN_COUNT; m++) {
+		// m - 1 is never negative, because layerCount is clamped to at least 1 and nobody would choose zero for MIP_BIN_COUNT.
+		this->texture.mips[m] = this->texture.mips[m - 1];
+	}
+	this->texture.layerCount = layerCount;
+}
+
+void ImageRgbaU8Impl::removePyramidStructure() {
+	for (int32_t m = 0; m < MIP_BIN_COUNT; m++) {
+		this->texture.mips[m] = TextureRgbaLayer(imageInternal::getSafeData<uint32_t>(*this), this->width, this->height);
+	}
+	// Declare the old pyramid invalid so that it will not be displayed while rendering, but keep the extra memory for next time it is generated.
+	this->texture.layerCount = 1;
+}
+
+void ImageRgbaU8Impl::makeIntoTexture() {
+	// Check if the image is a valid texture.
 	if (!this->isTexture()) {
-		if (this->width < 4 || this->height < 4) {
-			printText("Cannot generate a pyramid from an image smaller than 4x4 pixels.\n");
-		} else if (this->width > 16384 || this->height > 16384) {
-			printText("Cannot generate a pyramid from an image larger than 16384x16384 pixels.\n");
-		} else if (getSizeGroup(this->width) == -1 || getSizeGroup(this->height) == -1) {
-			printText("Cannot generate a pyramid from image dimensions that are not powers of two.\n");
-		} else if (this->stride > this->width * pixelSize) {
-			printText("Cannot generate a pyramid from an image that contains padding.\n");
-		} else if (this->stride < this->width * pixelSize) {
-			printText("Cannot generate a pyramid from an image with corrupted stride.\n");
-		} else {
-			printText("Cannot generate a pyramid from an image that has not been initialized correctly.\n");
-		}
+		// Get valid dimensions.
+		int newWidth = roundSize(this->width);
+		int newHeight = roundSize(this->height);
+		// Create a new image with the correct dimensions.
+		ImageRgbaU8Impl result = ImageRgbaU8Impl(newWidth, newHeight, DSR_DEFAULT_ALIGNMENT);
+		// Resize the image content with bi-linear interpolation.
+		imageImpl_resizeToTarget(result, *this, true);
+		// Take over the new image's content.
+		this->buffer = result.buffer;
+		this->width = result.width;
+		this->height = result.height;
+		this->stride = result.stride;
+		this->startOffset = 0; // Starts from the beginning.
+		this->isSubImage = false; // No longer sharing buffer with any parent image.
+	}
+}
+
+void ImageRgbaU8Impl::generatePyramid() {
+	int32_t fullSizeGroup = getSizeGroup(std::min(this->width, this->height));
+	int32_t layerCount = std::min(std::max(fullSizeGroup - smallestSizeGroup, 1), MIP_BIN_COUNT);
+	if (this->texture.layerCount > 1) {
+		// Regenerate smaller images without wasting time with any redundant checks,
+		//   because the image has already been approved the first time it had the pyramid allocated.
+		updatePyramid(this->texture, layerCount);
 	} else {
-		int32_t pixelSize = this->pixelSize;
-		int32_t mipmaps = std::min(std::max(getSizeGroup(std::min(this->width, this->height)) - 1, 1), MIP_BIN_COUNT);
-		if (!this->texture.hasMipBuffer()) {
-			this->texture.pyramidBuffer = buffer_create(getPyramidSize(this->width / 2, this->height / 2, pixelSize, mipmaps - 1));
-		}
-		// Point to the image's original buffer in mip level 0
-		SafePointer<uint8_t> currentStart = imageInternal::getSafeData<uint8_t>(*this);
+		// In the event of having to correct a bad image into a valid texture, there will be two reallocations.
+		this->makeIntoTexture();
+		Buffer oldBuffer = this->buffer;
+		SafePointer<uint32_t> oldData = buffer_getSafeData<uint32_t>(oldBuffer, "Pyramid generation source") + this->startOffset;
+		this->buffer = buffer_create(getPyramidSize(this->width, this->height, layerCount));
 		int32_t currentWidth = this->width;
 		int32_t currentHeight = this->height;
-		this->texture.mips[0] = TextureRgbaLayer(currentStart.getUnsafe(), currentWidth, currentHeight);
-		// Create smaller pyramid images in the extra buffer
-		SafePointer<uint8_t> previousStart = currentStart;
-		currentStart = buffer_getSafeData<uint8_t>(this->texture.pyramidBuffer, "Pyramid generation target");
-		for (int32_t m = 1; m < mipmaps; m++) {
-			currentWidth /= 2;
-			currentHeight /= 2;
-			this->texture.mips[m] = TextureRgbaLayer(currentStart.getUnsafe(), currentWidth, currentHeight);
-			int32_t size = currentWidth * currentHeight * pixelSize;
-			// In-place downscaling by two.
-			downScaleByTwo(currentStart, previousStart, currentWidth, currentHeight, pixelSize, currentWidth * pixelSize);
-			previousStart = currentStart;
-			currentStart.increaseBytes(size);
-		}
-		// Fill unused mip levels with duplicates of the last mip level
-		for (int32_t m = mipmaps; m < MIP_BIN_COUNT; m++) {
-			// m - 1 is never negative, because mipmaps is clamped to at least 1 and nobody would choose zero for MIP_BIN_COUNT.
-			this->texture.mips[m] = this->texture.mips[m - 1];
-		}
+		this->generatePyramidStructure(layerCount);
+		// Copy the image's old content while assuming that there is no padding.
+		safeMemoryCopy(this->texture.mips[0].data, oldData, this->width * this->height * pixelSize);
+		// Generate smaller images.
+		updatePyramid(this->texture, layerCount);
+		// Once an image had a pyramid generated, the new buffer will remain for as long as the image exists.
+		this->texture.layerCount = layerCount;
+		// Remove start offset because the old data has been cloned to create the new pyramid image.
+		this->startOffset = 0;
 	}
 }
 
 void ImageRgbaU8Impl::removePyramid() {
-	// Only try to remove if it has a pyramid
-	if (buffer_exists(this->texture.pyramidBuffer)) {
-		// Remove the pyramid's buffer
-		this->texture.pyramidBuffer = Buffer();
-		// Re-initialize
-		for (int32_t m = 0; m < MIP_BIN_COUNT; m++) {
-			this->texture.mips[m] = TextureRgbaLayer(imageInternal::getSafeData<uint8_t>(*this).getUnsafe(), this->width, this->height);
-		}
-	}
+	// Duplicate the original image when no longer showing the pyramid.
+	this->removePyramidStructure();
 }
 
 void ImageRgbaU8Impl::initializeRgbaImage() {
 	// If the image fills the criterias of a texture
-	if (getSizeGroup(this->width) >= 2
-	 && getSizeGroup(this->height) >= 2
-	 && this->stride == this->width * this->pixelSize) {
+	if (getSizeGroup(this->width) >= smallestSizeGroup
+	 && getSizeGroup(this->height) >= smallestSizeGroup
+	 && this->stride == this->width * pixelSize) {
 		// Initialize each mip bin to show the original image
-		for (int32_t m = 0; m < MIP_BIN_COUNT; m++) {
-			this->texture.mips[m] = TextureRgbaLayer(imageInternal::getSafeData<uint8_t>(*this).getUnsafe(), this->width, this->height);
-		}
+		this->removePyramidStructure();
 	}
 };
 

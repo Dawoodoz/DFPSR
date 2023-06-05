@@ -37,9 +37,9 @@ namespace dsr {
 namespace shaderMethods {
 	// Returns the linear interpolation of the values using corresponding weight ratios for A, B and C in 4 pixels at the same time.
 	inline F32x4 interpolate(const FVector3D &vertexData, const F32x4x3 &vertexWeights) {
-		ALIGN16 F32x4 vMA = vertexData.x * vertexWeights.v1;
-		ALIGN16 F32x4 vMB = vertexData.y * vertexWeights.v2;
-		ALIGN16 F32x4 vMC = vertexData.z * vertexWeights.v3;
+		F32x4 vMA = vertexData.x * vertexWeights.v1;
+		F32x4 vMB = vertexData.y * vertexWeights.v2;
+		F32x4 vMC = vertexData.z * vertexWeights.v3;
 		return vMA + vMB + vMC;
 	}
 
@@ -55,14 +55,14 @@ namespace shaderMethods {
 	// Returns (colorA * weightA + colorB * weightB) / 256 as bytes
 	// weightA and weightB should contain pairs of the same 16-bit weights for each of the 4 pixels in the corresponding A and B colors
 	inline U32x4 weightColors(const U32x4 &colorA, const U16x8 &weightA, const U32x4 &colorB, const U16x8 &weightB) {
-		ALIGN16 U32x4 lowMask(0x00FF00FFu);
-		ALIGN16 U16x8 lowColorA = U16x8(colorA & lowMask);
-		ALIGN16 U16x8 lowColorB = U16x8(colorB & lowMask);
-		ALIGN16 U32x4 highMask(0xFF00FF00u);
-		ALIGN16 U16x8 highColorA = U16x8((colorA & highMask) >> 8);
-		ALIGN16 U16x8 highColorB = U16x8((colorB & highMask) >> 8);
-		ALIGN16 U32x4 lowColor = (((lowColorA * weightA) + (lowColorB * weightB))).get_U32();
-		ALIGN16 U32x4 highColor = (((highColorA * weightA) + (highColorB * weightB))).get_U32();
+		U32x4 lowMask(0x00FF00FFu);
+		U16x8 lowColorA = U16x8(colorA & lowMask);
+		U16x8 lowColorB = U16x8(colorB & lowMask);
+		U32x4 highMask(0xFF00FF00u);
+		U16x8 highColorA = U16x8((colorA & highMask) >> 8);
+		U16x8 highColorB = U16x8((colorB & highMask) >> 8);
+		U32x4 lowColor = (((lowColorA * weightA) + (lowColorB * weightB))).get_U32();
+		U32x4 highColor = (((highColorA * weightA) + (highColorB * weightB))).get_U32();
 		return (((lowColor >> 8) & lowMask) | (highColor & highMask));
 	}
 
@@ -79,8 +79,8 @@ namespace shaderMethods {
 
 	inline U32x4 mix_L(const U32x4 &colorA, const U32x4 &colorB, const U32x4 &weight) {
 		// Get inverse weights
-		ALIGN16 U16x8 weightB = repeatAs16Bits(weight);
-		ALIGN16 U16x8 weightA = invertWeight(weightB);
+		U16x8 weightB = repeatAs16Bits(weight);
+		U16x8 weightA = invertWeight(weightB);
 		// Multiply
 		return weightColors(colorA, weightA, colorB, weightB);
 	}
@@ -97,19 +97,8 @@ namespace shaderMethods {
 
 	// Single layer sampling methods
 	inline U32x4 sample_U32(const TextureRgbaLayer *source, const U32x4 &col, const U32x4 &row) {
-		#ifdef USE_AVX2
-			U32x4 pixelOffset((col + (row << (source->strideShift - 2)))); // PixelOffset = Column + Row * PixelStride
-			return U32x4(GATHER_U32x4_AVX2(source->data, pixelOffset.v, 4));
-			// return gather(source->data, pixelOffset.v); TODO: Needs SafePointer, so that this function can use the gather function with automatic emulation instead of hardcoding for AVX2
-		#else
-			UVector4D byteOffset = ((col << 2) + (row << source->strideShift)).get(); // ByteOffset = Column * 4 + Row * ByteStride
-			return U32x4(
-			  *((uint32_t*)(source->data + byteOffset.x)),
-			  *((uint32_t*)(source->data + byteOffset.y)),
-			  *((uint32_t*)(source->data + byteOffset.z)),
-			  *((uint32_t*)(source->data + byteOffset.w))
-			);
-		#endif
+		U32x4 pixelOffset((col + (row << (source->strideShift - 2)))); // PixelOffset = Column + Row * PixelStride
+		return gather(source->data, pixelOffset);
 	}
 
 	// How many mip levels down from here should be sampled for the given texture coordinates
@@ -140,7 +129,9 @@ namespace shaderMethods {
 	}
 
 	// Single layer sampling method
-	// Precondition: u, v > -0.875f = 1 - (0.5 / minimumMipSize)
+	// Preconditions:
+	//   u >= -halfPixelOffsetU
+	//   v >= -halfPixelOffsetV
 	template<Interpolation INTERPOLATION>
 	inline U32x4 sample_U32(const TextureRgbaLayer *source, const F32x4 &u, const F32x4 &v) {
 		if (INTERPOLATION == Interpolation::BL) {
@@ -174,7 +165,9 @@ namespace shaderMethods {
 		}
 	}
 
-	// Precondition: u, v > -0.875f = 1 - (0.5 / minimumMipSize)
+	// Preconditions:
+	//   u >= -halfPixelOffsetU
+	//   v >= -halfPixelOffsetV
 	template<Interpolation INTERPOLATION, bool HIGH_QUALITY>
 	inline Rgba_F32 sample_F32(const TextureRgbaLayer *source, const F32x4 &u, const F32x4 &v) {
 		if (INTERPOLATION == Interpolation::BL) {
@@ -211,14 +204,18 @@ namespace shaderMethods {
 	}
 
 	// Multi layer sampling method
-	// Precondition: u, v > -0.875f = 1 - (0.5 / minimumMipSize)
+	// Preconditions:
+	//   u >= -halfPixelOffsetU
+	//   v >= -halfPixelOffsetV
 	template<Interpolation INTERPOLATION>
 	inline U32x4 sample_U32(const TextureRgba *source, const F32x4 &u, const F32x4 &v) {
 		int mipLevel = getMipLevel(source, u, v);
 		return sample_U32<INTERPOLATION>(&(source->mips[mipLevel]), u, v);
 	}
 
-	// Precondition: u, v > -0.875f = 1 - (0.5 / minimumMipSize)
+	// Preconditions:
+	//   u >= -halfPixelOffsetU
+	//   v >= -halfPixelOffsetV
 	template<Interpolation INTERPOLATION, bool HIGH_QUALITY>
 	inline Rgba_F32 sample_F32(const TextureRgba *source, const F32x4 &u, const F32x4 &v) {
 		int mipLevel = getMipLevel(source, u, v);

@@ -185,6 +185,11 @@ PackOrderIndex dsr::image_getPackOrderIndex(const ImageRgbaU8& image) {
 }
 
 // Texture
+void dsr::image_makeIntoTexture(ImageRgbaU8& image) {
+	if (image) {
+		image->makeIntoTexture();
+	}
+}
 void dsr::image_generatePyramid(ImageRgbaU8& image) {
 	if (image) {
 		image->generatePyramid();
