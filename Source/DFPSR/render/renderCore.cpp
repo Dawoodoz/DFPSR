@@ -30,10 +30,6 @@
 
 using namespace dsr;
 
-//#define DISABLE_VERTEX_COLOR
-//#define DISABLE_DIFFUSE_MAP
-//#define DISABLE_LIGHT_MAP
-
 class SubVertex {
 public:
 	FVector3D cs; // Camera space position based on the weights
@@ -201,26 +197,6 @@ Visibility dsr::getTriangleVisibility(const ITriangle2D &triangle, const Camera 
 	return Visibility::Full;
 }
 
-static bool almostZero(float value) {
-	return value > -0.001f && value < 0.001f;
-}
-
-static bool almostZero(const FVector3D &channel) {
-	return almostZero(channel.x) && almostZero(channel.y) && almostZero(channel.z);
-}
-
-static bool almostOne(float value) {
-	return value > 0.999f && value < 1.001f;
-}
-
-static bool almostOne(const FVector3D &channel) {
-	return almostOne(channel.x) && almostOne(channel.y) && almostOne(channel.z);
-}
-
-static bool almostSame(const FVector3D &channel) {
-	return almostZero(channel.x - channel.y) && almostZero(channel.x - channel.z) && almostZero(channel.y - channel.z);
-}
-
 static const int alignX = 2;
 static const int alignY = 2;
 
@@ -338,81 +314,9 @@ void dsr::renderTriangleFromData(
 	// Only draw visible triangles
 	Visibility visibility = getTriangleVisibility(triangle, camera, false);
 	if (visibility != Visibility::Hidden) {
-		// Disable features when debugging
-		#ifdef DISABLE_VERTEX_COLOR
-			colors = TriangleColors(1.0f);
-		#endif
-		#ifdef DISABLE_DIFFUSE_MAP
-			diffuse = nullptr;
-		#endif
-		#ifdef DISABLE_LIGHT_MAP
-			light = nullptr;
-		#endif
 		// Select an instance of the default shader
 		if (!(filter == Filter::Alpha && almostZero(colors.alpha))) {
-			bool hasVertexFade = !(almostSame(colors.red) && almostSame(colors.green) && almostSame(colors.blue) && almostSame(colors.alpha));
-			bool colorless = almostOne(colors.red) && almostOne(colors.green) && almostOne(colors.blue) && almostOne(colors.alpha);
-			// Get the function pointer to the correct shader
-			DRAW_CALLBACK_TYPE drawTask = &drawCallbackTemplate;
-			if (diffuse) {
-				bool hasDiffusePyramid = diffuse->texture.hasMipBuffer();
-				if (light) {
-					if (hasVertexFade) { // DiffuseLightVertex
-						if (hasDiffusePyramid) { // With mipmap
-							drawTask = &(Shader_RgbaMultiply<true, true, true, false, false>::processTriangle);
-						} else { // Without mipmap
-							drawTask = &(Shader_RgbaMultiply<true, true, true, false, true>::processTriangle);
-						}
-					} else { // DiffuseLight
-						if (hasDiffusePyramid) { // With mipmap
-							drawTask = &(Shader_RgbaMultiply<true, true, false, false, false>::processTriangle);
-						} else { // Without mipmap
-							drawTask = &(Shader_RgbaMultiply<true, true, false, false, true>::processTriangle);
-						}
-					}
-				} else {
-					if (hasVertexFade) { // DiffuseVertex
-						if (hasDiffusePyramid) { // With mipmap
-							drawTask = &(Shader_RgbaMultiply<true, false, true, false, false>::processTriangle);
-						} else { // Without mipmap
-							drawTask = &(Shader_RgbaMultiply<true, false, true, false, true>::processTriangle);
-						}
-					} else {
-						if (colorless) { // Diffuse without normalization
-							if (hasDiffusePyramid) { // With mipmap
-								drawTask = &(Shader_RgbaMultiply<true, false, false, true, false>::processTriangle);
-							} else { // Without mipmap
-								drawTask = &(Shader_RgbaMultiply<true, false, false, true, true>::processTriangle);
-							}
-						} else { // Diffuse
-							if (hasDiffusePyramid) { // With mipmap
-								drawTask = &(Shader_RgbaMultiply<true, false, false, false, false>::processTriangle);
-							} else { // Without mipmap
-								drawTask = &(Shader_RgbaMultiply<true, false, false, false, true>::processTriangle);
-							}
-						}
-					}
-				}
-			} else {
-				if (light) {
-					if (hasVertexFade) { // LightVertex
-						drawTask = &(Shader_RgbaMultiply<false, true, true, false, false>::processTriangle);
-					} else {
-						if (colorless) { // Light without normalization
-							drawTask = &(Shader_RgbaMultiply<false, true, false, true, false>::processTriangle);
-						} else { // Light
-							drawTask = &(Shader_RgbaMultiply<false, true, false, false, false>::processTriangle);
-						}
-					}
-				} else {
-					if (hasVertexFade) { // Vertex
-						drawTask = &(Shader_RgbaMultiply<false, false, true, false, false>::processTriangle);
-					} else { // Single color
-						drawTask = &(Shader_RgbaMultiply<false, false, false, false, false>::processTriangle);
-					}
-				}
-			}
-			renderTriangleWithShader(commandQueue, TriangleDrawData(targetImage, depthBuffer, camera.perspective, filter, TriangleInput(diffuse, light, texCoords, colors), drawTask), camera, triangle, clipBound);
+			renderTriangleWithShader(commandQueue, TriangleDrawData(targetImage, depthBuffer, camera.perspective, filter, TriangleInput(diffuse, light, texCoords, colors), &processTriangle_RgbaMultiply), camera, triangle, clipBound);
 		}
 	}
 }
