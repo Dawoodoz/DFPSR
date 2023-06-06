@@ -67,12 +67,11 @@ namespace dsr {
 
 // Pointing to the parent image using raw pointers for fast rendering. May not exceed the lifetime of the parent image!
 struct TextureRgbaLayer {
-	SafePointer<uint32_t> data;
-	int32_t strideShift = 0;
-	uint32_t widthMask = 0, heightMask = 0;
-	int32_t width = 0, height = 0;
-	float subWidth = 0.0f, subHeight = 0.0f; // TODO: Better names?
-	float halfPixelOffsetU = 0.0f, halfPixelOffsetV = 0.0f;
+	SafePointer<uint32_t> data;                                         // Replace with the start offset
+	int32_t strideShift = 0;                                            // Subtract one per layer 
+	uint32_t widthMask = 0, heightMask = 0;                             // Shift one bit right per layer
+	int32_t width = 0, height = 0;                                      // Shift one bit right per layer
+	float subWidth = 0.0f, subHeight = 0.0f;                            // Try to use integers, so that these can be shifted
 	TextureRgbaLayer();
 	TextureRgbaLayer(SafePointer<uint32_t> data, int32_t width, int32_t height);
 	// Can it be sampled as a texture
@@ -84,6 +83,7 @@ struct TextureRgbaLayer {
 
 // Pointing to the parent image using raw pointers for fast rendering. Do not separate from the image!
 struct TextureRgba {
+	// TODO: Remove the array, so that any number of layers can be contained by calculating the masks and offsets.
 	TextureRgbaLayer mips[MIP_BIN_COUNT]; // Pointing to all mip levels including the original image
 	int32_t layerCount = 0; // 0 Means that there are no pointers, 1 means that you have a pyramid but only one layer.
 	// Can it be sampled as a texture
