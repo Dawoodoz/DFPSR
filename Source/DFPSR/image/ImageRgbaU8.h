@@ -30,17 +30,10 @@
 
 namespace dsr {
 
-// TODO: Figure out how to handle very small textures where the full resolution is smaller than the smallest allowed MIP level.
-//       Larger SIMD vectors will change the smallest allowed textures if the bit pattern is used, which may be inconsistent if it keeps growing.
-//       Having 32x32 pixels as the minimum size would allow using up to 1024-bit SIMD without a problem.
-// TODO: Reallocate the image's buffer, so that the pyramid images are placed into the same allocation.
-//       This allow reading a texture with multiple mip levels using different 32-bit offsets in the same SIMD vector holding multiple groups of 2x2 pixels.
-// TODO: Adapt how far down to go in mip resolutions based on DSR_DEFAULT_ALIGNMENT, so that no mip level is padded in memory.
-//       This is needed so that the stride can be calculated using bit shifting from the mip level.
-//       The visual appearance may differ between SIMD lengths for low resolution textures, but not between computers running the same executable.
-// TODO: Begin by replacing the lookup table for pyramid layers with template inline functions, because figuring out how to get start offset and stride consistently may take time.
-//       Pixel loops will later look up the masks once and store it in SIMD vectors to avoid fetching it from memory multiple times from potential memory aliasing.
-// IDEA: Keep the same order of mip layers, but mask out offset bits from the right side.
+// TODO: Check that the start offsets in mip layers are based on the image's own start offset.
+// TODO: Replace the lookup table for pyramid layers with template inline functions, so that it can be vectorized per pixel or 2x2 group using bitwise operations.
+// TODO: Calculate start offset dynamically for textures.
+//       Keep the same order of mip layers, but mask out offset bits from the right side.
 //       When the most significant bit is masked out, it jumps to the full resoultion image at offset zero.
 //       Offsets
 //         00000000000000000000000000000000 Full resolution of 64x64
@@ -67,15 +60,17 @@ namespace dsr {
 
 // Pointing to the parent image using raw pointers for fast rendering. May not exceed the lifetime of the parent image!
 struct TextureRgbaLayer {
-	SafePointer<uint32_t> data;                                         // Replace with the start offset
-	int32_t strideShift = 0;                                            // Subtract one per layer 
+	// Offset from the main texture's data pointer in whole texels.
+	uint32_t startOffset = 0;                                           // Generate by and-masking the smallest image's start offset with a double bit shift
+	// How much should we shift one to the left to get the stride in whole texels.
+	int32_t widthShift = 0;                                             // Subtract one per layer 
 	uint32_t widthMask = 0, heightMask = 0;                             // Shift one bit right per layer
+	// TODO: These dimensions are integers added against floats, which is very expensive.
+	//       Try to apply their multiplication against UV coordinates in an integer scale after getting enough bits for both high resolution and many laps around the texture.
 	int32_t width = 0, height = 0;                                      // Shift one bit right per layer
 	float subWidth = 0.0f, subHeight = 0.0f;                            // Try to use integers, so that these can be shifted
 	TextureRgbaLayer();
-	TextureRgbaLayer(SafePointer<uint32_t> data, int32_t width, int32_t height);
-	// Can it be sampled as a texture
-	bool exists() const { return this->data.getUnsafe() != nullptr; }
+	TextureRgbaLayer(uint32_t startOffset, int32_t width, int32_t height);
 };
 
 // TODO: Try to replace with generated bit masks from inline functions.
@@ -83,14 +78,16 @@ struct TextureRgbaLayer {
 
 // Pointing to the parent image using raw pointers for fast rendering. Do not separate from the image!
 struct TextureRgba {
+	SafePointer<uint32_t> data; // Direct access to the shared buffer's content for faster sampling.
 	// TODO: Remove the array, so that any number of layers can be contained by calculating the masks and offsets.
+	// TODO: Store bit masks and offsets needed to quickly generate the memory offsets for a pixel coordinate at a specified mip layer.
 	TextureRgbaLayer mips[MIP_BIN_COUNT]; // Pointing to all mip levels including the original image
 	int32_t layerCount = 0; // 0 Means that there are no pointers, 1 means that you have a pyramid but only one layer.
 	// Can it be sampled as a texture
-	bool exists() const { return this->mips[0].exists(); }
+	bool exists() const { return this->layerCount > 0; }
 	// Does it have a mip pyramid generated for smoother sampling
-	// TODO: Rename once there is no separate MIP buffer, just a single pyramid buffer.
-	bool hasMipBuffer() const { return this->layerCount != 0; }
+	// TODO: Rename.
+	bool hasMipBuffer() const { return this->layerCount > 1; }
 };
 
 class ImageRgbaU8Impl : public ImageImpl {

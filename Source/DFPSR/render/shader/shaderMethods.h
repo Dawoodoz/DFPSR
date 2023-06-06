@@ -96,9 +96,9 @@ namespace shaderMethods {
 	}
 
 	// Single layer sampling methods
-	inline U32x4 sample_U32(const TextureRgbaLayer *source, const U32x4 &col, const U32x4 &row) {
-		U32x4 pixelOffset((col + (row << (source->strideShift - 2)))); // PixelOffset = Column + Row * PixelStride
-		return gather(source->data, pixelOffset);
+	inline U32x4 sample_U32(SafePointer<uint32_t> data, const TextureRgbaLayer *source, const U32x4 &col, const U32x4 &row) {
+		U32x4 pixelOffset((source->startOffset + col + (row << source->widthShift))); // PixelOffset = Start + Column + Row * Width
+		return gather(data, pixelOffset);
 	}
 
 	// How many mip levels down from here should be sampled for the given texture coordinates
@@ -130,7 +130,7 @@ namespace shaderMethods {
 
 	// Single layer sampling method
 	template<Interpolation INTERPOLATION>
-	inline U32x4 sample_U32(const TextureRgbaLayer *source, const F32x4 &u, const F32x4 &v) {
+	inline U32x4 sample_U32(SafePointer<uint32_t> data, const TextureRgbaLayer *source, const F32x4 &u, const F32x4 &v) {
 		if (INTERPOLATION == Interpolation::BL) {
 			U32x4 subPixelOffset = U32x4(1073741952); // 2 to the power of 30 + 128, adjusting to a safe part of the unsigned integer and adding half a pixel for the bi-linear interpolation.
 			U32x4 subPixLowX(truncateToU32(u * source->subWidth) + subPixelOffset); // SubPixelLowX = u * (Width * 256) + 128
@@ -146,10 +146,10 @@ namespace shaderMethods {
 			U32x4 colHigh(((colLow + 1) & wMask)); // ColumnHigh = (ColumnLow + 1) % Width
 			U32x4 rowHigh(((rowLow + 1) & hMask)); // RowHigh = (RowLow + 1) % Height
 			// Sample colors in the 4 closest pixels
-			U32x4 colorA(sample_U32(source, colLow, rowLow));
-			U32x4 colorB(sample_U32(source, colHigh, rowLow));
-			U32x4 colorC(sample_U32(source, colLow, rowHigh));
-			U32x4 colorD(sample_U32(source, colHigh, rowHigh));
+			U32x4 colorA(sample_U32(data, source, colLow, rowLow));
+			U32x4 colorB(sample_U32(data, source, colHigh, rowLow));
+			U32x4 colorC(sample_U32(data, source, colLow, rowHigh));
+			U32x4 colorD(sample_U32(data, source, colHigh, rowHigh));
 			// Take a weighted average
 			return shaderMethods::mix_BL(colorA, colorB, colorC, colorD, weightX, weightY);
 		} else { // Interpolation::NN or unhandled
@@ -160,12 +160,12 @@ namespace shaderMethods {
 			U32x4 pixY(truncateToU32(v * source->height + subPixelOffset)); // PixelY = V * Height
 			U32x4 col(pixX & source->widthMask); // Column = PixelX % Width
 			U32x4 row(pixY & source->heightMask); // Row = PixelY % Height
-			return sample_U32(source, col, row);
+			return sample_U32(data, source, col, row);
 		}
 	}
 
 	template<Interpolation INTERPOLATION, bool HIGH_QUALITY>
-	inline Rgba_F32 sample_F32(const TextureRgbaLayer *source, const F32x4 &u, const F32x4 &v) {
+	inline Rgba_F32 sample_F32(SafePointer<uint32_t> data, const TextureRgbaLayer *source, const F32x4 &u, const F32x4 &v) {
 		if (INTERPOLATION == Interpolation::BL) {
 			if (HIGH_QUALITY) { // High quality interpolation
 				F32x4 subPixelOffset = F32x4(4194304.5f); // A large power of two and half a pixel's offset for bi-linear interpolation.
@@ -181,37 +181,42 @@ namespace shaderMethods {
 				U32x4 colHigh(((colLow + 1) & wMask)); // ColumnHigh = (ColumnLow + 1) % Width
 				U32x4 rowHigh(((rowLow + 1) & hMask)); // RowHigh = (RowLow + 1) % Height
 				// Sample colors in the 4 closest pixels
-				Rgba_F32 colorA(Rgba_F32(sample_U32(source, colLow, rowLow)));
-				Rgba_F32 colorB(Rgba_F32(sample_U32(source, colHigh, rowLow)));
-				Rgba_F32 colorC(Rgba_F32(sample_U32(source, colLow, rowHigh)));
-				Rgba_F32 colorD(Rgba_F32(sample_U32(source, colHigh, rowHigh)));
+				Rgba_F32 colorA(Rgba_F32(sample_U32(data, source, colLow, rowLow)));
+				Rgba_F32 colorB(Rgba_F32(sample_U32(data, source, colHigh, rowLow)));
+				Rgba_F32 colorC(Rgba_F32(sample_U32(data, source, colLow, rowHigh)));
+				Rgba_F32 colorD(Rgba_F32(sample_U32(data, source, colHigh, rowHigh)));
 				F32x4 weightX = pixX - floatFromU32(pixLowX);
 				F32x4 weightY = pixY - floatFromU32(pixLowY);
 				F32x4 invWeightX = 1.0f - weightX;
 				F32x4 invWeightY = 1.0f - weightY;
 				return (colorA * invWeightX + colorB * weightX) * invWeightY + (colorC * invWeightX + colorD * weightX) * weightY;
 			} else { // Fast interpolation
-				return Rgba_F32(sample_U32<Interpolation::BL>(source, u, v));
+				return Rgba_F32(sample_U32<Interpolation::BL>(data, source, u, v));
 			}
 		} else { // Interpolation::NN or unhandled
-			return Rgba_F32(sample_U32<Interpolation::NN>(source, u, v));
+			return Rgba_F32(sample_U32<Interpolation::NN>(data, source, u, v));
 		}
 	}
 
 	// Multi layer sampling method
-	template<Interpolation INTERPOLATION>
+	template<Interpolation INTERPOLATION, bool DISABLE_MIPMAP>
 	inline U32x4 sample_U32(const TextureRgba *source, const F32x4 &u, const F32x4 &v) {
-		int mipLevel = getMipLevel(source, u, v);
-		return sample_U32<INTERPOLATION>(&(source->mips[mipLevel]), u, v);
+		if (DISABLE_MIPMAP) {
+			return sample_U32<INTERPOLATION>(source->data, &(source->mips[0]), u, v);
+		} else {
+			int mipLevel = getMipLevel(source, u, v);
+			return sample_U32<INTERPOLATION>(source->data, &(source->mips[mipLevel]), u, v);
+		}
 	}
 
-	// Preconditions:
-	//   u >= -halfPixelOffsetU
-	//   v >= -halfPixelOffsetV
-	template<Interpolation INTERPOLATION, bool HIGH_QUALITY>
+	template<Interpolation INTERPOLATION, bool DISABLE_MIPMAP, bool HIGH_QUALITY>
 	inline Rgba_F32 sample_F32(const TextureRgba *source, const F32x4 &u, const F32x4 &v) {
-		int mipLevel = getMipLevel(source, u, v);
-		return sample_F32<INTERPOLATION, HIGH_QUALITY>(&(source->mips[mipLevel]), u, v);
+		if (DISABLE_MIPMAP) {
+			return sample_F32<INTERPOLATION, HIGH_QUALITY>(source->data, &(source->mips[0]), u, v);
+		} else {
+			int mipLevel = getMipLevel(source, u, v);
+			return sample_F32<INTERPOLATION, HIGH_QUALITY>(source->data, &(source->mips[mipLevel]), u, v);
+		}
 	}
 }
 

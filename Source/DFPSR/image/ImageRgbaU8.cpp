@@ -228,16 +228,16 @@ static void updatePyramid(TextureRgba &texture, int32_t layerCount) {
 		int32_t sourceIndex = targetIndex - 1;
 		int32_t targetWidth = texture.mips[targetIndex].width;
 		int32_t targetHeight = texture.mips[targetIndex].height;
-		downScaleByTwo(texture.mips[targetIndex].data, texture.mips[sourceIndex].data, targetWidth, targetHeight, targetWidth * pixelSize);
+		downScaleByTwo(texture.data + texture.mips[targetIndex].startOffset, texture.data + texture.mips[sourceIndex].startOffset, targetWidth, targetHeight, targetWidth * pixelSize);
 	}
 	texture.layerCount = layerCount;
 }
 
 TextureRgbaLayer::TextureRgbaLayer() {}
 
-TextureRgbaLayer::TextureRgbaLayer(SafePointer<uint32_t> data, int32_t width, int32_t height) :
-  data(data),
-  strideShift(getSizeGroup(width) + 2),
+TextureRgbaLayer::TextureRgbaLayer(uint32_t startOffset, int32_t width, int32_t height) :
+  startOffset(startOffset),
+  widthShift(getSizeGroup(width)),
   widthMask(width - 1),
   heightMask(height - 1),
   width(width),
@@ -249,7 +249,7 @@ void ImageRgbaU8Impl::generatePyramidStructure(int32_t layerCount) {
 	int32_t currentWidth = this->width;
 	int32_t currentHeight = this->height;
 	// Allocate smaller pyramid images within the buffer
-	SafePointer<uint32_t> currentStart = buffer_getSafeData<uint32_t>(this->buffer, "Pyramid generation target");
+	uint32_t currentStart = 0;
 	for (int32_t m = 0; m < layerCount; m++) {
 		this->texture.mips[m] = TextureRgbaLayer(currentStart, currentWidth, currentHeight);
 		currentStart += currentWidth * currentHeight;
@@ -262,14 +262,17 @@ void ImageRgbaU8Impl::generatePyramidStructure(int32_t layerCount) {
 		this->texture.mips[m] = this->texture.mips[m - 1];
 	}
 	this->texture.layerCount = layerCount;
+	this->texture.data = imageInternal::getSafeData<uint32_t>(*this);
 }
 
 void ImageRgbaU8Impl::removePyramidStructure() {
+	// The mip layers have offsets relative to the texture's data pointer, which is already compensating for any offset from any parent image.
 	for (int32_t m = 0; m < MIP_BIN_COUNT; m++) {
-		this->texture.mips[m] = TextureRgbaLayer(imageInternal::getSafeData<uint32_t>(*this), this->width, this->height);
+		this->texture.mips[m] = TextureRgbaLayer(0, this->width, this->height);
 	}
 	// Declare the old pyramid invalid so that it will not be displayed while rendering, but keep the extra memory for next time it is generated.
 	this->texture.layerCount = 1;
+	this->texture.data = imageInternal::getSafeData<uint32_t>(*this);
 }
 
 void ImageRgbaU8Impl::makeIntoTexture() {
@@ -309,7 +312,7 @@ void ImageRgbaU8Impl::generatePyramid() {
 		int32_t currentHeight = this->height;
 		this->generatePyramidStructure(layerCount);
 		// Copy the image's old content while assuming that there is no padding.
-		safeMemoryCopy(this->texture.mips[0].data, oldData, this->width * this->height * pixelSize);
+		safeMemoryCopy(this->texture.data + this->texture.mips[0].startOffset, oldData, this->width * this->height * pixelSize);
 		// Generate smaller images.
 		updatePyramid(this->texture, layerCount);
 		// Once an image had a pyramid generated, the new buffer will remain for as long as the image exists.

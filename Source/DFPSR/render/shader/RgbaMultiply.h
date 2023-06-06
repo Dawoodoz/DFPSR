@@ -1,6 +1,6 @@
 ﻿// zlib open source license
 //
-// Copyright (c) 2017 to 2019 David Forsgren Piuva
+// Copyright (c) 2017 to 2023 David Forsgren Piuva
 // 
 // This software is provided 'as-is', without any express or implied
 // warranty. In no event will the authors be held liable for any damages
@@ -36,9 +36,8 @@ namespace dsr {
 template <bool HAS_DIFFUSE_MAP, bool HAS_LIGHT_MAP, bool HAS_VERTEX_FADING, bool COLORLESS, bool DISABLE_MIPMAP>
 class Shader_RgbaMultiply : public Shader {
 private:
-	const TextureRgba *diffuseMap; // The full diffuseMap mipmap pyramid to use without DISABLE_MIPMAP
-	const TextureRgbaLayer *diffuseLayer; // Layer 0 of diffuseMap to use with DISABLE_MIPMAP
-	const TextureRgbaLayer *lightLayer;
+	const TextureRgba *diffuseMap; // Mip-mapping is allowed for diffuse textures.
+	const TextureRgba *lightMap; // Mip-mapping is not allowed for lightmaps, because it would increase the number of shaders to compile and still look worse.
 	// Planar format with each vector representing the three triangle corners
 	const TriangleTexCoords texCoords;
 	const TriangleColors colors;
@@ -46,32 +45,25 @@ private:
 	float getVertexScale() {
 		float result = 255.0f; // Scale from normalized to byte for the output
 		if (HAS_DIFFUSE_MAP) {
-			result /= 255.0f; // Normalize the diffuse map from 0..255 to 0..1 by dividing the vertex color
+			result *= 1.0f / 255.0f; // Normalize the diffuse map from 0..255 to 0..1 by dividing the vertex color
 		}
 		if (HAS_LIGHT_MAP) {
-			result /= 255.0f; // Normalize the light map from 0..255 to 0..1 by dividing the vertex color
+			result *= 1.0f / 255.0f; // Normalize the light map from 0..255 to 0..1 by dividing the vertex color
 		}
 		return result;
 	}
 	explicit Shader_RgbaMultiply(const TriangleInput &triangleInput) :
 	  diffuseMap(triangleInput.diffuseImage ? &(triangleInput.diffuseImage->texture) : nullptr),
-	  diffuseLayer(triangleInput.diffuseImage ? &(triangleInput.diffuseImage->texture.mips[0]) : nullptr),
-	  lightLayer(triangleInput.lightImage ? &(triangleInput.lightImage->texture.mips[0]) : nullptr),
+	  lightMap(triangleInput.lightImage ? &(triangleInput.lightImage->texture) : nullptr),
 	  texCoords(triangleInput.texCoords), colors(triangleInput.colors.getScaled(getVertexScale())) {
 		// Texture coordinates must be on the positive side to allow using truncation as a floor function
 		if (HAS_DIFFUSE_MAP) {
-			// Incorrect tests?
-			if (DISABLE_MIPMAP) {
-				assert(this->diffuseLayer != nullptr); // Cannot sample null
-				assert(this->diffuseLayer->exists()); // Cannot sample regular images
-			} else {
-				assert(this->diffuseMap != nullptr); // Cannot sample null
-				assert(this->diffuseMap->exists()); // Cannot sample regular images
-			}
+			assert(this->diffuseMap != nullptr); // Cannot sample null
+			assert(this->diffuseMap->exists()); // Cannot sample regular images
 		}
 		if (HAS_LIGHT_MAP) {
-			assert(this->lightLayer != nullptr); // Cannot sample null
-			assert(this->lightLayer->exists()); // Cannot sample regular images
+			assert(this->lightMap != nullptr); // Cannot sample null
+			assert(this->lightMap->exists()); // Cannot sample regular images
 		}
 	}
 public:
@@ -86,16 +78,12 @@ public:
 			// Optimized for diffuse only
 			F32x4 u1(shaderMethods::interpolate(this->texCoords.u1, vertexWeights));
 			F32x4 v1(shaderMethods::interpolate(this->texCoords.v1, vertexWeights));
-			if (DISABLE_MIPMAP) {
-				return shaderMethods::sample_F32<Interpolation::BL, false>(this->diffuseLayer, u1, v1);
-			} else {
-				return shaderMethods::sample_F32<Interpolation::BL, false>(this->diffuseMap, u1, v1);
-			}
+			return shaderMethods::sample_F32<Interpolation::BL, DISABLE_MIPMAP, false>(this->diffuseMap, u1, v1);
 		} else if (HAS_LIGHT_MAP && !HAS_DIFFUSE_MAP && COLORLESS) {
 			// Optimized for light only
 			F32x4 u2(shaderMethods::interpolate(this->texCoords.u2, vertexWeights));
 			F32x4 v2(shaderMethods::interpolate(this->texCoords.v2, vertexWeights));
-			return shaderMethods::sample_F32<Interpolation::BL, false>(this->lightLayer, u2, v2);
+			return shaderMethods::sample_F32<Interpolation::BL, true, false>(this->lightMap, u2, v2);
 		} else {
 			// Interpolate the vertex color
 			Rgba_F32 color = HAS_VERTEX_FADING ?
@@ -105,17 +93,13 @@ public:
 			if (HAS_DIFFUSE_MAP) {
 				F32x4 u1(shaderMethods::interpolate(this->texCoords.u1, vertexWeights));
 				F32x4 v1(shaderMethods::interpolate(this->texCoords.v1, vertexWeights));
-				if (DISABLE_MIPMAP) {
-					color = color * shaderMethods::sample_F32<Interpolation::BL, false>(this->diffuseLayer, u1, v1);
-				} else {
-					color = color * shaderMethods::sample_F32<Interpolation::BL, false>(this->diffuseMap, u1, v1);
-				}
+				color = color * shaderMethods::sample_F32<Interpolation::BL, DISABLE_MIPMAP, false>(this->diffuseMap, u1, v1);
 			}
 			// Sample lightmap
 			if (HAS_LIGHT_MAP) {
 				F32x4 u2(shaderMethods::interpolate(this->texCoords.u2, vertexWeights));
 				F32x4 v2(shaderMethods::interpolate(this->texCoords.v2, vertexWeights));
-				color = color * shaderMethods::sample_F32<Interpolation::BL, false>(this->lightLayer, u2, v2);
+				color = color * shaderMethods::sample_F32<Interpolation::BL, true, false>(this->lightMap, u2, v2);
 			}
 			return color;
 		}
