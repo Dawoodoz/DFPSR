@@ -1,6 +1,6 @@
 ﻿// zlib open source license
 //
-// Copyright (c) 2017 to 2019 David Forsgren Piuva
+// Copyright (c) 2017 to 2023 David Forsgren Piuva
 // 
 // This software is provided 'as-is', without any express or implied
 // warranty. In no event will the authors be held liable for any damages
@@ -66,15 +66,7 @@ struct TriangleInput {
 
 // The template for function pointers doing the work
 inline void drawCallbackTemplate(const TriangleInput &triangleInput, ImageRgbaU8Impl *colorBuffer, ImageF32Impl *depthBuffer, const ITriangle2D &triangle, const Projection &projection, const RowShape &shape, Filter filter) {}
-#define DRAW_CALLBACK_TYPE decltype(&drawCallbackTemplate)
-
-// Inherit this class for pixel shaders
-class Shader {
-public:
-	void fillShape(ImageRgbaU8Impl *colorBuffer, ImageF32Impl *depthBuffer, const ITriangle2D &triangle, const Projection &projection, const RowShape &shape, Filter filter);
-	// The main call that defines the pixel shader
-	virtual Rgba_F32 getPixels_2x2(const F32x4x3 &vertexWeights) const = 0;
-};
+using DRAW_CALLBACK_TYPE = decltype(&drawCallbackTemplate);
 
 }
 
