@@ -1,6 +1,6 @@
 ﻿// zlib open source license
 //
-// Copyright (c) 2017 to 2019 David Forsgren Piuva
+// Copyright (c) 2017 to 2023 David Forsgren Piuva
 // 
 // This software is provided 'as-is', without any express or implied
 // warranty. In no event will the authors be held liable for any damages
@@ -129,16 +129,12 @@ namespace shaderMethods {
 	}
 
 	// Single layer sampling method
-	// Preconditions:
-	//   u >= -halfPixelOffsetU
-	//   v >= -halfPixelOffsetV
 	template<Interpolation INTERPOLATION>
 	inline U32x4 sample_U32(const TextureRgbaLayer *source, const F32x4 &u, const F32x4 &v) {
 		if (INTERPOLATION == Interpolation::BL) {
-			F32x4 uLow(u + source->halfPixelOffsetU);
-			F32x4 vLow(v + source->halfPixelOffsetV);
-			U32x4 subPixLowX(truncateToU32(uLow * source->subWidth)); // SubPixelLowX = ULow * (Width * 256)
-			U32x4 subPixLowY(truncateToU32(vLow * source->subHeight)); // SubPixelLowY = VLow * (Height * 256)
+			U32x4 subPixelOffset = U32x4(1073741952); // 2 to the power of 30 + 128, adjusting to a safe part of the unsigned integer and adding half a pixel for the bi-linear interpolation.
+			U32x4 subPixLowX(truncateToU32(u * source->subWidth) + subPixelOffset); // SubPixelLowX = u * (Width * 256) + 128
+			U32x4 subPixLowY(truncateToU32(v * source->subHeight) + subPixelOffset); // SubPixelLowY = v * (Height * 256) + 128
 			U32x4 weightX = subPixLowX & 255; // WeightX = SubPixelLowX % 256
 			U32x4 weightY = subPixLowY & 255; // WeightY = SubPixelLowY % 256
 			U32x4 pixLowX(subPixLowX >> 8); // PixelLowX = SubPixelLowX / 256
@@ -157,25 +153,24 @@ namespace shaderMethods {
 			// Take a weighted average
 			return shaderMethods::mix_BL(colorA, colorB, colorC, colorD, weightX, weightY);
 		} else { // Interpolation::NN or unhandled
-			U32x4 pixX(truncateToU32(u * source->width)); // PixelX = U * Width
-			U32x4 pixY(truncateToU32(v * source->height)); // PixelY = V * Height
+			// TODO: Test nearest neighbor sampling.
+			F32x4 subPixelOffset = F32x4(1073741824.0f);
+			// TODO: Use multiply and add instructions.
+			U32x4 pixX(truncateToU32(u * source->width + subPixelOffset));  // PixelX = U * Width
+			U32x4 pixY(truncateToU32(v * source->height + subPixelOffset)); // PixelY = V * Height
 			U32x4 col(pixX & source->widthMask); // Column = PixelX % Width
 			U32x4 row(pixY & source->heightMask); // Row = PixelY % Height
 			return sample_U32(source, col, row);
 		}
 	}
 
-	// Preconditions:
-	//   u >= -halfPixelOffsetU
-	//   v >= -halfPixelOffsetV
 	template<Interpolation INTERPOLATION, bool HIGH_QUALITY>
 	inline Rgba_F32 sample_F32(const TextureRgbaLayer *source, const F32x4 &u, const F32x4 &v) {
 		if (INTERPOLATION == Interpolation::BL) {
 			if (HIGH_QUALITY) { // High quality interpolation
-				F32x4 uLow(u + source->halfPixelOffsetU);
-				F32x4 vLow(v + source->halfPixelOffsetV);
-				F32x4 pixX = uLow * source->width; // PixelX = ULow * Width
-				F32x4 pixY = vLow * source->height; // PixelY = VLow * Height
+				F32x4 subPixelOffset = F32x4(4194304.5f); // A large power of two and half a pixel's offset for bi-linear interpolation.
+				F32x4 pixX = u * source->width + subPixelOffset; // PixelX = ULow * Width
+				F32x4 pixY = v * source->height + subPixelOffset; // PixelY = VLow * Height
 				// Truncation can be used as floor for positive input
 				U32x4 pixLowX(truncateToU32(pixX)); // PixelLowX = floor(PixelX)
 				U32x4 pixLowY(truncateToU32(pixY)); // PixelLowY = floor(PixelY)
@@ -204,9 +199,6 @@ namespace shaderMethods {
 	}
 
 	// Multi layer sampling method
-	// Preconditions:
-	//   u >= -halfPixelOffsetU
-	//   v >= -halfPixelOffsetV
 	template<Interpolation INTERPOLATION>
 	inline U32x4 sample_U32(const TextureRgba *source, const F32x4 &u, const F32x4 &v) {
 		int mipLevel = getMipLevel(source, u, v);

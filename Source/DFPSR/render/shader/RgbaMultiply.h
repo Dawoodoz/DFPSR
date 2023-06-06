@@ -57,7 +57,7 @@ private:
 	  diffuseMap(triangleInput.diffuseImage ? &(triangleInput.diffuseImage->texture) : nullptr),
 	  diffuseLayer(triangleInput.diffuseImage ? &(triangleInput.diffuseImage->texture.mips[0]) : nullptr),
 	  lightLayer(triangleInput.lightImage ? &(triangleInput.lightImage->texture.mips[0]) : nullptr),
-	  texCoords(triangleInput.texCoords.getPositive()), colors(triangleInput.colors.getScaled(getVertexScale())) {
+	  texCoords(triangleInput.texCoords), colors(triangleInput.colors.getScaled(getVertexScale())) {
 		// Texture coordinates must be on the positive side to allow using truncation as a floor function
 		if (HAS_DIFFUSE_MAP) {
 			// Incorrect tests?

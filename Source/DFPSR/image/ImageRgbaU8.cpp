@@ -243,9 +243,7 @@ TextureRgbaLayer::TextureRgbaLayer(SafePointer<uint32_t> data, int32_t width, in
   width(width),
   height(height),
   subWidth(width * 256),
-  subHeight(height * 256),
-  halfPixelOffsetU(1.0f - (0.5f / width)),
-  halfPixelOffsetV(1.0f - (0.5f / height)) {}
+  subHeight(height * 256) {}
 
 void ImageRgbaU8Impl::generatePyramidStructure(int32_t layerCount) {
 	int32_t currentWidth = this->width;

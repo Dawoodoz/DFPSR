@@ -34,13 +34,6 @@
 
 namespace dsr {
 
-inline float getMinimum(const FVector3D &coordinates) {
-	float result = coordinates.x;
-	if (coordinates.y < result) { result = coordinates.y; }
-	if (coordinates.z < result) { result = coordinates.z; }
-	return result;
-}
-
 struct TriangleTexCoords {
 	FVector3D u1, v1, u2, v2;
 	TriangleTexCoords() {}
@@ -48,14 +41,6 @@ struct TriangleTexCoords {
 	  u1(u1), v1(v1), u2(u2), v2(v2) {}
 	TriangleTexCoords(const FVector4D &a, const FVector4D &b, const FVector4D &c) :
 	  u1(FVector3D(a.x, b.x, c.x)), v1(FVector3D(a.y, b.y, c.y)), u2(FVector3D(a.z, b.z, c.z)), v2(FVector3D(a.w, b.w, c.w)) {}
-	TriangleTexCoords getPositive() const {
-		return TriangleTexCoords(
-		  this->u1 + FVector3D(1 - (int)getMinimum(this->u1)),
-		  this->v1 + FVector3D(1 - (int)getMinimum(this->v1)),
-		  this->u2 + FVector3D(1 - (int)getMinimum(this->u2)),
-		  this->v2 + FVector3D(1 - (int)getMinimum(this->v2))
-		);
-	}
 };
 
 struct TriangleColors {
