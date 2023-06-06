@@ -136,17 +136,17 @@ inline static void fillQuadSuper(const Shader& shader, int x, SafePointer<uint32
 	if (vis0 || vis1 || vis2 || vis3) {
 		if (COLOR_WRITE) {
 			// Get the color
-			ALIGN16 U32x4 packedColor(0u); // Allow uninitialized memory?
+			U32x4 packedColor(0u); // Allow uninitialized memory?
 			// Execute the shader
-			ALIGN16 Rgba_F32 planarSourceColor = shader.getPixels_2x2(weights);
+			Rgba_F32 planarSourceColor = shader.getPixels_2x2(weights);
 			// Apply alpha filtering
 			if (FILTER == Filter::Alpha) {
 				// Get opacity from the source color
-				ALIGN16 F32x4 opacity = planarSourceColor.alpha * (1.0f / 255.0f);
+				F32x4 opacity = planarSourceColor.alpha * (1.0f / 255.0f);
 				// Read the packed colors for alpha blending
-				ALIGN16 U32x4 packedTargetColor = clippedRead<CLIP_SIDES>(pixelDataUpper, pixelDataLower, vis0, vis1, vis2, vis3);
+				U32x4 packedTargetColor = clippedRead<CLIP_SIDES>(pixelDataUpper, pixelDataLower, vis0, vis1, vis2, vis3);
 				// Unpack the target color into planar RGBA format so that it can be mixed with the source color
-				ALIGN16 Rgba_F32 planarTargetColor(packedTargetColor, targetPackingOrder);
+				Rgba_F32 planarTargetColor(packedTargetColor, targetPackingOrder);
 				// Blend linearly using floats
 				planarSourceColor = (planarSourceColor * opacity) + (planarTargetColor * (1.0f - opacity));
 			}
@@ -172,15 +172,15 @@ template<bool CLIP_SIDES, bool COLOR_WRITE, bool DEPTH_READ, bool DEPTH_WRITE, F
 static inline void fillRowSuper(const Shader& shader, SafePointer<uint32_t> pixelDataUpper, SafePointer<uint32_t> pixelDataLower, SafePointer<float> depthDataUpper, SafePointer<float> depthDataLower, FVector3D pWeightUpper, FVector3D pWeightLower, const FVector3D &pWeightDx, int startX, int endX, const RowInterval &upperRow, const RowInterval &lowerRow, const PackOrder &targetPackingOrder) {
 	if (AFFINE) {
 		FVector3D dx2 = pWeightDx * 2.0f;
-		ALIGN16 F32x4 vLinearDepth(pWeightUpper.x, pWeightUpper.x + pWeightDx.x, pWeightLower.x, pWeightLower.x + pWeightDx.x);
-		ALIGN16 F32x4 weightB(pWeightUpper.y, pWeightUpper.y + pWeightDx.y, pWeightLower.y, pWeightLower.y + pWeightDx.y);
-		ALIGN16 F32x4 weightC(pWeightUpper.z, pWeightUpper.z + pWeightDx.z, pWeightLower.z, pWeightLower.z + pWeightDx.z);
+		F32x4 vLinearDepth(pWeightUpper.x, pWeightUpper.x + pWeightDx.x, pWeightLower.x, pWeightLower.x + pWeightDx.x);
+		F32x4 weightB(pWeightUpper.y, pWeightUpper.y + pWeightDx.y, pWeightLower.y, pWeightLower.y + pWeightDx.y);
+		F32x4 weightC(pWeightUpper.z, pWeightUpper.z + pWeightDx.z, pWeightLower.z, pWeightLower.z + pWeightDx.z);
 		for (int x = startX; x < endX; x += 2) {
 			// Get the linear depth
 			FVector4D depth = vLinearDepth.get();
 			// Calculate the weight of the first vertex from the other two
-			ALIGN16 F32x4 weightA = 1.0f - (weightB + weightC);
-			ALIGN16 F32x4x3 weights(weightA, weightB, weightC);
+			F32x4 weightA = 1.0f - (weightB + weightC);
+			F32x4x3 weights(weightA, weightB, weightC);
 			fillQuadSuper<CLIP_SIDES, COLOR_WRITE, DEPTH_READ, DEPTH_WRITE, FILTER, AFFINE>(shader, x, pixelDataUpper, pixelDataLower, depthDataUpper, depthDataLower, upperRow, lowerRow, targetPackingOrder, depth, weights);
 			// Iterate projection
 			vLinearDepth = vLinearDepth + dx2.x;
@@ -192,21 +192,21 @@ static inline void fillRowSuper(const Shader& shader, SafePointer<uint32_t> pixe
 		}
 	} else {
 		FVector3D dx2 = pWeightDx * 2.0f;
-		ALIGN16 F32x4 vRecDepth(pWeightUpper.x, pWeightUpper.x + pWeightDx.x, pWeightLower.x, pWeightLower.x + pWeightDx.x);
-		ALIGN16 F32x4 vRecU(pWeightUpper.y, pWeightUpper.y + pWeightDx.y, pWeightLower.y, pWeightLower.y + pWeightDx.y);
-		ALIGN16 F32x4 vRecV(pWeightUpper.z, pWeightUpper.z + pWeightDx.z, pWeightLower.z, pWeightLower.z + pWeightDx.z);
+		F32x4 vRecDepth(pWeightUpper.x, pWeightUpper.x + pWeightDx.x, pWeightLower.x, pWeightLower.x + pWeightDx.x);
+		F32x4 vRecU(pWeightUpper.y, pWeightUpper.y + pWeightDx.y, pWeightLower.y, pWeightLower.y + pWeightDx.y);
+		F32x4 vRecV(pWeightUpper.z, pWeightUpper.z + pWeightDx.z, pWeightLower.z, pWeightLower.z + pWeightDx.z);
 		for (int x = startX; x < endX; x += 2) {
 			// Get the reciprocal depth
 			FVector4D depth = vRecDepth.get();
 			// After linearly interpolating (1 / W, U / W, V / W) based on the affine weights...
 			// Divide 1 by 1 / W to get the linear depth W
-			ALIGN16 F32x4 vLinearDepth = vRecDepth.reciprocal();
+			F32x4 vLinearDepth = vRecDepth.reciprocal();
 			// Multiply the vertex weights to the second and third edges with the depth to compensate for that we divided them by depth before interpolating.
-			ALIGN16 F32x4 weightB = vRecU * vLinearDepth;
-			ALIGN16 F32x4 weightC = vRecV * vLinearDepth;
+			F32x4 weightB = vRecU * vLinearDepth;
+			F32x4 weightC = vRecV * vLinearDepth;
 			// Calculate the weight of the first vertex from the other two
-			ALIGN16 F32x4 weightA = 1.0f - (weightB + weightC);
-			ALIGN16 F32x4x3 weights(weightA, weightB, weightC);
+			F32x4 weightA = 1.0f - (weightB + weightC);
+			F32x4x3 weights(weightA, weightB, weightC);
 			fillQuadSuper<CLIP_SIDES, COLOR_WRITE, DEPTH_READ, DEPTH_WRITE, FILTER, AFFINE>(shader, x, pixelDataUpper, pixelDataLower, depthDataUpper, depthDataLower, upperRow, lowerRow, targetPackingOrder, depth, weights);
 			// Iterate projection
 			vRecDepth = vRecDepth + dx2.x;
