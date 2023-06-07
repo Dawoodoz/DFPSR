@@ -57,29 +57,29 @@ START_TEST(Image)
 	}
 	{ // Texture criterias
 		ImageRgbaU8 image, subImage;
-		image = image_create_RgbaU8(2, 2);
+		image = image_create_RgbaU8(16, 16);
 		ASSERT_EQUAL(image_isTexture(image), false); // Too small
-		image = image_create_RgbaU8(13, 8);
+		image = image_create_RgbaU8(47, 64);
 		ASSERT_EQUAL(image_isTexture(image), false); // Not power-of-two width
-		image = image_create_RgbaU8(4, 7);
+		image = image_create_RgbaU8(32, 35);
 		ASSERT_EQUAL(image_isTexture(image), false); // Not power-of-two height
-		image = image_create_RgbaU8(4, 4);
+		image = image_create_RgbaU8(32, 32);
 		ASSERT_EQUAL(image_isTexture(image), true); // Okay
-		image = image_create_RgbaU8(4, 16384);
-		subImage = image_getSubImage(image, IRect(0, 0, 4, 128));
+		image = image_create_RgbaU8(32, 16384);
+		subImage = image_getSubImage(image, IRect(0, 0, 32, 128));
 		ASSERT_EQUAL(image_isTexture(image), true); // Okay
 		ASSERT_EQUAL(image_isTexture(subImage), true); // Okay to use full-width vertical sub-images
-		image = image_create_RgbaU8(16384, 4);
-		subImage = image_getSubImage(image, IRect(0, 0, 128, 4));
+		image = image_create_RgbaU8(16384, 32);
+		subImage = image_getSubImage(image, IRect(0, 0, 128, 32));
 		ASSERT_EQUAL(image_isTexture(image), true); // Okay
 		ASSERT_EQUAL(image_isTexture(subImage), false); // Not okay to use partial width leading to partial stride
-		image = image_create_RgbaU8(16384 + 1, 4);
+		image = image_create_RgbaU8(16384 + 1, 32);
 		ASSERT_EQUAL(image_isTexture(image), false); // Too wide and not power-of-two width
-		image = image_create_RgbaU8(32768, 4);
+		image = image_create_RgbaU8(32768, 32);
 		ASSERT_EQUAL(image_isTexture(image), false); // Too wide
-		image = image_create_RgbaU8(4, 16384 + 1);
+		image = image_create_RgbaU8(32, 16384 + 1);
 		ASSERT_EQUAL(image_isTexture(image), false); // Too high and not power-of-two height
-		image = image_create_RgbaU8(4, 32768);
+		image = image_create_RgbaU8(32, 32768);
 		ASSERT_EQUAL(image_isTexture(image), false); // Too high
 	}
 	{ // Sub-images
