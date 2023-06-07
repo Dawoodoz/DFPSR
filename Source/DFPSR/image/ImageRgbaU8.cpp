@@ -41,13 +41,13 @@ ImageRgbaU8Impl::ImageRgbaU8Impl(int32_t newWidth, int32_t newHeight, int32_t ne
 }
 
 ImageRgbaU8Impl::ImageRgbaU8Impl(int32_t newWidth, int32_t newHeight, int32_t alignment) :
-  ImageImpl(newWidth, newHeight, roundUp(newWidth * sizeof(Color4xU8), alignment), sizeof(Color4xU8)) {
+  ImageImpl(newWidth, newHeight, roundUp(newWidth * sizeof(Color4xU8), alignment), sizeof(Color4xU8), alignment) {
 	this->initializeRgbaImage();
 }
 
 // Native canvas constructor
 ImageRgbaU8Impl::ImageRgbaU8Impl(int32_t newWidth, int32_t newHeight, PackOrderIndex packOrderIndex, int32_t alignment) :
-  ImageImpl(newWidth, newHeight, roundUp(newWidth * sizeof(Color4xU8), 16), sizeof(Color4xU8)) {
+  ImageImpl(newWidth, newHeight, roundUp(newWidth * sizeof(Color4xU8), 16), sizeof(Color4xU8), alignment) {
 	this->packOrder = PackOrder::getPackOrder(packOrderIndex);
 	this->initializeRgbaImage();
 }
@@ -308,8 +308,6 @@ void ImageRgbaU8Impl::generatePyramid() {
 		Buffer oldBuffer = this->buffer;
 		SafePointer<uint32_t> oldData = buffer_getSafeData<uint32_t>(oldBuffer, "Pyramid generation source") + this->startOffset;
 		this->buffer = buffer_create(getPyramidSize(this->width, this->height, layerCount));
-		int32_t currentWidth = this->width;
-		int32_t currentHeight = this->height;
 		this->generatePyramidStructure(layerCount);
 		// Copy the image's old content while assuming that there is no padding.
 		safeMemoryCopy(this->texture.data + this->texture.mips[0].startOffset, oldData, this->width * this->height * pixelSize);

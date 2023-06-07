@@ -33,7 +33,7 @@ ImageU16Impl::ImageU16Impl(int32_t newWidth, int32_t newHeight, int32_t newStrid
 }
 
 ImageU16Impl::ImageU16Impl(int32_t newWidth, int32_t newHeight, int32_t alignment) :
-  ImageImpl(newWidth, newHeight, roundUp(newWidth * sizeof(uint16_t), alignment), sizeof(uint16_t)) {
+  ImageImpl(newWidth, newHeight, roundUp(newWidth * sizeof(uint16_t), alignment), sizeof(uint16_t), alignment) {
 }
 
 IMAGE_DEFINITION(ImageU16Impl, 1, uint16_t, uint16_t);

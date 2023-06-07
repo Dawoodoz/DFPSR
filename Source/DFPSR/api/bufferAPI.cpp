@@ -61,7 +61,6 @@ static int getFinalAlignment(int requestedAlignment) {
 	// Find any power of two alignment divisible by both requestedAlignment and DSR_DEFAULT_ALIGNMENT
 	int largestAlignment = max(requestedAlignment, DSR_DEFAULT_ALIGNMENT);
 	for (uint32_t e = 0; e < 32; e++) {
-		uint32_t requestedAlignment = 1 << e;
 		if (1 << e == largestAlignment) return largestAlignment;
 	}
 	return -1;

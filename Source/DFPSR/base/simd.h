@@ -56,8 +56,9 @@
 //   Pros and cons:
 //     - Have to manually set the alignment of buffers to DSR_FLOAT_ALIGNMENT to prevent crashing.
 //       If the default alignment for buffers changed based on the size of F vectors, the more commonly used X vector would get slowed down from cache misses from padding larger than X vectors.
-//     - It can be difficult to detect incorrect memory alignment, because a pointer can be aligned to more than requested by accident.
-//       If accidentally aligning to 128 bits instead of 256 bits, there is a 50% risk of failing to detect it at runtime.
+//       AlignedImageF32 and sound backends are already aligned with the F vector size, because they are not generic like Buffer.
+//     - It can be difficult to detect incorrect memory alignment, because a pointer can accidentally be aligned to more than what was requested.
+//       If accidentally aligning to 128 bits instead of 256 bits, there is a 50% risk of failing to detect it at runtime and later fail on another computer.
 //       If sticking with 128-bit or X vectors, all buffers will be correctly aligned automatically.
 //     + For heavy calculations where memory access is not the bottleneck, using larger SIMD vectors when enabled allow saving energy and increasing performance.
 //     - If you forget to test with longer vector lengths (compiling with -mavx2 or -mEMULATE_256BIT_SIMD) then you might find bugs from not iterating or aligning memory correctly.

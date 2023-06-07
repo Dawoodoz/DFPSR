@@ -30,7 +30,7 @@ ImageImpl::ImageImpl(int32_t width, int32_t height, int32_t stride, int32_t pixe
 	this->validate();
 }
 
-ImageImpl::ImageImpl(int32_t width, int32_t height, int32_t stride, int32_t pixelSize) :
-  width(width), height(height), stride(stride), pixelSize(pixelSize), buffer(buffer_create(stride * height)), startOffset(0), isSubImage(false) {
+ImageImpl::ImageImpl(int32_t width, int32_t height, int32_t stride, int32_t pixelSize, int alignment) :
+  width(width), height(height), stride(stride), pixelSize(pixelSize), buffer(buffer_create(stride * height, alignment)), startOffset(0), isSubImage(false) {
 	this->validate();
 }
