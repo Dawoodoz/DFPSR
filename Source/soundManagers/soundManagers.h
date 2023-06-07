@@ -13,7 +13,8 @@
 //   The soundOutput function returns true iff the audio backend should keep fetching sound samples, and false iff the engine is done and ready for the call to sound_streamToSpeakers to return.
 //   data: The data array should be filled with sound samples in the -1.0f to 1.0f range, in indices from 0 to (length * channels) - 1.
 //     The audio backend is responsible for converting the 32-bit float samples into a bit-depth chosen by the backend.
-//     The backend is supposed to padd the SafePointer's range to at least be divisible by 16 bytes for 128-bit SIMD vectorization in the sound engine.
+//     The backend is supposed to padd the SafePointer's range to at least be divisible by DSR_FLOAT_ALIGNMENT, which allow using both X vectors and F vectors.
+//       The F vector can be larger than the X vector if building for a SIMD extension that only supports the widest vector length for floating-point operations.
 //     Padding elements will not add to the time passed in the sound engine, for only played elements increment time.
 //   length: The number of ticks per channel. The total number of elements to write into data is channels * length.
 // How to use:
