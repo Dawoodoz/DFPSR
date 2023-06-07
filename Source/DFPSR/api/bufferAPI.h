@@ -55,15 +55,21 @@ namespace dsr {
 	class BufferImpl;
 	using Buffer = std::shared_ptr<BufferImpl>;
 
+	// Pre-condition:
+	//   minimumAlignment must be a power of two, otherwise an exception will be thrown.
 	// Side-effect: Creates a new buffer head regardless of newSize, but only allocates a zeroed data allocation if newSize > 0.
 	// Post-condition: Returns a handle to the new buffer.
 	// Creating a buffer without a size will only allocate the buffer's head referring to null data with size zero.
-	Buffer buffer_create(int64_t newSize);
+	// The minimumAlignment argument represents the number of bytes the allocation must be aligned with in memory when DSR_DEFAULT_ALIGNMENT is not enough.
+	//   Useful for when using a longer SIMD vector that only exists for a certain type (such as AVX without AVX2) or you use a signal processor.
+	//   Any minimumAlignment smaller than DSR_DEFAULT_ALIGNMENT will be ignored, because then DSR_DEFAULT_ALIGNMENT is larger than the minimum.
+	Buffer buffer_create(int64_t newSize, int minimumAlignment = 1);
 
+	// Pre-conditions:
+	//   newSize may not be larger than the size of newData in bytes.
+	//     Breaking this pre-condition may cause crashes, so only provide a newData pointer if you know what you are doing.
 	// Side-effect: Creates a new buffer of newSize bytes inheriting ownership of newData.
 	//   If the given data cannot be freed as a C allocation, replaceDestructor must be called with the special destructor.
-	// Pre-condition: newSize may not be larger than the size of newData in bytes.
-	//   Breaking this pre-condition may cause crashes, so only provide a newData pointer if you know what you are doing.
 	// Post-condition: Returns a handle to the manually constructed buffer.
 	Buffer buffer_create(int64_t newSize, uint8_t *newData);
 
@@ -79,6 +85,8 @@ namespace dsr {
 
 	// Returns a clone of the buffer.
 	// Giving an empty handle returns an empty handle.
+	// If the old buffer's alignment exceeds DSR_DEFAULT_ALIGNMENT, the alignment will be inherited.
+	// The resulting buffer will always be aligned by at least DSR_DEFAULT_ALIGNMENT, even if the old buffer had no alignment.
 	Buffer buffer_clone(const Buffer &buffer);
 
 	// Returns the buffer's size in bytes, as given when allocating it excluding allocation padding.
