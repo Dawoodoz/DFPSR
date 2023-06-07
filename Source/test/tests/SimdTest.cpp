@@ -10,6 +10,9 @@ START_TEST(Simd)
 	#ifdef USE_SSSE3
 		printText("	* SSSE3\n");
 	#endif
+	#ifdef USE_AVX
+		printText("	* AVX\n");
+	#endif
 	#ifdef USE_AVX2
 		printText("	* AVX2\n");
 	#endif

@@ -33,7 +33,7 @@ ImageF32Impl::ImageF32Impl(int32_t newWidth, int32_t newHeight, int32_t newStrid
 }
 
 ImageF32Impl::ImageF32Impl(int32_t newWidth, int32_t newHeight, int32_t alignment) :
-  ImageImpl(newWidth, newHeight, roundUp(newWidth * sizeof(float), alignment), sizeof(float)) {
+  ImageImpl(newWidth, newHeight, roundUp(newWidth * sizeof(float), alignment), sizeof(float), alignment) {
 }
 
 IMAGE_DEFINITION(ImageF32Impl, 1, float, float);

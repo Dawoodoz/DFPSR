@@ -54,7 +54,7 @@ public:
 	// Sub-images
 	ImageImpl(int32_t width, int32_t height, int32_t stride, int32_t pixelSize, Buffer buffer, intptr_t startOffset);
 	// New images
-	ImageImpl(int32_t width, int32_t height, int32_t stride, int32_t pixelSize);
+	ImageImpl(int32_t width, int32_t height, int32_t stride, int32_t pixelSize, int alignment);
 };
 
 #define IMAGE_DECLARATION(IMAGE_TYPE,CHANNELS,COLOR_TYPE,ELEMENT_TYPE) \

@@ -45,7 +45,7 @@ AlignedImageU16 dsr::image_create_U16(int32_t width, int32_t height) {
 	return AlignedImageU16(std::make_shared<ImageU16Impl>(width, height, DSR_DEFAULT_ALIGNMENT));
 }
 AlignedImageF32 dsr::image_create_F32(int32_t width, int32_t height) {
-	return AlignedImageF32(std::make_shared<ImageF32Impl>(width, height, DSR_DEFAULT_ALIGNMENT));
+	return AlignedImageF32(std::make_shared<ImageF32Impl>(width, height, DSR_FLOAT_ALIGNMENT));
 }
 OrderedImageRgbaU8 dsr::image_create_RgbaU8(int32_t width, int32_t height) {
 	return OrderedImageRgbaU8(std::make_shared<ImageRgbaU8Impl>(width, height, DSR_DEFAULT_ALIGNMENT));
