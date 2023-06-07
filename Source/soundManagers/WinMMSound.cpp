@@ -14,11 +14,14 @@ static Buffer outputBuffer, floatBuffer;
 static SafePointer<int16_t> outputData[2];
 static SafePointer<float> floatData;
 
+// Aligning memory to allow using the widest available floating-point SIMD vector.
+static const int soundBufferAlignment = DSR_FLOAT_ALIGNMENT;
+
 static void allocateBuffers(int neededElements) {
-	int64_t roundedElements = roundUp(neededElements, 8); // Using the same padding for both allow loading two whole SIMD vectors for large input and writing a single output vector.
+	int64_t roundedElements = roundUp(neededElements, soundBufferAlignment / 2);
 	int64_t outputSize = roundedElements * sizeof(int16_t);
 	outputBuffer = buffer_create(outputSize * 2);
-	floatBuffer = buffer_create(roundedElements * sizeof(float));
+	floatBuffer = buffer_create(roundedElements * sizeof(float), soundBufferAlignment);
 	SafePointer<int16_t> allOutputData = buffer_getSafeData<int16_t>(outputBuffer, "Output data");
 	outputData[0] = allOutputData.slice("Output data 0", 0, outputSize);
 	outputData[1] = allOutputData.slice("Output data 1", outputSize, outputSize);
