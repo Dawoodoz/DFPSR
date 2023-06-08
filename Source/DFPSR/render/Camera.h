@@ -37,6 +37,13 @@
 
 namespace dsr {
 
+// A special rounding used for vertex projection
+inline int64_t safeRoundInt64(float value) {
+	int64_t result = (int64_t)value;
+	if (value <= -1048576.0f || value >= 1048576.0f) { result = 0; }
+	return result;
+}
+
 class ViewFrustum {
 private:
 	FPlane3D planes[6];

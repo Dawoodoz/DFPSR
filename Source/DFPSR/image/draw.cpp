@@ -29,6 +29,35 @@
 
 using namespace dsr;
 
+// Preconditions:
+//   0 <= a <= 255
+//   0 <= b <= 255
+// Postconditions:
+//   Returns the normalized multiplication of a and b, where the 0..255 range represents decimal values from 0.0 to 1.0.
+//   The result may not be less than zero or larger than any of the inputs.
+// Examples:
+//   normalizedByteMultiplication(0, 0) = 0
+//   normalizedByteMultiplication(x, 0) = 0
+//   normalizedByteMultiplication(0, x) = 0
+//   normalizedByteMultiplication(x, 255) = x
+//   normalizedByteMultiplication(255, x) = x
+//   normalizedByteMultiplication(255, 255) = 255
+static inline uint32_t normalizedByteMultiplication(uint32_t a, uint32_t b) {
+	// Approximate the reciprocal of an unsigned byte's maximum value 255 for normalization
+	//   256³ / 255 ≈ 65793
+	// Truncation goes down, so add half a unit before rounding to get the closest value
+	//   2^24 / 2 = 8388608
+	// No overflow for unsigned 32-bit integers
+	//   255² * 65793 + 8388608 = 4286578433 < 2^32
+	return (a * b * 65793 + 8388608) >> 24;
+}
+
+// True iff high and low bytes are equal
+//   Equivalent to value % 257 == 0 because A + B * 256 = A * 257 when A = B.
+inline bool isUniformByteU16(uint16_t value) {
+	return (value & 0x00FF) == ((value & 0xFF00) >> 8);
+}
+
 // -------------------------------- Drawing shapes --------------------------------
 
 template <typename COLOR_TYPE>
@@ -568,10 +597,10 @@ void dsr::imageImpl_drawAlphaFilter(ImageRgbaU8Impl& target, const ImageRgbaU8Im
 					targetPixel[target.packOrder.alphaIndex] = 255;
 				} else {
 					uint32_t targetRatio = 255 - sourceRatio;
-					targetPixel[target.packOrder.redIndex]   = mulByte_8(targetPixel[target.packOrder.redIndex], targetRatio) + mulByte_8(sourcePixel[source.packOrder.redIndex], sourceRatio);
-					targetPixel[target.packOrder.greenIndex] = mulByte_8(targetPixel[target.packOrder.greenIndex], targetRatio) + mulByte_8(sourcePixel[source.packOrder.greenIndex], sourceRatio);
-					targetPixel[target.packOrder.blueIndex]  = mulByte_8(targetPixel[target.packOrder.blueIndex], targetRatio) + mulByte_8(sourcePixel[source.packOrder.blueIndex], sourceRatio);
-					targetPixel[target.packOrder.alphaIndex] = mulByte_8(targetPixel[target.packOrder.alphaIndex], targetRatio) + sourceRatio;
+					targetPixel[target.packOrder.redIndex]   = normalizedByteMultiplication(targetPixel[target.packOrder.redIndex], targetRatio) + normalizedByteMultiplication(sourcePixel[source.packOrder.redIndex], sourceRatio);
+					targetPixel[target.packOrder.greenIndex] = normalizedByteMultiplication(targetPixel[target.packOrder.greenIndex], targetRatio) + normalizedByteMultiplication(sourcePixel[source.packOrder.greenIndex], sourceRatio);
+					targetPixel[target.packOrder.blueIndex]  = normalizedByteMultiplication(targetPixel[target.packOrder.blueIndex], targetRatio) + normalizedByteMultiplication(sourcePixel[source.packOrder.blueIndex], sourceRatio);
+					targetPixel[target.packOrder.alphaIndex] = normalizedByteMultiplication(targetPixel[target.packOrder.alphaIndex], targetRatio) + sourceRatio;
 				}
 			}
 		);
@@ -636,7 +665,7 @@ static void drawSilhouette_template(ImageRgbaU8Impl& target, const ImageU8Impl& 
 			if (FULL_ALPHA) {
 				sourceRatio = *sourcePixel;
 			} else {
-				sourceRatio = mulByte_8(*sourcePixel, color.alpha);
+				sourceRatio = normalizedByteMultiplication(*sourcePixel, color.alpha);
 			}
 			if (sourceRatio > 0) {
 				if (sourceRatio == 255) {
@@ -646,10 +675,10 @@ static void drawSilhouette_template(ImageRgbaU8Impl& target, const ImageU8Impl& 
 					targetPixel[target.packOrder.alphaIndex] = 255;
 				} else {
 					uint32_t targetRatio = 255 - sourceRatio;
-					targetPixel[target.packOrder.redIndex]   = mulByte_8(targetPixel[target.packOrder.redIndex], targetRatio) + mulByte_8(color.red, sourceRatio);
-					targetPixel[target.packOrder.greenIndex] = mulByte_8(targetPixel[target.packOrder.greenIndex], targetRatio) + mulByte_8(color.green, sourceRatio);
-					targetPixel[target.packOrder.blueIndex]  = mulByte_8(targetPixel[target.packOrder.blueIndex], targetRatio) + mulByte_8(color.blue, sourceRatio);
-					targetPixel[target.packOrder.alphaIndex] = mulByte_8(targetPixel[target.packOrder.alphaIndex], targetRatio) + sourceRatio;
+					targetPixel[target.packOrder.redIndex]   = normalizedByteMultiplication(targetPixel[target.packOrder.redIndex], targetRatio) + normalizedByteMultiplication(color.red, sourceRatio);
+					targetPixel[target.packOrder.greenIndex] = normalizedByteMultiplication(targetPixel[target.packOrder.greenIndex], targetRatio) + normalizedByteMultiplication(color.green, sourceRatio);
+					targetPixel[target.packOrder.blueIndex]  = normalizedByteMultiplication(targetPixel[target.packOrder.blueIndex], targetRatio) + normalizedByteMultiplication(color.blue, sourceRatio);
+					targetPixel[target.packOrder.alphaIndex] = normalizedByteMultiplication(targetPixel[target.packOrder.alphaIndex], targetRatio) + sourceRatio;
 				}
 			}
 		);
