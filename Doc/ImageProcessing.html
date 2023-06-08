@@ -6,8 +6,8 @@ H1 {  padding-left: 10px; padding-right:  0px; padding-top: 10px; padding-bottom
 H2 {  padding-left: 10px; padding-right:  0px; padding-top: 10px; padding-bottom:  0px; font-size: 1.2rem; }
 blockquote {
   tab-size: 3rem;
-  color: #FFFFFF; background: #000000;
-  font-size: 1.2rem; font-family: monospace;
+  color: #88FF88; background: #000000;
+  font-size: 0.95rem; font-family: monospace;
   padding-left: 5px; padding-right: 5px;
   padding-top: 5px; padding-bottom: 5px;
 }
@@ -252,7 +252,7 @@ When adding an integer to a pointer, the address offset is multiplied by the poi
 This means that a pointers of uint32_t for a color pixel only needs to add 4 elements to the pointer to move 16 bytes, while pointers of uint16_t moves 8 elements and pointers of uint8_t moves 16 elements.
 
 </P><P>
-Adding two grayscale images using SIMD vectorization</B>:
+Adding two grayscale images using <B>SIMD vectorization</B>:
 <PRE><BLOCKQUOTE>void addImages_simd(AlignedImageU8 targetImage, AlignedImageU8 imageA, AlignedImageU8 imageB) {
 	int width = image_getWidth(targetImage);
 	int height = image_getHeight(targetImage);
@@ -279,6 +279,70 @@ Adding two grayscale images using SIMD vectorization</B>:
 			targetPixel += 16;
 			pixelA += 16;
 			pixelB += 16;
+		}
+		// Move row pointers to the next row
+		targetRow.increaseBytes(targetStride);
+		rowA.increaseBytes(strideA);
+		rowB.increaseBytes(strideB);
+	}
+}
+</BLOCKQUOTE></PRE>
+</P><P>
+</P><IMG SRC="Images/Border.png"><P>
+
+</P><P>
+</P><H2> Loops with the arbitrary X vector size (faster for heavy calculations)</H2><P>
+</P><P>
+<B>Source/DFPSR/base/simd.h</B> contains F32xX, a SIMD vector storing laneCountX_32Bit 32-bit floats.
+
+</P><P>
+<B>Source/DFPSR/base/simd.h</B> contains I32xX, a SIMD vector storing laneCountX_32Bit signed 32-bit integers.
+
+</P><P>
+<B>Source/DFPSR/base/simd.h</B> contains U32xX, a SIMD vector storing laneCountX_32Bit unsigned 32-bit integers.
+
+</P><P>
+<B>Source/DFPSR/base/simd.h</B> contains U16xX, a SIMD vector storing laneCountX_16Bit unsigned 16-bit integers.
+
+</P><P>
+<B>Source/DFPSR/base/simd.h</B> contains U8xX, a SIMD vector storing laneCountX_8Bit unsigned 8-bit integers.
+
+</P><P>
+Then you might want to take advantage of 256-bit SIMD vectors, but don't want to copy and paste code to use both U8x16 and U8x32.
+For functions working directly on values without reading nor writing, you can use templates to have multiple vector lengths supported at the same time.
+For a filter however, you only need to generate the code for the biggest available vector size, so we use U8xX and laneCountX_8Bit for processing 8-bit monochrome images using type aliases.
+When building with AVX2 (-mavx2 for g++), the X vector types (F32xX, I32xX, U32xX, U16xX, U8xX) change size from 128 bits to 256 bits and their lane counts (laneCountX_32Bit, laneCountX_16Bit, laneCountX_8Bit) also double.
+If you do not have AVX2 on your computer for testing this, you can force the X vector to be at least 256 bits by defining the macro EMULATE_256BIT_X_SIMD globally.
+The aligned image types and buffers allocated by the library are always aligned with at least the X vector's DSR_DEFAULT_ALIGNMENT, so you can safely use the X vector on any aligned image and most of the buffers.
+
+</P><P>
+Replaced <B>U8x16</B> with <B>U8xX</B> and <B>16</B> with <B>laneCountX_8Bit</B> to work with any future SIMD vector length:
+<PRE><BLOCKQUOTE>void addImages_simd(AlignedImageU8 targetImage, AlignedImageU8 imageA, AlignedImageU8 imageB) {
+	int width = image_getWidth(targetImage);
+	int height = image_getHeight(targetImage);
+	SafePointer&lt;uint8_t&gt; targetRow = image_getSafePointer(targetImage);
+	SafePointer&lt;uint8_t&gt; rowA = image_getSafePointer(imageA);
+	SafePointer&lt;uint8_t&gt; rowB = image_getSafePointer(imageB);
+	int targetStride = image_getStride(targetImage);
+	int strideA = image_getStride(imageA);
+	int strideB = image_getStride(imageB);
+	for (int y = 0; y &lt; height; y++) {
+		SafePointer&lt;uint8_t&gt; targetPixel = targetRow;
+		SafePointer&lt;uint8_t&gt; pixelA = rowA;
+		SafePointer&lt;uint8_t&gt; pixelB = rowB;
+		// Assuming that we have ownership of any padding pixels
+		for (int x = 0; x &lt; width; x += laneCountX_8Bit) {
+			// Read multiple source pixels at a time
+			U8xX a = U8xX::readAligned(pixelA, "addImages: reading pixelA");
+			U8xX b = U8xX::readAligned(pixelB, "addImages: reading pixelB");
+			// Saturated operations replace conditional move
+			U8xX result = saturatedAddition(a, b);
+			// Write the result multiple pixels at a time
+			result.writeAligned(targetPixel, "addImages: writing result");
+			// Move pixel pointers to the next pixel
+			targetPixel += laneCountX_8Bit;
+			pixelA += laneCountX_8Bit;
+			pixelB += laneCountX_8Bit;
 		}
 		// Move row pointers to the next row
 		targetRow.increaseBytes(targetStride);

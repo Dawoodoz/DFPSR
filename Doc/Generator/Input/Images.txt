@@ -26,7 +26,10 @@ A 32-bit color image format using 4 channels with 8 bits in each. The alpha chan
 ---
 Title2: Aligned images
 Then there's the aligned image types AlignedImageU8, AlignedImageU16, AlignedImageF32 and AlignedImageRgbaU8.
-Aligned images are created from the constructors by default because new images are always aligned for 128-bit SIMD vectorization.
+Aligned images are created from the constructors by default because new images are always aligned for SIMD vectorization.
+Aligned integer images (AlignedImageU8, AlignedImageU16 and AlignedImageRgbaU8) use DSR_DEFAULT_ALIGNMENT to be compatible with the largest supported SIMD vector capable of processing all element types, called the X vector (F32xX, I32xX, U32xX, U16xX, U8xX).
+Aligned float images (AlignedImageF32) use DSR_FLOAT_ALIGNMENT to be compatible with the largest supported floating-point SIMD vector, called the F vector (F32xF).
+The F vector size is as least as large as the X vector size, so floating-point images aligned for the F vector are also aligned for the X vectors.
 Non-aligned images are created as sub-images pointing to existing pixel buffers without cloning.
 ---
 Title2: Ordered images

@@ -6,8 +6,8 @@ H1 {  padding-left: 10px; padding-right:  0px; padding-top: 10px; padding-bottom
 H2 {  padding-left: 10px; padding-right:  0px; padding-top: 10px; padding-bottom:  0px; font-size: 1.2rem; }
 blockquote {
   tab-size: 3rem;
-  color: #FFFFFF; background: #000000;
-  font-size: 1.2rem; font-family: monospace;
+  color: #88FF88; background: #000000;
+  font-size: 0.95rem; font-family: monospace;
   padding-left: 5px; padding-right: 5px;
   padding-top: 5px; padding-bottom: 5px;
 }
@@ -44,7 +44,10 @@ Avoid exact equality comparisons using floating-point numbers, because it's alwa
 </P><H2> ImageRgbaU8</H2><P>A 32-bit color image format using 4 channels with 8 bits in each. The alpha channel can be used to represent opacity or any other information needed.
 </P><IMG SRC="Images/Border.png"><P>
 </P><H2> Aligned images</H2><P>Then there's the aligned image types AlignedImageU8, AlignedImageU16, AlignedImageF32 and AlignedImageRgbaU8.
-Aligned images are created from the constructors by default because new images are always aligned for 128-bit SIMD vectorization.
+Aligned images are created from the constructors by default because new images are always aligned for SIMD vectorization.
+Aligned integer images (AlignedImageU8, AlignedImageU16 and AlignedImageRgbaU8) use DSR_DEFAULT_ALIGNMENT to be compatible with the largest supported SIMD vector capable of processing all element types, called the X vector (F32xX, I32xX, U32xX, U16xX, U8xX).
+Aligned float images (AlignedImageF32) use DSR_FLOAT_ALIGNMENT to be compatible with the largest supported floating-point SIMD vector, called the F vector (F32xF).
+The F vector size is as least as large as the X vector size, so floating-point images aligned for the F vector are also aligned for the X vectors.
 Non-aligned images are created as sub-images pointing to existing pixel buffers without cloning.
 </P><IMG SRC="Images/Border.png"><P>
 </P><H2> Ordered images</H2><P>The ordered image type OrderedImageRgbaU8 is aligned just like AlignedImageU8 but also ensures that
