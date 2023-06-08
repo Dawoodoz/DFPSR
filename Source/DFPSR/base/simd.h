@@ -472,11 +472,8 @@
 		* The "v" variable is the native backend, which is only defined when SIMD is supported by hardware.
 			Only use when USE_BASIC_SIMD is defined.
 			Will not work on scalar emulation.
-		* The "scalars" array is only defined for targets with direct access to SIMD registers. (SSE)
-			Only use when USE_DIRECT_SIMD_MEMORY_ACCESS is defined.
-			Will not work on NEON or scalar emulation.
-		* The "scalars" array is ony defined when SIMD is turned off.
-			Cannot be used when USE_BASIC_SIMD is defined.
+		* The "scalars" array is available when emulating a type that does not exist or the SIMD vector has direct access to the memory.
+			Do not rely on these for accessing elements, because otherwise your code will not be able to compile for ARM NEON.
 	*/
 
 	union F32x4 {
