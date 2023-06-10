@@ -1,4 +1,5 @@
 ﻿// zlib open source license
+// zlib open source license
 //
 // Copyright (c) 2018 to 2019 David Forsgren Piuva
 // 
@@ -21,7 +22,7 @@
 //    3. This notice may not be removed or altered from any source
 //    distribution.
 
-#include "../base/simdExtra.h"
+#include "../base/simd.h"
 #include "draw.h"
 #include "internal/imageInternal.h"
 #include "../math/scalar.h"
@@ -1187,51 +1188,32 @@ static void blockMagnify_reference(
 static void blockMagnify_2x2(ImageRgbaU8Impl& target, const ImageRgbaU8Impl& source, int clipWidth, int clipHeight) {
 	#ifdef USE_SIMD_EXTRA
 		const SafePointer<uint32_t> sourceRow = imageInternal::getSafeData<uint32_t>(source);
-		SafePointer<uint32_t> upperTargetRow = imageInternal::getSafeData<uint32_t>(target, 0);
-		SafePointer<uint32_t> lowerTargetRow = imageInternal::getSafeData<uint32_t>(target, 1);
-		int doubleTargetStride = target.stride * 2;
+		SafePointer<uint32_t> targetRowA = imageInternal::getSafeData<uint32_t>(target, 0);
+		SafePointer<uint32_t> targetRowB = imageInternal::getSafeData<uint32_t>(target, 1);
+		int blockTargetStride = target.stride * 2;
 		for (int upperTargetY = 0; upperTargetY + 2 <= clipHeight; upperTargetY+=2) {
 			// Carriage return
 			const SafePointer<uint32_t> sourcePixel = sourceRow;
-			SafePointer<uint32_t> upperTargetPixel = upperTargetRow;
-			SafePointer<uint32_t> lowerTargetPixel = lowerTargetRow;
+			SafePointer<uint32_t> targetPixelA = targetRowA;
+			SafePointer<uint32_t> targetPixelB = targetRowB;
 			// Write to whole multiples of 8 pixels
 			int writeLeftX = 0;
-			while (writeLeftX + 8 <= clipWidth) {
-				// Read pixels
-				ALIGN16 SIMD_U32x4 sourcePixels = U32x4::readAligned(sourcePixel, "blockMagnify_2x2 @ whole sourcePixels").v;
-				sourcePixel += 4;
-				// Double the pixels by zipping with itself
-				ALIGN16 SIMD_U32x4x2 doubledPixels = ZIP_U32_SIMD(sourcePixels, sourcePixels);
-				// Write lower part
-				U32x4(doubledPixels.val[0]).writeAligned(upperTargetPixel, "blockMagnify_2x2 @ write upper left #1");
-				upperTargetPixel += 4;
-				U32x4(doubledPixels.val[0]).writeAligned(lowerTargetPixel, "blockMagnify_2x2 @ write lower left #1");
-				lowerTargetPixel += 4;
-				// Write upper part
-				U32x4(doubledPixels.val[1]).writeAligned(upperTargetPixel, "blockMagnify_2x2 @ write upper right #1");
-				upperTargetPixel += 4;
-				U32x4(doubledPixels.val[1]).writeAligned(lowerTargetPixel, "blockMagnify_2x2 @ write lower right #1");
-				lowerTargetPixel += 4;
-				// Count
-				writeLeftX += 8;
-			}
-			// Fill the last pixels using scalar operations to avoid going out of bound
 			while (writeLeftX + 2 <= clipWidth) {
-				// Read one pixel
-				uint32_t sourceColor = *sourcePixel;
-				// Write 2x2 pixels
-				*upperTargetPixel = sourceColor; upperTargetPixel += 1;
-				*upperTargetPixel = sourceColor; upperTargetPixel += 1;
-				*lowerTargetPixel = sourceColor; lowerTargetPixel += 1;
-				*lowerTargetPixel = sourceColor; lowerTargetPixel += 1;
+				// Read one pixel at a time
+				uint32_t scalarValue = *sourcePixel;
+				sourcePixel += 1;
+				// Write to a whole block of pixels
+				targetPixelA[0] = scalarValue; targetPixelA[1] = scalarValue;
+				targetPixelB[0] = scalarValue; targetPixelB[1] = scalarValue;
+				targetPixelA += 2;
+				targetPixelB += 2;
 				// Count
 				writeLeftX += 2;
 			}
 			// Line feed
 			sourceRow.increaseBytes(source.stride);
-			upperTargetRow.increaseBytes(doubleTargetStride);
-			lowerTargetRow.increaseBytes(doubleTargetStride);
+			targetRowA.increaseBytes(blockTargetStride);
+			targetRowB.increaseBytes(blockTargetStride);
 		}
 	#else
 		blockMagnify_reference<false>(target, source, 2, 2, clipWidth, clipHeight);

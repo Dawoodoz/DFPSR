@@ -1,0 +1,11 @@
+﻿It is not fun when things break backward compatibility, but it would be even less fun if the whole library became a bloated mess that nobody uses after a few decades.
+While every new feature may create naming conflicts from using the dsr namespace implicitly and every bugfix can make workarounds relying on incorrect behavior stop working, some things require extra attention to make porting to a new version easier.
+
+There are plans to create an automatic refactoring tool built into the Builder build system that could potentially do this automatically for you, but one must be very careful with overwriting people's code in case that someone does not use version control.
+
+Changes since version 0.1.0
+	* simdExtra.h was removed, because such a low depth of abstraction would risk making the code slower from not fitting well with future SIMD extensions.
+		On missing header when including simdExtra.h:
+			Replace 'simdExtra.h' with 'simd.h' to make it compile.
+			Remove any duplicate includes of simd.h to clean up your code.
+			Remove all code within '#ifdef USE_SIMD_EXTRA' or '#if defined USE_SIMD_EXTRA' to clean up your code.
