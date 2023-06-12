@@ -371,17 +371,57 @@ inline String operator+ (const String& a, const ReadableString& b) { return stri
 inline String operator+ (const ReadableString& a, const String& b) { return string_combine(a, b); }
 
 
-// Methods used so often that they don't need to use the string_ prefix
+// ---------------- Message handling ----------------
 
 
-// Print information
+enum class MessageType {
+	Error, // Terminate as quickly as possible after saving and informing the user.
+	Warning, // Inform the user but let the caller continue.
+	StandardPrinting, // Print text to the terminal.
+	DebugPrinting // Print debug information to the terminal, if debug mode is active.
+};
+
+// Send a message
+void string_sendMessage(const ReadableString &message, MessageType type);
+// Send a message directly to the default message handler, ignoring string_assignMessageHandler.
+void string_sendMessage_default(const ReadableString &message, MessageType type);
+
+// Get a message
+// Pre-condition:
+//   The action function must throw an exception or terminate the program when given an error, otherwise string_sendMessage will throw an exception about failing to do so.
+//   Do not call string_sendMessage directly or indirectly from within action, use string_sendMessage_default instead to avoid infinite recursion.
+// Terminating the program as soon as possible is ideal, but one might want to save a backup or show what went wrong in a graphical interface before terminating.
+// Do not throw and catch errors as if they were warnings, because throwing and catching creates a partial transaction, potentially violating type invariants.
+//   Better to use warnings and let the sender of the warning figure out how to abort the action safely.
+void string_assignMessageHandler(std::function<void(const ReadableString &message, MessageType type)> action);
+
+// Undo string_assignMessageHandler, so that any messages will be handled the default way again.
+void string_unassignMessageHandler();
+
+// Throw an error, which must terminate the application or throw an error
+template<typename... ARGS>
+void throwError(ARGS... args) {
+	String result = string_combine(args...);
+	string_sendMessage(result, MessageType::Error);
+}
+
+// Send a warning, which might throw an exception, terminate the application or anything else that the application requests using string_handleMessages
+template<typename... ARGS>
+void sendWarning(ARGS... args) {
+	String result = string_combine(args...);
+	string_sendMessage(result, MessageType::Warning);
+}
+
+// Print information to the terminal or something else listening for messages using string_handleMessages
 template<typename... ARGS>
 void printText(ARGS... args) {
 	String result = string_combine(args...);
-	result.toStream(std::cout);
+	string_sendMessage(result, MessageType::StandardPrinting);
 }
 
-// Use for text printing that are useful when debugging but should not be given out in a release
+// Debug messages are automatically disabled in release mode, so that you don't have to worry about accidentally releasing a program with poor performance from constantly printing to the terminal
+//   Useful for selectively printing the most important information accumulated over time
+//   Less useful for profiling, because the debug mode is slower than the release mode
 #ifdef NDEBUG
 	// Supress debugText in release mode
 	template<typename... ARGS>
@@ -389,18 +429,11 @@ void printText(ARGS... args) {
 #else
 	// Print debugText in debug mode
 	template<typename... ARGS>
-	void debugText(ARGS... args) { printText(args...); }
+	void debugText(ARGS... args) {
+		String result = string_combine(args...);
+		string_sendMessage(result, MessageType::DebugPrinting);
+	}
 #endif
-
-// Raise an exception
-//   Only catch errors to display useful error messages, emergency backups or crash logs before terminating
-//   Further execution after a partial transaction will break object invariants
-void throwErrorMessage(const String& message);
-template<typename... ARGS>
-void throwError(ARGS... args) {
-	String result = string_combine(args...);
-	throwErrorMessage(result);
-}
 
 }
 
