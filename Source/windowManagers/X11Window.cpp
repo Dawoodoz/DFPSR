@@ -705,7 +705,7 @@ std::shared_ptr<dsr::BackendWindow> createBackendWindow(const dsr::String& title
 		auto backend = std::make_shared<X11Window>(title, width, height);
 		return std::dynamic_pointer_cast<dsr::BackendWindow>(backend);
 	} else {
-		dsr::printText("No display detected. Aborting X11 window creation.\n");
+		dsr::sendWarning("No display detected. Aborting X11 window creation.\n");
 		return std::shared_ptr<dsr::BackendWindow>();
 	}
 }
