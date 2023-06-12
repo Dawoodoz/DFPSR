@@ -946,8 +946,33 @@ String& dsr::string_toStreamIndented(String& target, const uint8_t& value, const
 	return target;
 }
 
-void dsr::throwErrorMessage(const String& message) {
-	throw std::runtime_error(message.toStdString());
+static const std::function<void(const ReadableString &message, MessageType type)> defaultMessageAction = [](const ReadableString &message, MessageType type) {
+	if (type == MessageType::Error) {
+		throw std::runtime_error(message.toStdString());
+	} else {
+		message.toStream(std::cout);
+	}
+};
+
+static std::function<void(const ReadableString &message, MessageType type)> globalMessageAction = defaultMessageAction;
+
+void dsr::string_sendMessage(const ReadableString &message, MessageType type) {
+	globalMessageAction(message, type);
+	if (type == MessageType::Error) {
+		throw std::runtime_error("The message handler provided using string_assignMessageHandler did not throw an exception or terminate the program for the given error!\n");
+	}
+}
+
+void dsr::string_sendMessage_default(const ReadableString &message, MessageType type) {
+	defaultMessageAction(message, type);
+}
+
+void dsr::string_assignMessageHandler(std::function<void(const ReadableString &message, MessageType type)> newHandler) {
+	globalMessageAction = newHandler;
+}
+
+void dsr::string_unassignMessageHandler() {
+	globalMessageAction = defaultMessageAction;
 }
 
 void dsr::string_split_callback(std::function<void(ReadableString)> action, const ReadableString& source, DsrChar separator, bool removeWhiteSpace) {

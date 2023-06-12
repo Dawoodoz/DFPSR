@@ -55,7 +55,8 @@ bool sound_streamToSpeakers(int channels, int sampleRate, std::function<bool(Saf
 	bufferEndEvent = CreateEvent(0, FALSE, FALSE, 0);
 	if (bufferEndEvent == 0) {
 		terminateSound();
-		throwError(U"Failed to create buffer end event!");
+		sendWarning(U"Failed to create buffer end event!");
+		return false;
 	}
 	int totalSamples = samplesPerChannel * channels;
 	allocateBuffers(totalSamples);
@@ -70,11 +71,13 @@ bool sound_streamToSpeakers(int channels, int sampleRate, std::function<bool(Saf
 	format.cbSize = 0;
 	if(waveOutOpen(&waveOutput, WAVE_MAPPER, &format, (DWORD_PTR)bufferEndEvent, (DWORD_PTR)NULL, CALLBACK_EVENT) != MMSYSERR_NOERROR) {
 		terminateSound();
-		throwError(U"Failed to open wave output!");
+		sendWarning(U"Failed to open wave output!");
+		return false;
 	}
 	if(waveOutSetVolume(waveOutput, 0xFFFFFFFF) != MMSYSERR_NOERROR) {
 		terminateSound();
-		throwError(U"Failed to set volume!");
+		sendWarning(U"Failed to set volume!");
+		return false;
 	}
 	for (int b = 0; b < 2; b++) {
 		ZeroMemory(&header[b], sizeof(WAVEHDR));
@@ -82,7 +85,8 @@ bool sound_streamToSpeakers(int channels, int sampleRate, std::function<bool(Saf
 		header[b].lpData = (LPSTR)(outputData[b].getUnsafe());
 		if (waveOutPrepareHeader(waveOutput, &header[b], sizeof(WAVEHDR)) != MMSYSERR_NOERROR) {
 			terminateSound();
-			throwError(U"Failed to prepare buffer for streaming!");
+			sendWarning(U"Failed to prepare buffer for streaming!");
+			return false;
 		}
 	}
 	running = true;
@@ -118,7 +122,9 @@ bool sound_streamToSpeakers(int channels, int sampleRate, std::function<bool(Saf
 					target[t+7] = (int16_t)upper.w;
 				}
 				if (waveOutWrite(waveOutput, &header[b], sizeof(WAVEHDR)) != MMSYSERR_NOERROR) {
-					terminateSound(); throwError(U"Failed to write wave output!");
+					terminateSound();
+					sendWarning(U"Failed to write wave output!");
+					return false;
 				}
 				if (!running) { break; }
 			}

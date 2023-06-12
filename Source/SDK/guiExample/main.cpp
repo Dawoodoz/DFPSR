@@ -12,8 +12,35 @@ Component buttonAdd;
 Component myListBox;
 Component textElement;
 
+// Custom message handling
+List<String> messages;
+
+void showMessages() {
+	if (messages.length() > 0) {
+		// Summarizing all messages from the last action, which can also be used to display them in the same pop-up message.
+		String content;
+		string_append(content, U"Messages:\n");
+		for (int m = 0; m < messages.length(); m++) {
+			string_append(content, U"  * ", messages[m]);
+		}
+		string_append(content, U"\n");
+		string_sendMessage_default(content, MessageType::StandardPrinting);
+		messages.clear();
+	}
+}
+
 DSR_MAIN_CALLER(dsrMain)
 void dsrMain(List<String> args) {
+	// Assign custom message handling to get control over errors, warnings and any other text being printed to the terminal.
+	string_assignMessageHandler([](const ReadableString &message, MessageType type) {
+		// Deferring messages can be useful for showing them at a later time.
+		messages.push(message);
+		// A custom message handler still have to throw exceptions or terminate the program when errors are thrown.
+		if (type == MessageType::Error) {
+			string_sendMessage_default(message, MessageType::Error);
+		}
+	});
+
 	// Set current path to the application folder, so that it's safe to use relative paths for loading GUI resources.
 	// Loading and saving files will automatically convert / and \ to the local format using file_optimizePath, so that you can use them directly in relative paths.
 	file_setCurrentPath(file_getApplicationFolder());
@@ -27,6 +54,7 @@ void dsrMain(List<String> args) {
 
 	// Bind methods to events
 	window_setCloseEvent(window, []() {
+		sendWarning(U"Ahhh, you killed me! But closing a window directly is okay, because the program can run logic for saving things before terminating.");
 		running = false;
 	});
 
@@ -55,6 +83,13 @@ void dsrMain(List<String> args) {
 			}
 		}
 	});
+
+	// Connect actions to components without saving their handles
+	component_setPressedEvent(window_findComponentByName(window, U"menuExit"), []() {
+		sendWarning(U"You forgot to save your project and now I'm throwing it away because you forgot to save!");
+		running = false;
+	});
+
 	// Called when the selected index has changed, when indices have changed their meaning
 	//   Triggered by mouse, keyboard, list changes and initialization
 	component_setSelectEvent(myListBox, [](int64_t index) {
@@ -77,9 +112,16 @@ void dsrMain(List<String> args) {
 		}
 		// Busy loop instead of waiting
 		//window_executeEvents(window);
+		// Custom message handling
+		showMessages();
 		// Draw interface
 		window_drawComponents(window);
 		// Show the final image
 		window_showCanvas(window);
 	}
+
+	// Empty the messages and switch back to the default message handler so that errors from deallocating global resources can be displayed
+	showMessages();
+	string_unassignMessageHandler();
+	printText(U"Printing text using the default message handler again.\n");
 }

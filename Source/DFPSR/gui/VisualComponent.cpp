@@ -248,11 +248,11 @@ void VisualComponent::drawOverlay(ImageRgbaU8& targetImage, const IVector2D &abs
 // Manual use with the correct type
 void VisualComponent::addChildComponent(std::shared_ptr<VisualComponent> child) {
 	if (!this->isContainer()) {
-		throwError(U"Cannot attach a child to a non-container parent component!\n");
+		sendWarning(U"Cannot attach a child to a non-container parent component!\n");
 	} else if (child.get() == this) {
-		throwError(U"Cannot attach a component to itself!\n");
+		sendWarning(U"Cannot attach a component to itself!\n");
 	} else if (child->hasChild(this)) {
-		throwError(U"Cannot attach to its own parent as a child component!\n");
+		sendWarning(U"Cannot attach to its own parent as a child component!\n");
 	} else {
 		// Remove from any previous parent
 		child->detachFromParent();
@@ -643,7 +643,7 @@ VisualTheme VisualComponent::getTheme() const {
 void VisualComponent::changedTheme(VisualTheme newTheme) {}
 
 String VisualComponent::call(const ReadableString &methodName, const ReadableString &arguments) {
-	throwError("Unimplemented custom call received");
+	sendWarning("Unimplemented custom call received");
 	return U"";
 }
 
@@ -673,8 +673,8 @@ MediaResult dsr::component_generateImage(VisualTheme theme, MediaMethod &method,
 			// Assigned by theme_assignMediaMachineArguments.
 		} else {
 			// TODO: Ask the theme for the argument using a specified style class for variations between different types of buttons, checkboxes, panels, et cetera.
-			//       Throw an exception if the theme did not provide an input argument to its own media function.
-			throwError(U"Unhandled setting \"", argumentName, U"\" requested by the media method \"", machine_getMethodName(machine, methodIndex), U"\" in the visual theme!\n");
+			//       Send a warning if the theme did not provide an input argument to its own media function.
+			sendWarning(U"Unhandled setting \"", argumentName, U"\" requested by the media method \"", machine_getMethodName(machine, methodIndex), U"\" in the visual theme!\n");
 		}
 	});
 }
