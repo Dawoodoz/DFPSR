@@ -262,6 +262,7 @@ void VisualComponent::addChildComponent(std::shared_ptr<VisualComponent> child) 
 		this->children.push(child);
 		this->childChanged = true;
 		child->parent = this;
+		child->window = this->window;
 	}
 }
 
@@ -289,6 +290,13 @@ std::shared_ptr<Persistent> VisualComponent::getChild(int index) const {
 	}
 }
 
+static void detachFromWindow(std::shared_ptr<VisualComponent> component) {
+	component->window = std::shared_ptr<BackendWindow>();
+	for (int c = 0; c < component->children.length(); c++) {
+		detachFromWindow(component->children[c]);
+	}
+}
+
 void VisualComponent::detachFromParent() {
 	// Check if there's a parent component
 	VisualComponent *parent = this->parent;
@@ -298,6 +306,8 @@ void VisualComponent::detachFromParent() {
 		for (int i = 0; i < parent->getChildCount(); i++) {
 			std::shared_ptr<VisualComponent> current = parent->children[i];
 			if (current.get() == this) {
+				// Disconnect child from backend window.
+				detachFromWindow(parent->children[i]);
 				// Disconnect parent from child.
 				current->parent = nullptr;
 				// Disconnect child from parent.
@@ -632,7 +642,7 @@ void VisualComponent::applyTheme(VisualTheme theme) {
 	this->theme = theme;
 	this->changedTheme(theme);
 	for (int i = 0; i < this->getChildCount(); i++) {
-		this->children[i] -> applyTheme(theme);
+		this->children[i]->applyTheme(theme);
 	}
 }
 

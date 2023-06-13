@@ -293,15 +293,6 @@ void TextBox::receiveMouseEvent(const MouseEvent& event) {
 	}
 }
 
-// TODO: Move stub implementation to an API and allow system wrappers to override it with a real implementation copying and pasting across different applications.
-String pasteBinStub;
-void saveToClipBoard(const ReadableString &text) {
-	pasteBinStub = text;
-}
-ReadableString readFromClipBoard() {
-	return pasteBinStub;
-}
-
 ReadableString TextBox::getSelectedText() {
 	int64_t selectionLeft = std::min(this->selectionStart, this->beamLocation);
 	int64_t selectionRight = std::max(this->selectionStart, this->beamLocation);
@@ -428,14 +419,26 @@ void TextBox::receiveKeyboardEvent(const KeyboardEvent& event) {
 				this->placeBeamAtCharacter(getLineEnd(this->text.value, this->beamLocation), removeSelection);
 			} else if (event.dsrKey == DsrKey_X) {
 				// Cut selection using Ctrl + X
-				saveToClipBoard(this->getSelectedText());
-				this->replaceSelection(U"");
+				if (this->window.get()) {
+					this->window->saveToClipboard(this->getSelectedText());
+					this->replaceSelection(U"");
+				} else {
+					sendWarning(U"No window handle found in TextBox when trying to cut text!");
+				}
 			} else if (event.dsrKey == DsrKey_C) {
 				// Copy selection using Ctrl + C
-				saveToClipBoard(this->getSelectedText());
+				if (this->window.get()) {
+					this->window->saveToClipboard(this->getSelectedText());
+				} else {
+					sendWarning(U"No window handle found in TextBox when trying to copy text!");
+				}
 			} else if (event.dsrKey == DsrKey_V) {
 				// Paste selection using Ctrl + V
-				this->replaceSelection(readFromClipBoard());
+				if (this->window.get()) {
+					this->replaceSelection(this->window->loadFromClipboard());
+				} else {
+					sendWarning(U"No window handle found in TextBox when trying to paste text!");
+				}
 			} else if (event.dsrKey == DsrKey_A) {
 				// Select all using Ctrl + A
 				this->selectionStart = 0;
