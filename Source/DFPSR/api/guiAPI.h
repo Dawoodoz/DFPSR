@@ -46,8 +46,14 @@ namespace dsr {
 	// If the game starts in full screen, this constructor should be used instead.
 	//   Otherwise the canvas may ask for the window's dimensions while the system still keeps the old dimensions due to delays.
 	Window window_create_fullscreen(const dsr::String& title);
-	// Returns true iff the window exists
+	// Returns true iff the window exists.
 	bool window_exists(const Window& window);
+
+// Set window title
+	// Assigns the window's title.
+	void window_setTitle(Window& window, const dsr::String& title);
+	// Returns the window's title.
+	String window_getTitle(Window& window);
 
 // Layout files
 	// Loading an interface by parsing a layout file's content, with any external resources loaded relative to fromPath.
@@ -126,6 +132,8 @@ namespace dsr {
 	//   Just like when handling a window resize, this will replace the canvas and depth buffer.
 	//     Any old handles to canvas and depth buffer will become useless, so fetch new image handles from the window to avoid black flickering.
 	void window_setPixelScale(const Window& window, int scale);
+
+// Cursor
 	// Sets the cursor visibility for window, hiding if visible is false and showing if visible is true.
 	// Returns true on success and false on failure.
 	bool window_setCursorVisibility(const Window& window, bool visible);
