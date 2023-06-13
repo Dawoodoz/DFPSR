@@ -90,7 +90,17 @@ DsrWindow::DsrWindow(std::shared_ptr<BackendWindow> backend)
 	this->resetInterface();
 }
 
-DsrWindow::~DsrWindow() {}
+static void setBackendWindowHandle(std::shared_ptr<VisualComponent> component, std::shared_ptr<BackendWindow> windowHandle) {
+	component->window = windowHandle;
+	for (int c = 0; c < component->children.length(); c++) {
+		setBackendWindowHandle(component->children[c], windowHandle);
+	}
+}
+
+DsrWindow::~DsrWindow() {
+	// Disconnect the backend window from all components, so that handles to components without a DsrWindow will not prevent the BackendWindow from being freed.
+	setBackendWindowHandle(this->mainPanel, std::shared_ptr<BackendWindow>());
+}
 
 void DsrWindow::applyLayout() {
 	this->mainPanel->applyLayout(IRect(0, 0, this->getCanvasWidth(), this->getCanvasHeight()));
@@ -123,12 +133,16 @@ void DsrWindow::resetInterface() {
 		throwError(U"DsrWindow::resetInterface: The window's Panel could not be created!");
 	}
 	this->mainPanel->setName("mainPanel");
+	// Inherit handle to backend window to access the clipboard.
+	this->mainPanel->window = this->backend;
 	this->applyLayout();
 }
 
 void DsrWindow::loadInterfaceFromString(String layout, const ReadableString &fromPath) {
 	// Load a tree structure of visual components from text
 	this->mainPanel = std::dynamic_pointer_cast<VisualComponent>(createPersistentClassFromText(layout, fromPath));
+	// Re-assign the backend window handle
+	setBackendWindowHandle(this->mainPanel, this->backend);
 	if (this->mainPanel.get() == nullptr) {
 		throwError(U"DsrWindow::loadInterfaceFromString: The window's root component could not be created!\n\nLayout:\n", layout, "\n");
 	}
@@ -233,8 +247,6 @@ void DsrWindow::drawComponents() {
 }
 
 AlignedImageRgbaU8 DsrWindow::getCanvas() {
-	// TODO: Query if the backend has an optimized upload for a smaller canvas
-	//       Useful if a window backend has GPU accelerated or native upscaling
 	auto fullResolutionCanvas = this->backend->getCanvas();
 	if (this->pixelScale > 1) {
 		// Get low resolution canvas in deterministic RGBA pack order

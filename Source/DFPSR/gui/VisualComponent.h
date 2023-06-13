@@ -25,7 +25,7 @@
 #define DFPSR_GUI_VISUALCOMPONENT
 
 #include "../persistent/includePersistent.h"
-#include "BackendWindow.h" // TODO: Separate event types from the window module
+#include "BackendWindow.h"
 #include "FlexRegion.h"
 #include "InputEvent.h"
 #include "VisualTheme.h"
@@ -58,6 +58,8 @@ static const ComponentState componentState_indirect = 0b101010101010101010101010
 class VisualComponent : public Persistent {
 PERSISTENT_DECLARATION(VisualComponent)
 public: // Relations
+	// Handle to the backend window.
+	std::shared_ptr<BackendWindow> window;
 	// Parent component
 	VisualComponent *parent = nullptr;
 	IRect givenSpace; // Remembering the local region that was reserved inside of the parent component.

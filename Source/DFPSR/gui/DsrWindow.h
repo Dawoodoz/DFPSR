@@ -41,6 +41,8 @@ void gui_initialize();
 
 class DsrWindow {
 public:
+	// TODO: Should there be a separate interface context object to reduce the number of variables placed in each component?
+	//       If they all store a handle to the backend window, they could instead have a generic interface object storing pointers to the window, root, active components, et cetera...
 	// Window backend, which the API is allowed to call directly to bypass DsrWindow for trivial operations.
 	std::shared_ptr<BackendWindow> backend;
 private:

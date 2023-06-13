@@ -86,6 +86,15 @@ public:
 	virtual bool setCursorVisibility(bool visible) { return false; } // Returns true on success.
 	virtual void setCursorPosition(int x, int y) {} // Does nothing unless implemented.
 public:
+	// Clipboard interface
+	//   If none is replaced, both default implementations will use an internal variable.
+	//   If both are implemented, the system's clipboard should be accessed.
+	//   Partial implementations with only loadFromClipboard or saveToClipboard are not allowed.
+	// Load from the clipboard, waiting at most timeoutInMilliseconds milliseconds.
+	virtual ReadableString loadFromClipboard(int64_t timeoutInMilliseconds = 500);
+	// Save text to the clipboard.
+	virtual void saveToClipboard(const ReadableString &text);
+public:
 	// Each callback declaration has a public variable and a public getter and setter
 	DECLARE_CALLBACK(closeEvent, emptyCallback);
 	DECLARE_CALLBACK(resizeEvent, sizeCallback);

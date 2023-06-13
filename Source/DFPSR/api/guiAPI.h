@@ -55,6 +55,17 @@ namespace dsr {
 	// Returns the window's title.
 	String window_getTitle(Window& window);
 
+// Clipboard
+	// Most operating systems require that a window is associated with each request to access the clipboard.
+	//   This allow anti-virus software to see the user consent for accessing the clipboard,
+	//   because a key combination commonly associated with pasting text was pressed before the request was made.
+	// Returns content from an internal or extenal clipboard.
+	//   The internal clipboard within the application is used when the system specific backend has not implemented clipboard access.
+	String window_loadFromClipboard(Window& window, int64_t timeoutInMilliseconds);
+	// Stores the text argument to an internal or extenal clipboard.
+	//   The internal clipboard within the application is used when the system specific backend has not implemented clipboard access.
+	void window_saveToClipboard(Window& window, const ReadableString &text);
+
 // Layout files
 	// Loading an interface by parsing a layout file's content, with any external resources loaded relative to fromPath.
 	//   Embedded images do not count as external resources, but file paths need fromPath in order to know from where they will be loaded.
