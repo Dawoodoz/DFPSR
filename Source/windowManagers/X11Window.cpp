@@ -7,12 +7,14 @@
 
 #include "../DFPSR/api/imageAPI.h"
 #include "../DFPSR/api/drawAPI.h"
+#include "../DFPSR/api/timeAPI.h"
 #include "../DFPSR/gui/BackendWindow.h"
 
 // According to this documentation, XInitThreads doesn't have to be used if a mutex is wrapped around all the calls to XLib.
 //   https://tronche.com/gui/x/xlib/display/XInitThreads.html
 #include <mutex>
 #include <future>
+#include <climits>
 
 static std::mutex windowLock;
 
@@ -92,11 +94,63 @@ public:
 	int getHeight() const override { return this->windowHeight; };
 	// Destructor
 	~X11Window();
-	// Interface
+	// Full-screen
 	void setFullScreen(bool enabled) override;
 	bool isFullScreen() override { return this->windowState == 2; }
+	// Showing the content
 	void showCanvas() override;
+	// Clipboard access
+	Atom clipboardAtom, targetsAtom, utf8StringAtom, targetAtom;
+	bool loadingFromClipboard = false;
+	dsr::String textFromClipboard;
+	dsr::String textToClipboard;
+	void listContentInClipboard();
+	void initializeClipboard();
+	void terminateClipboard();		
+	dsr::ReadableString loadFromClipboard(int64_t timeoutInMilliseconds);
+	void saveToClipboard(const dsr::ReadableString &text);
 };
+
+void X11Window::initializeClipboard() {
+	this->clipboardAtom = XInternAtom(this->display , "CLIPBOARD", False);
+	this->targetsAtom = XInternAtom(this->display , "TARGETS", False);
+	this->utf8StringAtom = XInternAtom(this->display, "UTF8_STRING", False);
+	this->targetAtom = None;
+}
+
+void X11Window::terminateClipboard() {
+	// TODO: Send ownership to the clipboard to allow pasting after terminating the program it was copied from.
+}
+
+dsr::ReadableString X11Window::loadFromClipboard(int64_t timeoutInMilliseconds) {
+	// TODO: Can the old request be aborted if it takes too long?
+	if (!this->loadingFromClipboard) {
+		// Request text to paste and wait some time for an application to respond.
+		// TODO: How can old content be ignored after a timeout if the time is too short?
+		XConvertSelection(this->display, this->clipboardAtom, this->targetsAtom, this->clipboardAtom, this->window, CurrentTime);
+		this->loadingFromClipboard = true;
+		// TODO: Implement timeout without drifting time.
+		int64_t time = 0;
+		while (this->loadingFromClipboard && time < timeoutInMilliseconds) {
+			this->prefetchEvents();
+			dsr::time_sleepSeconds(0.001);
+			time++;
+		}
+		return this->textFromClipboard;
+	} else {
+		return U"";
+	}
+}
+
+void X11Window::listContentInClipboard() {
+	// Tell other programs sharing the clipboard that something is available to paste.
+	XSetSelectionOwner(this->display, this->clipboardAtom, this->window, CurrentTime);
+}
+
+void X11Window::saveToClipboard(const dsr::ReadableString &text) {
+	this->textToClipboard = text;
+	this->listContentInClipboard();
+}
 
 void X11Window::setCursorPosition(int x, int y) {
 	windowLock.lock();
@@ -193,6 +247,9 @@ void X11Window::setFullScreen(bool enabled) {
 		this->createWindowed_locked(this->title, 800, 600); // TODO: Remember the dimensions from last windowed mode
 	}
 	this->applyCursorVisibility_locked();
+	windowLock.lock();
+		listContentInClipboard();
+	windowLock.unlock();
 }
 
 void X11Window::removeOldWindow_locked() {
@@ -345,6 +402,9 @@ X11Window::X11Window(const dsr::String& title, int width, int height) {
 	this->noCursor = XCreatePixmapCursor(this->display, zeroBitmap, zeroBitmap, &black, &black, 0, 0);
 	// Free the temporary bitmap used to create the cursor
 	XFreePixmap(this->display, zeroBitmap);
+
+	// Create things needed for copying and pasting text.
+	this->initializeClipboard();
 }
 
 // Convert keycodes from XLib to DSR
@@ -603,6 +663,66 @@ void X11Window::prefetchEvents() {
 						// Make a request to resize the canvas
 						this->receivedWindowResize(xce.width, xce.height);
 					}
+				} else if (currentEvent.type == SelectionRequest) {
+					// Based on: https://handmade.network/forums/articles/t/8544-implementing_copy_paste_in_x11
+					// Another program has requested the content that you posted about in the clipboard.
+					XSelectionRequestEvent request = currentEvent.xselectionrequest;	
+					if (XGetSelectionOwner(this->display, this->clipboardAtom) == this->window && request.selection == this->clipboardAtom) {
+						if (request.target == this->targetsAtom && request.property != None) {
+							XChangeProperty(request.display, request.requestor, request.property,
+								XA_ATOM, 32, PropModeReplace, (unsigned char*)&(this->utf8StringAtom), 1);
+						} else if (request.target == this->utf8StringAtom && request.property != None) {
+							// Encode the data as UTF-8 with portable line-breaks, without byte order mark nor null terminator.
+							dsr::Buffer encodedUTF8 = dsr::string_saveToMemory(this->textToClipboard, dsr::CharacterEncoding::BOM_UTF8, dsr::LineEncoding::CrLf, false, false);
+							XChangeProperty(request.display, request.requestor, request.property,
+								request.target, 8, PropModeReplace, dsr::buffer_dangerous_getUnsafeData(encodedUTF8), dsr::buffer_getSize(encodedUTF8));
+						}
+						XSelectionEvent sendEvent;
+						sendEvent.type = SelectionNotify;
+						sendEvent.serial = request.serial;
+						sendEvent.send_event = request.send_event;
+						sendEvent.display = request.display;
+						sendEvent.requestor = request.requestor;
+						sendEvent.selection = request.selection;
+						sendEvent.target = request.target;
+						sendEvent.property = request.property;
+						sendEvent.time = request.time;
+						XSendEvent(display, request.requestor, 0, 0, (XEvent*)&sendEvent);
+					}
+				} else if (currentEvent.type == SelectionNotify) {
+					// You previously requested access to a program's clipboard content and here it is giving the data to you.
+					// Based on: https://handmade.network/forums/articles/t/8544-implementing_copy_paste_in_x11
+					XSelectionEvent selection = currentEvent.xselection;
+					if (selection.property != None) {
+						Atom actualType;
+						int actualFormat;
+						unsigned long bytesAfter;
+						unsigned char* data;
+						unsigned long count;
+						XGetWindowProperty(this->display, this->window, this->clipboardAtom, 0, LONG_MAX, False, AnyPropertyType,
+							&actualType, &actualFormat, &count, &bytesAfter, &data);
+						if (selection.target == this->targetsAtom) {
+							Atom* list = (Atom*)data;
+							for (int i = 0; i < count; i++) {
+								if (list[i] == XA_STRING) {
+									this->targetAtom = XA_STRING;
+								} else if (list[i] == this->utf8StringAtom) {
+									this->targetAtom = this->utf8StringAtom;
+									break;
+								}
+							}
+							if (this->targetAtom != None) {
+								XConvertSelection(this->display, this->clipboardAtom, this->targetAtom, this->clipboardAtom, this->window, CurrentTime);
+							}
+						} else if (selection.target == this->targetAtom) {
+							dsr::Buffer textBuffer = dsr::buffer_create(count + 4); // Null terminate by adding zero initialized data after the copy.
+							memcpy(buffer_dangerous_getUnsafeData(textBuffer), data, count);
+							this->textFromClipboard = dsr::string_dangerous_decodeFromData(buffer_dangerous_getUnsafeData(textBuffer), dsr::CharacterEncoding::BOM_UTF8);
+							// Stop waiting now that we found the data.
+							this->loadingFromClipboard = false;
+						}
+						if (data) XFree(data);
+					}
 				}
 			}
 		}
@@ -649,6 +769,7 @@ X11Window::~X11Window() {
 	#endif
 	windowLock.lock();
 		if (this->display) {
+			this->terminateClipboard();
 			XFreeCursor(this->display, this->noCursor);
 			XFreeGC(this->display, this->graphicsContext);
 			XDestroyWindow(this->display, this->window);
