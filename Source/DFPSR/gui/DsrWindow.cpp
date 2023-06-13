@@ -268,6 +268,7 @@ String DsrWindow::getTitle() {
 }
 
 void DsrWindow::setTitle(const String &newTitle) {
+	return this->backend->setTitle(newTitle);
 }
 
 void DsrWindow::applyTheme(VisualTheme theme) {

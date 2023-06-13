@@ -498,3 +498,13 @@ void dsr::window_applyTheme(const Window& window, const VisualTheme& theme) {
 	MUST_EXIST(theme, window_applyTheme);
 	window->applyTheme(theme);
 }
+
+void dsr::window_setTitle(Window& window, const dsr::String& title) {
+	MUST_EXIST(window, window_setTitle);
+	window->backend->setTitle(title);
+}
+
+String dsr::window_getTitle(Window& window) {
+	MUST_EXIST(window, window_getTitle);
+	return window->backend->getTitle();
+}
