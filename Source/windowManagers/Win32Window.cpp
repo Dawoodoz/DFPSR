@@ -569,8 +569,14 @@ void Win32Window::resizeCanvas(int width, int height) {
 	// Create a new canvas
 	//   Even thou Windows is using RGBA pack order for the window, the bitmap format used for drawing is using BGRA order
 	for (int bufferIndex = 0; bufferIndex < bufferCount; bufferIndex++) {
+		dsr::AlignedImageRgbaU8 previousCanvas = this->canvas[bufferIndex];
 		this->canvas[bufferIndex] = dsr::image_create_RgbaU8_native(width, height, dsr::PackOrderIndex::BGRA);
+		if (image_exists(previousCanvas)) {
+			// Until the application's main loop has redrawn, fill the new canvas with a copy of the old one with black borders.
+			dsr::draw_copy(this->canvas[bufferIndex], previousCanvas);
+		}
 	}
+	this->firstFrame = true;
 }
 Win32Window::~Win32Window() {
 	#ifndef DISABLE_MULTI_THREADING
