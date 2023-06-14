@@ -64,7 +64,7 @@ bool BackendWindow::executeEvents() {
 				if (wEvent->windowEventType == WindowEventType::Close) {
 					this->callback_closeEvent();
 				} else if (wEvent->windowEventType == WindowEventType::Redraw) {
-					this->showCanvas();
+					//this->showCanvas();
 				}
 			}
 		}
