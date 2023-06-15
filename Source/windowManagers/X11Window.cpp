@@ -466,18 +466,12 @@ static dsr::DsrKey getDsrKey(KeySym keyCode) {
 		result = dsr::DsrKey_Return;
 	} else if (keyCode == XK_BackSpace) {
 		result = dsr::DsrKey_BackSpace;
-	} else if (keyCode == XK_Shift_L) {
-		result = dsr::DsrKey_LeftShift;
-	} else if (keyCode == XK_Shift_R) {
-		result = dsr::DsrKey_RightShift;
-	} else if (keyCode == XK_Control_L) {
-		result = dsr::DsrKey_LeftControl;
-	} else if (keyCode == XK_Control_R) {
-		result = dsr::DsrKey_RightControl;
-	} else if (keyCode == XK_Alt_L) {
-		result = dsr::DsrKey_LeftAlt;
-	} else if (keyCode == XK_Alt_R) {
-		result = dsr::DsrKey_RightAlt;
+	} else if (keyCode == XK_Shift_L || keyCode == XK_Shift_R) {
+		result = dsr::DsrKey_Shift;
+	} else if (keyCode == XK_Control_L || keyCode == XK_Control_R) {
+		result = dsr::DsrKey_Control;
+	} else if (keyCode == XK_Alt_L || keyCode == XK_Alt_R) {
+		result = dsr::DsrKey_Alt;
 	} else if (keyCode == XK_Delete) {
 		result = dsr::DsrKey_Delete;
 	} else if (keyCode == XK_Left) {

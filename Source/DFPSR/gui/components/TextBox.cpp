@@ -354,12 +354,8 @@ void TextBox::moveBeamVertically(int64_t rowIndexOffset, bool removeSelection) {
 	limitScrolling(true);
 }
 
-static const uint32_t combinationKey_leftShift = 1 << 0;
-static const uint32_t combinationKey_rightShift = 1 << 1;
-static const uint32_t combinationKey_shift = combinationKey_leftShift | combinationKey_rightShift;
-static const uint32_t combinationKey_leftControl = 1 << 2;
-static const uint32_t combinationKey_rightControl = 1 << 3;
-static const uint32_t combinationKey_control = combinationKey_leftControl | combinationKey_rightControl;
+static const uint32_t combinationKey_shift = 1 << 0;
+static const uint32_t combinationKey_control = 1 << 1;
 
 static int64_t getLineStart(const ReadableString &text, int64_t searchStart) {
 	for (int64_t i = searchStart - 1; i >= 0; i--) {
@@ -381,25 +377,19 @@ static int64_t getLineEnd(const ReadableString &text, int64_t searchStart) {
 
 void TextBox::receiveKeyboardEvent(const KeyboardEvent& event) {
 	// Insert and scroll-lock is not supported.
+	// To prevent getting stuck from missing a key event, one can reset by pressing and releasing again.
+	//   So if you press down both control keys and release one of them, it counts both as released.
 	if (event.keyboardEventType == KeyboardEventType::KeyDown) {
-		if (event.dsrKey == DsrKey_LeftShift) {
-			this->combinationKeys |= combinationKey_leftShift;
-		} else if (event.dsrKey == DsrKey_RightShift) {
-			this->combinationKeys |= combinationKey_rightShift;
-		} else if (event.dsrKey == DsrKey_LeftControl) {
-			this->combinationKeys |= combinationKey_leftControl;
-		} else if (event.dsrKey == DsrKey_RightControl) {
-			this->combinationKeys |= combinationKey_rightControl;
+		if (event.dsrKey == DsrKey_Shift) {
+			this->combinationKeys |= combinationKey_shift; // Enable shift
+		} else if (event.dsrKey == DsrKey_Control) {
+			this->combinationKeys |= combinationKey_control; // Enable control
 		}
 	} else if (event.keyboardEventType == KeyboardEventType::KeyUp) {
-		if (event.dsrKey == DsrKey_LeftShift) {
-			this->combinationKeys &= ~combinationKey_leftShift;
-		} else if (event.dsrKey == DsrKey_RightShift) {
-			this->combinationKeys &= ~combinationKey_rightShift;
-		} else if (event.dsrKey == DsrKey_LeftControl) {
-			this->combinationKeys &= ~combinationKey_leftControl;
-		} else if (event.dsrKey == DsrKey_RightControl) {
-			this->combinationKeys &= ~combinationKey_rightControl;
+		if (event.dsrKey == DsrKey_Shift) {
+			this->combinationKeys &= ~combinationKey_shift; // Disable shift
+		} else if (event.dsrKey == DsrKey_Control) {
+			this->combinationKeys &= ~combinationKey_control; // Disable control
 		}
 	} else if (event.keyboardEventType == KeyboardEventType::KeyType) {
 		int64_t textLength = string_length(this->text.value);
