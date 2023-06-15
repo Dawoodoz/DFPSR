@@ -5,7 +5,25 @@ There are plans to create an automatic refactoring tool built into the Builder b
 
 Changes since version 0.1.0
 	* simdExtra.h was removed, because such a low depth of abstraction would risk making the code slower from not fitting well with future SIMD extensions.
+		The more features you add to the badly defined extra feature set, the less systems it will work on, until it is just a slower version of specific instruction sets.
 		On missing header when including simdExtra.h:
 			Replace 'simdExtra.h' with 'simd.h' to make it compile.
 			Remove any duplicate includes of simd.h to clean up your code.
 			Remove all code within '#ifdef USE_SIMD_EXTRA' or '#if defined USE_SIMD_EXTRA' to clean up your code.
+	* Left and right sides of control, shift and alt keys were merged.
+		Because MS-Windows allow using control, shift and alt of undefined side.
+			This caused copying and pasting of text to fail when I tested on a different keyboard,
+			  because it was neither left nor right control, just control.
+			Adding a third case would not solve the bug in applications using this library,
+			  because checks for left or right would still fail.
+			Forcing unknown sides to one side would cause new bugs when someone connects different actions to left and right sides.
+			The only resaonable bugfix was to merge left and right sides into the same keys.
+		On missing DsrKey:
+			Replace 'DsrKey_LeftControl' with 'DsrKey_Control'
+			Replace 'DsrKey_RightControl' with 'DsrKey_Control'
+			Replace 'DsrKey_LeftShift' with 'DsrKey_Shift'
+			Replace 'DsrKey_RightShift' with 'DsrKey_Shift'
+			Replace 'DsrKey_LeftAlt' with 'DsrKey_Alt'
+			Replace 'DsrKey_RightAlt' with 'DsrKey_Alt'
+			Merge any uplicated checks for left or right versions to clean up your code.
+			Rethink the design if you relied on distinguishing between left and right control, shift or alt.

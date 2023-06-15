@@ -64,18 +64,12 @@ inline String dsr::getName(DsrKey v) {
 		return U"Return";
 	} else if (v == DsrKey_BackSpace) {
 		return U"BackSpace";
-	} else if (v == DsrKey_LeftShift) {
-		return U"LeftShift";
-	} else if (v == DsrKey_RightShift) {
-		return U"RightShift";
-	} else if (v == DsrKey_LeftControl) {
-		return U"LeftControl";
-	} else if (v == DsrKey_RightControl) {
-		return U"RightControl";
-	} else if (v == DsrKey_LeftAlt) {
-		return U"LeftAlt";
-	} else if (v == DsrKey_RightAlt) {
-		return U"RightAlt";
+	} else if (v == DsrKey_Shift) {
+		return U"Shift";
+	} else if (v == DsrKey_Control) {
+		return U"Control";
+	} else if (v == DsrKey_Alt) {
+		return U"Alt";
 	} else if (v == DsrKey_Delete) {
 		return U"Delete";
 	} else if (v == DsrKey_LeftArrow) {

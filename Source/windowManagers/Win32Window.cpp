@@ -317,21 +317,12 @@ static dsr::DsrKey getDsrKey(WPARAM keyCode) {
 		result = dsr::DsrKey_Return;
 	} else if (keyCode == VK_BACK) {
 		result = dsr::DsrKey_BackSpace;
-	} else if (keyCode == VK_LSHIFT || keyCode == VK_SHIFT) {
-		// If the keyboard does not tell if the shift is left or right, treat it like a left shift.
-		result = dsr::DsrKey_LeftShift;
-	} else if (keyCode == VK_RSHIFT) {
-		result = dsr::DsrKey_RightShift;
-	} else if (keyCode == VK_LCONTROL || keyCode == VK_CONTROL) {
-		// If the keyboard does not tell if control is left or right, treat it like left control.
-		result = dsr::DsrKey_LeftControl;
-	} else if (keyCode == VK_RCONTROL) {
-		result = dsr::DsrKey_RightControl;
-	} else if (keyCode == VK_LMENU || keyCode == VK_MENU) {
-		// If the keyboard does not tell if alt is left or right, treat it like left alt.
-		result = dsr::DsrKey_LeftAlt;
-	} else if (keyCode == VK_RMENU) {
-		result = dsr::DsrKey_RightAlt;
+	} else if (keyCode == VK_LSHIFT || keyCode == VK_SHIFT || keyCode == VK_RSHIFT) {
+		result = dsr::DsrKey_Shift;
+	} else if (keyCode == VK_LCONTROL || keyCode == VK_CONTROL || keyCode == VK_RCONTROL) {
+		result = dsr::DsrKey_Control;
+	} else if (keyCode == VK_LMENU || keyCode == VK_MENU || keyCode == VK_RMENU) {
+		result = dsr::DsrKey_Alt;
 	} else if (keyCode == VK_DELETE) {
 		result = dsr::DsrKey_Delete;
 	} else if (keyCode == VK_LEFT) {
