@@ -87,7 +87,7 @@ public:
 	// Interface
 	void setFullScreen(bool enabled) override;
 	bool isFullScreen() override { return this->windowState == 2; }
-	void redraw(HWND& hwnd, bool locked); // HWND is passed by argument because drawing might be called before the constructor has assigned it to this->hwnd
+	void redraw(HWND& hwnd, bool locked, bool swap); // HWND is passed by argument because drawing might be called before the constructor has assigned it to this->hwnd
 	void showCanvas() override;
 };
 
@@ -519,7 +519,7 @@ static LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT message, WPARAM wParam, 
 	case WM_PAINT:
 		parent->queueInputEvent(new dsr::WindowEvent(dsr::WindowEventType::Redraw, parent->windowWidth, parent->windowHeight));
 		// BeginPaint and EndPaint must be called with the given hwnd to prevent having the redraw message sent again
-		parent->redraw(hwnd, false);
+		parent->redraw(hwnd, false, false);
 		// Passing on the event to prevent flooding with more messages. This is only a temporary solution.
 		// TODO: Avoid overwriting the result with any background color.
 		//result = DefWindowProc(hwnd, message, wParam, lParam);
@@ -585,7 +585,7 @@ Win32Window::~Win32Window() {
 }
 
 // The lock argument must be true if not already within a lock and false if inside of a lock.
-void Win32Window::redraw(HWND& hwnd, bool lock) {
+void Win32Window::redraw(HWND& hwnd, bool lock, bool swap) {
 	#ifndef DISABLE_MULTI_THREADING
 		// Wait for the previous update to finish, to avoid flooding the system with new threads waiting for windowLock
 		if (this->displayFuture.valid()) {
@@ -596,8 +596,10 @@ void Win32Window::redraw(HWND& hwnd, bool lock) {
 	if (lock) {
 		windowLock.lock();
 	}
-	this->drawIndex = (this->drawIndex + 1) % bufferCount;
-	this->showIndex = (this->showIndex + 1) % bufferCount;
+	if (swap) {
+		this->drawIndex = (this->drawIndex + 1) % bufferCount;
+		this->showIndex = (this->showIndex + 1) % bufferCount;
+	}
 	this->prefetchEvents();
 	int displayIndex = this->showIndex;
 	std::function<void()> task = [this, displayIndex, lock]() {
@@ -629,6 +631,7 @@ void Win32Window::redraw(HWND& hwnd, bool lock) {
 		if (this->firstFrame) {
 			// The first frame will be cloned when double buffering.
 			if (bufferCount == 2) {
+				// TODO: Only do this for the absolute first frame, not after resize.
 				dsr::draw_copy(this->canvas[this->drawIndex], this->canvas[this->showIndex]);
 			}
 			// Single-thread the first frame to keep it safe.
@@ -642,7 +645,7 @@ void Win32Window::redraw(HWND& hwnd, bool lock) {
 }
 
 void Win32Window::showCanvas() {
-	this->redraw(this->hwnd, true);
+	this->redraw(this->hwnd, true, true);
 }
 
 std::shared_ptr<dsr::BackendWindow> createBackendWindow(const dsr::String& title, int width, int height) {
