@@ -61,7 +61,7 @@ namespace dsr {
 	//   because a key combination commonly associated with pasting text was pressed before the request was made.
 	// Returns content from an internal or extenal clipboard.
 	//   The internal clipboard within the application is used when the system specific backend has not implemented clipboard access.
-	String window_loadFromClipboard(Window& window, int64_t timeoutInMilliseconds);
+	String window_loadFromClipboard(Window& window, double timeoutInSeconds);
 	// Stores the text argument to an internal or extenal clipboard.
 	//   The internal clipboard within the application is used when the system specific backend has not implemented clipboard access.
 	void window_saveToClipboard(Window& window, const ReadableString &text);

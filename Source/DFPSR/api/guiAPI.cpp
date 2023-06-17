@@ -508,9 +508,9 @@ String dsr::window_getTitle(Window& window) {
 	MUST_EXIST(window, window_getTitle);
 	return window->backend->getTitle();
 }
-String window_loadFromClipboard(Window& window, int64_t timeoutInMilliseconds) {
+String window_loadFromClipboard(Window& window, double timeoutInSeconds) {
 	MUST_EXIST(window, window_loadFromClipboard);
-	return window->backend->loadFromClipboard(timeoutInMilliseconds);
+	return window->backend->loadFromClipboard(timeoutInSeconds);
 }
 
 void window_saveToClipboard(Window& window, const ReadableString &text) {

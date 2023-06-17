@@ -28,7 +28,7 @@ using namespace dsr;
 // Used when access to the external clipboard is not implemented.
 static String backupClipboard;
 
-ReadableString BackendWindow::loadFromClipboard(int64_t timeoutInMilliseconds) {
+ReadableString BackendWindow::loadFromClipboard(double timeoutInSeconds) {
 	sendWarning(U"loadFromClipboard is not implemented! Simulating clipboard using a variable within the same application.");
 	return backupClipboard;
 }

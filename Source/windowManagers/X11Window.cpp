@@ -107,7 +107,7 @@ public:
 	void listContentInClipboard();
 	void initializeClipboard();
 	void terminateClipboard();		
-	dsr::ReadableString loadFromClipboard(int64_t timeoutInMilliseconds);
+	dsr::ReadableString loadFromClipboard(double timeoutInSeconds);
 	void saveToClipboard(const dsr::ReadableString &text);
 };
 
@@ -122,24 +122,18 @@ void X11Window::terminateClipboard() {
 	// TODO: Send ownership to the clipboard to allow pasting after terminating the program it was copied from.
 }
 
-dsr::ReadableString X11Window::loadFromClipboard(int64_t timeoutInMilliseconds) {
-	// TODO: Can the old request be aborted if it takes too long?
-	if (!this->loadingFromClipboard) {
-		// Request text to paste and wait some time for an application to respond.
-		// TODO: How can old content be ignored after a timeout if the time is too short?
-		XConvertSelection(this->display, this->clipboardAtom, this->targetsAtom, this->clipboardAtom, this->window, CurrentTime);
-		this->loadingFromClipboard = true;
-		// TODO: Implement timeout without drifting time.
-		int64_t time = 0;
-		while (this->loadingFromClipboard && time < timeoutInMilliseconds) {
-			this->prefetchEvents();
-			dsr::time_sleepSeconds(0.001);
-			time++;
-		}
-		return this->textFromClipboard;
-	} else {
-		return U"";
+dsr::ReadableString X11Window::loadFromClipboard(double timeoutInSeconds) {
+	// The timeout needs to be at least 10 milliseconds to give it a fair chance.
+	if (timeoutInSeconds < 0.01) timeoutInSeconds = 0.01;
+	// Request text to paste and wait some time for an application to respond.
+	XConvertSelection(this->display, this->clipboardAtom, this->targetsAtom, this->clipboardAtom, this->window, CurrentTime);
+	this->loadingFromClipboard = true;
+	double deadline = dsr::time_getSeconds() + timeoutInSeconds;
+	while (this->loadingFromClipboard && dsr::time_getSeconds() < deadline) {
+		this->prefetchEvents();
+		dsr::time_sleepSeconds(0.001);
 	}
+	return this->loadingFromClipboard ? U"" : this->textFromClipboard;
 }
 
 void X11Window::listContentInClipboard() {
@@ -687,7 +681,10 @@ void X11Window::prefetchEvents() {
 					// You previously requested access to a program's clipboard content and here it is giving the data to you.
 					// Based on: https://handmade.network/forums/articles/t/8544-implementing_copy_paste_in_x11
 					XSelectionEvent selection = currentEvent.xselection;
-					if (selection.property != None) {
+					if (selection.property == None) {
+						// If we got an empty notification, we can avoid waiting for a timeout.
+						this->loadingFromClipboard = false;
+					} else {
 						Atom actualType;
 						int actualFormat;
 						unsigned long bytesAfter;
