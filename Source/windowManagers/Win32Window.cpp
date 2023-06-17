@@ -53,6 +53,7 @@ private:
 	// Called before the application fetches events from the input queue
 	//   Closing the window, moving the mouse, pressing a key, et cetera
 	void prefetchEvents() override;
+	void prefetchEvents_impl();
 
 	// Called to change the cursor visibility and returning true on success
 	bool setCursorVisibility(bool visible) override;
@@ -517,7 +518,7 @@ static LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT message, WPARAM wParam, 
 		}
 		break;
 	case WM_PAINT:
-		parent->queueInputEvent(new dsr::WindowEvent(dsr::WindowEventType::Redraw, parent->windowWidth, parent->windowHeight));
+		//parent->queueInputEvent(new dsr::WindowEvent(dsr::WindowEventType::Redraw, parent->windowWidth, parent->windowHeight));
 		// BeginPaint and EndPaint must be called with the given hwnd to prevent having the redraw message sent again
 		parent->redraw(hwnd, false, false);
 		// Passing on the event to prevent flooding with more messages. This is only a temporary solution.
@@ -542,15 +543,19 @@ static LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT message, WPARAM wParam, 
 	return result;
 }
 
+void Win32Window::prefetchEvents_impl() {
+	MSG messages;
+	if (IsWindowUnicode(this->hwnd)) {
+		while (PeekMessageW(&messages, NULL, 0, 0, PM_REMOVE)) { TranslateMessage(&messages); DispatchMessage(&messages); }
+	} else {
+		while (PeekMessage(&messages, NULL, 0, 0, PM_REMOVE)) { TranslateMessage(&messages); DispatchMessage(&messages); }
+	}
+}
+
 void Win32Window::prefetchEvents() {
 	// Only prefetch new events if nothing else is locking.
 	if (windowLock.try_lock()) {
-		MSG messages;
-		if (IsWindowUnicode(this->hwnd)) {
-			while (PeekMessageW(&messages, NULL, 0, 0, PM_REMOVE)) { TranslateMessage(&messages); DispatchMessage(&messages); }
-		} else {
-			while (PeekMessage(&messages, NULL, 0, 0, PM_REMOVE)) { TranslateMessage(&messages); DispatchMessage(&messages); }
-		}
+		this->prefetchEvents_impl();
 		windowLock.unlock();
 	}
 }
@@ -594,7 +599,10 @@ void Win32Window::redraw(HWND& hwnd, bool lock, bool swap) {
 	#endif
 
 	if (lock) {
+		// Any other requests will have to wait.
 		windowLock.lock();
+		// Last chance to prefetch events before uploading the canvas.
+		this->prefetchEvents_impl();
 	}
 	if (swap) {
 		this->drawIndex = (this->drawIndex + 1) % bufferCount;
