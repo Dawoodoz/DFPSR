@@ -91,7 +91,7 @@ public:
 	//   If both are implemented, the system's clipboard should be accessed.
 	//   Partial implementations with only loadFromClipboard or saveToClipboard are not allowed.
 	// Load from the clipboard, waiting at most timeoutInMilliseconds milliseconds.
-	virtual ReadableString loadFromClipboard(int64_t timeoutInMilliseconds = 500);
+	virtual ReadableString loadFromClipboard(double timeoutInSeconds = 0.5);
 	// Save text to the clipboard.
 	virtual void saveToClipboard(const ReadableString &text);
 public:
