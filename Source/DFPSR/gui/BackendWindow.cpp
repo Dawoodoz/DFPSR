@@ -33,7 +33,7 @@ ReadableString BackendWindow::loadFromClipboard(double timeoutInSeconds) {
 	return backupClipboard;
 }
 
-void BackendWindow::saveToClipboard(const ReadableString &text) {
+void BackendWindow::saveToClipboard(const ReadableString &text, double timeoutInSeconds) {
 	sendWarning(U"saveToClipboard is not implemented! Simulating clipboard using a variable within the same application.");
 	backupClipboard = text;
 }

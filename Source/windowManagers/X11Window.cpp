@@ -108,7 +108,7 @@ public:
 	void initializeClipboard();
 	void terminateClipboard();		
 	dsr::ReadableString loadFromClipboard(double timeoutInSeconds);
-	void saveToClipboard(const dsr::ReadableString &text);
+	void saveToClipboard(const dsr::ReadableString &text, double timeoutInSeconds);
 };
 
 void X11Window::initializeClipboard() {
@@ -141,7 +141,7 @@ void X11Window::listContentInClipboard() {
 	XSetSelectionOwner(this->display, this->clipboardAtom, this->window, CurrentTime);
 }
 
-void X11Window::saveToClipboard(const dsr::ReadableString &text) {
+void X11Window::saveToClipboard(const dsr::ReadableString &text, double timeoutInSeconds) {
 	this->textToClipboard = text;
 	this->listContentInClipboard();
 }

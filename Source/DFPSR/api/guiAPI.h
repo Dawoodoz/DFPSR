@@ -64,7 +64,7 @@ namespace dsr {
 	String window_loadFromClipboard(Window& window, double timeoutInSeconds);
 	// Stores the text argument to an internal or extenal clipboard.
 	//   The internal clipboard within the application is used when the system specific backend has not implemented clipboard access.
-	void window_saveToClipboard(Window& window, const ReadableString &text);
+	void window_saveToClipboard(Window& window, const ReadableString &text, double timeoutInSeconds);
 
 // Layout files
 	// Loading an interface by parsing a layout file's content, with any external resources loaded relative to fromPath.
