@@ -93,7 +93,7 @@ public:
 	// Load from the clipboard, waiting at most timeoutInMilliseconds milliseconds.
 	virtual ReadableString loadFromClipboard(double timeoutInSeconds = 0.5);
 	// Save text to the clipboard.
-	virtual void saveToClipboard(const ReadableString &text);
+	virtual void saveToClipboard(const ReadableString &text, double timeoutInSeconds = 0.5);
 public:
 	// Each callback declaration has a public variable and a public getter and setter
 	DECLARE_CALLBACK(closeEvent, emptyCallback);

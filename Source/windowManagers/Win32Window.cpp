@@ -13,6 +13,8 @@ Link to these dependencies for MS Windows:
 
 #include "../DFPSR/api/imageAPI.h"
 #include "../DFPSR/api/drawAPI.h"
+#include "../DFPSR/api/bufferAPI.h"
+#include "../DFPSR/api/timeAPI.h"
 #include "../DFPSR/gui/BackendWindow.h"
 
 #include <mutex>
@@ -90,11 +92,64 @@ public:
 	bool isFullScreen() override { return this->windowState == 2; }
 	void redraw(HWND& hwnd, bool locked, bool swap); // HWND is passed by argument because drawing might be called before the constructor has assigned it to this->hwnd
 	void showCanvas() override;
+	// Clipboard		
+	dsr::ReadableString loadFromClipboard(double timeoutInSeconds);
+	void saveToClipboard(const dsr::ReadableString &text, double timeoutInSeconds);
 };
 
 static LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
 
 static TCHAR windowClassName[] = _T("DfpsrWindowApplication");
+
+dsr::ReadableString Win32Window::loadFromClipboard(double timeoutInSeconds) {
+	dsr::String result = U"";
+	if (IsClipboardFormatAvailable(CF_UNICODETEXT)) {
+		// TODO: Repeat attempts to open the clipboard in a delayed loop until the timeout is reached.
+		if (OpenClipboard(this->hwnd)) {
+			HGLOBAL globalBuffer = GetClipboardData(CF_UNICODETEXT);
+			void *globalData = GlobalLock(globalBuffer);
+			if (globalData) {
+				result = dsr::string_dangerous_decodeFromData(globalData, dsr::CharacterEncoding::BOM_UTF16LE);
+				GlobalUnlock(globalBuffer);
+			}
+			CloseClipboard();
+		}
+	} else if (IsClipboardFormatAvailable(CF_TEXT)) {
+		// TODO: Repeat attempts to open the clipboard in a delayed loop until the timeout is reached.
+		if (OpenClipboard(this->hwnd)) {
+			HGLOBAL globalBuffer = GetClipboardData(CF_TEXT);
+			void *globalData = GlobalLock(globalBuffer);
+			if (globalData) {
+				// TODO: Use a built-in conversion from native text formats.
+				// If the text is not in Unicode format, assume Latin-1.
+				result = dsr::string_dangerous_decodeFromData(globalData, dsr::CharacterEncoding::Raw_Latin1);
+				GlobalUnlock(globalBuffer);
+			}
+			CloseClipboard();
+		}
+	}
+	return result;
+}
+
+void Win32Window::saveToClipboard(const dsr::ReadableString &text, double timeoutInSeconds) {
+	// TODO: Repeat attempts to open the clipboard in a delayed loop until the timeout is reached.
+	if (OpenClipboard(this->hwnd)) {
+		EmptyClipboard();
+		dsr::Buffer savedText = dsr::string_saveToMemory(text, dsr::CharacterEncoding::BOM_UTF16LE, dsr::LineEncoding::CrLf, false, true);
+		int64_t textSize = dsr::buffer_getSize(savedText);
+		HGLOBAL globalBuffer = GlobalAlloc(GMEM_MOVEABLE, textSize);
+		if (globalBuffer) {
+			void *globalData = GlobalLock(globalBuffer);
+			uint8_t *localData = dsr::buffer_dangerous_getUnsafeData(savedText);
+			memcpy(globalData, localData, textSize);
+			GlobalUnlock(globalBuffer);
+			SetClipboardData(CF_UNICODETEXT, globalBuffer);
+		} else {
+			dsr::sendWarning(U"Could not allocate global memory for saving text to the clipboard!\n");
+		}
+		CloseClipboard();
+	}
+}
 
 void Win32Window::updateTitle_locked() {
 	windowLock.lock();
@@ -574,6 +629,7 @@ void Win32Window::resizeCanvas(int width, int height) {
 	}
 	this->firstFrame = true;
 }
+
 Win32Window::~Win32Window() {
 	#ifndef DISABLE_MULTI_THREADING
 		// Wait for the last update of the window to finish so that it doesn't try to operate on freed resources
