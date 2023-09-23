@@ -1,6 +1,12 @@
 # DFPSR
 A modern software rendering library for C++14 using SSE/NEON created by David Forsgren Piuva. If you're looking for the latest mainstream fad, look elsewhere. This is a library for quality software meant to be developed over multiple decades and survive your grandchildren with minimal maintenance. Just like carving your legacy into stone, it takes more effort to master the skill but gives a more robust result by not relying on a far away library. Maximum user experience and minimum system dependency.
 
+## Creator's background
+DXOMARK world record in digital video stabilization from the mobile industry. Worked with safety critical robotic vision for civilian airport traffic control. Held lectures in optimization at different companies in the mobile, medical and gaming industries. Worked with optimizations on GPU, CPU, DSP, ISP, FPGA and ASIC.
+
+## Optimization needs good tools to save your time
+The most important part about optimizing code is to grasp both high algorithms and low hardware limitations, because you can not let a scientist design the algorithm and a programmer optimize it with no room for changes in handwritten assembler (the most common mistake). The algorithm design is not done until you have a good tradeoff between quality and performance with all optimizations in place. Time savings at the cost of quality in one place can be compensated by increasing quality at a lower cost somewhere else to increase both speed and quality. The faster you can create a near optimal vectorization of an algorithm, the faster you can iterate the design process. Think about what you are truly approximating. Is your goal to draw as many perfectly straight polygons as possible, or is the goal to approximate a complex real world shape using any technique?
+
 The official website:
 [dawoodoz.com](https://dawoodoz.com)
 
@@ -35,7 +41,7 @@ Real-time dynamic light with depth-based casted shadows and normal mapping at 45
 * **Timers** Get the double precision seconds passed since the first call to the timer, so that you won't have to worry about midnight bugs when the time of day resets.
 * **SIMD abstraction layer** Use simd.h to automatically generate highly efficient SSE, AVX and NEON intrinsics from fully readable math syntax. Your vectorized code will look like a reference implementation and compiling for an unknown target architecture will generate scalar operations that can still give a performance boost by writing your algorithm with basic operations that are most often supported directly in CPU hardware, accessing memory aligned with cache lines, keeping the instruction window packed with tasks, and making it very easy for a compiler's auto-vectorization if something similar with a different name exists in the future.
 * **Safe pointers** Use SafePointer.h to catch more errors by telling your pointer which part of an allocation it may work on. Leaves no overhead in the release version, so that you can always replace your raw pointer with SafePointer and know that you will get an informative error message with the pointer's name and detailed information when something bad happens.
-* **Strings** Uses UTF-32 to store characters in memory to make sure that all algorithms work with non-latin characters (compatible with U"" string literals). Saving to files default to UTF-8 (compact storage) with BOM (explicitly saying which format is uses) and CR LF line endings (so that text files encoded anywhere can be read everywhere). Uses shared memory buffers automatically to allow splitting into a list of strings without flooding the heap with small allocations.
+* **Strings** Use UTF-32 to store characters in memory to make sure that all algorithms work with non-latin characters (compatible with U"" string literals). Saving to files default to UTF-8 (compact storage) with BOM (explicitly saying which format is uses) and CR LF line endings (so that text files encoded anywhere can be read everywhere). Uses shared memory buffers automatically to allow splitting into a list of strings without flooding the heap with small allocations.
 * **Buffers** All files are saved and loaded through Buffer objects. This makes sure that all file formats you design only have to worry about how to encode the bytes, regressions tests will be easy by not involving external side-effects from the file system, and any file can be bundled into your own by using the Buffer equivalent of a save function.
 * **File management** Roughly equivalent to std::filesystem from C++17, but works with C++14, uses the same String and ReadableString types on all platforms, and can automatically correct folder separators between / (Posix) and \ (MS-Windows).
 * **Process management** Can start other applications and keep track of their status, so that you can call an application like a function writing the result to files.
@@ -43,7 +49,7 @@ Real-time dynamic light with depth-based casted shadows and normal mapping at 45
 ## Summary of licenses
 This library mainly uses the Zlib Open Source License, but also includes the STB Image library for saving and loading images, which has a permissive dual license (MIT / Unlicense).
 Because the STB Image library can be used as public domain, it does not have any legal effect on using the library as a whole under the Zlib Open Source License.
-All included source code with all their licenses allow both commercial and non-commercies use, including undisclosed modification of the source code.
+All included source code with all their licenses allow both commercial and non-commercial use, including undisclosed modification of the source code.
 If you are not redistributing the source code, then you do not have to tell anyone that you use this library, because an insincere endorsement has no value.
 
 ## Still a public beta
