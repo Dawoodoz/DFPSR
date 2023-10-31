@@ -443,14 +443,28 @@ void TextBox::receiveKeyboardEvent(const KeyboardEvent& event) {
 			if (selected && (event.dsrKey == DsrKey_BackSpace || event.dsrKey == DsrKey_Delete)) {
 				// Remove selection
 				this->replaceSelection(U"");
-			} else if (event.dsrKey == DsrKey_BackSpace && canGoLeft) {
-				// Erase left of beam
-				this->beamLocation--;
-				this->replaceSelection(U"");
-			} else if (event.dsrKey == DsrKey_Delete && canGoRight) {
-				// Erase right of beam
-				this->beamLocation++;
-				this->replaceSelection(U"");
+			} else if (event.dsrKey == DsrKey_BackSpace) {
+				if (this->selectionStart == this->beamLocation) {
+					if (this->beamLocation > 0) {
+						// Erase left of beam
+						this->beamLocation--;
+						this->replaceSelection(U"");
+					}
+				} else {
+					// Erase selection
+					this->replaceSelection(U"");
+				}
+			} else if (event.dsrKey == DsrKey_Delete) {
+				if (this->selectionStart == this->beamLocation) {
+					if (this->beamLocation < textLength) {
+						// Erase right of beam
+						this->beamLocation++;
+						this->replaceSelection(U"");
+					}
+				} else {
+					// Erase selection
+					this->replaceSelection(U"");
+				}
 			} else if (event.dsrKey == DsrKey_Home) {
 				// Move to the line start using Home
 				this->placeBeamAtCharacter(getLineStart(this->text.value, this->beamLocation), removeSelection);
