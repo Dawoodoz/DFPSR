@@ -1175,7 +1175,7 @@ bool dsr::string_isInteger(const ReadableString& source, bool allowWhiteSpace) {
 	if (allowWhiteSpace) {
 		PATTERN_STAR(WhiteSpace);
 	}
-	return true;
+	return readIndex == source.length;
 }
 
 // To avoid consuming the all digits on Digit* before reaching Digit+ when there is no decimal, whole integers are judged by string_isInteger
@@ -1201,7 +1201,7 @@ bool dsr::string_isDouble(const ReadableString& source, bool allowWhiteSpace) {
 		if (allowWhiteSpace) {
 			PATTERN_STAR(WhiteSpace);
 		}
-		return true;
+		return readIndex == source.length;
 	}
 }
 
