@@ -233,10 +233,6 @@ namespace dsr {
 	uint8_t image_maxDifference(const ImageRgbaU8& imageA, const ImageRgbaU8& imageB);
 
 // Sub-images are viewports to another image's data
-// TODO: Aligned sub-images that only takes vertial sections using whole rows
-// TODO: Aligned sub-images that terminates with an error if the input rectangle isn't aligned
-//       Start must be 16-byte aligned, end must be same as the parent or also 16-byte aligned
-// TODO: Make an optional warning for not returning the desired dimensions when out of bound
 	// Get a sub-image sharing buffer and side-effects with the parent image
 	// Returns the overlapping region if out of bound
 	// Returns a null image if there are no overlapping pixels to return
