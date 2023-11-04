@@ -212,7 +212,7 @@ ReadableString string_after(const ReadableString& source, int64_t exclusiveStart
 // Split source into a list of strings.
 // Post-condition:
 //   Returns a list of strings from source by splitting along separator.
-//   If removeWhiteSpace is true then surrounding white-space will be removed, otherwise white-space is kept.
+//   If removeWhiteSpace is true then surrounding white-space will be removed, otherwise all white-space is kept.
 // The separating characters are excluded from the resulting strings.
 // The number of strings returned in the list will equal the number of separating characters plus one, so the result may contain empty strings.
 // Each string in the list clones content to its own dynamic buffer. Use string_split_callback if you don't need long term storage.
@@ -220,10 +220,10 @@ List<String> string_split(const ReadableString& source, DsrChar separator, bool 
 // Split a string without needing a list to store the result.
 // Use string_splitCount on the same source and separator if you need to know the element count in advance.
 // Side-effects:
-//   Calls action for each sub-string divided by separator in source.
-void string_split_callback(std::function<void(ReadableString)> action, const ReadableString& source, DsrChar separator, bool removeWhiteSpace = false);
+//   Calls action for each sub-string divided by separator in source given as the separatedText argument.
+void string_split_callback(std::function<void(ReadableString separatedText)> action, const ReadableString& source, DsrChar separator, bool removeWhiteSpace = false);
 // An alternative overload for having a very long lambda at the end.
-inline void string_split_callback(const ReadableString& source, DsrChar separator, bool removeWhiteSpace, std::function<void(ReadableString)> action) {
+inline void string_split_callback(const ReadableString& source, DsrChar separator, bool removeWhiteSpace, std::function<void(ReadableString separatedText)> action) {
 	string_split_callback(action, source, separator, removeWhiteSpace);
 }
 // Split source using separator, only to return the number of splits.

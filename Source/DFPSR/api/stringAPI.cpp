@@ -975,7 +975,7 @@ void dsr::string_unassignMessageHandler() {
 	globalMessageAction = defaultMessageAction;
 }
 
-void dsr::string_split_callback(std::function<void(ReadableString)> action, const ReadableString& source, DsrChar separator, bool removeWhiteSpace) {
+void dsr::string_split_callback(std::function<void(ReadableString separatedText)> action, const ReadableString& source, DsrChar separator, bool removeWhiteSpace) {
 	int64_t sectionStart = 0;
 	for (int64_t i = 0; i < source.length; i++) {
 		DsrChar c = source[i];
