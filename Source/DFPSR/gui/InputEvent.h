@@ -1,6 +1,6 @@
 ﻿// zlib open source license
 //
-// Copyright (c) 2018 to 2022 David Forsgren Piuva
+// Copyright (c) 2018 to 2023 David Forsgren Piuva
 // 
 // This software is provided 'as-is', without any express or implied
 // warranty. In no event will the authors be held liable for any damages
@@ -62,11 +62,11 @@ String& string_toStreamIndented(String& target, const DsrKey& source, const Read
 
 class KeyboardEvent : public InputEvent {
 public:
-	// What the user did to the key
+	// What the user did to the key.
 	KeyboardEventType keyboardEventType;
-	// The raw unicode value without any encoding
+	// The raw unicode value without any encoding.
 	DsrChar character;
-	// Minimal set of keys for portability
+	// Minimal set of keys for portability.
 	DsrKey dsrKey;
 	KeyboardEvent(KeyboardEventType keyboardEventType, DsrChar character, DsrKey dsrKey)
 	 : keyboardEventType(keyboardEventType), character(character), dsrKey(dsrKey) {}
@@ -112,26 +112,27 @@ public:
 	: windowEventType(windowEventType), width(width), height(height) {}
 };
 
-// A macro for declaring a virtual callback from the base method
-//   Use the getter for registering methods so that they can be forwarded to a wrapper without inheritance
-//   Use the actual variable beginning with `callback_` when calling the method from inside
+// A macro for declaring a virtual callback from the base method.
+//   Use the getter for registering methods so that they can be forwarded to a wrapper without inheritance.
+//   Use the actual variable beginning with `callback_` when calling the method from inside.
 #define DECLARE_CALLBACK(NAME, LAMBDA) \
 	decltype(LAMBDA) callback_##NAME = LAMBDA; \
 	decltype(LAMBDA)& NAME() { return callback_##NAME; }
 
-// The callback templates and types
-static std::function<void()> emptyCallback = []() {};
-using EmptyCallback = decltype(emptyCallback) ;
-static std::function<void(int)> indexCallback = [](int64_t index) {};
-using IndexCallback = decltype(indexCallback);
-static std::function<void(int, int)> sizeCallback = [](int width, int height) {};
-using SizeCallback = decltype(sizeCallback);
-static std::function<void(const KeyboardEvent&)> keyboardCallback = [](const KeyboardEvent& event) {};
-using KeyboardCallback = decltype(keyboardCallback);
-static std::function<void(const MouseEvent&)> mouseCallback = [](const MouseEvent& event) {};
-using MouseCallback = decltype(mouseCallback);
+// The callback types.
+using EmptyCallback = std::function<void()>;
+using IndexCallback = std::function<void(int index)>;
+using SizeCallback = std::function<void(int width, int height)>;
+using KeyboardCallback = std::function<void(const KeyboardEvent& event)>;
+using MouseCallback = std::function<void(const MouseEvent& event)>;
+
+// The default functions to call until a callback has been selected.
+static EmptyCallback emptyCallback = []() {};
+static IndexCallback indexCallback = [](int64_t index) {};
+static SizeCallback sizeCallback = [](int width, int height) {};
+static KeyboardCallback keyboardCallback = [](const KeyboardEvent& event) {};
+static MouseCallback mouseCallback = [](const MouseEvent& event) {};
 
 }
 
 #endif
-
