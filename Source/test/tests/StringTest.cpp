@@ -146,6 +146,15 @@ START_TEST(String)
 		ASSERT_EQUAL(dsr::string_isInteger(U" 123"), true);
 		ASSERT_EQUAL(dsr::string_isInteger(U"-123"), true);
 		ASSERT_EQUAL(dsr::string_isInteger(U""), false);
+		ASSERT_EQUAL(dsr::string_isInteger(U"85x"), false);
+		ASSERT_EQUAL(dsr::string_isInteger(U"F15"), false);
+		ASSERT_EQUAL(dsr::string_isInteger(U" 14"), true);
+		ASSERT_EQUAL(dsr::string_isInteger(U"8 "), true);
+		ASSERT_EQUAL(dsr::string_isInteger(U"		100"), true);
+		ASSERT_EQUAL(dsr::string_isInteger(U"100		"), true);
+		ASSERT_EQUAL(dsr::string_isInteger(U"10 10"), false);
+		ASSERT_EQUAL(dsr::string_isInteger(U"10		10"), false);
+		ASSERT_EQUAL(dsr::string_isInteger(U" 10  10 "), false);
 		ASSERT_EQUAL(dsr::string_isDouble(U"0"), true);
 		ASSERT_EQUAL(dsr::string_isDouble(U"-0"), true);
 		ASSERT_EQUAL(dsr::string_isDouble(U"1"), true);
@@ -166,6 +175,10 @@ START_TEST(String)
 		ASSERT_EQUAL(dsr::string_isDouble(U"0.54321"), true);
 		ASSERT_EQUAL(dsr::string_isDouble(U"-0.54321"), true);
 		ASSERT_EQUAL(dsr::string_isDouble(U""), false);
+		ASSERT_EQUAL(dsr::string_isDouble(U"0..0"), false);
+		ASSERT_EQUAL(dsr::string_isDouble(U"M0.0"), false);
+		ASSERT_EQUAL(dsr::string_isDouble(U"0.0x"), false);
+		ASSERT_EQUAL(dsr::string_isDouble(U"T0.0q"), false);
 	}
 	// Upper case
 	ASSERT_MATCH(dsr::string_upperCase(U"a"), U"A");

@@ -1,6 +1,6 @@
 ﻿
 #include "../testTools.h"
-#include "../../DFPSR/base/simdExtra.h"
+#include "../../DFPSR/base/simd.h"
 
 START_TEST(Simd)
 	printText("\nSIMD test is compiled using:\n");
