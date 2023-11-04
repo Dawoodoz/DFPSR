@@ -1,6 +1,6 @@
 ﻿// zlib open source license
 //
-// Copyright (c) 2017 to 2019 David Forsgren Piuva
+// Copyright (c) 2017 to 2023 David Forsgren Piuva
 // 
 // This software is provided 'as-is', without any express or implied
 // warranty. In no event will the authors be held liable for any damages
@@ -36,8 +36,8 @@
 namespace dsr {
 
 // Generic implementaions
-void assertInsideSafePointer(const char* method, const char* name, const uint8_t* pointer, const uint8_t* data, const uint8_t* regionStart, const uint8_t* regionEnd, int claimedSize, int elementSize);
-void assertNonNegativeSize(int size);
+void assertInsideSafePointer(const char* method, const char* name, const uint8_t* pointer, const uint8_t* data, const uint8_t* regionStart, const uint8_t* regionEnd, intptr_t claimedSize, intptr_t elementSize);
+void assertNonNegativeSize(intptr_t size);
 
 template<typename T>
 class SafePointer {
@@ -54,21 +54,21 @@ public:
 	#ifdef SAFE_POINTER_CHECKS
 	SafePointer() : data(nullptr), regionStart(nullptr), regionEnd(nullptr), name("Unnamed null pointer") {}
 	explicit SafePointer(const char* name) : data(nullptr), regionStart(nullptr), regionEnd(nullptr), name(name) {}
-	SafePointer(const char* name, T* regionStart, int regionByteSize = sizeof(T)) : data(regionStart), regionStart(regionStart), regionEnd((T*)(((uint8_t*)regionStart) + (intptr_t)regionByteSize)), name(name) {
+	SafePointer(const char* name, T* regionStart, intptr_t regionByteSize = sizeof(T)) : data(regionStart), regionStart(regionStart), regionEnd((T*)(((uint8_t*)regionStart) + (intptr_t)regionByteSize)), name(name) {
 		assertNonNegativeSize(regionByteSize);
 	}
-	SafePointer(const char* name, T* regionStart, int regionByteSize, T* data) : data(data), regionStart(regionStart), regionEnd((T*)(((uint8_t*)regionStart) + (intptr_t)regionByteSize)), name(name) {
+	SafePointer(const char* name, T* regionStart, intptr_t regionByteSize, T* data) : data(data), regionStart(regionStart), regionEnd((T*)(((uint8_t*)regionStart) + (intptr_t)regionByteSize)), name(name) {
 		assertNonNegativeSize(regionByteSize);
 	}
 	#else
 	SafePointer() : data(nullptr) {}
 	explicit SafePointer(const char* name) : data(nullptr) {}
-	SafePointer(const char* name, T* regionStart, int regionByteSize = sizeof(T)) : data(regionStart) {}
-	SafePointer(const char* name, T* regionStart, int regionByteSize, T* data) : data(data) {}
+	SafePointer(const char* name, T* regionStart, intptr_t regionByteSize = sizeof(T)) : data(regionStart) {}
+	SafePointer(const char* name, T* regionStart, intptr_t regionByteSize, T* data) : data(data) {}
 	#endif
 public:
 	#ifdef SAFE_POINTER_CHECKS
-	inline void assertInside(const char* method, const T* pointer, int size = (int)sizeof(T)) const {
+	inline void assertInside(const char* method, const T* pointer, intptr_t size = (intptr_t)sizeof(T)) const {
 		assertInsideSafePointer(method, this->name, (const uint8_t*)pointer, (const uint8_t*)this->data, (const uint8_t*)this->regionStart, (const uint8_t*)this->regionEnd, size, sizeof(T));
 	}
 	inline void assertInside(const char* method) const {
@@ -100,7 +100,7 @@ public:
 	}
 	// Returns the pointer in modulo byteAlignment
 	// Returns 0 if the pointer is aligned with byteAlignment
-	inline int getAlignmentOffset(int byteAlignment) const {
+	inline int32_t getAlignmentOffset(int32_t byteAlignment) const {
 		return ((uintptr_t)this->data) % byteAlignment;
 	}
 	inline bool isNull() const {
@@ -112,8 +112,8 @@ public:
 	// Get a new safe pointer from a sub-set of data
 	//  byteOffset is which byte in the source will be index zero in the new pointer
 	//  size is the new pointer's size, which may not exceed the remaining available space
-	inline SafePointer<T> slice(const char* name, int byteOffset, int size) {
-		T *newStart = (T*)(((uint8_t*)(this->data)) + (intptr_t)byteOffset);
+	inline SafePointer<T> slice(const char* name, intptr_t byteOffset, intptr_t size) {
+		T *newStart = (T*)(((uint8_t*)(this->data)) + byteOffset);
 		#ifdef SAFE_POINTER_CHECKS
 		assertInside("getSlice", newStart, size);
 		return SafePointer<T>(name, newStart, size);
@@ -121,8 +121,8 @@ public:
 		return SafePointer<T>(name, newStart);
 		#endif
 	}
-	inline const SafePointer<T> slice(const char* name, int byteOffset, int size) const {
-		T *newStart = (T*)(((uint8_t*)(this->data)) + (intptr_t)byteOffset);
+	inline const SafePointer<T> slice(const char* name, intptr_t byteOffset, intptr_t size) const {
+		T *newStart = (T*)(((uint8_t*)(this->data)) + byteOffset);
 		#ifdef SAFE_POINTER_CHECKS
 		assertInside("getSlice", newStart, size);
 		return SafePointer<T>(name, newStart, size);
@@ -157,14 +157,14 @@ public:
 		#endif
 		return *(this->data);
 	}
-	inline T& operator[] (int index) {
+	inline T& operator[] (intptr_t index) {
 		T* address = this->data + index;
 		#ifdef SAFE_POINTER_CHECKS
 		assertInside("operator[]", address);
 		#endif
 		return *address;
 	}
-	inline const T& operator[] (int index) const {
+	inline const T& operator[] (intptr_t index) const {
 		T* address = this->data + index;
 		#ifdef SAFE_POINTER_CHECKS
 		assertInside("operator[]", address);
@@ -225,7 +225,7 @@ public:
 };
 
 template <typename T, typename S>
-inline void safeMemoryCopy(SafePointer<T> target, const SafePointer<S>& source, int64_t byteSize) {
+inline void safeMemoryCopy(SafePointer<T> target, const SafePointer<S>& source, intptr_t byteSize) {
 	#ifdef SAFE_POINTER_CHECKS
 		// Both target and source must be in valid memory
 		target.assertInside("memoryCopy (target)", target.getUnchecked(), (size_t)byteSize);
@@ -238,7 +238,7 @@ inline void safeMemoryCopy(SafePointer<T> target, const SafePointer<S>& source, 
 }
 
 template <typename T>
-inline void safeMemorySet(SafePointer<T>& target, uint8_t value, int64_t byteSize) {
+inline void safeMemorySet(SafePointer<T>& target, uint8_t value, intptr_t byteSize) {
 	#ifdef SAFE_POINTER_CHECKS
 		// Target must be in valid memory
 		target.assertInside("memoryCopy (target)", target.getUnchecked(), byteSize);
