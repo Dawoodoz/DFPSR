@@ -1,6 +1,6 @@
 ﻿// zlib open source license
 //
-// Copyright (c) 2017 to 2019 David Forsgren Piuva
+// Copyright (c) 2017 to 2023 David Forsgren Piuva
 // 
 // This software is provided 'as-is', without any express or implied
 // warranty. In no event will the authors be held liable for any damages
@@ -26,13 +26,13 @@
 
 using namespace dsr;
 
-void dsr::assertNonNegativeSize(int size) {
+void dsr::assertNonNegativeSize(intptr_t size) {
 	if (size < 0) {
 		throwError(U"Negative size of SafePointer!\n");
 	}
 }
 
-void dsr::assertInsideSafePointer(const char* method, const char* name, const uint8_t* pointer, const uint8_t* data, const uint8_t* regionStart, const uint8_t* regionEnd, int claimedSize, int elementSize) {
+void dsr::assertInsideSafePointer(const char* method, const char* name, const uint8_t* pointer, const uint8_t* data, const uint8_t* regionStart, const uint8_t* regionEnd, intptr_t claimedSize, intptr_t elementSize) {
 	if (pointer < regionStart || pointer + claimedSize > regionEnd) {
 		String message;
 		if (data == nullptr) {
@@ -49,16 +49,16 @@ void dsr::assertInsideSafePointer(const char* method, const char* name, const ui
 		string_append(message, U"|  Requested pointer: ", (uintptr_t)pointer, U"\n");
 		string_append(message, U"|  Requested size: ", claimedSize, U" bytes\n");
 
-		int startOffset = (int)((intptr_t)pointer - (intptr_t)regionStart);
-		int baseOffset = (int)((intptr_t)pointer - (intptr_t)data);
+		intptr_t startOffset = (intptr_t)pointer - (intptr_t)regionStart;
+		intptr_t baseOffset = (intptr_t)pointer - (intptr_t)data;
 
 		// Index relative to allocation start
 		//   regionStart is the start of the accessible memory region
 		if (startOffset != baseOffset) {
 			string_append(message, U"|  Start offset: ", startOffset, U" bytes\n");
 			if (startOffset % elementSize == 0) {
-				int index = startOffset / elementSize;
-				int elementCount = ((int)((intptr_t)regionEnd - (intptr_t)regionStart)) / elementSize;
+				intptr_t index = startOffset / elementSize;
+				intptr_t elementCount = ((intptr_t)regionEnd - (intptr_t)regionStart) / elementSize;
 				string_append(message, U"|    Start index: ", index, U" [0..", (elementCount - 1), U"]\n");
 			}
 		}
@@ -67,8 +67,8 @@ void dsr::assertInsideSafePointer(const char* method, const char* name, const ui
 		//   data is the base of the allocation at index zero
 		string_append(message, U"|  Base offset: ", baseOffset, U" bytes\n");
 		if (baseOffset % elementSize == 0) {
-			int index = baseOffset / elementSize;
-			int elementCount = ((int)((intptr_t)regionEnd - (intptr_t)data)) / elementSize;
+			intptr_t index = baseOffset / elementSize;
+			intptr_t elementCount = ((intptr_t)regionEnd - (intptr_t)data) / elementSize;
 			string_append(message, U"|    Base index: ", index, U" [0..", (elementCount - 1), U"]\n");
 		}
 		string_append(message, U"\\_______________________________________________________________________\n\n");
