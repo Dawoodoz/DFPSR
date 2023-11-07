@@ -33,9 +33,9 @@ void dsr::assertNonNegativeSize(intptr_t size) {
 }
 
 void dsr::assertInsideSafePointer(const char* method, const char* name, const uint8_t* pointer, const uint8_t* data, const uint8_t* regionStart, const uint8_t* regionEnd, intptr_t claimedSize, intptr_t elementSize) {
-	if (pointer < regionStart || pointer + claimedSize > regionEnd) {
+	if (regionStart == nullptr || pointer < regionStart || pointer + claimedSize > regionEnd) {
 		String message;
-		if (data == nullptr) {
+		if (regionStart == nullptr) {
 			string_append(message, U"\n _____________________ SafePointer null exception! _____________________\n");
 		} else {
 			string_append(message, U"\n _________________ SafePointer out of bound exception! _________________\n");

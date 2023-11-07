@@ -21,6 +21,23 @@
 //    3. This notice may not be removed or altered from any source
 //    distribution.
 
+// If you get segmentation faults despite using SafePointer, then check the following.
+// * Are you compiling all of your code in debug mode?
+//   The release mode does not perform SafePointer checks, because it is supposed to be zero overhead by letting the compiler inline the pointers.
+// * Did you create a SafePointer from a memory region that you do not have access to, expired stack memory, or a region larger than the allocation?
+//   SafePointer can not know which memory is safe to call if you do not give it correct information.
+//   If the pointer was created without an allocation, make sure that regionStart is nullptr and claimedSize is zero.
+// * Did you deallocate the memory before using the SafePointer?
+//   SafePointer can not keep the allocation alive, because that would require counting references in both debug and release.
+
+// To stay safe when using SafePointer:
+// * Compile in debug mode by habit, until it is time for profiling or relase.
+//   The operating system can not detect out of bound access in stack memory or arena allocations, so it may silently corrupt the memory without being caught if safety is disabled.
+// * Let the Buffer create the safe pointer for you to prevent accidentally giving the wrong size, or use the default constructor for expressing null.
+//   If you only need a part of the buffer's memory, use the slice function to get a subset of the memory with bound checks on construction.
+// * Either create a SafePointer when needed within the buffer's scope, or store both in the same structure.
+//   This makes sure that the allocation is not freed while the pointer still exists.
+
 #ifndef DFPSR_SAFE_POINTER
 #define DFPSR_SAFE_POINTER
 

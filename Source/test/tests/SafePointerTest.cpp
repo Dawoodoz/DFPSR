@@ -10,7 +10,7 @@ START_TEST(SafePointer)
 	uint8_t allocation[3][bufferSize];
 	// Run the algorithm for each byte offset relative to the alignment
 	for (int offset = 0; offset < alignment; offset++) {
-		// The SafePointer class will emulate the behaviour of a raw data pointer while providing full bound checks in debug mode.
+		// The SafePointer should be inlined into a raw pointer in relase mode while providing full bound checks in debug mode.
 		SafePointer<int32_t> bufferA("bufferA", (int32_t*)(allocation[0] + offset), dataSize);
 		SafePointer<int32_t> bufferB("bufferB", (int32_t*)(allocation[1] + offset), dataSize);
 		SafePointer<int32_t> bufferC("bufferC", (int32_t*)(allocation[2] + offset), dataSize);
