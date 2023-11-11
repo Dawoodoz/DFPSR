@@ -100,7 +100,7 @@ public:
 		impl_baseZeroBoundCheck(indexB, this->length(), "Swap index B");
 		std::swap(this->backend[indexA], this->backend[indexB]);
 	}
-	// Side-effect: Adds a new element at the end
+	// Side-effect: Pushes a new element at the end
 	//   Warning! Reallocation may invalidate old pointers and references to elements in the replaced buffer
 	// Post-condition: Returns a reference to the new element in the list
 	T& push(const T& newValue) {
@@ -114,8 +114,16 @@ public:
 		return this->last();
 	}
 	// Side-effect: Pushes a new element constructed using the given arguments
+	//   Warning! Reallocation may invalidate old pointers and references to elements in the replaced buffer
+	// Post-condition: Returns a reference to the new element in the list
 	template<typename... ARGS>
 	T& pushConstruct(ARGS... args) {
+		// Optimize for speed by assuming that we have enough memory
+		if (this->length() == 0) {
+			this->backend.reserve(32);
+		} else if (this->length() >= (int64_t)this->backend.capacity()) {
+			this->backend.reserve((int64_t)this->backend.capacity() * 4);
+		}
 		this->backend.emplace_back(args...);
 		return this->last();
 	}
