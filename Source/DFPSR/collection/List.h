@@ -34,22 +34,30 @@ namespace dsr {
 
 // TODO: Remove the std::vector dependency by reimplementing the basic features.
 
-// An array list for constant time random access to elements in a LIFO stack.
-// Technically, there's nothing wrong with the internals of std::vector, but its interface is horrible.
-//   * Forced use of iterators for cloning and element removal is both overly complex and bloating the code.
-//     Most people joining your project won't be able to read the code if using iterators, so just don't.
-//   * Unsigned indices will either force dangerous casting from signed, or prevent
-//     the ability to loop backwards without crashing when the x < 0u criteria cannot be met.
+// A wrapper over std::vector to improve safety, readability and performance.
+//   Technically, there's nothing wrong with the internals of std::vector, but its interface is horrible.
+//     * std::vector will create too many small allocations unless manually told how to reserve memory in advance.
+//     * Forced use of iterators for cloning and element removal is both overly complex and bloating the code.
+//       Most people joining your project won't be able to read the code if using std::iterator.
+//       Safer to access elements by index, or an iterating high-level function performing a lambda for each element.
+//       If performance is important, then use Buffer and SafePointer instead, so that you get memory bound and alignment checks for SIMD vectors.
+//     * Unsigned indices will either force dangerous casting from signed, or prevent
+//       the ability to loop backwards without crashing when the x < 0u criteria cannot be met.
 template <typename T>
 class List {
 private:
 	std::vector<T> backend;
+	List(const std::vector<T>& backend) : backend(backend) {}
 public:
 	// Constructor
 	List() {}
 	// Clonable by default!
 	//   Pass by reference if you don't want to lose your changes and waste time duplicating memory
 	List(const List& source) : backend(std::vector<T>(source.backend.begin(), source.backend.end())) {}
+	// Construct using one argument per element
+	template<typename... ELEMENTS>
+	List(ELEMENTS... elements)
+	: backend({elements...}) {}
 	// Post-condition: Returns the number of elements in the array list
 	int64_t length() const {
 		return (int64_t)this->backend.size();
