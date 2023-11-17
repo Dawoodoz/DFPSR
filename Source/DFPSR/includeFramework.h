@@ -7,10 +7,8 @@
 	#include "includeEssentials.h"
 
 	// Types needed to use the APIs
-	#include "math/includeMath.h"
-
-	// Additional functionality for convenience (not to be used in any API)
-	#include "collection/includeCollection.h" // Safer and easier to use than std collections
+	#include "math/includeMath.h" // Mathematical types
+	#include "collection/includeCollection.h" // Generic collections
 
 	// 2D API
 	#include "api/imageAPI.h" // Creating images and modifying pixels
@@ -23,10 +21,11 @@
 	#include "api/mediaMachineAPI.h" // A machine for running image functions
 	#include "api/fontAPI.h" // Printing text to images
 	// Convenient API
+	#include "api/algorithmAPI.h" // Functions for performing operations on whole collections
 	#include "api/timeAPI.h" // Methods for time and delays
 	#include "api/configAPI.h" // Making it easy to load your application's settings from configuration files
 
 	// TODO: Create more APIs
-	#include "gui/VisualTheme.h" // Place in the gui API
+	#include "gui/VisualTheme.h" // An unfinished system for changing how the GUI looks
 
 #endif
