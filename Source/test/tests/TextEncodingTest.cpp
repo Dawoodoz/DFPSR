@@ -122,7 +122,7 @@ START_TEST(TextEncoding)
 				Buffer encoded = string_saveToMemory(originalLatin1, CharacterEncoding::Raw_Latin1, lineEncoding);
 				String decodedLatin1 = string_loadFromMemory(encoded);
 				//compareCharacterCodes(originalLatin1, decodedLatin1);
-				ASSERT_MATCH(originalLatin1, decodedLatin1);
+				ASSERT_EQUAL(originalLatin1, decodedLatin1);
 			}
 			{ // UTF-8 up to U+10FFFF excluding \r and \0
 				String originalUTF8;
@@ -134,7 +134,7 @@ START_TEST(TextEncoding)
 				}
 				Buffer encoded = string_saveToMemory(originalUTF8, CharacterEncoding::BOM_UTF8, lineEncoding);
 				String decodedUTF8 = string_loadFromMemory(encoded);
-				ASSERT_MATCH(originalUTF8, decodedUTF8);
+				ASSERT_EQUAL(originalUTF8, decodedUTF8);
 			}
 			// Selected cases for UTF-16
 			for (int e = 0; e <= 1; e++) {
@@ -187,7 +187,7 @@ START_TEST(TextEncoding)
 				String decoded = string_loadFromMemory(encoded);
 				//printBuffer(encoded);
 				//compareCharacterCodes(originalUTF16, decoded);
-				ASSERT_MATCH(originalUTF16, decoded);
+				ASSERT_EQUAL(originalUTF16, decoded);
 			}
 			// All UTF-16 characters excluding \r and \0
 			for (int e = 0; e <= 1; e++) {
@@ -205,26 +205,26 @@ START_TEST(TextEncoding)
 				}
 				Buffer encoded = string_saveToMemory(original, characterEncoding, lineEncoding);
 				String decoded = string_loadFromMemory(encoded);
-				ASSERT_MATCH(original, decoded);
+				ASSERT_EQUAL(original, decoded);
 			}
 		}
 	}
 	{ // Loading strings of different encodings
 		String fileLatin1 = string_load(folderPath + U"Latin1.txt", true);
 		//compareCharacterCodes(fileLatin1, expected_latin1);
-		ASSERT_MATCH(fileLatin1, expected_latin1);
+		ASSERT_EQUAL(fileLatin1, expected_latin1);
 
 		String fileUTF8 = string_load(folderPath + U"BomUtf8.txt", true);
 		//compareCharacterCodes(fileUTF8, expected_utf8);
-		ASSERT_MATCH(fileUTF8, expected_utf8);
+		ASSERT_EQUAL(fileUTF8, expected_utf8);
 
 		String fileUTF16LE = string_load(folderPath + U"BomUtf16Le.txt", true);
 		//compareCharacterCodes(fileUTF16LE, expected_utf16le);
-		ASSERT_MATCH(fileUTF16LE, expected_utf16le);
+		ASSERT_EQUAL(fileUTF16LE, expected_utf16le);
 
 		String fileUTF16BE = string_load(folderPath + U"BomUtf16Be.txt", true);
 		//compareCharacterCodes(fileUTF16BE, expected_utf16be);
-		ASSERT_MATCH(fileUTF16BE, expected_utf16be);
+		ASSERT_EQUAL(fileUTF16BE, expected_utf16be);
 	}
 	{ // Saving and loading text to files using every combination of character and line encoding
 		String originalContent = U"Hello my friend\n你好我的朋友\n𐐷𤭢\n";
@@ -237,17 +237,17 @@ START_TEST(TextEncoding)
 			string_save(tempPath, originalContent, CharacterEncoding::Raw_Latin1, lineEncoding);
 			String latin1Loaded = string_load(tempPath, true);
 			//compareCharacterCodes(latin1Loaded, latin1Expected);
-			ASSERT_MATCH(latin1Loaded, latin1Expected);
+			ASSERT_EQUAL(latin1Loaded, latin1Expected);
 
 			// UFT-8 should store up to 21 bits correctly
 			string_save(tempPath, unicodeContent, CharacterEncoding::BOM_UTF8, lineEncoding);
-			ASSERT_MATCH(string_load(tempPath, true), unicodeContent);
+			ASSERT_EQUAL(string_load(tempPath, true), unicodeContent);
 
 			// UFT-16 should store up to 20 bits correctly
 			string_save(tempPath, unicodeContent, CharacterEncoding::BOM_UTF16BE, lineEncoding);
-			ASSERT_MATCH(string_load(tempPath, true), unicodeContent);
+			ASSERT_EQUAL(string_load(tempPath, true), unicodeContent);
 			string_save(tempPath, unicodeContent, CharacterEncoding::BOM_UTF16LE, lineEncoding);
-			ASSERT_MATCH(string_load(tempPath, true), unicodeContent);
+			ASSERT_EQUAL(string_load(tempPath, true), unicodeContent);
 			string_save(tempPath, U"This file is used when testing text encoding.");
 		}
 	}

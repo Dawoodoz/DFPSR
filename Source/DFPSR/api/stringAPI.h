@@ -311,6 +311,10 @@ Buffer string_saveToMemory(const ReadableString& content,
 bool string_match(const ReadableString& a, const ReadableString& b);
 // Post-condition: Returns true iff strings a and b are roughly equal using a case insensitive match.
 bool string_caseInsensitiveMatch(const ReadableString& a, const ReadableString& b);
+// While string_match should be preferred over == for code readability and consistency with string_caseInsensitiveMatch,
+//   the equality operator might be called automatically from template methods when a template type is a string.
+inline bool operator==(const ReadableString& a, const ReadableString& b) { return string_match(a, b); }
+inline bool operator!=(const ReadableString& a, const ReadableString& b) { return !string_match(a, b); }
 
 // Post-condition: Returns text converted to upper case.
 String string_upperCase(const ReadableString &text);

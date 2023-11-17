@@ -24,7 +24,6 @@ inline bool nearValue(const FVector4D& a, const FVector4D& b) {
 #define START_TEST(NAME) int main() { printText("Running test \"", #NAME, "\": ");
 #define END_TEST printText(" (done)\n"); return PASSED; }
 
-#define OP_EQUALS_STRING(A, B) (string_match(A, B))
 #define OP_EQUALS(A, B) ((A) == (B))
 #define OP_NOT_EQUALS(A, B) ((A) != (B))
 #define OP_LESSER(A, B) ((A) < (B))
@@ -56,7 +55,6 @@ inline bool nearValue(const FVector4D& a, const FVector4D& b) {
 		printText("\n\n"); \
 		return FAILED; \
 	}
-#define ASSERT_MATCH(A, B) ASSERT_COMP(A, B, OP_EQUALS_STRING, "matches")
 #define ASSERT_EQUAL(A, B) ASSERT_COMP(A, B, OP_EQUALS, "==")
 #define ASSERT_NOT_EQUAL(A, B) ASSERT_COMP(A, B, OP_NOT_EQUALS, "!=")
 #define ASSERT_LESSER(A, B) ASSERT_COMP(A, B, OP_LESSER, "<")
