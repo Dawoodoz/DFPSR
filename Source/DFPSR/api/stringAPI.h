@@ -342,19 +342,19 @@ void string_appendChar(String& target, DsrChar value);
 
 // Append one element
 template<typename TYPE>
-inline void string_append(String& target, TYPE value) {
+inline void string_append(String& target, const TYPE &value) {
 	string_toStream(target, value);
 }
 // Append multiple elements
 template<typename HEAD, typename... TAIL>
-inline void string_append(String& target, HEAD head, TAIL... tail) {
+inline void string_append(String& target, HEAD head, TAIL&&... tail) {
 	string_append(target, head);
 	string_append(target, tail...);
 }
 // Combine a number of strings, characters and numbers
 //   If an input type is rejected, create a Printable object to wrap around it
 template<typename... ARGS>
-inline String string_combine(ARGS... args) {
+inline String string_combine(ARGS&&... args) {
 	String result;
 	string_append(result, args...);
 	return result;
