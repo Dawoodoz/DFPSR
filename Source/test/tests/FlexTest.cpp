@@ -11,6 +11,6 @@ START_TEST(Flex)
 	FlexValue a;
 	a.assignValue(U"67%+34", U"");
 	ASSERT_EQUAL(a, FlexValue(67, 34));
-	ASSERT_MATCH(FlexValue(67, 34).toString(), U"67%+34");
+	ASSERT_EQUAL(FlexValue(67, 34).toString(), U"67%+34");
 END_TEST
 
