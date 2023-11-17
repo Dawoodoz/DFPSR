@@ -29,24 +29,22 @@
 
 namespace dsr {
 
-// The simplest possible automatically deallocating array with bound checks.
-//   Indices use signed indices, which can be used directly from high-level algorithms.
-// Because std::vector is a list of members, not a fixed size array of values.
-//   Using a list instead of an array makes the code both dangerous and unreadable.
-//   Using unsigned indices will either force dangerous casting from signed, or prevent
-//   the ability to loop backwards without crashing when the x < 0u criteria cannot be met.
+// A fixed size collection of elements initialized to the same default value.
+// TODO: Should implicit cloning be allowed just for consistency with List?
+//       Having one set of rules for lists and another for Arrays is inconsistent.
 template <typename T>
 class Array {
 private:
-	const int32_t elementCount;
+	const int64_t elementCount;
 	T *elements = nullptr;
 public:
 	// Constructor
-	Array(const int32_t newLength, const T& defaultValue)
+	Array(const int64_t newLength, const T& defaultValue)
 	  : elementCount(newLength) {
   		impl_nonZeroLengthCheck(newLength, "New array length");
+  		// TODO: Try to initialize once, so that elements don't need to have the assignment operator defined.
 		this->elements = new T[newLength];
-		for (int32_t index = 0; index < newLength; index++) {
+		for (int64_t index = 0; index < newLength; index++) {
 			this->elements[index] = defaultValue;
 		}
 	}
@@ -56,15 +54,15 @@ public:
 	// Destructor
 	~Array() { delete[] this->elements; }
 	// Element access
-	T& operator[] (const int32_t index) {
+	T& operator[] (const int64_t index) {
 		impl_baseZeroBoundCheck(index, this->length(), "Array index");
 		return this->elements[index];
 	}
-	const T& operator[] (const int32_t index) const {
+	const T& operator[] (const int64_t index) const {
 		impl_baseZeroBoundCheck(index, this->length(), "Array index");
 		return this->elements[index];
 	}
-	int32_t length() const {
+	int64_t length() const {
 		return this->elementCount;
 	}
 };
