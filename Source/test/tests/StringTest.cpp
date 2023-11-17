@@ -55,43 +55,43 @@ START_TEST(String)
 	}
 	{ // Concatenation
 		dsr::String ab = dsr::string_combine(U"a", U"b");
-		ASSERT_MATCH(ab, U"ab");
+		ASSERT_EQUAL(ab, U"ab");
 		dsr::String cd = dsr::string_combine(U"c", U"d");
-		ASSERT_MATCH(cd, U"cd");
+		ASSERT_EQUAL(cd, U"cd");
 		cd = dsr::string_combine(U"c", U"d");
-		ASSERT_MATCH(cd, U"cd");
+		ASSERT_EQUAL(cd, U"cd");
 		auto abcd = ab + cd;
-		ASSERT_MATCH(abcd, U"abcd");
-		ASSERT_MATCH(dsr::string_combine(U"a", U"b", U"c", "d"), U"abcd");
+		ASSERT_EQUAL(abcd, U"abcd");
+		ASSERT_EQUAL(dsr::string_combine(U"a", U"b", U"c", "d"), U"abcd");
 	}
 	{ // Sub-strings
 		dsr::ReadableString abcd = U"abcd";
 		dsr::String efgh = U"efgh";
-		ASSERT_MATCH(dsr::string_inclusiveRange(abcd, 0, 3), U"abcd");
-		ASSERT_MATCH(dsr::string_exclusiveRange(abcd, 1, 2), U"b");
-		ASSERT_MATCH(dsr::string_inclusiveRange(efgh, 2, 3), U"gh");
-		ASSERT_MATCH(dsr::string_exclusiveRange(efgh, 3, 4), U"h");
-		ASSERT_MATCH(dsr::string_combine(string_from(abcd, 2), string_before(efgh, 2)), U"cdef");
-		ASSERT_MATCH(dsr::string_exclusiveRange(abcd, 0, 0), U""); // No size returns nothing
-		ASSERT_MATCH(dsr::string_exclusiveRange(abcd, -670214452, 2), U"ab"); // Reading out of bound is clamped
-		ASSERT_MATCH(dsr::string_exclusiveRange(abcd, 2, 985034841), U"cd"); // Reading out of bound is clamped
-		ASSERT_MATCH(dsr::string_exclusiveRange(abcd, 4, 764), U""); // Completely ous of bound returns nothing
-		ASSERT_MATCH(dsr::string_exclusiveRange(abcd, -631, 0), U""); // Completely ous of bound returns nothing
+		ASSERT_EQUAL(dsr::string_inclusiveRange(abcd, 0, 3), U"abcd");
+		ASSERT_EQUAL(dsr::string_exclusiveRange(abcd, 1, 2), U"b");
+		ASSERT_EQUAL(dsr::string_inclusiveRange(efgh, 2, 3), U"gh");
+		ASSERT_EQUAL(dsr::string_exclusiveRange(efgh, 3, 4), U"h");
+		ASSERT_EQUAL(dsr::string_combine(string_from(abcd, 2), string_before(efgh, 2)), U"cdef");
+		ASSERT_EQUAL(dsr::string_exclusiveRange(abcd, 0, 0), U""); // No size returns nothing
+		ASSERT_EQUAL(dsr::string_exclusiveRange(abcd, -670214452, 2), U"ab"); // Reading out of bound is clamped
+		ASSERT_EQUAL(dsr::string_exclusiveRange(abcd, 2, 985034841), U"cd"); // Reading out of bound is clamped
+		ASSERT_EQUAL(dsr::string_exclusiveRange(abcd, 4, 764), U""); // Completely ous of bound returns nothing
+		ASSERT_EQUAL(dsr::string_exclusiveRange(abcd, -631, 0), U""); // Completely ous of bound returns nothing
 	}
 	{ // Processing
 		dsr::String buffer = U"Garbage";
-		ASSERT_MATCH(buffer, U"Garbage");
+		ASSERT_EQUAL(buffer, U"Garbage");
 		buffer = foo(U"Ball", U"åäöÅÄÖ");
-		ASSERT_MATCH(buffer, U"Foo(Ball,åäöÅÄÖ)");
+		ASSERT_EQUAL(buffer, U"Foo(Ball,åäöÅÄÖ)");
 		fooInPlace(buffer, U"Å", U"ф");
-		ASSERT_MATCH(buffer, U"Foo(Å,ф)");
+		ASSERT_EQUAL(buffer, U"Foo(Å,ф)");
 	}
 	{ // Numbers
 		uint32_t x = 0;
 		int32_t y = -123456;
 		int64_t z = 100200300400500600ULL;
 		dsr::String values = dsr::string_combine(U"x = ", x, U", y = ", y, U", z = ", z);
-		ASSERT_MATCH(values, U"x = 0, y = -123456, z = 100200300400500600");
+		ASSERT_EQUAL(values, U"x = 0, y = -123456, z = 100200300400500600");
 	}
 	{ // Identifying numbers
 		ASSERT_EQUAL(dsr::character_isDigit(U'0' - 1), false);
@@ -181,30 +181,30 @@ START_TEST(String)
 		ASSERT_EQUAL(dsr::string_isDouble(U"T0.0q"), false);
 	}
 	// Upper case
-	ASSERT_MATCH(dsr::string_upperCase(U"a"), U"A");
-	ASSERT_MATCH(dsr::string_upperCase(U"aB"), U"AB");
-	ASSERT_MATCH(dsr::string_upperCase(U"abc"), U"ABC");
-	ASSERT_MATCH(dsr::string_upperCase(U"abc1"), U"ABC1");
-	ASSERT_MATCH(dsr::string_upperCase(U"Abc12"), U"ABC12");
-	ASSERT_MATCH(dsr::string_upperCase(U"ABC123"), U"ABC123");
+	ASSERT_EQUAL(dsr::string_upperCase(U"a"), U"A");
+	ASSERT_EQUAL(dsr::string_upperCase(U"aB"), U"AB");
+	ASSERT_EQUAL(dsr::string_upperCase(U"abc"), U"ABC");
+	ASSERT_EQUAL(dsr::string_upperCase(U"abc1"), U"ABC1");
+	ASSERT_EQUAL(dsr::string_upperCase(U"Abc12"), U"ABC12");
+	ASSERT_EQUAL(dsr::string_upperCase(U"ABC123"), U"ABC123");
 	// Lower case
-	ASSERT_MATCH(dsr::string_lowerCase(U"a"), U"a");
-	ASSERT_MATCH(dsr::string_lowerCase(U"aB"), U"ab");
-	ASSERT_MATCH(dsr::string_lowerCase(U"abc"), U"abc");
-	ASSERT_MATCH(dsr::string_lowerCase(U"abc1"), U"abc1");
-	ASSERT_MATCH(dsr::string_lowerCase(U"Abc12"), U"abc12");
-	ASSERT_MATCH(dsr::string_lowerCase(U"ABC123"), U"abc123");
+	ASSERT_EQUAL(dsr::string_lowerCase(U"a"), U"a");
+	ASSERT_EQUAL(dsr::string_lowerCase(U"aB"), U"ab");
+	ASSERT_EQUAL(dsr::string_lowerCase(U"abc"), U"abc");
+	ASSERT_EQUAL(dsr::string_lowerCase(U"abc1"), U"abc1");
+	ASSERT_EQUAL(dsr::string_lowerCase(U"Abc12"), U"abc12");
+	ASSERT_EQUAL(dsr::string_lowerCase(U"ABC123"), U"abc123");
 	// White space removal by pointing to a section of the original input
-	ASSERT_MATCH(dsr::string_removeOuterWhiteSpace(U" "), U"");
-	ASSERT_MATCH(dsr::string_removeOuterWhiteSpace(U"  abc  "), U"abc");
-	ASSERT_MATCH(dsr::string_removeOuterWhiteSpace(U"  two words  "), U"two words");
-	ASSERT_MATCH(dsr::string_removeOuterWhiteSpace(U"  \" something quoted \"  "), U"\" something quoted \"");
+	ASSERT_EQUAL(dsr::string_removeOuterWhiteSpace(U" "), U"");
+	ASSERT_EQUAL(dsr::string_removeOuterWhiteSpace(U"  abc  "), U"abc");
+	ASSERT_EQUAL(dsr::string_removeOuterWhiteSpace(U"  two words  "), U"two words");
+	ASSERT_EQUAL(dsr::string_removeOuterWhiteSpace(U"  \" something quoted \"  "), U"\" something quoted \"");
 	// Quote mangling
-	ASSERT_MATCH(dsr::string_mangleQuote(U""), U"\"\"");
-	ASSERT_MATCH(dsr::string_mangleQuote(U"1"), U"\"1\"");
-	ASSERT_MATCH(dsr::string_mangleQuote(U"12"), U"\"12\"");
-	ASSERT_MATCH(dsr::string_mangleQuote(U"123"), U"\"123\"");
-	ASSERT_MATCH(dsr::string_mangleQuote(U"abc"), U"\"abc\"");
+	ASSERT_EQUAL(dsr::string_mangleQuote(U""), U"\"\"");
+	ASSERT_EQUAL(dsr::string_mangleQuote(U"1"), U"\"1\"");
+	ASSERT_EQUAL(dsr::string_mangleQuote(U"12"), U"\"12\"");
+	ASSERT_EQUAL(dsr::string_mangleQuote(U"123"), U"\"123\"");
+	ASSERT_EQUAL(dsr::string_mangleQuote(U"abc"), U"\"abc\"");
 	// Not enough quote signs
 	ASSERT_CRASH(dsr::string_unmangleQuote(U""));
 	ASSERT_CRASH(dsr::string_unmangleQuote(U" "));
@@ -212,14 +212,14 @@ START_TEST(String)
 	// Too many quote signs
 	ASSERT_CRASH(dsr::string_unmangleQuote(U"ab\"cd\"ef\"gh"));
 	// Basic quote
-	ASSERT_MATCH(dsr::string_unmangleQuote(U"\"ab\""), U"ab");
+	ASSERT_EQUAL(dsr::string_unmangleQuote(U"\"ab\""), U"ab");
 	// Surrounded quote
-	ASSERT_MATCH(dsr::string_unmangleQuote(U"\"ab\"cd"), U"ab");
-	ASSERT_MATCH(dsr::string_unmangleQuote(U"ab\"cd\""), U"cd");
-	ASSERT_MATCH(dsr::string_unmangleQuote(U"ab\"cd\"ef"), U"cd");
+	ASSERT_EQUAL(dsr::string_unmangleQuote(U"\"ab\"cd"), U"ab");
+	ASSERT_EQUAL(dsr::string_unmangleQuote(U"ab\"cd\""), U"cd");
+	ASSERT_EQUAL(dsr::string_unmangleQuote(U"ab\"cd\"ef"), U"cd");
 	// Mangled quote inside of quote
-	ASSERT_MATCH(dsr::string_unmangleQuote(U"ab\"c\\\"d\"ef"), U"c\"d");
-	ASSERT_MATCH(dsr::string_unmangleQuote(dsr::string_mangleQuote(U"c\"d")), U"c\"d");
+	ASSERT_EQUAL(dsr::string_unmangleQuote(U"ab\"c\\\"d\"ef"), U"c\"d");
+	ASSERT_EQUAL(dsr::string_unmangleQuote(dsr::string_mangleQuote(U"c\"d")), U"c\"d");
 	// Mangle things
 	dsr::String randomText;
 	string_reserve(randomText, 100);
@@ -230,18 +230,18 @@ START_TEST(String)
 		}
 		// Add a new random character
 		string_appendChar(randomText, (i * 21 + 136) % 256);
-		ASSERT_MATCH(dsr::string_unmangleQuote(dsr::string_mangleQuote(randomText)), randomText);
+		ASSERT_EQUAL(dsr::string_unmangleQuote(dsr::string_mangleQuote(randomText)), randomText);
 	}
 	// Number serialization
-	ASSERT_MATCH(dsr::string_combine(0, U" ", 1), U"0 1");
-	ASSERT_MATCH(dsr::string_combine(14, U"x", 135), U"14x135");
-	ASSERT_MATCH(dsr::string_combine(-135), U"-135");
-	ASSERT_MATCH(dsr::string_combine(-14), U"-14");
-	ASSERT_MATCH(dsr::string_combine(-1), U"-1");
-	ASSERT_MATCH(dsr::string_combine(0u), U"0");
-	ASSERT_MATCH(dsr::string_combine(1u), U"1");
-	ASSERT_MATCH(dsr::string_combine(14u), U"14");
-	ASSERT_MATCH(dsr::string_combine(135u), U"135");
+	ASSERT_EQUAL(dsr::string_combine(0, U" ", 1), U"0 1");
+	ASSERT_EQUAL(dsr::string_combine(14, U"x", 135), U"14x135");
+	ASSERT_EQUAL(dsr::string_combine(-135), U"-135");
+	ASSERT_EQUAL(dsr::string_combine(-14), U"-14");
+	ASSERT_EQUAL(dsr::string_combine(-1), U"-1");
+	ASSERT_EQUAL(dsr::string_combine(0u), U"0");
+	ASSERT_EQUAL(dsr::string_combine(1u), U"1");
+	ASSERT_EQUAL(dsr::string_combine(14u), U"14");
+	ASSERT_EQUAL(dsr::string_combine(135u), U"135");
 	// Number parsing
 	ASSERT_EQUAL(string_toInteger(U"0"), 0);
 	ASSERT_EQUAL(string_toInteger(U"-0"), 0);
@@ -276,29 +276,29 @@ START_TEST(String)
 		List<String> result;
 		result = string_split(source, U'.', false);
 		ASSERT_EQUAL(result.length(), 4);
-		ASSERT_MATCH(result[0], U" a ");
-		ASSERT_MATCH(result[1], U" b ");
-		ASSERT_MATCH(result[2], U" c ");
-		ASSERT_MATCH(result[3], U" d ");
+		ASSERT_EQUAL(result[0], U" a ");
+		ASSERT_EQUAL(result[1], U" b ");
+		ASSERT_EQUAL(result[2], U" c ");
+		ASSERT_EQUAL(result[3], U" d ");
 		ASSERT_EQUAL(string_getBufferUseCount(source), 5);
 		ASSERT_EQUAL(string_getBufferUseCount(source2), 1);
 		result = string_split(source2, U'.', true);
 		ASSERT_EQUAL(result.length(), 3);
-		ASSERT_MATCH(result[0], U"a");
-		ASSERT_MATCH(result[1], U"b");
-		ASSERT_MATCH(result[2], U"c");
+		ASSERT_EQUAL(result[0], U"a");
+		ASSERT_EQUAL(result[1], U"b");
+		ASSERT_EQUAL(result[2], U"c");
 		ASSERT_EQUAL(string_getBufferUseCount(source), 1);
 		ASSERT_EQUAL(string_getBufferUseCount(source2), 4);
 	}
 	{ // Using buffer remembered in ReadableString to reuse memory for splitting
 		String original = U" a . b . c . d ";
 		ReadableString borrowsTheBuffer = string_after(original, 3);
-		ASSERT_MATCH(borrowsTheBuffer, U" b . c . d ");
+		ASSERT_EQUAL(borrowsTheBuffer, U" b . c . d ");
 		List<String> result = string_split(borrowsTheBuffer, U'.', true);
 		ASSERT_EQUAL(result.length(), 3);
-		ASSERT_MATCH(result[0], U"b");
-		ASSERT_MATCH(result[1], U"c");
-		ASSERT_MATCH(result[2], U"d");
+		ASSERT_EQUAL(result[0], U"b");
+		ASSERT_EQUAL(result[1], U"c");
+		ASSERT_EQUAL(result[2], U"d");
 		ASSERT_EQUAL(string_getBufferUseCount(original), 5);
 		ASSERT_EQUAL(string_getBufferUseCount(borrowsTheBuffer), 5);
 		ASSERT_EQUAL(string_getBufferUseCount(result[0]), 5);
@@ -307,18 +307,18 @@ START_TEST(String)
 	}
 	{ // Automatically allocating a shared buffer for many elements
 		List<String> result = string_split(U" a . b . c . d ", U'.', true);
-		ASSERT_MATCH(result[0], U"a");
-		ASSERT_MATCH(result[1], U"b");
-		ASSERT_MATCH(result[2], U"c");
-		ASSERT_MATCH(result[3], U"d");
+		ASSERT_EQUAL(result[0], U"a");
+		ASSERT_EQUAL(result[1], U"b");
+		ASSERT_EQUAL(result[2], U"c");
+		ASSERT_EQUAL(result[3], U"d");
 		ASSERT_EQUAL(string_getBufferUseCount(result[0]), 4);
 		ASSERT_EQUAL(string_getBufferUseCount(result[1]), 4);
 		ASSERT_EQUAL(string_getBufferUseCount(result[2]), 4);
 		ASSERT_EQUAL(string_getBufferUseCount(result[3]), 4);
 		result = string_split(U" a . b . c ", U'.', false);
-		ASSERT_MATCH(result[0], U" a ");
-		ASSERT_MATCH(result[1], U" b ");
-		ASSERT_MATCH(result[2], U" c ");
+		ASSERT_EQUAL(result[0], U" a ");
+		ASSERT_EQUAL(result[1], U" b ");
+		ASSERT_EQUAL(result[2], U" c ");
 		ASSERT_EQUAL(string_getBufferUseCount(result[0]), 3);
 		ASSERT_EQUAL(string_getBufferUseCount(result[1]), 3);
 		ASSERT_EQUAL(string_getBufferUseCount(result[2]), 3);
