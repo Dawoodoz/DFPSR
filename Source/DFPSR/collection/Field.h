@@ -30,34 +30,40 @@
 
 namespace dsr {
 
+// TODO: Should this be cloned automatically for consistency with List?
+// TODO: Implement generic operations for Field.
+
 // A 2D version of Array with built-in support for accessing elements out of bound.
+//   If you need more speed, pack elements into a Buffer and iterate
+//     over them using SafePointer with SIMD aligned stride between rows.
 template <typename T>
 class Field {
 private:
-	const int32_t elementWidth, elementHeight;
+	const int64_t elementWidth, elementHeight;
 	T *elements = nullptr;
 public:
 	// Constructor
-	Field(const int32_t width, const int32_t height, const T& defaultValue)
+	Field(const int64_t width, const int64_t height, const T& defaultValue)
 	  : elementWidth(width), elementHeight(height) {
 		impl_nonZeroLengthCheck(width, "New array width");
   		impl_nonZeroLengthCheck(height, "New array height");
-		int32_t size = width * height;
+		int64_t size = width * height;
 		this->elements = new T[size];
-		for (int32_t index = 0; index < size; index++) {
+		for (int64_t index = 0; index < size; index++) {
 			this->elements[index] = defaultValue;
 		}
 	}
-private:
-	// Direct memory access
+	// Direct memory access where bound checks are only applied in debug mode, so access out of bound will crash.
 	// Precondition: this->inside(location.x, location.y)
-	T& writeAccess(const IVector2D& location) {
+	T& unsafe_writeAccess(const IVector2D& location) {
+		assert(this->inside(location));
 		return this->elements[location.x + location.y * this->elementWidth];
 	}
-	const T& readAccess(const IVector2D& location) const {
+	// Precondition: this->inside(location.x, location.y)
+	const T& unsafe_readAccess(const IVector2D& location) const {
+		assert(this->inside(location));
 		return this->elements[location.x + location.y * this->elementWidth];
 	}
-public:
 	// No implicit copies, only pass by reference
 	Field(const Field&) = delete;
 	Field& operator=(const Field&) = delete;
@@ -70,7 +76,7 @@ public:
 	// Read access
 	T read_border(const IVector2D& location, const T& outside) const {
 		if (this->inside(location)) {
-			return this->readAccess(location);
+			return this->unsafe_readAccess(location);
 		} else {
 			return outside;
 		}
@@ -80,18 +86,18 @@ public:
 		if (location.x >= this->elementWidth) location.x = this->elementWidth - 1;
 		if (location.y < 0) location.y = 0;
 		if (location.y >= this->elementHeight) location.y = this->elementHeight - 1;
-		return this->readAccess(location);
+		return this->unsafe_readAccess(location);
 	}
 	// Write access
 	void write_ignore(const IVector2D& location, const T& value) {
 		if (this->inside(location)) {
-			this->writeAccess(location) = value;
+			this->unsafe_writeAccess(location) = value;
 		}
 	}
-	int32_t width() const {
+	int64_t width() const {
 		return this->elementWidth;
 	}
-	int32_t height() const {
+	int64_t height() const {
 		return this->elementHeight;
 	}
 };
