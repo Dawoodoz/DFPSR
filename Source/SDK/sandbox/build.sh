@@ -3,7 +3,7 @@
 # Assuming that you called build.sh from its own folder, you should already be in the project folder.
 PROJECT_FOLDERS=". ../SpriteEngine"
 # Placing your executable in the project folder allow using the same relative paths in the final release.
-TARGET_FILE=./sandbox
+TARGET_FILE=./Sandbox
 # The root folder is where DFPSR, SDK and tools are located.
 ROOT_PATH=../..
 # Select where to place temporary files.
