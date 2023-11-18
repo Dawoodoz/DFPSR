@@ -223,8 +223,7 @@ ModelImpl::ModelImpl(const ModelImpl &old) :
   positionBuffer(old.positionBuffer),
   partBuffer(old.partBuffer) {}
 int ModelImpl::addEmptyPart(const String& name) {
-	this->partBuffer.pushConstruct(name);
-	return this->partBuffer.length() - 1;
+	return this->partBuffer.pushConstructGetIndex(name);
 }
 int ModelImpl::getNumberOfParts() const {
 	return this->partBuffer.length();
@@ -277,8 +276,7 @@ void ModelImpl::setLightMapByName(ResourcePool &pool, const String &filename, in
 }
 int ModelImpl::addPolygon(Polygon polygon, int partIndex) {
 	CHECK_PART_INDEX(partIndex, return -1);
-	this->partBuffer[partIndex].polygonBuffer.push(polygon);
-	return this->partBuffer[partIndex].polygonBuffer.length() - 1;
+	return this->partBuffer[partIndex].polygonBuffer.pushGetIndex(polygon);
 }
 int ModelImpl::getNumberOfPolygons(int partIndex) const {
 	CHECK_PART_INDEX(partIndex, return -1);
@@ -321,9 +319,8 @@ void ModelImpl::setPoint(int pointIndex, const FVector3D& position) {
 	this->positionBuffer[pointIndex] = position;
 }
 int ModelImpl::addPoint(const FVector3D &position) {
-	this->positionBuffer.push(position);
 	this->expandBound(position);
-	return this->positionBuffer.length() - 1;
+	return this->positionBuffer.pushGetIndex(position);
 }
 int ModelImpl::addPointIfNeeded(const FVector3D &position, float threshold) {
 	int existingIndex = this->findPoint(position, threshold);
