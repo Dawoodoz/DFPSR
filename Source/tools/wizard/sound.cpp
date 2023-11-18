@@ -108,8 +108,7 @@ static int createEmptySoundBuffer(const ReadableString &name, bool fromFile, int
 	if (sampleCount < 1) { throwError("Cannot create sound buffer without and length!\n");}
 	if (channelCount < 1) { throwError("Cannot create sound buffer without any channels!\n");}
 	if (sampleRate < 1) { throwError("Cannot create sound buffer without any sample rate!\n");}
-	sounds.pushConstruct(name, fromFile, sampleCount, sampleRate, channelCount, soundFormat);
-	return sounds.length() - 1;
+	return sounds.pushConstructGetIndex(name, fromFile, sampleCount, sampleRate, channelCount, soundFormat);
 }
 int generateMonoSoundBuffer(const ReadableString &name, int sampleCount, int sampleRate, int soundFormat, std::function<double(double time)> generator) {
 	int result = createEmptySoundBuffer(name, false, sampleCount, sampleRate, 1, soundFormat);

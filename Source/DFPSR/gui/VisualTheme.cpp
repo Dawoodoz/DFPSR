@@ -298,8 +298,7 @@ public:
 	List<ClassSettings> settings;
 	int32_t getClassIndex(const ReadableString& className) {
 		for (int64_t i = 0; i < this->settings.length(); i++) { if (string_caseInsensitiveMatch(this->settings[i].className, className)) { return i; } }
-		settings.pushConstruct(className);
-		return settings.length() - 1;
+		return settings.pushConstructGetIndex(className);
 	}
 	VisualThemeImpl(const MediaMachine &machine, const ReadableString &styleSettings, const ReadableString &fromPath) : machine(machine) {
 		this->settings.pushConstruct(U"default");

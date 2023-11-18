@@ -242,8 +242,7 @@ static void loadPlyModel(Model& targetModel, int targetPart, const ReadableStrin
 					}
 				} else if (tokens.length() >= 3) {
 					if (string_caseInsensitiveMatch(tokens[0], U"ELEMENT")) {
-						elements.push(PlyElement(tokens[1], string_toInteger(tokens[2])));
-						elementIndex = elements.length() - 1;
+						elementIndex = elements.pushGetIndex(PlyElement(tokens[1], string_toInteger(tokens[2])));
 					} else if (string_caseInsensitiveMatch(tokens[0], U"PROPERTY")) {
 						if (elementIndex < 0) {
 							printText("loadPlyModel: Cannot declare a property without an element!\n");

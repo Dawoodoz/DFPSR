@@ -283,8 +283,7 @@ public:
 // Global list of all sprite types ever loaded
 List<SpriteType> spriteTypes;
 int spriteWorld_loadSpriteTypeFromFile(const String& folderPath, const String& spriteName) {
-	spriteTypes.pushConstruct(folderPath, spriteName);
-	return spriteTypes.length() - 1;
+	return spriteTypes.pushConstructGetIndex(folderPath, spriteName);
 }
 int spriteWorld_getSpriteTypeCount() {
 	return spriteTypes.length();
@@ -296,8 +295,7 @@ String spriteWorld_getSpriteTypeName(int index) {
 // Global list of all model types ever loaded
 List<ModelType> modelTypes;
 int spriteWorld_loadModelTypeFromFile(const String& folderPath, const String& visibleModelName, const String& shadowModelName) {
-	modelTypes.pushConstruct(folderPath, visibleModelName, shadowModelName);
-	return modelTypes.length() - 1;
+	return modelTypes.pushConstructGetIndex(folderPath, visibleModelName, shadowModelName);
 }
 int spriteWorld_getModelTypeCount() {
 	return modelTypes.length();
