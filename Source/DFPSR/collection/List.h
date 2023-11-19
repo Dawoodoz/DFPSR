@@ -44,6 +44,7 @@ namespace dsr {
 //       so that you get memory bound and alignment checks for SIMD vectors.
 //     * Unsigned indices will either force dangerous casting from signed, or prevent
 //       the ability to loop backwards without crashing when the x < 0u criteria cannot be met.
+//   Unlike Buffer, List is a value type, so be careful not to pass it by value unless you intend to clone its content.
 template <typename T>
 class List {
 private:
@@ -53,7 +54,9 @@ public:
 	// Constructor
 	List() {}
 	// Clonable by default!
-	//   Pass by reference if you don't want to lose your changes and waste time duplicating memory.
+	//   Be very careful not to accidentally pass a List by value instead of reference,
+	//   otherwise your side-effects might write to a temporary copy
+	//   or time is wasted to clone a List every time you look something up.
 	List(const List& source) : backend(std::vector<T>(source.backend.begin(), source.backend.end())) {}
 	// Construct using one argument per element.
 	template<typename... ELEMENTS>
@@ -170,4 +173,3 @@ public:
 }
 
 #endif
-

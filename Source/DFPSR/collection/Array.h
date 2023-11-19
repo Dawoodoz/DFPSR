@@ -30,29 +30,55 @@
 namespace dsr {
 
 // A fixed size collection of elements initialized to the same default value.
-// TODO: Should implicit cloning be allowed just for consistency with List?
-//       Having one set of rules for lists and another for Arrays is inconsistent.
+//   Unlike Buffer, Array is a value type, so be careful not to pass it by value unless you intend to clone its content.
 template <typename T>
 class Array {
 private:
-	const int64_t elementCount;
+	int64_t elementCount = 0;
 	T *elements = nullptr;
 public:
 	// Constructor
 	Array(const int64_t newLength, const T& defaultValue)
 	  : elementCount(newLength) {
   		impl_nonZeroLengthCheck(newLength, "New array length");
-  		// TODO: Try to initialize once, so that elements don't need to have the assignment operator defined.
 		this->elements = new T[newLength];
 		for (int64_t index = 0; index < newLength; index++) {
 			this->elements[index] = defaultValue;
 		}
 	}
-	// No implicit copies, only pass by reference
-	Array(const Array&) = delete;
-	Array& operator=(const Array&) = delete;
+	// Clonable by default!
+	//   Be very careful not to accidentally pass an Array by value instead of reference,
+	//   otherwise your side-effects might write to a temporary copy
+	//   or time is wasted to clone an Array every time you look something up.
+	Array(const Array<T>& source) {
+		// Allocate to the same size as source.
+		this->elements = new T[source.elementCount];
+		this->elementCount = source.elementCount;
+		// Copy elements from source.
+		for (int64_t e = 0; e < this->elementCount; e++) {
+			// Assign one element at a time, so that objects can be copy constructed.
+			//   If the element type T is trivial and does not require calling constructors, using safeMemoryCopy with SafePointer will be much faster than using Array<T>.
+			this->elements[e] = source.elements[e];
+		}
+	};
+	// When assigning to the array, memory can be reused when the size is the same.
+	Array& operator=(const Array<T>& source) {
+		// Reallocate to the same size as source if needed.
+		if (this->elementCount != source.elementCount) {
+			if (this->elements) delete[] this->elements;
+			this->elements = new T[source.elementCount];
+		}
+		this->elementCount = source.elementCount;
+		// Copy elements from source.
+		for (int64_t e = 0; e < this->elementCount; e++) {
+			// Assign one element at a time, so that objects can be copy constructed.
+			//   If the element type T is trivial and does not require calling constructors, using safeMemoryCopy with SafePointer will be much faster than using Array<T>.
+			this->elements[e] = source.elements[e];
+		}
+		return *this;
+	};
 	// Destructor
-	~Array() { delete[] this->elements; }
+	~Array() { if (this->elements) delete[] this->elements; }
 	// Element access
 	T& operator[] (const int64_t index) {
 		impl_baseZeroBoundCheck(index, this->length(), "Array index");
@@ -70,4 +96,3 @@ public:
 }
 
 #endif
-

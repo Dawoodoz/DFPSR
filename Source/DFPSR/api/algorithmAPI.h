@@ -59,7 +59,7 @@ bool operator==(const Field<T>& a, const Field<T>& b) {
 	 || a.height() != b.height()) return false;
 	for (int64_t y = 0; y < a.height(); y++) {
 		for (int64_t x = 0; x < a.width(); x++) {
-			if (!(a.unsafe_readAccess(IVector2D(x, y)) == b.unsafe_readAccess(IVector2D(x, y)))) return false;
+			if (!(a.unsafe_readAccess(x, y) == b.unsafe_readAccess(x, y))) return false;
 		}
 	}
 	return true;
@@ -112,7 +112,7 @@ String& string_toStreamIndented(String& target, const Field<T>& collection, cons
 	int64_t maxX = collection.width() - 1;
 	int64_t maxY = collection.height() - 1;
 	for (int64_t y = 0; y <= maxY; y++) {
-		string_append(target, indentation, U"\t{");
+		string_append(target, indentation, U"\t{\n");
 		for (int64_t x = 0; x <= maxX; x++) {
 			string_toStreamIndented(target, collection.unsafe_readAccess(IVector2D(x, y)), indentation + "\t\t");
 			if (x < maxX) {
@@ -120,11 +120,11 @@ String& string_toStreamIndented(String& target, const Field<T>& collection, cons
 			}
 			string_append(target, U"\n");
 		}
+		string_append(target, indentation, U"\t}");
 		if (y < maxY) {
-			// Comma separate rows on a separate line, to avoid having too much indentation.
-			string_append(target, U"\n", indentation, U"\t,");
+			string_append(target, U",");
 		}
-		string_append(target, U"\n", indentation, U"\t{\n");
+		string_append(target, U"\n");
 	}
 	string_append(target, indentation, U"}");
 	return target;
