@@ -109,7 +109,7 @@ public:
 private:
 	inline void setInputs(int firstInputIndex) {}
 	template<typename HEAD, typename... TAIL>
-	inline void setInputs(int firstInputIndex, HEAD first, TAIL... args) {
+	inline void setInputs(int firstInputIndex, const HEAD &first, TAIL&&... args) {
 		machine_setInputByIndex(this->machine, this->methodIndex, firstInputIndex, first);
 		this->setInputs(firstInputIndex + 1, args...);
 	}
@@ -121,7 +121,7 @@ public:
 	// MediaMethod can be called like a function using arguments, returning MediaResult for assigning outputs by reference. 
 	// Useful when you know the arguments in advance.
 	template <typename... ARGS>
-	MediaResult operator () (ARGS... args) {
+	MediaResult operator () (ARGS&&... args) {
 		int givenCount = argCount(args...);
 		int expectedCount = machine_getInputCount(this->machine, this->methodIndex);
 		if (givenCount != expectedCount) {
