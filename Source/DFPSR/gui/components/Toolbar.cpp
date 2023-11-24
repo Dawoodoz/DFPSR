@@ -118,7 +118,7 @@ void Toolbar::updateLocationEvent(const IRect& oldLocation, const IRect& newLoca
 		// Place each child component in order.
 		//   Each child is created within a segmented region, but can choose to add more padding or limit its height for fine adjustments.
 		int left = this->padding.value;
-		int top = newLocation.top() + this->padding.value;
+		int top = this->padding.value;
 		int width = newLocation.width() - (this->padding.value * 2);
 		for (int i = 0; i < this->getChildCount(); i++) {
 			int height = this->children[i]->getDesiredDimensions().y;
@@ -129,7 +129,7 @@ void Toolbar::updateLocationEvent(const IRect& oldLocation, const IRect& newLoca
 		// TODO: Add scroll buttons on the sides if there is not enough space for all child components.
 		// Place each child component in order.
 		//   Each child is created within a segmented region, but can choose to add more padding or limit its height for fine adjustments.
-		int left = newLocation.left() + this->padding.value;
+		int left = this->padding.value;
 		int top = this->padding.value;
 		int height = newLocation.height() - (this->padding.value * 2);
 		for (int i = 0; i < this->getChildCount(); i++) {
