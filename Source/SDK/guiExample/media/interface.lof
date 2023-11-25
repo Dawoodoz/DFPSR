@@ -8,21 +8,27 @@
 		Begin : Menu
 			Name = "menuFile"
 			Text = "File"
+			ListClass = "TextBox"
 			Begin : Menu
+				Color = 120,255,120
 				Name = "menuNew"
 				Text = "New"
 			End
 			Begin : Menu
+				Color = 120,120,255
 				Name = "menuLoad"
 				Text = "Load"
 			End
 			Begin : Menu
+				Color = 255,255,120
 				Name = "menuSave"
 				Text = "Save"
 			End
 			Begin : Menu
+				Color = 255,120,120
 				Name = "menuExit"
 				Text = "Exit"
+				Class = "Button"
 			End
 		End
 		Begin : Menu

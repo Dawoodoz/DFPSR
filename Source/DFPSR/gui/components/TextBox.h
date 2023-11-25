@@ -58,6 +58,9 @@ public:
 	PersistentColor foreColor = PersistentColor(0, 0, 0);
 	PersistentColor backColor = PersistentColor(200, 200, 200);
 	PersistentString text;
+	// Name of theme class used to draw the background.
+	//   "TextBox" is used if backgroundClass is empty or not found.
+	PersistentString backgroundClass;
 	PersistentBoolean multiLine;
 	int64_t borderX = 6; // Empty pixels left and right of text.
 	int64_t borderY = 4; // Empty pixels above and below text.
@@ -92,8 +95,12 @@ private:
 	MediaMethod textBox;
 	RasterFont font;
 	void loadFont();
+	void loadTheme(const VisualTheme &theme);
 	void completeAssets();
 	void generateGraphics();
+	// Settings fetched from the theme
+	String finalBackgroundClass; // The selected BackgroundClass/Class from layout settings or the component's default theme class "TextBox".
+	int background_filter = 0; // 0 for solid, 1 for alpha filter.
 	// Generated
 	bool hasImages = false;
 	bool drawnAsFocused = false;

@@ -35,12 +35,21 @@ public:
 	// Attributes
 	PersistentColor backColor = PersistentColor(130, 130, 130);
 	PersistentColor foreColor = PersistentColor(0, 0, 0);
+	// The text to display for the head that is directly interacted with.
 	PersistentString text;
+	// Name of theme class used to draw the background of the head.
+	//   "MenuTop" is used if listClass is empty or not found, and the menu is not directly within another menu.
+	//   "MenuSub" is used if listClass is empty or not found, and the menu is a direct child of another menu.
+	PersistentString headClass;
+	// Name of theme class used to draw the background of the drop-down list.
+	//   "MenuList" is used if listClass is empty or not found.
+	PersistentString listClass;
 	PersistentInteger padding = PersistentInteger(4); // Empty space around child components and its own text.
 	PersistentInteger spacing = PersistentInteger(2); // Empty space between child components.
 	void declareAttributes(StructureDefinition &target) const override;
 	Persistent* findAttribute(const ReadableString &name) override;
 private:
+	void loadTheme(const VisualTheme &theme);
 	void completeAssets();
 	void generateGraphics();
 	void generateBackground();
@@ -49,6 +58,11 @@ private:
 	RasterFont font;
 	bool subMenu = false;
 	IRect overlayLocation; // Relative to the parent's location, just like its own location
+	// Settings fetched from the theme
+	String finalHeadClass; // The selected HeadClass/Class from layout settings or the component's default theme class "MenuTop" or "MenuSub" based on ownership.
+	String finalListClass; // The selected ListClass from layout settings or the component's default theme class "MenuList".
+	int menuHead_filter = 0; // 0 for solid, 1 for alpha filter.
+	int menuList_filter = 0; // 0 for solid, 1 for alpha filter.
 	// Generated
 	bool hasImages = false;
 	OrderedImageRgbaU8 imageUp;

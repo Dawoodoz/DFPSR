@@ -34,6 +34,7 @@ void Button::declareAttributes(StructureDefinition &target) const {
 	target.declareAttribute(U"ForeColor");
 	target.declareAttribute(U"Text");
 	target.declareAttribute(U"Padding");
+	target.declareAttribute(U"BackgroundClass");
 }
 
 Persistent* Button::findAttribute(const ReadableString &name) {
@@ -46,6 +47,8 @@ Persistent* Button::findAttribute(const ReadableString &name) {
 		return &(this->text);
 	} else if (string_caseInsensitiveMatch(name, U"Padding")) {
 		return &(this->padding);
+	} else if (string_caseInsensitiveMatch(name, U"Class") || string_caseInsensitiveMatch(name, U"BackgroundClass")) {
+		return &(this->backgroundClass);
 	} else {
 		return VisualComponent::findAttribute(name);
 	}
@@ -87,7 +90,11 @@ void Button::generateGraphics() {
 
 void Button::drawSelf(ImageRgbaU8& targetImage, const IRect &relativeLocation) {
 	this->generateGraphics();
-	draw_alphaFilter(targetImage, (this->pressed && this->inside) ? this->imageDown : this->imageUp, relativeLocation.left(), relativeLocation.top());
+	if (this->background_filter == 1) {
+		draw_alphaFilter(targetImage, (this->pressed && this->inside) ? this->imageDown : this->imageUp, relativeLocation.left(), relativeLocation.top());
+	} else {
+		draw_copy(targetImage, (this->pressed && this->inside) ? this->imageDown : this->imageUp, relativeLocation.left(), relativeLocation.top());
+	}
 }
 
 void Button::receiveMouseEvent(const MouseEvent& event) {
@@ -111,14 +118,20 @@ bool Button::pointIsInside(const IVector2D& pixelPosition) {
 	return image_readPixel_border(this->imageUp, localPoint.x, localPoint.y).alpha > 127;
 }
 
+void Button::loadTheme(const VisualTheme &theme) {
+	this->finalBackgroundClass = theme_selectClass(theme, this->backgroundClass.value, U"Button");
+	this->button = theme_getScalableImage(theme, this->finalBackgroundClass);
+	this->background_filter = theme_getInteger(theme, this->finalBackgroundClass, U"Filter", 0);
+}
+
 void Button::changedTheme(VisualTheme newTheme) {
-	this->button = theme_getScalableImage(newTheme, U"Button");
+	this->loadTheme(newTheme);
 	this->hasImages = false;
 }
 
 void Button::completeAssets() {
 	if (this->button.methodIndex == -1) {
-		this->button = theme_getScalableImage(theme_getDefault(), U"Button");
+		this->loadTheme(theme_getDefault());
 	}
 	if (this->font.get() == nullptr) {
 		this->font = font_getDefault();
@@ -133,7 +146,10 @@ void Button::changedLocation(const IRect &oldLocation, const IRect &newLocation)
 }
 
 void Button::changedAttribute(const ReadableString &name) {
-	if (!string_caseInsensitiveMatch(name, U"Visible")) {
+	if (string_caseInsensitiveMatch(name, U"BackgroundClass")) {
+		// Update from the theme if the theme class has changed.
+		this->changedTheme(this->getTheme());
+	} else if (!string_caseInsensitiveMatch(name, U"Visible")) {
 		this->hasImages = false;
 	}
 	VisualComponent::changedAttribute(name);

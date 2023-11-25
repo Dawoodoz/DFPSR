@@ -1,6 +1,6 @@
 ﻿// zlib open source license
 //
-// Copyright (c) 2018 to 2022 David Forsgren Piuva
+// Copyright (c) 2018 to 2023 David Forsgren Piuva
 // 
 // This software is provided 'as-is', without any express or implied
 // warranty. In no event will the authors be held liable for any damages
@@ -191,6 +191,8 @@ UR"QUOTE(
 	; Fall back on the Button method if a component's class could not be recognized.
 	[Button]
 		rounding = 12
+		filter = 1
+		method = "Button"
 	[ListBox]
 		method = "HardRectangle"
 	[TextBox]
@@ -242,7 +244,7 @@ struct KeywordEntry {
 	MACRO_NAME(LOCATION strings)
 
 #define RETURN_TRUE_IF_SETTING_EXISTS(COLLECTION) \
-	for (int64_t i = 0; i < COLLECTION.length(); i++) { \
+	for (int i = 0; i < COLLECTION.length(); i++) { \
 		if (string_caseInsensitiveMatch(COLLECTION[i].key, key)) { \
 			return true; \
 		} \
@@ -281,9 +283,31 @@ struct ClassSettings {
 	// Post-condition: Returns true iff the key was found for the expected type.
 	// Side-effect: Writes the value of the found key iff found.
 	bool getString(String &target, const ReadableString &key) {
-		for (int64_t i = 0; i < this->strings.length(); i++) {
+		for (int i = 0; i < this->strings.length(); i++) {
 			if (string_caseInsensitiveMatch(this->strings[i].key, key)) {
 				target = this->strings[i].value;
+				return true;
+			}
+		}
+		return false;
+	}
+	// Post-condition: Returns true iff the key was found for the expected type.
+	// Side-effect: Writes the value of the found key iff found.
+	bool getImage(PersistentImage &target, const ReadableString &key) {
+		for (int i = 0; i < this->colorImages.length(); i++) {
+			if (string_caseInsensitiveMatch(this->colorImages[i].key, key)) {
+				target = this->colorImages[i].value;
+				return true;
+			}
+		}
+		return false;
+	}
+	// Post-condition: Returns true iff the key was found for the expected type.
+	// Side-effect: Writes the value of the found key iff found.
+	bool getScalar(FixedPoint &target, const ReadableString &key) {
+		for (int i = 0; i < this->scalars.length(); i++) {
+			if (string_caseInsensitiveMatch(this->scalars[i].key, key)) {
+				target = this->scalars[i].value;
 				return true;
 			}
 		}
@@ -296,14 +320,14 @@ class VisualThemeImpl {
 public:
 	MediaMachine machine;
 	List<ClassSettings> settings;
-	int32_t getClassIndex(const ReadableString& className) {
-		for (int64_t i = 0; i < this->settings.length(); i++) { if (string_caseInsensitiveMatch(this->settings[i].className, className)) { return i; } }
+	int getClassIndex(const ReadableString& className) {
+		for (int i = 0; i < this->settings.length(); i++) { if (string_caseInsensitiveMatch(this->settings[i].className, className)) { return i; } }
 		return settings.pushConstructGetIndex(className);
 	}
 	VisualThemeImpl(const MediaMachine &machine, const ReadableString &styleSettings, const ReadableString &fromPath) : machine(machine) {
 		this->settings.pushConstruct(U"default");
 		config_parse_ini(styleSettings, [this, fromPath](const ReadableString& block, const ReadableString& key, const ReadableString& value) {
-			int32_t classIndex = (string_length(block) == 0) ? 0 : this->getClassIndex(block);
+			int classIndex = (string_length(block) == 0) ? 0 : this->getClassIndex(block);
 			this->settings[classIndex].setVariable(key, value, fromPath);
 		});
 	}
@@ -327,35 +351,104 @@ VisualTheme theme_createFromFile(const MediaMachine &machine, const ReadableStri
 	return theme_createFromText(machine, string_load(styleFilename), file_getRelativeParentFolder(styleFilename));
 }
 
-MediaMethod theme_getScalableImage(const VisualTheme &theme, const ReadableString &className) {
+bool theme_exists(const VisualTheme &theme) {
+	return theme.get() != nullptr;
+}
+
+int theme_getClassIndex(const VisualTheme &theme, const ReadableString &className) {
+	if (!theme_exists(theme)) {
+		return -1;
+	} else if (string_length(className) == 0) {
+		return 0;
+	} else {
+		int classIndex = theme->getClassIndex(className);
+		return (classIndex == -1) ? 0 : classIndex;
+	}
+}
+
+bool theme_class_exists(const VisualTheme &theme, const ReadableString &className) {
+	return theme_getClassIndex(theme, className) > 0;
+}
+
+String theme_selectClass(const VisualTheme &theme, const ReadableString &suggestedClassName, const ReadableString &fallbackClassName) {
+	return theme_class_exists(theme, suggestedClassName) ? suggestedClassName : fallbackClassName;
+}
+
+OrderedImageRgbaU8 theme_getImage(const VisualTheme &theme, const ReadableString &className, const ReadableString &settingName) {
 	if (!theme.get()) {
-		throwError(U"theme_getScalableImage: Can't get scalable image from a non-existing theme!\n");
+		return OrderedImageRgbaU8();
 	}
 	int classIndex = theme->getClassIndex(className);
-	if (classIndex == -1) {
-		throwError(U"theme_getScalableImage: Can't find any style class named ", className, U" in the given theme!\n");
+	PersistentImage result;
+	if ((classIndex != -1 && theme->settings[classIndex].getImage(result, settingName))
+	                     || (theme->settings[0].getImage(result, settingName))) {
+		// If the class existed and it contained the setting or the setting could be found in the default class then return it.
+		return result.value;
+	} else {
+		return OrderedImageRgbaU8();
 	}
-	// Try to get the method's name from the component's class settings,
-	// and fall back on the class name itself if not found in neither the class settings nor the common default settings.
+}
+
+FixedPoint theme_getFixedPoint(const VisualTheme &theme, const ReadableString &className, const ReadableString &settingName, const FixedPoint &defaultValue) {
+	if (!theme.get()) {
+		return defaultValue;
+	}
+	int classIndex = theme->getClassIndex(className);
+	FixedPoint result;
+	if ((classIndex != -1 && theme->settings[classIndex].getScalar(result, settingName))
+	                     || (theme->settings[0].getScalar(result, settingName))) {
+		// If the class existed and it contained the setting or the setting could be found in the default class then return it.
+		return result;
+	} else {
+		return defaultValue;
+	}
+}
+
+int theme_getInteger(const VisualTheme &theme, const ReadableString &className, const ReadableString &settingName, const int &defaultValue) {
+	return fixedPoint_round(theme_getFixedPoint(theme, className, settingName, FixedPoint::fromWhole(defaultValue)));
+}
+
+ReadableString theme_getString(const VisualTheme &theme, const ReadableString &className, const ReadableString &settingName, const ReadableString &defaultValue) {
+	if (!theme.get()) {
+		return defaultValue;
+	}
+	int classIndex = theme->getClassIndex(className);
+	String result;
+	if ((classIndex != -1 && theme->settings[classIndex].getString(result, settingName))
+	                     || (theme->settings[0].getString(result, settingName))) {
+		// If the class existed and it contained the setting or the setting could be found in the default class then return it.
+		return result;
+	} else {
+		return defaultValue;
+	}
+}
+
+MediaMethod theme_getScalableImage(const VisualTheme &theme, const ReadableString &className) {
+	if (!theme.get()) {
+		throwError(U"theme_getScalableImage: Can't get scalable image of class ", className, U" from a non-existing theme!\n");
+	}
+	int classIndex = theme->getClassIndex(className);
 	String methodName;
-	if (!theme->settings[classIndex].getString(methodName, U"method")) {
-		if (!theme->settings[0].getString(methodName, U"method")) {
-			throwError(U"The property \"method\" could not be found from the style class ", className, U", nor in the default settings!\n");
-		}
+	if ((classIndex != -1 && theme->settings[classIndex].getString(methodName, U"method"))
+	                     || (theme->settings[0].getString(methodName, U"method"))) {
+		// If the class existed and it contained the setting or the setting could be found in the default class then return it.
+		return machine_getMethod(theme->machine, methodName, theme->getClassIndex(className));
+	} else {
+		throwError(U"theme_getScalableImage: Can't get scalable image of class ", className, U" because the setting did not exist in neither the class nor the default settings!\n");
+		return MediaMethod();
 	}
-	return machine_getMethod(theme->machine, methodName, classIndex);
 }
 
 static bool assignMediaMachineArguments(ClassSettings settings, MediaMachine &machine, int methodIndex, int inputIndex, const ReadableString &argumentName) {
 	// Search for argumentName in colorImages.
-	for (int64_t i = 0; i < settings.colorImages.length(); i++) {
+	for (int i = 0; i < settings.colorImages.length(); i++) {
 		if (string_caseInsensitiveMatch(settings.colorImages[i].key, argumentName)) {
 			machine_setInputByIndex(machine, methodIndex, inputIndex, settings.colorImages[i].value.value);
 			return true;
 		}
 	}
 	// Search for argumentName in scalars.
-	for (int64_t i = 0; i < settings.scalars.length(); i++) {
+	for (int i = 0; i < settings.scalars.length(); i++) {
 		if (string_caseInsensitiveMatch(settings.scalars[i].key, argumentName)) {
 			machine_setInputByIndex(machine, methodIndex, inputIndex, settings.scalars[i].value);
 			return true;
@@ -365,7 +458,7 @@ static bool assignMediaMachineArguments(ClassSettings settings, MediaMachine &ma
 	return false;
 }
 
-bool theme_assignMediaMachineArguments(const VisualTheme &theme, int32_t contextIndex, MediaMachine &machine, int methodIndex, int inputIndex, const ReadableString &argumentName) {
+bool theme_assignMediaMachineArguments(const VisualTheme &theme, int contextIndex, MediaMachine &machine, int methodIndex, int inputIndex, const ReadableString &argumentName) {
 	if (!theme.get()) { return false; }
 	// Check in the context first, and then in the default settings.
 	return (contextIndex > 0 && assignMediaMachineArguments(theme->settings[contextIndex], machine, methodIndex, inputIndex, argumentName))

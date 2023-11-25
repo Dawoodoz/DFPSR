@@ -36,6 +36,9 @@ public:
 	PersistentColor backColor = PersistentColor(130, 130, 130);
 	PersistentColor foreColor = PersistentColor(0, 0, 0);
 	PersistentString text;
+	// Name of theme class used to draw the background.
+	//   "Button" is used if backgroundClass is empty or not found.
+	PersistentString backgroundClass;
 	PersistentInteger padding = PersistentInteger(5); // How many pixels of padding are applied on each side of the text when calculating desired dimensions for placing in toolbars.
 	void declareAttributes(StructureDefinition &target) const override;
 	Persistent* findAttribute(const ReadableString &name) override;
@@ -46,8 +49,12 @@ private:
 	// Given from the style
 	MediaMethod button;
 	RasterFont font;
+	void loadTheme(const VisualTheme &theme);
 	void completeAssets();
 	void generateGraphics();
+	// Settings fetched from the theme
+	String finalBackgroundClass; // The selected BackgroundClass/Class from layout settings or the component's default theme class "Button".
+	int background_filter = 0; // 0 for solid, 1 for alpha filter.
 	// Generated
 	bool hasImages = false;
 	OrderedImageRgbaU8 imageUp;
