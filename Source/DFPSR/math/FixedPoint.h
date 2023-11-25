@@ -102,7 +102,10 @@ inline FixedPoint operator*(int64_t left, const FixedPoint &right) {
 	return FixedPoint(left * right.getMantissa());
 }
 
+// Returns value rounded to the closest integer.
 int32_t fixedPoint_round(const FixedPoint& value);
+
+// Returns a floating-point approximation of value.
 double fixedPoint_approximate(const FixedPoint& value);
 
 FixedPoint fixedPoint_min(const FixedPoint &left, const FixedPoint &right);

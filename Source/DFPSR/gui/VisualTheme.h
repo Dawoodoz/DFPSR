@@ -1,6 +1,6 @@
 ﻿// zlib open source license
 //
-// Copyright (c) 2018 to 2022 David Forsgren Piuva
+// Copyright (c) 2018 to 2023 David Forsgren Piuva
 // 
 // This software is provided 'as-is', without any express or implied
 // warranty. In no event will the authors be held liable for any damages
@@ -50,8 +50,43 @@ VisualTheme theme_createFromFile(const MediaMachine &machine, const ReadableStri
 // Get a handle to the default theme.
 VisualTheme theme_getDefault();
 
-// Get a scalable image by name from the theme.
+// Returns true iff theme exists, otherwise false.
+bool theme_exists(const VisualTheme &theme);
+// Returns the index of className in theme, 0 if it did not exist in theme or -1 if theme does not exist.
+int theme_getClassIndex(const VisualTheme &theme, const ReadableString &className);
+// Returns true iff className exists in theme.
+bool theme_class_exists(const VisualTheme &theme, const ReadableString &className);
+// Returns suggestedClassName if it exists in theme, fallbackClassName otherwise.
+String theme_selectClass(const VisualTheme &theme, const ReadableString &suggestedClassName, const ReadableString &fallbackClassName);
+
+// Getters for resources in the theme's *.ini configuration file.
+//   If className is not found in the theme, the settings declared before the first class are used.
+//     This allow unhandled components to have a generic look, get a pattern that signals unfinished work or leave it blank to terminate with an error when a class is not handled.
+//   Settings after the class name within [] until the end of the file or next class belong to that class.
+
+// Get the scalable image created using the media machine method name stored in the string setting "method" within className in theme.
+//   If there is no method name assigned to "method" after [className], the "method" before the first [] block is used instead.
+//   If no method is found at all, it means that the theme wants to throw an exception to alert the developer about a class that needs to be handled.
+//   The matches for className and "method" are both case insensitive.
 MediaMethod theme_getScalableImage(const VisualTheme &theme, const ReadableString &className);
+// TODO: Create syntax for naming sub-image regions within the atlas to be used as icons without needing to load separate files.
+// Get a fixed size image from className in theme using settingName, an empty handle if not found in theme or theme does not exist.
+//   Looks for image assignments to settingName after [className] first, then before the first [] block, and then returns an empty handle if not found at all.
+//   The matches for className and settingName are both case insensitive.
+//   Use theme_getClassIndex if you are unsure of why an empty handle was returned, because it will not throw exceptions.
+OrderedImageRgbaU8 theme_getImage(const VisualTheme &theme, const ReadableString &className, const ReadableString &settingName);
+// Get a fixed-point value from className in theme using settingName, the default value if not found, or throw an exception if theme does not exist.
+//   Looks for scalar assignments to settingName after [className] first, then before the first [] block, and then returns defaultValue if not found at all.
+//   The matches for className and settingName are both case insensitive.
+//   Use theme_getClassIndex if you are unsure of why defaultValue was returned, because it will not throw exceptions.
+FixedPoint theme_getFixedPoint(const VisualTheme &theme, const ReadableString &className, const ReadableString &settingName, const FixedPoint &defaultValue);
+// Get FixedPoint and truncate to an integer, which should leave 16 bits of useful range.
+int theme_getInteger(const VisualTheme &theme, const ReadableString &className, const ReadableString &settingName, const int &defaultValue);
+// Get a string from className in theme using settingName, the default value if not found, or throw an exception if theme does not exist.
+//   Looks for string assignments to settingName after [className] first, then before the first [] block, and then returns defaultValue if not found at all.
+//   The matches for className and settingName are both case insensitive.
+//   Use theme_getClassIndex if you are unsure of why defaultValue was returned, because it will not throw exceptions.
+ReadableString theme_getString(const VisualTheme &theme, const ReadableString &className, const ReadableString &settingName, const FixedPoint &defaultValue);
 
 // Called by VisualComponent to assign input arguments to functions in the media machine that were not given by the component itself.
 // Post-condition: Returns true if argumentName was identified and assigned as input to inputIndex of methodIndex in machine.

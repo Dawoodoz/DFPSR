@@ -1,0 +1,272 @@
+﻿# Helper function that can't be used as a theme.
+BEGIN: Resize3x3
+	INPUT: FixedPoint, targetWidth
+	INPUT: FixedPoint, targetHeight
+	INPUT: FixedPoint, sourceBorder
+	INPUT: ImageRgbaU8, sourceImage
+	INPUT: FixedPoint, sourceLeft
+	INPUT: FixedPoint, sourceTop
+	INPUT: FixedPoint, sourceWidth
+	INPUT: FixedPoint, sourceHeight
+	OUTPUT: ImageRgbaU8, targetImage
+	CREATE: targetImage, targetWidth, targetHeight
+	# Limit targetBorder
+	MIN: targetBorder<FixedPoint>, targetWidth, targetHeight
+	MUL: targetBorder, targetBorder, 0.3
+	MIN: targetBorder, targetBorder, sourceBorder
+	# Calculat dimensions
+	ADD: sourceRight<FixedPoint>, sourceLeft, sourceWidth
+	ADD: sourceBottom<FixedPoint>, sourceTop, sourceHeight
+	ADD: sb2<FixedPoint>, sourceBorder, sourceBorder
+	SUB: sbiw<FixedPoint>, sourceWidth, sb2
+	SUB: sbih<FixedPoint>, sourceHeight, sb2
+	#ADD: sbl<FixedPoint>, sourceLeft, sourceBorder
+	#ADD: sbt<FixedPoint>, sourceTop, sourceBorder
+	SUB: sbow<FixedPoint>, sourceRight, sourceBorder
+	SUB: sboh<FixedPoint>, sourceBottom, sourceBorder
+	ADD: pl<FixedPoint>, sourceLeft, sourceBorder
+	ADD: pt<FixedPoint>, sourceTop, sourceBorder
+	ADD: tb2<FixedPoint>, targetBorder, targetBorder
+	SUB: tbiw<FixedPoint>, targetWidth, tb2
+	SUB: tbih<FixedPoint>, targetHeight, tb2
+	SUB: tbow<FixedPoint>, targetWidth, targetBorder
+	SUB: tboh<FixedPoint>, targetHeight, targetBorder
+	# Upper
+	RESIZE_BILINEAR: scaled<ImageRgbaU8>, targetBorder, targetBorder, sourceImage, sourceLeft, sourceTop, sourceBorder, sourceBorder
+	COPY: targetImage, 0, 0, scaled
+	RESIZE_BILINEAR: scaled, tbiw, targetBorder, sourceImage, pl, sourceTop, sbiw, sourceBorder
+	COPY: targetImage, targetBorder, 0, scaled
+	RESIZE_BILINEAR: scaled, targetBorder, targetBorder, sourceImage, sbow, sourceTop, sourceBorder, sourceBorder
+	COPY: targetImage, tbow, 0, scaled
+	# Middle
+	RESIZE_BILINEAR: scaled, targetBorder, tbih, sourceImage, sourceLeft, pt, sourceBorder, sbih
+	COPY: targetImage, 0, targetBorder, scaled
+	RESIZE_BILINEAR: scaled, tbiw, tbih, sourceImage, pl, pt, sbiw, sbih
+	COPY: targetImage, targetBorder, targetBorder, scaled
+	RESIZE_BILINEAR: scaled, targetBorder, tbih, sourceImage, sbow, pt, sourceBorder, sbih
+	COPY: targetImage, tbow, targetBorder, scaled
+	# Lower
+	RESIZE_BILINEAR: scaled, targetBorder, targetBorder, sourceImage, sourceLeft, sboh, sourceBorder, sourceBorder
+	COPY: targetImage, 0, tboh, scaled
+	RESIZE_BILINEAR: scaled, tbiw, targetBorder, sourceImage, pl, sboh, sbiw, sourceBorder
+	COPY: targetImage, targetBorder, tboh, scaled
+	RESIZE_BILINEAR: scaled, targetBorder, targetBorder, sourceImage, sbow, sboh, sourceBorder, sourceBorder
+	COPY: targetImage, tbow, tboh, scaled
+END:
+
+BEGIN: Diffuse3x3
+	INPUT: FixedPoint, width
+	INPUT: FixedPoint, height
+	INPUT: FixedPoint, red
+	INPUT: FixedPoint, green
+	INPUT: FixedPoint, blue
+	INPUT: FixedPoint, sourceLeft
+	INPUT: FixedPoint, sourceTop
+	INPUT: FixedPoint, sourceWidth
+	INPUT: FixedPoint, sourceHeight
+	INPUT: FixedPoint, preserved
+	INPUT: ImageRgbaU8, atlas
+	OUTPUT: ImageRgbaU8, colorImage
+	# Scale by 1 / 255 so that 255 represents full intensity in atlas.
+	MUL: normRed<FixedPoint>, red, 0.00392156862745
+	MUL: normGreen<FixedPoint>, green, 0.00392156862745
+	MUL: normBlue<FixedPoint>, blue, 0.00392156862745
+	# Resize source region from the atlas.
+	CALL: Resize3x3, rescaledImage<ImageRgbaU8>, width, height, preserved, atlas, sourceLeft, sourceTop, sourceWidth, sourceHeight
+	GET_RED: diffuseMap<ImageU8>, rescaledImage
+	GET_ALPHA: visibilityMap<ImageU8>, rescaledImage
+	MUL: redImage<ImageU8>, diffuseMap, normRed
+	MUL: greenImage<ImageU8>, diffuseMap, normGreen
+	MUL: blueImage<ImageU8>, diffuseMap, normBlue
+	PACK_RGBA: colorImage, redImage, greenImage, blueImage, visibilityMap
+END:
+
+BEGIN: FocusableDiffuse3x3
+	INPUT: FixedPoint, width
+	INPUT: FixedPoint, height
+	INPUT: FixedPoint, red
+	INPUT: FixedPoint, green
+	INPUT: FixedPoint, blue
+	INPUT: FixedPoint, sourceLeft
+	INPUT: FixedPoint, sourceTop
+	INPUT: FixedPoint, sourceWidth
+	INPUT: FixedPoint, sourceHeight
+	INPUT: FixedPoint, focusOffsetX
+	INPUT: FixedPoint, focusOffsetY
+	INPUT: FixedPoint, focused
+	INPUT: FixedPoint, preserved
+	INPUT: ImageRgbaU8, atlas
+	OUTPUT: ImageRgbaU8, colorImage
+	# Select image using the focused state.
+	MUL: sourceOffsetX<FixedPoint>, focused, focusOffsetX
+	MUL: sourceOffsetY<FixedPoint>, focused, focusOffsetY
+	ADD: adjustedSourceLeft<FixedPoint>, sourceLeft, sourceOffsetX
+	ADD: adjustedSourceTop<FixedPoint>, sourceTop, sourceOffsetY
+	# Scale by 1 / 255 so that 255 represents full intensity in atlas.
+	MUL: normRed<FixedPoint>, red, 0.00392156862745
+	MUL: normGreen<FixedPoint>, green, 0.00392156862745
+	MUL: normBlue<FixedPoint>, blue, 0.00392156862745
+	# Resize source region from the atlas.
+	CALL: Resize3x3, rescaledImage<ImageRgbaU8>, width, height, preserved, atlas, adjustedSourceLeft, adjustedSourceTop, sourceWidth, sourceHeight
+	GET_RED: diffuseMap<ImageU8>, rescaledImage
+	GET_ALPHA: visibilityMap<ImageU8>, rescaledImage
+	MUL: redImage<ImageU8>, diffuseMap, normRed
+	MUL: greenImage<ImageU8>, diffuseMap, normGreen
+	MUL: blueImage<ImageU8>, diffuseMap, normBlue
+	PACK_RGBA: colorImage, redImage, greenImage, blueImage, visibilityMap
+END:
+
+BEGIN: DiffuseSpecular3x3
+	INPUT: FixedPoint, width
+	INPUT: FixedPoint, height
+	INPUT: FixedPoint, red
+	INPUT: FixedPoint, green
+	INPUT: FixedPoint, blue
+	INPUT: FixedPoint, sourceLeft
+	INPUT: FixedPoint, sourceTop
+	INPUT: FixedPoint, sourceWidth
+	INPUT: FixedPoint, sourceHeight
+	INPUT: FixedPoint, preserved
+	INPUT: ImageRgbaU8, atlas
+	OUTPUT: ImageRgbaU8, colorImage
+	# Scale by 1 / 255 so that 255 represents full intensity in atlas.
+	MUL: normRed<FixedPoint>, red, 0.00392156862745
+	MUL: normGreen<FixedPoint>, green, 0.00392156862745
+	MUL: normBlue<FixedPoint>, blue, 0.00392156862745
+	# Resize source region from the atlas.
+	CALL: Resize3x3, rescaledImage<ImageRgbaU8>, width, height, preserved, atlas, sourceLeft, sourceTop, sourceWidth, sourceHeight
+	GET_RED: diffuseMap<ImageU8>, rescaledImage
+	GET_GREEN: specularMap<ImageU8>, rescaledImage
+	GET_ALPHA: visibilityMap<ImageU8>, rescaledImage
+	MUL: redImage<ImageU8>, diffuseMap, normRed
+	MUL: greenImage<ImageU8>, diffuseMap, normGreen
+	MUL: blueImage<ImageU8>, diffuseMap, normBlue
+	ADD: redImage, redImage, specularMap
+	ADD: greenImage, greenImage, specularMap
+	ADD: blueImage, blueImage, specularMap
+	PACK_RGBA: colorImage, redImage, greenImage, blueImage, visibilityMap
+END:
+
+BEGIN: PressableDiffuseSpecular3x3
+	INPUT: FixedPoint, width
+	INPUT: FixedPoint, height
+	INPUT: FixedPoint, red
+	INPUT: FixedPoint, green
+	INPUT: FixedPoint, blue
+	INPUT: FixedPoint, pressed
+	INPUT: FixedPoint, sourceLeft
+	INPUT: FixedPoint, sourceTop
+	INPUT: FixedPoint, sourceWidth
+	INPUT: FixedPoint, sourceHeight
+	INPUT: FixedPoint, pressOffsetX
+	INPUT: FixedPoint, pressOffsetY
+	INPUT: FixedPoint, preserved
+	INPUT: ImageRgbaU8, atlas
+	OUTPUT: ImageRgbaU8, colorImage
+	# Select image using the pressed state.
+	MUL: sourceOffsetX<FixedPoint>, pressed, pressOffsetX
+	MUL: sourceOffsetY<FixedPoint>, pressed, pressOffsetY
+	ADD: adjustedSourceLeft<FixedPoint>, sourceLeft, sourceOffsetX
+	ADD: adjustedSourceTop<FixedPoint>, sourceTop, sourceOffsetY
+	# Rescale the source region to fit width and height, while applying the diffuse color and adding white shine.
+	CALL: DiffuseSpecular3x3, colorImage, width, height, red, green, blue, adjustedSourceLeft, adjustedSourceTop, sourceWidth, sourceHeight, preserved, atlas
+END:
+
+BEGIN: DiffuseSpecular1x1
+	INPUT: FixedPoint, width
+	INPUT: FixedPoint, height
+	INPUT: FixedPoint, red
+	INPUT: FixedPoint, green
+	INPUT: FixedPoint, blue
+	INPUT: FixedPoint, sourceLeft
+	INPUT: FixedPoint, sourceTop
+	INPUT: FixedPoint, sourceWidth
+	INPUT: FixedPoint, sourceHeight
+	INPUT: FixedPoint, preserved
+	INPUT: ImageRgbaU8, atlas
+	OUTPUT: ImageRgbaU8, colorImage
+	# Scale by 1 / 255 so that 255 represents full intensity in atlas.
+	MUL: normRed<FixedPoint>, red, 0.00392156862745
+	MUL: normGreen<FixedPoint>, green, 0.00392156862745
+	MUL: normBlue<FixedPoint>, blue, 0.00392156862745
+	# Resize source region from the atlas.
+	RESIZE_BILINEAR: rescaledImage<ImageRgbaU8>, width, height, atlas, sourceLeft, sourceTop, sourceWidth, sourceHeight
+	GET_RED: diffuseMap<ImageU8>, rescaledImage
+	GET_GREEN: specularMap<ImageU8>, rescaledImage
+	GET_ALPHA: visibilityMap<ImageU8>, rescaledImage
+	MUL: redImage<ImageU8>, diffuseMap, normRed
+	MUL: greenImage<ImageU8>, diffuseMap, normGreen
+	MUL: blueImage<ImageU8>, diffuseMap, normBlue
+	ADD: redImage, redImage, specularMap
+	ADD: greenImage, greenImage, specularMap
+	ADD: blueImage, blueImage, specularMap
+	PACK_RGBA: colorImage, redImage, greenImage, blueImage, visibilityMap
+END:
+
+BEGIN: PressableDiffuseSpecular1x1
+	INPUT: FixedPoint, width
+	INPUT: FixedPoint, height
+	INPUT: FixedPoint, red
+	INPUT: FixedPoint, green
+	INPUT: FixedPoint, blue
+	INPUT: FixedPoint, pressed
+	INPUT: FixedPoint, sourceLeft
+	INPUT: FixedPoint, sourceTop
+	INPUT: FixedPoint, sourceWidth
+	INPUT: FixedPoint, sourceHeight
+	INPUT: FixedPoint, pressOffsetX
+	INPUT: FixedPoint, pressOffsetY
+	INPUT: FixedPoint, preserved
+	INPUT: ImageRgbaU8, atlas
+	OUTPUT: ImageRgbaU8, colorImage
+	# Select image using the pressed state.
+	MUL: sourceOffsetX<FixedPoint>, pressed, pressOffsetX
+	MUL: sourceOffsetY<FixedPoint>, pressed, pressOffsetY
+	ADD: adjustedSourceLeft<FixedPoint>, sourceLeft, sourceOffsetX
+	ADD: adjustedSourceTop<FixedPoint>, sourceTop, sourceOffsetY
+	# Rescale the source region to fit width and height, while applying the diffuse color and adding white shine.
+	CALL: DiffuseSpecular1x1, colorImage, width, height, red, green, blue, adjustedSourceLeft, adjustedSourceTop, sourceWidth, sourceHeight, preserved, atlas
+END:
+
+BEGIN: ListBox
+	INPUT: FixedPoint, width
+	INPUT: FixedPoint, height
+	INPUT: FixedPoint, red
+	INPUT: FixedPoint, green
+	INPUT: FixedPoint, blue
+	INPUT: FixedPoint, sourceLeft
+	INPUT: FixedPoint, sourceTop
+	INPUT: FixedPoint, sourceWidth
+	INPUT: FixedPoint, sourceHeight
+	INPUT: FixedPoint, preserved
+	INPUT: ImageRgbaU8, atlas
+	OUTPUT: ImageRgbaU8, colorImage
+	# Rescale the source region to fit width and height, while applying the diffuse color.
+	CALL: Diffuse3x3, colorImage, width, height, red, green, blue, sourceLeft, sourceTop, sourceWidth, sourceHeight, preserved, atlas
+END:
+
+BEGIN: VerticalScrollList
+	INPUT: FixedPoint, width
+	INPUT: FixedPoint, height
+	INPUT: FixedPoint, red
+	INPUT: FixedPoint, green
+	INPUT: FixedPoint, blue
+	OUTPUT: ImageRgbaU8, colorImage
+	CREATE: visImage<ImageU8>, width, height
+	CREATE: lumaImage<ImageU8>, width, height
+	FADE_LINEAR: visImage, 0, 0, 128, width, 0, 0
+	PACK_RGBA: colorImage, 0, 0, 0, visImage
+END:
+
+BEGIN: HorizontalScrollList
+	INPUT: FixedPoint, width
+	INPUT: FixedPoint, height
+	INPUT: FixedPoint, red
+	INPUT: FixedPoint, green
+	INPUT: FixedPoint, blue
+	OUTPUT: ImageRgbaU8, colorImage
+	CREATE: visImage<ImageU8>, width, height
+	CREATE: lumaImage<ImageU8>, width, height
+	FADE_LINEAR: visImage, 0, 0, 128, 0, height, 0
+	PACK_RGBA: colorImage, 0, 0, 0, visImage
+END:
