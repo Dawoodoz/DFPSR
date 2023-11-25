@@ -34,6 +34,7 @@ void Toolbar::declareAttributes(StructureDefinition &target) const {
 	target.declareAttribute(U"Color");
 	target.declareAttribute(U"Padding");
 	target.declareAttribute(U"Spacing");
+	target.declareAttribute(U"BackgroundClass");
 }
 
 Persistent* Toolbar::findAttribute(const ReadableString &name) {
@@ -48,6 +49,8 @@ Persistent* Toolbar::findAttribute(const ReadableString &name) {
 		return &(this->padding);
 	} else if (string_caseInsensitiveMatch(name, U"Spacing")) {
 		return &(this->spacing);
+	} else if (string_caseInsensitiveMatch(name, U"Class") || string_caseInsensitiveMatch(name, U"BackgroundClass")) {
+		return &(this->backgroundClass);
 	} else {
 		return VisualComponent::findAttribute(name);
 	}
@@ -78,19 +81,29 @@ void Toolbar::drawSelf(ImageRgbaU8& targetImage, const IRect &relativeLocation) 
 			draw_rectangle(targetImage, relativeLocation, ColorRgbaI32(this->color.value, 255));
 		} else {
 			this->generateGraphics();
-			draw_copy(targetImage, this->imageBackground, relativeLocation.left(), relativeLocation.top());
+			if (this->background_filter == 1) {
+				draw_alphaFilter(targetImage, this->imageBackground, relativeLocation.left(), relativeLocation.top());
+			} else {
+				draw_copy(targetImage, this->imageBackground, relativeLocation.left(), relativeLocation.top());
+			}			
 		}
 	}
 }
 
+void Toolbar::loadTheme(const VisualTheme &theme) {
+	this->finalBackgroundClass = theme_selectClass(theme, this->backgroundClass.value, U"Toolbar");
+	this->background = theme_getScalableImage(theme, this->finalBackgroundClass);
+	this->background_filter = theme_getInteger(theme, this->finalBackgroundClass, U"Filter", 0);
+}
+
 void Toolbar::changedTheme(VisualTheme newTheme) {
-	this->background = theme_getScalableImage(newTheme, U"Toolbar");
+	this->loadTheme(newTheme);
 	this->hasImages = false;
 }
 
 void Toolbar::completeAssets() {
 	if (this->background.methodIndex == -1) {
-		this->background = theme_getScalableImage(theme_getDefault(), U"Toolbar");
+		this->loadTheme(theme_getDefault());
 	}
 }
 
@@ -102,7 +115,10 @@ void Toolbar::changedLocation(const IRect &oldLocation, const IRect &newLocation
 }
 
 void Toolbar::changedAttribute(const ReadableString &name) {
-	if (!string_caseInsensitiveMatch(name, U"Visible")) {
+	if (string_caseInsensitiveMatch(name, U"BackgroundClass")) {
+		// Update from the theme if the theme class has changed.
+		this->changedTheme(this->getTheme());
+	} else if (!string_caseInsensitiveMatch(name, U"Visible")) {
 		this->hasImages = false;
 	}
 	VisualComponent::changedAttribute(name);

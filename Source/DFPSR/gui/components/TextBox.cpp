@@ -34,6 +34,7 @@ void TextBox::declareAttributes(StructureDefinition &target) const {
 	target.declareAttribute(U"ForeColor");
 	target.declareAttribute(U"Text");
 	target.declareAttribute(U"MultiLine");
+	target.declareAttribute(U"BackgroundClass");
 }
 
 Persistent* TextBox::findAttribute(const ReadableString &name) {
@@ -45,6 +46,8 @@ Persistent* TextBox::findAttribute(const ReadableString &name) {
 		return &(this->text);
 	} else if (string_caseInsensitiveMatch(name, U"MultiLine")) {
 		return &(this->multiLine);
+	} else if (string_caseInsensitiveMatch(name, U"Class") || string_caseInsensitiveMatch(name, U"BackgroundClass")) {
+		return &(this->backgroundClass);
 	} else {
 		return VisualComponent::findAttribute(name);
 	}
@@ -207,7 +210,11 @@ void TextBox::generateGraphics() {
 
 void TextBox::drawSelf(ImageRgbaU8& targetImage, const IRect &relativeLocation) {
 	this->generateGraphics();
-	draw_copy(targetImage, this->image, relativeLocation.left(), relativeLocation.top());
+	if (this->background_filter == 1) {
+		draw_alphaFilter(targetImage, this->image, relativeLocation.left(), relativeLocation.top());
+	} else {
+		draw_copy(targetImage, this->image, relativeLocation.left(), relativeLocation.top());
+	}
 }
 
 int64_t TextBox::findBeamLocationInLine(int64_t rowIndex, int64_t pixelX) {
@@ -504,10 +511,16 @@ bool TextBox::pointIsInside(const IVector2D& pixelPosition) {
 	return dsr::image_readPixel_border(this->image, localPoint.x, localPoint.y).alpha > 127;
 }
 
+void TextBox::loadTheme(const VisualTheme &theme) {
+	this->finalBackgroundClass = theme_selectClass(theme, this->backgroundClass.value, U"TextBox");
+	this->textBox = theme_getScalableImage(theme, this->finalBackgroundClass);
+	this->verticalScrollBar.loadTheme(theme, this->backColor.value);
+	this->horizontalScrollBar.loadTheme(theme, this->backColor.value);
+	this->background_filter = theme_getInteger(theme, this->finalBackgroundClass, U"Filter", 0);
+}
+
 void TextBox::changedTheme(VisualTheme newTheme) {
-	this->textBox = theme_getScalableImage(newTheme, U"TextBox");
-	this->verticalScrollBar.loadTheme(newTheme, this->backColor.value);
-	this->horizontalScrollBar.loadTheme(newTheme, this->backColor.value);
+	this->loadTheme(newTheme);
 	this->hasImages = false;
 }
 
@@ -522,10 +535,7 @@ void TextBox::loadFont() {
 
 void TextBox::completeAssets() {
 	if (this->textBox.methodIndex == -1) {
-		VisualTheme newTheme = theme_getDefault();
-		this->textBox = theme_getScalableImage(newTheme, U"TextBox");
-		this->verticalScrollBar.loadTheme(newTheme, this->backColor.value);
-		this->horizontalScrollBar.loadTheme(newTheme, this->backColor.value);
+		this->loadTheme(theme_getDefault());
 	}
 	this->loadFont();
 }
@@ -539,7 +549,10 @@ void TextBox::changedLocation(const IRect &oldLocation, const IRect &newLocation
 }
 
 void TextBox::changedAttribute(const ReadableString &name) {
-	if (!string_caseInsensitiveMatch(name, U"Visible")) {
+	if (string_caseInsensitiveMatch(name, U"BackgroundClass")) {
+		// Update from the theme if the theme class has changed.
+		this->changedTheme(this->getTheme());
+	} else if (!string_caseInsensitiveMatch(name, U"Visible")) {
 		this->hasImages = false;
 		if (string_caseInsensitiveMatch(name, U"Text")) {
 			this->indexedAtLength = -1;

@@ -43,6 +43,8 @@ void Menu::declareAttributes(StructureDefinition &target) const {
 	target.declareAttribute(U"Text");
 	target.declareAttribute(U"Padding");
 	target.declareAttribute(U"Spacing");
+	target.declareAttribute(U"HeadClass");
+	target.declareAttribute(U"ListClass");
 }
 
 Persistent* Menu::findAttribute(const ReadableString &name) {
@@ -57,6 +59,11 @@ Persistent* Menu::findAttribute(const ReadableString &name) {
 		return &(this->padding);
 	} else if (string_caseInsensitiveMatch(name, U"Spacing")) {
 		return &(this->spacing);
+	} else if (string_caseInsensitiveMatch(name, U"HeadClass") || string_caseInsensitiveMatch(name, U"Class")) {
+		// Class is an alias for HeadClass.
+		return &(this->headClass);
+	} else if (string_caseInsensitiveMatch(name, U"ListClass")) {
+		return &(this->listClass);
 	} else {
 		return VisualComponent::findAttribute(name);
 	}
@@ -114,7 +121,11 @@ void Menu::generateGraphics() {
 // Fill the listBackgroundImageMethod with a solid color
 void Menu::drawSelf(ImageRgbaU8& targetImage, const IRect &relativeLocation) {
 	this->generateGraphics();
-	draw_alphaFilter(targetImage, this->showingOverlay() ? this->imageDown : this->imageUp, relativeLocation.left(), relativeLocation.top());
+	if (this->menuHead_filter == 1) {
+		draw_alphaFilter(targetImage, this->showingOverlay() ? this->imageDown : this->imageUp, relativeLocation.left(), relativeLocation.top());
+	} else {
+		draw_copy(targetImage, this->showingOverlay() ? this->imageDown : this->imageUp, relativeLocation.left(), relativeLocation.top());
+	}
 }
 
 void Menu::generateBackground() {
@@ -150,26 +161,37 @@ bool Menu::pointIsInsideOfOverlay(const IVector2D& pixelPosition) {
 
 void Menu::drawOverlay(ImageRgbaU8& targetImage, const IVector2D &absoluteOffset) {
 	this->generateBackground();
-	// TODO: Let the theme select between solid and alpha filtered drawing.
 	IVector2D overlayOffset = absoluteOffset + this->overlayLocation.upperLeft();
-	draw_copy(targetImage, this->listBackgroundImage, overlayOffset.x, overlayOffset.y);
+	if (this->menuList_filter == 1) {
+		draw_alphaFilter(targetImage, this->listBackgroundImage, overlayOffset.x, overlayOffset.y);
+	} else {
+		draw_copy(targetImage, this->listBackgroundImage, overlayOffset.x, overlayOffset.y);
+	}
 	for (int i = 0; i < this->getChildCount(); i++) {
 		this->children[i]->draw(targetImage, absoluteOffset + this->location.upperLeft());
 	}
 }
 
+void Menu::loadTheme(const VisualTheme &theme) {
+	// Is it a sub-menu or top menu?
+	this->subMenu = this->parent != nullptr && dynamic_cast<Menu*>(this->parent) != nullptr;
+	this->finalHeadClass = theme_selectClass(theme, this->headClass.value, this->subMenu ? U"MenuSub" : U"MenuTop");
+	this->finalListClass = theme_selectClass(theme, this->listClass.value, U"MenuList");
+	this->headImageMethod = theme_getScalableImage(theme, this->finalHeadClass);
+	this->listBackgroundImageMethod = theme_getScalableImage(theme, this->finalListClass);
+	// Ask the theme which parts should be drawn using alpha filtering, and fall back on solid drawing.
+	this->menuHead_filter = theme_getInteger(theme, this->finalHeadClass, U"Filter", 0);
+	this->menuList_filter = theme_getInteger(theme, this->finalListClass, U"Filter", 0);
+}
+
 void Menu::changedTheme(VisualTheme newTheme) {
-	this->headImageMethod = theme_getScalableImage(newTheme, this->subMenu ? U"MenuSub" : U"MenuTop");
-	this->listBackgroundImageMethod = theme_getScalableImage(newTheme, U"MenuList");
+	this->loadTheme(newTheme);
 	this->hasImages = false;
 }
 
 void Menu::completeAssets() {
 	if (this->headImageMethod.methodIndex == -1) {
-		// Work as a sub-menu if the direct parent is also a menu.
-		this->subMenu = this->parent != nullptr && dynamic_cast<Menu*>(this->parent) != nullptr;
-		this->headImageMethod = theme_getScalableImage(theme_getDefault(), this->subMenu ? U"MenuSub" : U"MenuTop");
-		this->listBackgroundImageMethod = theme_getScalableImage(theme_getDefault(), U"MenuList");
+		this->loadTheme(theme_getDefault());
 	}
 	if (this->font.get() == nullptr) {
 		this->font = font_getDefault();
@@ -184,7 +206,11 @@ void Menu::changedLocation(const IRect &oldLocation, const IRect &newLocation) {
 }
 
 void Menu::changedAttribute(const ReadableString &name) {
-	if (!string_caseInsensitiveMatch(name, U"Visible")) {
+	if (string_caseInsensitiveMatch(name, U"HeadClass")
+	 || string_caseInsensitiveMatch(name, U"ListClass")) {
+		// Update from the theme if a theme class has changed.
+		this->changedTheme(this->getTheme());
+	} else if (!string_caseInsensitiveMatch(name, U"Visible")) {
 		this->hasImages = false;
 	}
 	VisualComponent::changedAttribute(name);

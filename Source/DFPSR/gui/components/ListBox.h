@@ -37,6 +37,9 @@ public:
 	PersistentColor backColor = PersistentColor(200, 200, 200);
 	PersistentColor foreColor = PersistentColor(0, 0, 0);
 	PersistentStringList list;
+	// Name of theme class used to draw the background.
+	//   "ListBox" is used if backgroundClass is empty or not found.
+	PersistentString backgroundClass;
 	PersistentInteger selectedIndex; // Should always be inside of the list's 0..length-1 bound or zero.
 	void declareAttributes(StructureDefinition &target) const override;
 	Persistent* findAttribute(const ReadableString &name) override;
@@ -52,6 +55,9 @@ private:
 	void loadFont();
 	void completeAssets();
 	void generateGraphics();
+	// Settings fetched from the theme
+	String finalBackgroundClass; // The selected BackgroundClass/Class from layout settings or the component's default theme class "ListBox".
+	int background_filter = 0; // 0 for solid, 1 for alpha filter.
 	// Generated
 	bool hasImages = false;
 	OrderedImageRgbaU8 image;
@@ -63,7 +69,7 @@ private:
 	void limitScrolling(bool keepSelectedVisible = false); // Clamp scrolling
 	int64_t getVisibleScrollRange(); // Return the number of items that are visible at once
 	void pressScrollBar(int64_t localY); // Press the scroll-bar at localY in pixels
-	void loadTheme(VisualTheme theme);
+	void loadTheme(const VisualTheme &theme);
 	// If a new selection inherited the old index, forceUpdate will send the select event anyway
 	void setSelectedIndex(int64_t index, bool forceUpdate);
 public:

@@ -34,6 +34,9 @@ public:
 	// Attributes
 	PersistentBoolean solid; // If true, the panel itself will be drawn.
 	PersistentBoolean plain; // If true, a solid color will be drawn instead of a buffered image to save time and memory.
+	// Name of theme class used to draw the background.
+	//   "Toolbar" is used if backgroundClass is empty or not found.
+	PersistentString backgroundClass;
 	PersistentColor color = PersistentColor(130, 130, 130); // The color being used when drawn is set to true.
 	PersistentInteger padding = PersistentInteger(2); // Empty space around child components.
 	PersistentInteger spacing = PersistentInteger(3); // Empty space between child components.
@@ -41,10 +44,14 @@ public:
 	void declareAttributes(StructureDefinition &target) const override;
 	Persistent* findAttribute(const ReadableString &name) override;
 private:
+	void loadTheme(const VisualTheme &theme);
 	void completeAssets();
 	void generateGraphics();
 	MediaMethod background;
 	OrderedImageRgbaU8 imageBackground; // Alpha is copied to the target and should be 255
+	// Settings fetched from the theme
+	String finalBackgroundClass; // The selected BackgroundClass/Class from layout settings or the component's default theme class "Toolbar".
+	int background_filter = 0; // 0 for solid, 1 for alpha filter.
 	// Generated
 	bool hasImages = false;
 public:

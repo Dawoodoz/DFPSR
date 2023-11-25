@@ -52,6 +52,12 @@ void dsrMain(List<String> args) {
 	// Load an interface to the window
 	window_loadInterfaceFromFile(window, U"media/interface.lof");
 
+	// Create a virtual machine with reusable image generating functions.
+	//   The same Media Machine Code (*.mmc) can be used for multiple themes.
+	MediaMachine machine = machine_create(string_load(U"media/Drawing.mmc"));
+	// Use the virtual machine with a specific style referring to the functions in machine.
+	window_applyTheme(window, theme_createFromFile(machine, U"media/Theme.ini"));
+
 	// Bind methods to events
 	window_setCloseEvent(window, []() {
 		sendWarning(U"Ahhh, you killed me! But closing a window directly is okay, because the program can run logic for saving things before terminating.");

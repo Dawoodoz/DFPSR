@@ -33,6 +33,7 @@ void ListBox::declareAttributes(StructureDefinition &target) const {
 	target.declareAttribute(U"ForeColor");
 	target.declareAttribute(U"List");
 	target.declareAttribute(U"SelectedIndex");
+	target.declareAttribute(U"BackgroundClass");
 }
 
 Persistent* ListBox::findAttribute(const ReadableString &name) {
@@ -44,6 +45,8 @@ Persistent* ListBox::findAttribute(const ReadableString &name) {
 		return &(this->list);
 	} else if (string_caseInsensitiveMatch(name, U"SelectedIndex")) {
 		return &(this->selectedIndex);
+	} else if (string_caseInsensitiveMatch(name, U"Class") || string_caseInsensitiveMatch(name, U"BackgroundClass")) {
+		return &(this->backgroundClass);
 	} else {
 		return VisualComponent::findAttribute(name);
 	}
@@ -94,7 +97,11 @@ void ListBox::generateGraphics() {
 
 void ListBox::drawSelf(ImageRgbaU8& targetImage, const IRect &relativeLocation) {
 	this->generateGraphics();
-	draw_copy(targetImage, this->image, relativeLocation.left(), relativeLocation.top());
+	if (this->background_filter == 1) {
+		draw_alphaFilter(targetImage, this->image, relativeLocation.left(), relativeLocation.top());
+	} else {
+		draw_copy(targetImage, this->image, relativeLocation.left(), relativeLocation.top());
+	}
 }
 
 void ListBox::updateScrollRange() {
@@ -168,9 +175,11 @@ void ListBox::receiveKeyboardEvent(const KeyboardEvent& event) {
 	VisualComponent::receiveKeyboardEvent(event);
 }
 
-void ListBox::loadTheme(VisualTheme theme) {
-	this->scalableImage_listBox = theme_getScalableImage(theme, U"ListBox");
+void ListBox::loadTheme(const VisualTheme &theme) {
+	this->finalBackgroundClass = theme_selectClass(theme, this->backgroundClass.value, U"ListBox");
+	this->scalableImage_listBox = theme_getScalableImage(theme, this->finalBackgroundClass);
 	this->verticalScrollBar.loadTheme(theme, this->backColor.value);
+	this->background_filter = theme_getInteger(theme, this->finalBackgroundClass, U"Filter", 0);
 }
 
 void ListBox::changedTheme(VisualTheme newTheme) {
@@ -203,12 +212,14 @@ void ListBox::changedLocation(const IRect &oldLocation, const IRect &newLocation
 }
 
 void ListBox::changedAttribute(const ReadableString &name) {
-	if (!string_caseInsensitiveMatch(name, U"Visible")) {
-		this->hasImages = false;
-	}
 	if (string_caseInsensitiveMatch(name, U"List")) {
 		// Reset selection on full list updates
 		this->setSelectedIndex(0, true);
+	} else if (string_caseInsensitiveMatch(name, U"BackgroundClass")) {
+		// Update from the theme if the theme class has changed.
+		this->changedTheme(this->getTheme());
+	} else if (!string_caseInsensitiveMatch(name, U"Visible")) {
+		this->hasImages = false;
 	}
 	this->limitSelection(false);
 	this->limitScrolling();
