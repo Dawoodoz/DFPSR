@@ -662,7 +662,7 @@ bool VisualComponent::managesChildren() {
 }
 
 MediaResult dsr::component_generateImage(VisualTheme theme, MediaMethod &method, int width, int height, int red, int green, int blue, int pressed, int focused, int hover) {
-	return method.callUsingKeywords([&theme, &method, width, height, red, green, blue, pressed, focused, hover](MediaMachine &machine, int methodIndex, int inputIndex, const ReadableString &argumentName){
+	return method.callUsingKeywords([&theme, &method, width, height, red, green, blue, pressed, focused, hover](MediaMachine &machine, int methodIndex, int inputIndex, const ReadableString &argumentName) {
 		if (string_caseInsensitiveMatch(argumentName, U"width")) {
 			machine_setInputByIndex(machine, methodIndex, inputIndex, width);
 		} else if (string_caseInsensitiveMatch(argumentName, U"height")) {

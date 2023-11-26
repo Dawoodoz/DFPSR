@@ -1041,9 +1041,16 @@ static const InsSig mediaMachineInstructions[] = {
 
 // API implementation
 
+static void checkMachine(MediaMachine& machine) {
+	if (machine.get() == nullptr) {
+		throwError("The given media machine does not exist!");
+	}
+}
+
 static void checkMethodIndex(MediaMachine& machine, int methodIndex) {
+	checkMachine(machine);
 	if (methodIndex < 0 || methodIndex >= machine->methods.length()) {
-		throwError("Invalid method index ", methodIndex, " of 0..", (machine->methods.length() - 1), ".");
+		throwError("Invalid method index ", methodIndex, " of 0..", (machine->methods.length() - 1), "!");
 	}
 }
 
@@ -1129,8 +1136,17 @@ OrderedImageRgbaU8 machine_getImageRgbaU8OutputByIndex(MediaMachine& machine, in
 	return accessOutputByIndex<OrderedImageRgbaU8>(((MediaMemory*)machine->memory.get())->OrderedImageRgbaU8Memory, machine->memory->current.framePointer[DataType_ImageRgbaU8], machine->methods[methodIndex], DataType_ImageRgbaU8, outputIndex);
 }
 
+bool machine_exists(MediaMachine& machine) {
+	return machine.get() != nullptr;
+}
+
 int machine_findMethod(MediaMachine& machine, const ReadableString& methodName) {
-	return machine->findMethod(methodName);
+	if (!machine_exists(machine)) {
+		throwError(U"Can not look for ", methodName, U" in a media machine that does not exist!\n");
+		return -1;
+	} else {
+		return machine->findMethod(methodName);
+	}
 }
 
 MediaMethod machine_getMethod(MediaMachine& machine, const ReadableString& methodName, int contextIndex, bool mustExist) {
@@ -1144,6 +1160,11 @@ MediaMethod machine_getMethod(MediaMachine& machine, const ReadableString& metho
 String machine_getMethodName(MediaMachine& machine, int methodIndex) {
 	checkMethodIndex(machine, methodIndex);
 	return machine->methods[methodIndex].name;
+}
+
+int machine_getMethodCount(MediaMachine& machine) {
+	checkMachine(machine);
+	return machine->methods.length();
 }
 
 int machine_getInputCount(MediaMachine& machine, int methodIndex) {
