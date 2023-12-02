@@ -465,4 +465,17 @@ bool theme_assignMediaMachineArguments(const VisualTheme &theme, int contextInde
 	                         || assignMediaMachineArguments(theme->settings[0],            machine, methodIndex, inputIndex, argumentName);
 }
 
+ComponentState theme_getStateListenerMask(const MediaMethod &scalableImage) {
+	ComponentState result = 0;
+	for (int inputIndex = 0; inputIndex < machine_getInputCount(scalableImage.machine, scalableImage.methodIndex); inputIndex++) {
+		String upperInputName = string_upperCase(machine_getInputName(scalableImage.machine, scalableImage.methodIndex, inputIndex));
+		if (string_match(upperInputName, U"FOCUSED")) {
+			result |= componentState_focusDirect;
+		} else if (string_match(upperInputName, U"HOVERED")) {
+			result |= componentState_hoverDirect;
+		}
+	}
+	return result;
+}
+
 }

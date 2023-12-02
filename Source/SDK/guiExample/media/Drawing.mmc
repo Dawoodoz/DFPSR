@@ -116,6 +116,40 @@ BEGIN: FocusableDiffuse3x3
 	PACK_RGBA: colorImage, redImage, greenImage, blueImage, visibilityMap
 END:
 
+BEGIN: PressableDiffuse3x3
+	INPUT: FixedPoint, width
+	INPUT: FixedPoint, height
+	INPUT: FixedPoint, red
+	INPUT: FixedPoint, green
+	INPUT: FixedPoint, blue
+	INPUT: FixedPoint, pressed
+	INPUT: FixedPoint, focused
+	INPUT: FixedPoint, hovered
+	INPUT: FixedPoint, sourceLeft
+	INPUT: FixedPoint, sourceTop
+	INPUT: FixedPoint, sourceWidth
+	INPUT: FixedPoint, sourceHeight
+	INPUT: FixedPoint, pressOffsetX
+	INPUT: FixedPoint, pressOffsetY
+	INPUT: FixedPoint, preserved
+	INPUT: ImageRgbaU8, atlas
+	OUTPUT: ImageRgbaU8, colorImage
+	# Select image using the pressed state.
+	MUL: sourceOffsetX<FixedPoint>, pressed, pressOffsetX
+	MUL: sourceOffsetY<FixedPoint>, pressed, pressOffsetY
+	ADD: adjustedSourceLeft<FixedPoint>, sourceLeft, sourceOffsetX
+	ADD: adjustedSourceTop<FixedPoint>, sourceTop, sourceOffsetY
+	MUL: hoverChange<FixedPoint>, hovered, 0.1
+	MUL: focusChange<FixedPoint>, focused, -0.2
+	ADD: intensity<FixedPoint>, 1.0, hoverChange
+	ADD: intensity, intensity, focusChange
+	Mul: red, red, intensity
+	Mul: green, green, intensity
+	Mul: blue, blue, intensity
+	# Rescale the source region to fit width and height, while applying the diffuse color and adding white shine.
+	CALL: Diffuse3x3, colorImage, width, height, red, green, blue, adjustedSourceLeft, adjustedSourceTop, sourceWidth, sourceHeight, preserved, atlas
+END:
+
 BEGIN: DiffuseSpecular3x3
 	INPUT: FixedPoint, width
 	INPUT: FixedPoint, height
@@ -154,6 +188,8 @@ BEGIN: PressableDiffuseSpecular3x3
 	INPUT: FixedPoint, green
 	INPUT: FixedPoint, blue
 	INPUT: FixedPoint, pressed
+	INPUT: FixedPoint, focused
+	INPUT: FixedPoint, hovered
 	INPUT: FixedPoint, sourceLeft
 	INPUT: FixedPoint, sourceTop
 	INPUT: FixedPoint, sourceWidth
@@ -168,6 +204,13 @@ BEGIN: PressableDiffuseSpecular3x3
 	MUL: sourceOffsetY<FixedPoint>, pressed, pressOffsetY
 	ADD: adjustedSourceLeft<FixedPoint>, sourceLeft, sourceOffsetX
 	ADD: adjustedSourceTop<FixedPoint>, sourceTop, sourceOffsetY
+	MUL: hoverChange<FixedPoint>, hovered, 0.1
+	MUL: focusChange<FixedPoint>, focused, -0.2
+	ADD: intensity<FixedPoint>, 1.0, hoverChange
+	ADD: intensity, intensity, focusChange
+	Mul: red, red, intensity
+	Mul: green, green, intensity
+	Mul: blue, blue, intensity
 	# Rescale the source region to fit width and height, while applying the diffuse color and adding white shine.
 	CALL: DiffuseSpecular3x3, colorImage, width, height, red, green, blue, adjustedSourceLeft, adjustedSourceTop, sourceWidth, sourceHeight, preserved, atlas
 END:
@@ -210,6 +253,8 @@ BEGIN: PressableDiffuseSpecular1x1
 	INPUT: FixedPoint, green
 	INPUT: FixedPoint, blue
 	INPUT: FixedPoint, pressed
+	INPUT: FixedPoint, focused
+	INPUT: FixedPoint, hovered
 	INPUT: FixedPoint, sourceLeft
 	INPUT: FixedPoint, sourceTop
 	INPUT: FixedPoint, sourceWidth
@@ -224,6 +269,13 @@ BEGIN: PressableDiffuseSpecular1x1
 	MUL: sourceOffsetY<FixedPoint>, pressed, pressOffsetY
 	ADD: adjustedSourceLeft<FixedPoint>, sourceLeft, sourceOffsetX
 	ADD: adjustedSourceTop<FixedPoint>, sourceTop, sourceOffsetY
+	MUL: hoverChange<FixedPoint>, hovered, 0.1
+	MUL: focusChange<FixedPoint>, focused, -0.2
+	ADD: intensity<FixedPoint>, 1.0, hoverChange
+	ADD: intensity, intensity, focusChange
+	Mul: red, red, intensity
+	Mul: green, green, intensity
+	Mul: blue, blue, intensity
 	# Rescale the source region to fit width and height, while applying the diffuse color and adding white shine.
 	CALL: DiffuseSpecular1x1, colorImage, width, height, red, green, blue, adjustedSourceLeft, adjustedSourceTop, sourceWidth, sourceHeight, preserved, atlas
 END:

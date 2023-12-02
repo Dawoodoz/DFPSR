@@ -79,10 +79,10 @@ bool Menu::hasArrow() {
 	return this->subMenu && this->getChildCount() > 0;
 }
 
-static OrderedImageRgbaU8 generateHeadImage(Menu &menu, MediaMethod imageGenerator, int pressed, int width, int height, ColorRgbI32 backColor, ColorRgbI32 foreColor, const ReadableString &text, RasterFont font) {
+static OrderedImageRgbaU8 generateHeadImage(Menu &menu, MediaMethod imageGenerator, int pressed, int focused, int hover, int width, int height, ColorRgbI32 backColor, ColorRgbI32 foreColor, const ReadableString &text, RasterFont font) {
 	// Create a scaled image
 	OrderedImageRgbaU8 result;
- 	component_generateImage(menu.getTheme(), imageGenerator, width, height, backColor.red, backColor.green, backColor.blue, pressed)(result);
+ 	component_generateImage(menu.getTheme(), imageGenerator, width, height, backColor.red, backColor.green, backColor.blue, pressed, focused, hover)(result);
 	if (string_length(text) > 0) {
 		int backWidth = image_getWidth(result);
 		int backHeight = image_getHeight(result);
@@ -110,11 +110,13 @@ void Menu::generateGraphics() {
 	int headHeight = this->location.height();
 	if (headWidth < 1) { headWidth = 1; }
 	if (headHeight < 1) { headHeight = 1; }
-	if (!this->hasImages) {
+	// headImage is set to an empty handle when something used as input changes.
+	if (!image_exists(this->headImage)) {
 		completeAssets();
-		this->imageUp = generateHeadImage(*this, this->headImageMethod, 0, headWidth, headHeight, this->backColor.value, this->foreColor.value, this->text.value, this->font);
-		this->imageDown = generateHeadImage(*this, this->headImageMethod, 0, headWidth, headHeight, ColorRgbI32(0, 0, 0), ColorRgbI32(255, 255, 255), this->text.value, this->font);
-		this->hasImages = true;
+		bool focus = this->isFocused();
+		bool hover = this->isHovered();
+		bool press = this->pressed && hover;
+		this->headImage = generateHeadImage(*this, this->headImageMethod, press, focus, hover, headWidth, headHeight, this->backColor.value, this->foreColor.value, this->text.value, this->font);
 	}
 }
 
@@ -122,9 +124,9 @@ void Menu::generateGraphics() {
 void Menu::drawSelf(ImageRgbaU8& targetImage, const IRect &relativeLocation) {
 	this->generateGraphics();
 	if (this->menuHead_filter == 1) {
-		draw_alphaFilter(targetImage, this->showingOverlay() ? this->imageDown : this->imageUp, relativeLocation.left(), relativeLocation.top());
+		draw_alphaFilter(targetImage, this->headImage, relativeLocation.left(), relativeLocation.top());
 	} else {
-		draw_copy(targetImage, this->showingOverlay() ? this->imageDown : this->imageUp, relativeLocation.left(), relativeLocation.top());
+		draw_copy(targetImage, this->headImage, relativeLocation.left(), relativeLocation.top());
 	}
 }
 
@@ -178,6 +180,8 @@ void Menu::loadTheme(const VisualTheme &theme) {
 	this->finalHeadClass = theme_selectClass(theme, this->headClass.value, this->subMenu ? U"MenuSub" : U"MenuTop");
 	this->finalListClass = theme_selectClass(theme, this->listClass.value, U"MenuList");
 	this->headImageMethod = theme_getScalableImage(theme, this->finalHeadClass);
+	// Check which states the scalable head image is listening to.
+	this->headStateListenerMask = theme_getStateListenerMask(this->headImageMethod);
 	this->listBackgroundImageMethod = theme_getScalableImage(theme, this->finalListClass);
 	// Ask the theme which parts should be drawn using alpha filtering, and fall back on solid drawing.
 	this->menuHead_filter = theme_getInteger(theme, this->finalHeadClass, U"Filter", 0);
@@ -186,7 +190,7 @@ void Menu::loadTheme(const VisualTheme &theme) {
 
 void Menu::changedTheme(VisualTheme newTheme) {
 	this->loadTheme(newTheme);
-	this->hasImages = false;
+	this->headImage = OrderedImageRgbaU8();
 }
 
 void Menu::completeAssets() {
@@ -201,7 +205,7 @@ void Menu::completeAssets() {
 void Menu::changedLocation(const IRect &oldLocation, const IRect &newLocation) {
 	// If the component has changed dimensions then redraw the image
 	if (oldLocation.size() != newLocation.size()) {
-		this->hasImages = false;
+		this->headImage = OrderedImageRgbaU8();
 	}
 }
 
@@ -211,7 +215,7 @@ void Menu::changedAttribute(const ReadableString &name) {
 		// Update from the theme if a theme class has changed.
 		this->changedTheme(this->getTheme());
 	} else if (!string_caseInsensitiveMatch(name, U"Visible")) {
-		this->hasImages = false;
+		this->headImage = OrderedImageRgbaU8();
 	}
 	VisualComponent::changedAttribute(name);
 }
@@ -227,6 +231,22 @@ void Menu::updateStateEvent(ComponentState oldState, ComponentState newState) {
 	if (!(newState & componentState_showingOverlayDirect)) {		
 		// Clean up the background image to save memory and allow it to be regenerated in another size later.
 		this->listBackgroundImage = OrderedImageRgbaU8();
+	}
+	// Check which states have changed.
+	ComponentState changedStates = newState ^ oldState;
+	// TODO: Debug print to see if this works and create themes that respond to direct focus and hover states using color modifications as a simple start.
+	// Check if any of the changed bits overlap with the states that the head's scalable image generator uses as input.
+	if (changedStates & this->headStateListenerMask) {
+		// If a state affecting the input has changed, the image should be updated.
+		// The pressed argument can also be requested by the scalable images, but that is handled by components themselves.
+		this->headImage = OrderedImageRgbaU8();
+	}
+	// When pressed, changes in hover will affect if the component will appear pressed,
+	//   so show that one can safely abort a press done by mistake by releasing outside.
+	if (this->pressed && (changedStates & componentState_hoverDirect)) {
+		// If a state affecting the input has changed, the image should be updated.
+		// The pressed argument can also be requested by the scalable images, but that is handled by components themselves.
+		this->headImage = OrderedImageRgbaU8();
 	}
 }
 
@@ -266,17 +286,32 @@ void Menu::receiveMouseEvent(const MouseEvent& event) {
 	int childCount = this->getChildCount();
 	MouseEvent localEvent = event;
 	localEvent.position -= this->location.upperLeft();
-	if (this->showingOverlay() && this->pointIsInsideOfOverlay(event.position)) {
+	bool inOverlay = this->showingOverlay() && this->pointIsInsideOfOverlay(event.position);
+	bool inHead = this->pointIsInside(event.position);
+	if (event.mouseEventType == MouseEventType::MouseUp) {
+		// Pass on mouse up events to dragged components, even if not inside of them.
+		if (this->dragComponent.get() != nullptr) {
+			MouseEvent childEvent = localEvent;
+			childEvent.position -= this->dragComponent->location.upperLeft();
+			this->dragComponent->sendMouseEvent(childEvent, true);
+		}
+	} else if (inOverlay) {
+		// Pass on down and move events to a child component that the cursor is inside of.
 		for (int i = childCount - 1; i >= 0; i--) {
 			if (this->children[i]->pointIsInside(localEvent.position)) {
-				this->children[i]->makeFocused();
 				MouseEvent childEvent = localEvent;
 				childEvent.position -= this->children[i]->location.upperLeft();
+				if (event.mouseEventType == MouseEventType::MouseDown) {
+					this->dragComponent = this->children[i];
+					this->dragComponent->makeFocused();
+				}
 				this->children[i]->sendMouseEvent(childEvent, true);
 				break;
 			}
 		}
-	} else if (this->pointIsInside(event.position)) {
+	}
+	// If not interacting with the overlay and the cursor is within the head.
+	if (!inOverlay && inHead) {
 		if (childCount > 0) { // Has a list of members to open, toggle expansion when clicked.
 			if (this->subMenu) { // Menu within another menu.
 				// Hover to expand sub-menu's list.
@@ -313,15 +348,31 @@ void Menu::receiveMouseEvent(const MouseEvent& event) {
 			}
 		} else { // List item, because it has no children.
 			// Childless menu components are treated as menu items that can be clicked to perform an action and close the menu.
-			if (event.mouseEventType == MouseEventType::MouseDown) {
+			if ((event.mouseEventType == MouseEventType::MouseDown) && !this->pressed) {
+				// Show that the event is about to be triggered.
+				this->pressed = true;
+				// Update the head image.
+				this->headImage = OrderedImageRgbaU8();
+			} else if ((event.mouseEventType == MouseEventType::MouseUp) && this->pressed) {
+				// Released a press inside, confirming the event.
 				// Hide overlays all the way to root.
 				closeEntireMenu(this);
 				// Call the event assigned to this menu item.
 				this->callback_pressedEvent();
 			}
 		}
-		// Because the main body was interacted with, the mouse events are passed on.
+		// Because the main body was interacted with, the basic up/down/move/scroll mouse events are triggered.
 		VisualComponent::receiveMouseEvent(event);
+	}
+	// Releasing anywhere should stop pressing.
+	if (event.mouseEventType == MouseEventType::MouseUp) {
+		this->dragComponent = std::shared_ptr<VisualComponent>();
+		if (this->pressed) {
+			// No longer pressed.
+			this->pressed = false;
+			// Update the head image.
+			this->headImage = OrderedImageRgbaU8();
+		}
 	}
 }
 

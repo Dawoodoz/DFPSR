@@ -25,6 +25,7 @@
 #define DFPSR_GUI_VISUALTHEME
 
 #include "../api/mediaMachineAPI.h"
+#include "componentStates.h"
 
 namespace dsr {
 
@@ -91,6 +92,12 @@ ReadableString theme_getString(const VisualTheme &theme, const ReadableString &c
 // Called by VisualComponent to assign input arguments to functions in the media machine that were not given by the component itself.
 // Post-condition: Returns true if argumentName was identified and assigned as input to inputIndex of methodIndex in machine.
 bool theme_assignMediaMachineArguments(const VisualTheme &theme, int contextIndex, MediaMachine &machine, int methodIndex, int inputIndex, const ReadableString &argumentName);
+
+// Post-condition:
+//   Returns a bit-mask for the direct states that have corresponding input arguments in the method.
+//     Includes the componentState_focusDirect bit if the method has an input argument named "focused".
+//     Includes the componentState_hoverDirect bit if the method has an input argument named "hover".
+ComponentState theme_getStateListenerMask(const MediaMethod &scalableImage);
 
 }
 
