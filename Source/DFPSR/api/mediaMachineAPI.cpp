@@ -1041,13 +1041,13 @@ static const InsSig mediaMachineInstructions[] = {
 
 // API implementation
 
-static void checkMachine(MediaMachine& machine) {
+static void checkMachine(const MediaMachine& machine) {
 	if (machine.get() == nullptr) {
 		throwError("The given media machine does not exist!");
 	}
 }
 
-static void checkMethodIndex(MediaMachine& machine, int methodIndex) {
+static void checkMethodIndex(const MediaMachine& machine, int methodIndex) {
 	checkMachine(machine);
 	if (methodIndex < 0 || methodIndex >= machine->methods.length()) {
 		throwError("Invalid method index ", methodIndex, " of 0..", (machine->methods.length() - 1), "!");
@@ -1123,24 +1123,24 @@ void machine_setInputByIndex(MediaMachine& machine, int methodIndex, int inputIn
 }
 
 // Get output by index
-FixedPoint machine_getFixedPointOutputByIndex(MediaMachine& machine, int methodIndex, int outputIndex) {
+FixedPoint machine_getFixedPointOutputByIndex(const MediaMachine& machine, int methodIndex, int outputIndex) {
 	checkMethodIndex(machine, methodIndex);
 	return accessOutputByIndex<FixedPoint>(((MediaMemory*)machine->memory.get())->FixedPointMemory, machine->memory->current.framePointer[DataType_FixedPoint], machine->methods[methodIndex], DataType_FixedPoint, outputIndex);
 }
-AlignedImageU8 machine_getImageU8OutputByIndex(MediaMachine& machine, int methodIndex, int outputIndex) {
+AlignedImageU8 machine_getImageU8OutputByIndex(const MediaMachine& machine, int methodIndex, int outputIndex) {
 	checkMethodIndex(machine, methodIndex);
 	return accessOutputByIndex<AlignedImageU8>(((MediaMemory*)machine->memory.get())->AlignedImageU8Memory, machine->memory->current.framePointer[DataType_ImageU8], machine->methods[methodIndex], DataType_ImageU8, outputIndex);
 }
-OrderedImageRgbaU8 machine_getImageRgbaU8OutputByIndex(MediaMachine& machine, int methodIndex, int outputIndex) {
+OrderedImageRgbaU8 machine_getImageRgbaU8OutputByIndex(const MediaMachine& machine, int methodIndex, int outputIndex) {
 	checkMethodIndex(machine, methodIndex);
 	return accessOutputByIndex<OrderedImageRgbaU8>(((MediaMemory*)machine->memory.get())->OrderedImageRgbaU8Memory, machine->memory->current.framePointer[DataType_ImageRgbaU8], machine->methods[methodIndex], DataType_ImageRgbaU8, outputIndex);
 }
 
-bool machine_exists(MediaMachine& machine) {
+bool machine_exists(const MediaMachine& machine) {
 	return machine.get() != nullptr;
 }
 
-int machine_findMethod(MediaMachine& machine, const ReadableString& methodName) {
+int machine_findMethod(const MediaMachine& machine, const ReadableString& methodName) {
 	if (!machine_exists(machine)) {
 		throwError(U"Can not look for ", methodName, U" in a media machine that does not exist!\n");
 		return -1;
@@ -1157,27 +1157,27 @@ MediaMethod machine_getMethod(MediaMachine& machine, const ReadableString& metho
 	return MediaMethod(machine, methodIndex, contextIndex);
 }
 
-String machine_getMethodName(MediaMachine& machine, int methodIndex) {
+String machine_getMethodName(const MediaMachine& machine, int methodIndex) {
 	checkMethodIndex(machine, methodIndex);
 	return machine->methods[methodIndex].name;
 }
 
-int machine_getMethodCount(MediaMachine& machine) {
+int machine_getMethodCount(const MediaMachine& machine) {
 	checkMachine(machine);
 	return machine->methods.length();
 }
 
-int machine_getInputCount(MediaMachine& machine, int methodIndex) {
+int machine_getInputCount(const MediaMachine& machine, int methodIndex) {
 	checkMethodIndex(machine, methodIndex);
 	return machine->methods[methodIndex].inputCount;
 }
 
-int machine_getOutputCount(MediaMachine& machine, int methodIndex) {
+int machine_getOutputCount(const MediaMachine& machine, int methodIndex) {
 	checkMethodIndex(machine, methodIndex);
 	return machine->methods[methodIndex].outputCount;
 }
 
-String machine_getInputName(MediaMachine& machine, int methodIndex, int inputIndex) {
+String machine_getInputName(const MediaMachine& machine, int methodIndex, int inputIndex) {
 	checkMethodIndex(machine, methodIndex);
 	Method *method = &(machine->methods[methodIndex]);
 	if (inputIndex < 0 || inputIndex >= method->inputCount) {
@@ -1186,7 +1186,7 @@ String machine_getInputName(MediaMachine& machine, int methodIndex, int inputInd
 	return method->locals[inputIndex].name;
 }
 
-String machine_getOutputName(MediaMachine& machine, int methodIndex, int outputIndex) {
+String machine_getOutputName(const MediaMachine& machine, int methodIndex, int outputIndex) {
 	checkMethodIndex(machine, methodIndex);
 	Method *method = &(machine->methods[methodIndex]);
 	if (outputIndex < 0 || outputIndex >= method->outputCount) {
