@@ -28,6 +28,7 @@
 #include "BackendWindow.h"
 #include "FlexRegion.h"
 #include "InputEvent.h"
+#include "componentStates.h"
 #include "VisualTheme.h"
 #include "../api/imageAPI.h"
 #include "../api/drawAPI.h"
@@ -36,24 +37,6 @@ namespace dsr {
 
 // A reusable method for calling the media machine that allow providing additional variables as style flags.
 MediaResult component_generateImage(VisualTheme theme, MediaMethod &method, int width, int height, int red, int green, int blue, int pressed = 0, int focused = 0, int hover = 0);
-
-class VisualComponent;
-
-// Bit flags for component states.
-//  The size of ComponentState may change if running out of bits for new flags.
-//  Each state should have a direct state and an indirect state, so that bitwise operations can be used to scan all states at once.
-using ComponentState = uint32_t;
-static const ComponentState componentState_focusDirect = 1 << 0; // Component being directly focused.
-static const ComponentState componentState_focusIndirect = 1 << 1; // Contains the component being focused.
-static const ComponentState componentState_hoverDirect = 1 << 2; // Component being hovered.
-static const ComponentState componentState_hoverIndirect = 1 << 3; // Contains the component being hovered.
-static const ComponentState componentState_showingOverlayDirect = 1 << 4; // The component will have drawOverlay called, if also visible.
-static const ComponentState componentState_showingOverlayIndirect = 1 << 5; // The component contains a component drawing overlays.
-static const ComponentState componentState_focus = componentState_focusDirect | componentState_focusIndirect; // Direct or indirect focus.
-static const ComponentState componentState_hover = componentState_hoverDirect | componentState_hoverIndirect; // Direct or indirect hover.
-static const ComponentState componentState_showingOverlay = componentState_showingOverlayDirect | componentState_showingOverlayIndirect; // Direct or indirect overlay.
-static const ComponentState componentState_direct   = 0b01010101010101010101010101010101;
-static const ComponentState componentState_indirect = 0b10101010101010101010101010101010;
 
 class VisualComponent : public Persistent {
 PERSISTENT_DECLARATION(VisualComponent)
