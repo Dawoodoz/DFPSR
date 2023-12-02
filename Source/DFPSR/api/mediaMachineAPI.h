@@ -35,13 +35,13 @@ namespace dsr {
 MediaMachine machine_create(const ReadableString& code);
 
 // Post-condition: Returns true iff machine exists.
-bool machine_exists(MediaMachine& machine);
+bool machine_exists(const MediaMachine& machine);
 
 // Pre-condition:
 //   * The machine must exist.
 //     machine_exists(machine)
 // Returns the index to the method who's name matches methodName with case insensitivity in machine, or -1 if it does not exist in machine.
-int machine_findMethod(MediaMachine& machine, const ReadableString& methodName);
+int machine_findMethod(const MediaMachine& machine, const ReadableString& methodName);
 
 // Assign an input argument of a method before your call to machine_executeMethod.
 // Pre-condition:
@@ -76,15 +76,15 @@ void machine_executeMethod(MediaMachine& machine, int methodIndex);
 //   * The output index must be within range.
 //     0 <= outputIndex < machine_getOutputCount(machine, methodIndex)
 // Post-condition: Returns the output at outputIndex.
-FixedPoint machine_getFixedPointOutputByIndex(MediaMachine& machine, int methodIndex, int outputIndex);
-AlignedImageU8 machine_getImageU8OutputByIndex(MediaMachine& machine, int methodIndex, int outputIndex);
-OrderedImageRgbaU8 machine_getImageRgbaU8OutputByIndex(MediaMachine& machine, int methodIndex, int outputIndex);
+FixedPoint machine_getFixedPointOutputByIndex(const MediaMachine& machine, int methodIndex, int outputIndex);
+AlignedImageU8 machine_getImageU8OutputByIndex(const MediaMachine& machine, int methodIndex, int outputIndex);
+OrderedImageRgbaU8 machine_getImageRgbaU8OutputByIndex(const MediaMachine& machine, int methodIndex, int outputIndex);
 
 // Pre-condition:
 //   * The machine must exist.
 //     machine_exists(machine)
 // Post-condition: Returns the number of methods in machine.
-int machine_getMethodCount(MediaMachine& machine);
+int machine_getMethodCount(const MediaMachine& machine);
 
 // Pre-condition:
 //   * The machine must exist.
@@ -92,7 +92,7 @@ int machine_getMethodCount(MediaMachine& machine);
 //   * methodIndex must refer to the method that you want to get the name from.
 //     0 <= methodIndex < machine_getMethodCount(machine)
 // Post-condition: Returns the name of the method at methodIndex in machine.
-String machine_getMethodName(MediaMachine& machine, int methodIndex);
+String machine_getMethodName(const MediaMachine& machine, int methodIndex);
 
 // Pre-condition:
 //   * The machine must exist.
@@ -100,7 +100,7 @@ String machine_getMethodName(MediaMachine& machine, int methodIndex);
 //   * methodIndex must refer to the method that you want to get the input count from.
 //     0 <= methodIndex < machine_getMethodCount(machine)
 // Post-condition: Returns the input argument count for the method at methodIndex in machine.
-int machine_getInputCount(MediaMachine& machine, int methodIndex);
+int machine_getInputCount(const MediaMachine& machine, int methodIndex);
 
 // Pre-condition:
 //   * The machine must exist.
@@ -108,7 +108,7 @@ int machine_getInputCount(MediaMachine& machine, int methodIndex);
 //   * methodIndex must refer to the method that you want to get the output count from.
 //     0 <= methodIndex < machine_getMethodCount(machine)
 // Post-condition: Returns the output argument count for the method at methodIndex in machine.
-int machine_getOutputCount(MediaMachine& machine, int methodIndex);
+int machine_getOutputCount(const MediaMachine& machine, int methodIndex);
 
 // Pre-condition:
 //   * The machine must exist.
@@ -118,7 +118,7 @@ int machine_getOutputCount(MediaMachine& machine, int methodIndex);
 //   * The inputIndex must refer to the input argument that you want to get the name of.
 //     0 <= inputIndex < machine_getInputCount(machine, methodIndex)
 // Post-condition: Returns the input argument name at inputIndex for the method at methodIndex in machine.
-String machine_getInputName(MediaMachine& machine, int methodIndex, int inputIndex);
+String machine_getInputName(const MediaMachine& machine, int methodIndex, int inputIndex);
 
 // Pre-condition:
 //   * The machine must exist.
@@ -128,7 +128,7 @@ String machine_getInputName(MediaMachine& machine, int methodIndex, int inputInd
 //   * The outputIndex must refer to the output argument that you want to get the name of.
 //     0 <= outputIndex < machine_getOutputCount(machine, methodIndex)
 // Post-condition: Returns the output argument name at outputIndex for the method at methodIndex in machine.
-String machine_getOutputName(MediaMachine& machine, int methodIndex, int outputIndex);
+String machine_getOutputName(const MediaMachine& machine, int methodIndex, int outputIndex);
 
 // Helper function counting the number of arguments given to it.
 inline constexpr int machine_argCount() {
