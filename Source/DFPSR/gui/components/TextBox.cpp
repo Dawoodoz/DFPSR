@@ -75,7 +75,7 @@ static void tabJump(int64_t &x, int64_t tabWidth) {
 static int64_t monospacesPerTab = 4;
 
 // Pre-condition: text does not contain any linebreak.
-void iterateCharactersInLine(const ReadableString& text, const RasterFont &font, std::function<void(int64_t index, DsrChar code, int64_t left, int64_t right)> characterAction) {
+static void iterateCharactersInLine(const ReadableString& text, const RasterFont &font, std::function<void(int64_t index, DsrChar code, int64_t left, int64_t right)> characterAction) {
 	int64_t right = 0;
 	int64_t monospaceWidth = font_getMonospaceWidth(font);
 	int64_t tabWidth = monospaceWidth * monospacesPerTab;
@@ -93,7 +93,7 @@ void iterateCharactersInLine(const ReadableString& text, const RasterFont &font,
 
 // Iterate over the whole text once for both selection and characters.
 // Returns the beam's X location in pixels.
-int64_t printMonospaceLine(OrderedImageRgbaU8 &target, const ReadableString& text, const RasterFont &font, ColorRgbaI32 foreColor, bool focused, int64_t originX, int64_t selectionLeft, int64_t selectionRight, int64_t beamIndex, int64_t topY, int64_t bottomY) {
+static int64_t printMonospaceLine(OrderedImageRgbaU8 &target, const ReadableString& text, const RasterFont &font, ColorRgbaI32 foreColor, bool focused, int64_t originX, int64_t selectionLeft, int64_t selectionRight, int64_t beamIndex, int64_t topY, int64_t bottomY) {
 	int64_t characterHeight = bottomY - topY;
 	int64_t beamPixelX = 0;
 	iterateCharactersInLine(text, font, [&target, &font, &foreColor, &beamPixelX, originX, selectionLeft, selectionRight, beamIndex, topY, characterHeight, focused](int64_t index, DsrChar code, int64_t left, int64_t right) {
@@ -382,6 +382,7 @@ static int64_t getLineEnd(const ReadableString &text, int64_t searchStart) {
 	return string_length(text);
 }
 
+// TODO: Use DsrKey_PageUp and DsrKey_PageDown.
 void TextBox::receiveKeyboardEvent(const KeyboardEvent& event) {
 	// Insert and scroll-lock is not supported.
 	// To prevent getting stuck from missing a key event, one can reset by pressing and releasing again.
