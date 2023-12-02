@@ -36,7 +36,7 @@
 namespace dsr {
 
 // A reusable method for calling the media machine that allow providing additional variables as style flags.
-MediaResult component_generateImage(VisualTheme theme, MediaMethod &method, int width, int height, int red, int green, int blue, int pressed = 0, int focused = 0, int hover = 0);
+MediaResult component_generateImage(VisualTheme theme, MediaMethod &method, int width, int height, int red, int green, int blue, int pressed = 0, int focused = 0, int hovered = 0);
 
 class VisualComponent : public Persistent {
 PERSISTENT_DECLARATION(VisualComponent)
@@ -93,6 +93,8 @@ public: // Hover is reset before assigned again using a bit mask.
 	bool ownsHover() { return (this->currentState & (componentState_hoverDirect | componentState_hoverIndirect)) != 0; }
 	// Make the component directly hovered and its parents indirectly hovered.
 	void hover();
+	// Remove the hover effect.
+	void leave();
 public: // Showing overlay
 	inline bool showingOverlay() { return (this->currentState & componentState_showingOverlayDirect) != 0; }
 	inline bool ownsOverlay() { return (this->currentState & componentState_showingOverlay) != 0; }
@@ -239,6 +241,8 @@ public:
 	// Returns true iff the pixelPosition relative to the parent container's upper left corner is inside of the component's overlay.
 	// The caller is responsible for checking if the component is showing an overlay (this->showOverlay).
 	virtual bool pointIsInsideOfOverlay(const IVector2D& pixelPosition);
+	// Return true iff the pixelPosition relative to the parent container's upper left corner is inside of the region causing a hover effect.
+	virtual bool pointIsInsideOfHover(const IVector2D& pixelPosition);
 	// Send a mouse down event to the component
 	//   pixelPosition is relative to the component's own upper left corner. TODO: Does this make sense, or should it use parent coordinates?
 	//   The component is reponsible for bound checking, which can be used to either block the signal or pass to components below.
