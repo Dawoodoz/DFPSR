@@ -2,7 +2,7 @@
 #ifndef DFPSR_SOUND_API
 #define DFPSR_SOUND_API
 
-#include "../DFPSR/includeFramework.h"
+#include "../DFPSR/includeEssentials.h"
 
 // Call this function from a separate thread in a sound engine to initialize the sound system, call back with sound output requests and terminate when the callback returns false.
 // The sound_streamToSpeakers function returns false if the backend could not be created, and true iff the backend completed all work and terminated safely.

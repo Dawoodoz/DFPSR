@@ -5,6 +5,7 @@
 
 #include "soundManagers.h"
 #include <alsa/asoundlib.h>
+#include "../DFPSR/base/simd.h"
 
 using namespace dsr;
 
