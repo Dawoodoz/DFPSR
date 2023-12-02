@@ -379,6 +379,10 @@ bool VisualComponent::pointIsInsideOfOverlay(const IVector2D& pixelPosition) {
 	return false;
 }
 
+bool VisualComponent::pointIsInsideOfHover(const IVector2D& pixelPosition) {
+	return this->pointIsInside(pixelPosition);
+}
+
 // Non-recursive top-down search
 std::shared_ptr<VisualComponent> VisualComponent::getDirectChild(const IVector2D& pixelPosition) {
 	// Iterate child components in reverse drawing order
@@ -487,7 +491,7 @@ void VisualComponent::addStateBits(ComponentState directStates, bool unique) {
 	VisualComponent *root = getRoot(this);
 	// Remove all focus in the window if unique.
 	if (unique) root->applyStateAndMask(~directStates);
-	// Apply focus directly to itself and indirectly to parents.
+	// Apply state directly to itself and indirectly to parents.
 	this->currentState |= directStates;
 	// Update indirect states, so that parent components know what happens to their child components.
 	root->updateIndirectStates();
@@ -495,7 +499,7 @@ void VisualComponent::addStateBits(ComponentState directStates, bool unique) {
 
 void VisualComponent::removeStateBits(ComponentState directStates) {
 	VisualComponent *root = getRoot(this);
-	// Apply focus directly to itself and indirectly to parents.
+	// Remove state directly from itself and indirectly from parents.
 	this->currentState &= ~directStates;
 	// Update indirect states, so that parent components know what happens to their child components.
 	root->updateIndirectStates();
@@ -509,6 +513,10 @@ void VisualComponent::makeFocused() {
 
 void VisualComponent::hover() {
 	this->addStateBits(componentState_hoverDirect, true);
+}
+
+void VisualComponent::leave() {
+	this->removeStateBits(componentState_hoverDirect);
 }
 
 void VisualComponent::showOverlay() {
@@ -578,7 +586,11 @@ void VisualComponent::sendMouseEvent(const MouseEvent& event, bool recursive) {
 		MouseEvent parentEvent = event;
 		parentEvent.position += this->location.upperLeft();
 		// Itself is directly hovered.
-		this->hover();
+		if (pointIsInsideOfHover(parentEvent.position)) {
+			this->hover();
+		} else {
+			this->leave();
+		}
 		// If the event receiver pass it on to child components, it can just reset the hover flags again.
 		this->receiveMouseEvent(parentEvent);
 	}
@@ -661,8 +673,8 @@ bool VisualComponent::managesChildren() {
 	return false;
 }
 
-MediaResult dsr::component_generateImage(VisualTheme theme, MediaMethod &method, int width, int height, int red, int green, int blue, int pressed, int focused, int hover) {
-	return method.callUsingKeywords([&theme, &method, width, height, red, green, blue, pressed, focused, hover](MediaMachine &machine, int methodIndex, int inputIndex, const ReadableString &argumentName) {
+MediaResult dsr::component_generateImage(VisualTheme theme, MediaMethod &method, int width, int height, int red, int green, int blue, int pressed, int focused, int hovered) {
+	return method.callUsingKeywords([&theme, &method, width, height, red, green, blue, pressed, focused, hovered](MediaMachine &machine, int methodIndex, int inputIndex, const ReadableString &argumentName) {
 		if (string_caseInsensitiveMatch(argumentName, U"width")) {
 			machine_setInputByIndex(machine, methodIndex, inputIndex, width);
 		} else if (string_caseInsensitiveMatch(argumentName, U"height")) {
@@ -671,8 +683,8 @@ MediaResult dsr::component_generateImage(VisualTheme theme, MediaMethod &method,
 			machine_setInputByIndex(machine, methodIndex, inputIndex, pressed);
 		} else if (string_caseInsensitiveMatch(argumentName, U"focused")) {
 			machine_setInputByIndex(machine, methodIndex, inputIndex, focused);
-		} else if (string_caseInsensitiveMatch(argumentName, U"hover")) {
-			machine_setInputByIndex(machine, methodIndex, inputIndex, hover);
+		} else if (string_caseInsensitiveMatch(argumentName, U"hovered")) {
+			machine_setInputByIndex(machine, methodIndex, inputIndex, hovered);
 		} else if (string_caseInsensitiveMatch(argumentName, U"red")) {
 			machine_setInputByIndex(machine, methodIndex, inputIndex, red);
 		} else if (string_caseInsensitiveMatch(argumentName, U"green")) {
