@@ -27,3 +27,5 @@ Changes since version 0.1.0
 			Replace 'DsrKey_RightAlt' with 'DsrKey_Alt'
 			Merge any uplicated checks for left or right versions to clean up your code.
 			Rethink the design if you relied on distinguishing between left and right control, shift or alt.
+	* If you used a custom theme before the system was finished, you will now have to add the assignment "filter = 1" for components where rounded edges became black from adding the filter setting.
+		Because one can not let default values depend on which component is used when theme classes are shared freely between components.
