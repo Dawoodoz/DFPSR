@@ -719,9 +719,16 @@ DsrProcessStatus process_getStatus(const DsrProcess &process) {
 				int status = 0;
 				if (waitpid(process->pid, &status, WNOHANG) != 0) {
 					if (WIFEXITED(status)) {
-						process->lastStatus = DsrProcessStatus::Completed;
+						if (WEXITSTATUS(status) == 0) {
+							// The program finished and returned 0 for success.
+							process->lastStatus = DsrProcessStatus::Completed;
+						} else {
+							// The program finished, but returned a non-zero result indicating that something still went wrong.
+							process->lastStatus = DsrProcessStatus::Crashed;
+						}
 						process->terminated = true;
 					} else if (WIFSIGNALED(status)) {
+						// The program was stopped due to a hard crash.
 						process->lastStatus = DsrProcessStatus::Crashed;
 						process->terminated = true;
 					}
