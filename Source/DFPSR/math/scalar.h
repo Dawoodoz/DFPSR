@@ -106,7 +106,7 @@ inline void swap(T &a, T &b) {
 
 // More compact than min(a, b) when reading from the target
 template <typename T>
-inline void replaceWithSmaller(T& target, T source) {
+inline void replaceWithSmaller(T &target, const T &source) {
 	if (source < target) {
 		target = source;
 	}
@@ -114,7 +114,7 @@ inline void replaceWithSmaller(T& target, T source) {
 
 // More compact than max(a, b) when reading from the target
 template <typename T>
-inline void replaceWithLarger(T& target, T source) {
+inline void replaceWithLarger(T &target, const T &source) {
 	if (source > target) {
 		target = source;
 	}
