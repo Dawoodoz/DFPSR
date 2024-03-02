@@ -12,9 +12,15 @@ The official website:
 
 ## What your games might look like using isometric CPU rendering
 
-![Screenshot of the sandbox example running on a hexacore Intel Core I5 9600K.](Sandbox.jpg "Sandbox example")
+![Screenshot of the sandbox example with a dark maze, running on a hexacore Intel Core I5 9600K.](Sandbox.jpg "Sandbox example")
 
 Real-time dynamic light with depth-based casted shadows and normal mapping at 453 frames per second in 800x600 pixels running on the CPU. Higher resolutions would break the retro style and actually look worse, but there's lots of time left for game logic and additional effects. By pre-rendering 3D models to diffuse, normal and height images, reading the data is much more cache efficient on modern CPUs than using a free perspective. This also allow having more triangles than pixels on the screen and doing passive updates of static geometry. Low-detailed 3D models are used to cast dynamic shadows.
+
+## Traditional 3D rendering with polygons is also supported
+
+![Screenshot of the terrain example, showcasing an island with pre-generated normal mapping from a higher resolution height map.](Source/SDK/terrain/Preview.jpg "Terrain example")
+
+3D rendering is not as fast as 2D or isometric rendering on the CPU, but often reaches 60 Hz in 1920x1080 pixels for low-detailed graphics. For higher detail level and more features, it is recommended to copy and modify the rendering pipeline to make it hardcoded for only the features you want and then simplify the math for your specific rendering engine, as done for the Sandbox example where only vertex colors are needed for tiny triangles without perspective, so that colors can be calculated by incrementing color values instead of interpolating from depth divided coordinates.
 
 ## Why use an open-source software renderer when GPUs are so fast?
 * **Robustness** Using a software renderer will probably not ruin your system when making a mistake, unlike graphics APIs for the GPU that are prone to blue-screens.
@@ -35,14 +41,14 @@ Real-time dynamic light with depth-based casted shadows and normal mapping at 45
 * **2D drawing** Pixel exact standard draw calls for lines, rectangles, solid image copy, alpha filtered image drawing, depth buffered drawing, and stencil drawing.
 * **3D rendering** Roughly equivalent to Direct3D 7 with bi-linear texture sampling, mipmapping, lightmaps and alpha filtering when used out of the box, but can be modified to be more like Direct 3D 9 if you apply shading to textures (can use SIMD with multi-threading and be scheduled based on viewing distance).
 * **Occlusion system** The collection of rendering tasks for multi-threading also contains an occlusion grid where occlusion shapes can be drawn to skip drawing of triangles, object or whole groups if your engine implements a broad-phase for culling and occlusion tests. This fully dynamic occlusion can then be combined with static optimizations for specific games using information about which regions can be seen from each camera location.
-* **Optional far clipping** Because this graphics API only uses floating-point depth buffers for perspective, there is no need to normalize the depth values for any integer based representation. This allow selecting an infinite far clip distance when creating your camera, if you can afford rendering the entire scene at once.
+* **Optional far clipping** Because this graphics API only uses floating-point depth buffers for perspective, there is no need to normalize the depth values for any integer based representation. This allows selecting an infinite far clip distance when creating your camera, if you can afford rendering the entire scene at once.
 * **Media layer** Cross-platform media layer designed for robustness. Alsa and WinMM sound backends for full control over sound mixing, without having to call anything system specific yourself. Window management uses multi-threading for uploading the canvas, so that you don't need a GPU graphics drivers and heavy dependencies just to upload the result. Uses a borderless window for full-screen, so that you can easily access other programs if you get an important e-mail or instant message in the background. Upscaling is done on the CPU to work with any screen resolution without relying on graphics drivers that might give pixels the wrong interpolation or not even exist. Older media layers designed for CTR displays may cause frequency out of range errors when no graphics drivers are installed and the display does not accept the arbitrary selection of resolution. Uses an invisible cursor icon to hide the mouse, so that a crashing program will not take away the cursor when trying to kill the process.
 * **Graphical user interface framework** Load a visual interface to your window using a single line of code reading a layout file or string. Get generic handles to components using names or a combination of name and index. Add events by attaching lambda functions to component and window callbacks.
 * **Timers** Get the double precision seconds passed since the first call to the timer, so that you won't have to worry about midnight bugs when the time of day resets.
 * **SIMD abstraction layer** Use simd.h to automatically generate highly efficient SSE, AVX and NEON intrinsics from fully readable math syntax. Your vectorized code will look like a reference implementation and compiling for an unknown target architecture will generate scalar operations that can still give a performance boost by writing your algorithm with basic operations that are most often supported directly in CPU hardware, accessing memory aligned with cache lines, keeping the instruction window packed with tasks, and making it very easy for a compiler's auto-vectorization if something similar with a different name exists in the future.
 * **Safe pointers** Use SafePointer.h to catch more errors by telling your pointer which part of an allocation it may work on. Leaves no overhead in the release version, so that you can always replace your raw pointer with SafePointer and know that you will get an informative error message with the pointer's name and detailed information when something bad happens.
-* **Strings** Use UTF-32 to store characters in memory to make sure that all algorithms work with non-latin characters (compatible with U"" string literals). Saving to files default to UTF-8 (compact storage) with BOM (explicitly saying which format is uses) and CR LF line endings (so that text files encoded anywhere can be read everywhere). Uses shared memory buffers automatically to allow splitting into a list of strings without flooding the heap with small allocations.
-* **Buffers** All files are saved and loaded through Buffer objects. This makes sure that all file formats you design only have to worry about how to encode the bytes, regressions tests will be easy by not involving external side-effects from the file system, and any file can be bundled into your own by using the Buffer equivalent of a save function.
+* **Strings** Use UTF-32 to store characters in memory to make sure that all algorithms work with non-latin characters (compatible with U"" string literals). Saving to files default to UTF-8 (compact storage) with BOM (explicitly saying which format is used) and CR LF line endings (so that text files encoded anywhere can be read everywhere). Uses shared memory buffers automatically to allow splitting into a list of strings without flooding the heap with small allocations.
+* **Buffers** All files are saved and loaded through Buffer objects. This makes sure that all file formats you design only have to worry about how to encode the bytes, regression tests will be easy by not involving external side-effects from the file system, and any file can be bundled into your own by using the Buffer equivalent of a save function.
 * **File management** Roughly equivalent to std::filesystem from C++17, but works with C++14, uses the same String and ReadableString types on all platforms, and can automatically correct folder separators between / (Posix) and \ (MS-Windows).
 * **Process management** Can start other applications and keep track of their status, so that you can call an application like a function writing the result to files.
 
@@ -58,7 +64,7 @@ Theme, GUI, font and sound APIs are still under active development and may have 
 ## How you can help
 * Port to Macintosh or Wayland using the same principles of minimal dependency.
 * Test this beta version and give feedback on the design before version 1.0 is released.
-* Create different types of game engines with open source tools.
+* Create different types of game engines with open-source tools.
 
 ## Supported CPU hardware:
 * **Intel/AMD** using **SSE2** intrinsics and optional extensions.
@@ -72,7 +78,7 @@ Currently supporting X11 and Wayland is planned for future versions.
 * **Microsoft Windows**, but slower than on Linux because Windows has lots of background processes and slower threading and memory management.
 
 ## Might also work on:
-* BSD and Solaris has code targeting the platforms in fileAPI.cpp for getting the application folder, but there are likely some applications missing for running the build script.
+* BSD and Solaris have code targeting the platforms in fileAPI.cpp for getting the application folder, but there are likely some applications missing for running the build script.
 Future Posix compliant systems should only have a few quirks to sort out if it has an X11 server.
 * Big-Endian is supported in theory if enabling the DSR_BIG_ENDIAN macro globally, but this has never actually been tested due to difficulties with targeting such an old system with modern compilers.
 
@@ -81,5 +87,5 @@ Future Posix compliant systems should only have a few quirks to sort out if it h
 Macintosh does not have a symbolic link to the binary of the running process, so it would fall back on the current directory when asking for the application folder.
 
 ## Will not target:
-* Mobile phones. Because the constant changes breaking backwards compatibility on mobile platforms would defeat the purpose of using a long-lifetime framework. Mobile platforms require custom C++ compilers, access to signal processors, screen rotation, battery saving, knowing when to display the virtual keyboard, security permissions, forced full-screen... Trying to do both at the same time would end up with design compromises in both ends like Microsoft Windows 8 or Ubuntu's Unity lock screen, so it would be better to just take bits and pieces into a new library built on different design principles.
+* Mobile phones. Because the constant changes breaking backward compatibility on mobile platforms would defeat the purpose of using a long-lifetime framework. Mobile platforms require custom C++ compilers, access to signal processors, screen rotation, battery saving, knowing when to display the virtual keyboard, security permissions, forced full-screen... Trying to do both at the same time would end up with design compromises in both ends like Microsoft Windows 8 or Ubuntu's Unity lock screen, so it would be better to just take bits and pieces into a new library built on different design principles.
 * Web frontends. Such a wrapper over this library would not be able to get the power of SIMD intrinsics for defining your own image filters, so you would be better off targeting a GPU shading language from the browser which is more suited for dynamic scripting.
