@@ -1,5 +1,5 @@
 ﻿
-#include <assert.h>
+#include <cassert>
 #include <limits>
 #include <functional>
 #include "../../DFPSR/includeFramework.h"

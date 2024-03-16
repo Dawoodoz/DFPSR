@@ -25,7 +25,7 @@
 #define DFPSR_IMAGE
 
 #include <cassert>
-#include <stdint.h>
+#include <cstdint>
 #include "../base/SafePointer.h"
 #include "../api/bufferAPI.h"
 #include "../math/scalar.h"

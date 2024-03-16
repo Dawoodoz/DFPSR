@@ -81,7 +81,7 @@
 
 #ifndef DFPSR_SIMD
 #define DFPSR_SIMD
-	#include <stdint.h>
+	#include <cstdint>
 	#include <cassert>
 	#include "SafePointer.h"
 	#include "../math/FVector.h"

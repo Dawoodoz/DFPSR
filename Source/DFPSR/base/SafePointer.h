@@ -43,7 +43,7 @@
 
 #include <cstring>
 #include <cassert>
-#include <stdint.h>
+#include <cstdint>
 
 // Disabled in release mode
 #ifndef NDEBUG

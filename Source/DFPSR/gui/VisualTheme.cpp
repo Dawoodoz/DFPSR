@@ -21,7 +21,7 @@
 //    3. This notice may not be removed or altered from any source
 //    distribution.
 
-#include <stdint.h>
+#include <cstdint>
 #include "VisualTheme.h"
 #include "../api/fileAPI.h"
 #include "../api/imageAPI.h"

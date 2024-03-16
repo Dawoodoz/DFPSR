@@ -26,7 +26,7 @@
 #define DFPSR_COLLECTION_LIST
 
 #include "collections.h"
-#include <stdint.h>
+#include <cstdint>
 #include <vector>
 #include <algorithm>
 

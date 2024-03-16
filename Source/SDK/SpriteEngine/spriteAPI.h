@@ -5,7 +5,7 @@
 #include "../../DFPSR/includeFramework.h"
 #include "orthoAPI.h"
 #include "lightAPI.h"
-#include <assert.h>
+#include <cassert>
 #include <limits>
 
 namespace dsr {

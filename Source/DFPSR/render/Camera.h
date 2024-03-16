@@ -24,7 +24,7 @@
 #ifndef DFPSR_RENDER_CAMERA
 #define DFPSR_RENDER_CAMERA
 
-#include <stdint.h>
+#include <cstdint>
 #include <cassert>
 #include "../math/FVector.h"
 #include "../math/LVector.h"

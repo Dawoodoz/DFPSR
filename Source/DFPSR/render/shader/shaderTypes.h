@@ -24,8 +24,8 @@
 #ifndef DFPSR_RENDER_SHADER_TYPES
 #define DFPSR_RENDER_SHADER_TYPES
 
-#include <stdint.h>
-#include <stdio.h>
+#include <cstdint>
+#include <cstdio>
 #include "../../base/simd.h"
 #include "../../image/PackOrder.h"
 

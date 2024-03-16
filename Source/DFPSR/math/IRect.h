@@ -24,8 +24,8 @@
 #ifndef DFPSR_GEOMETRY_IRECT
 #define DFPSR_GEOMETRY_IRECT
 
-#include <stdint.h>
-#include <math.h>
+#include <cstdint>
+#include <cmath>
 #include <algorithm>
 #include "IVector.h"
 

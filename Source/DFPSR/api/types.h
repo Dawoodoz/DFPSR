@@ -25,7 +25,7 @@
 #ifndef DFPSR_API_TYPES
 #define DFPSR_API_TYPES
 
-#include <stdint.h>
+#include <cstdint>
 #include <memory>
 #include "../image/Color.h"
 #include "../math/IRect.h"
