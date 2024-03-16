@@ -24,7 +24,7 @@
 #ifndef DFPSR_RENDER_MODEL_POLYGONMODEL
 #define DFPSR_RENDER_MODEL_POLYGONMODEL
 
-#include <stdint.h>
+#include <cstdint>
 #include "../../api/types.h"
 #include "../../collection/List.h"
 #include "../../api/stringAPI.h"

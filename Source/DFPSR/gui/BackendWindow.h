@@ -24,7 +24,7 @@
 #ifndef DFPSR_BACKEND_WINDOW
 #define DFPSR_BACKEND_WINDOW
 
-#include <stdint.h>
+#include <cstdint>
 #include <memory>
 #include "InputEvent.h"
 #include "../image/ImageRgbaU8.h"

@@ -22,7 +22,7 @@
 //    distribution.
 
 #include "Button.h"
-#include <math.h>
+#include <cmath>
 
 using namespace dsr;
 

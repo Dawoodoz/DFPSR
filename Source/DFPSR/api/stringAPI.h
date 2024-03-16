@@ -24,7 +24,7 @@
 #ifndef DFPSR_API_STRING
 #define DFPSR_API_STRING
 
-#include <stdint.h>
+#include <cstdint>
 #include <string>
 #include <iostream>
 #include <sstream>

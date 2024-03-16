@@ -24,7 +24,7 @@
 #ifndef DFPSR_IMAGE_PACK_ORDER
 #define DFPSR_IMAGE_PACK_ORDER
 
-#include <stdint.h>
+#include <cstdint>
 #include "../api/types.h"
 #include "../base/simd.h"
 #include "../base/endian.h"

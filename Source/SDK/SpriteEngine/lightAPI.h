@@ -2,7 +2,7 @@
 #ifndef DFPSR_DEFERRED_LIGHT_ENGINE
 #define DFPSR_DEFERRED_LIGHT_ENGINE
 
-#include <assert.h>
+#include <cassert>
 #include "../../DFPSR/includeFramework.h"
 #include "orthoAPI.h"
 
