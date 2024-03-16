@@ -24,7 +24,7 @@
 #ifndef DFPSR_VIRTUAL_MACHINE
 #define DFPSR_VIRTUAL_MACHINE
 
-#include <stdint.h>
+#include <cstdint>
 #include "../math/FixedPoint.h"
 #include "../collection/Array.h"
 #include "../collection/List.h"

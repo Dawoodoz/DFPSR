@@ -24,7 +24,7 @@
 #ifndef DFPSR_API_BUFFER
 #define DFPSR_API_BUFFER
 
-#include <stdint.h>
+#include <cstdint>
 #include <memory>
 #include <functional>
 #include "../base/SafePointer.h"

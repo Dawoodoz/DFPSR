@@ -22,7 +22,7 @@
 //    distribution.
 
 #include "Label.h"
-#include <math.h>
+#include <cmath>
 
 using namespace dsr;
 

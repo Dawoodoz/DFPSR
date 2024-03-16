@@ -24,7 +24,7 @@
 #ifndef DFPSR_GEOMETRY_FPLANE3D
 #define DFPSR_GEOMETRY_FPLANE3D
 
-#include <math.h>
+#include <cmath>
 #include "FVector.h"
 
 namespace dsr {

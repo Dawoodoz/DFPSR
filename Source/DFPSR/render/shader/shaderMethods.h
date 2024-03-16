@@ -24,7 +24,7 @@
 #ifndef DFPSR_RENDER_SHADER_METHODS
 #define DFPSR_RENDER_SHADER_METHODS
 
-#include <stdint.h>
+#include <cstdint>
 #include "../../math/FVector.h"
 #include "../../math/scalar.h"
 #include "../../base/simd3D.h"

@@ -26,7 +26,7 @@
 
 #include "ImageRgbaU8.h"
 #include "../base/text.h"
-#include <stdio.h>
+#include <cstdio>
 
 namespace dsr {
 

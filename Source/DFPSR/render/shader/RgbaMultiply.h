@@ -24,8 +24,8 @@
 #ifndef DFPSR_RENDER_SHADER_RGBA_MULTIPLY
 #define DFPSR_RENDER_SHADER_RGBA_MULTIPLY
 
-#include <stdio.h>
-#include <stdint.h>
+#include <cstdio>
+#include <cstdint>
 #include <cassert>
 #include <algorithm>
 #include "Shader.h"

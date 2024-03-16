@@ -24,7 +24,7 @@
 #ifndef DFPSR_RENDER_PROJECTEDPOINT
 #define DFPSR_RENDER_PROJECTEDPOINT
 
-#include <stdint.h>
+#include <cstdint>
 #include "../math/FVector.h"
 #include "../math/LVector.h"
 

@@ -24,9 +24,9 @@
 #ifndef DFPSR_GEOMETRY_VECTOR_METHODS
 #define DFPSR_GEOMETRY_VECTOR_METHODS
 
-#include <stdint.h>
+#include <cstdint>
 #include <cassert>
-#include <math.h>
+#include <cmath>
 #include "../api/stringAPI.h"
 
 // Since using templates for vector operands may include unwanted function

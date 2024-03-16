@@ -27,7 +27,7 @@
 #ifndef DFPSR_COLLECTIONS
 #define DFPSR_COLLECTIONS
 
-#include <stdint.h>
+#include <cstdint>
 
 namespace dsr {
 

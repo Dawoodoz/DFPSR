@@ -24,7 +24,7 @@
 #ifndef DFPSR_RENDER_MODEL_RENDERCORE
 #define DFPSR_RENDER_MODEL_RENDERCORE
 
-#include <stdint.h>
+#include <cstdint>
 #include "Camera.h"
 #include "shader/Shader.h"
 #include "../image/ImageRgbaU8.h"

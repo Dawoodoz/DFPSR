@@ -24,7 +24,7 @@
 #include "timeAPI.h"
 #include <chrono>
 #include <thread>
-#include <stdint.h>
+#include <cstdint>
 
 static bool started = false;
 static std::chrono::time_point<std::chrono::steady_clock> startTime;

@@ -24,7 +24,7 @@
 #ifndef DFPSR_RENDER_RENDERING
 #define DFPSR_RENDER_RENDERING
 
-#include <stdint.h>
+#include <cstdint>
 #include "../../image/PackOrder.h"
 #include "../../image/ImageRgbaU8.h"
 #include "../../image/ImageF32.h"

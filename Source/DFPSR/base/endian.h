@@ -36,7 +36,7 @@
 
 #ifndef DFPSR_ENDIAN
 #define DFPSR_ENDIAN
-	#include <stdint.h>
+	#include <cstdint>
 	// TODO: Detect endianness automatically
 	#ifdef DSR_BIG_ENDIAN
 		// TODO: Not yet tested on a big-endian machine!

@@ -24,7 +24,7 @@
 #ifndef DFPSR_RENDER_ITRIANGLE2D
 #define DFPSR_RENDER_ITRIANGLE2D
 
-#include <stdint.h>
+#include <cstdint>
 #include <cassert>
 #include "ProjectedPoint.h"
 #include "../math/FVector.h"

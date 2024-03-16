@@ -3,9 +3,9 @@
 // or by defining DISABLE_ALLOCATOR (usually with a -DDISABLE_ALLOCATOR compiler flag).
 #ifndef DISABLE_ALLOCATOR
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
 #include <mutex>
 
 static std::mutex allocationLock;

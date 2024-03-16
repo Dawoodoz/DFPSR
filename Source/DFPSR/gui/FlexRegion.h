@@ -24,7 +24,7 @@
 #ifndef DFPSR_GUI_FLEXREGION
 #define DFPSR_GUI_FLEXREGION
 
-#include <stdint.h>
+#include <cstdint>
 #include "../math/IVector.h"
 #include "../math/IRect.h"
 #include "../math/scalar.h"
