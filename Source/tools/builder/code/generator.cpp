@@ -217,7 +217,8 @@ void produce(SessionContext &input, const ReadableString &scriptPath, ScriptLang
 	if (GENERATE) {
 		printText(U"Saving script to ", scriptPath, "\n");
 		if (language == ScriptLanguage::Batch) {
-			string_save(scriptPath, generatedCode);
+			// Batch on MS-Windows can not recognize a Byte Order Mark, so just encode it as Latin 1.
+			string_save(scriptPath, generatedCode, CharacterEncoding::Raw_Latin1, LineEncoding::CrLf);
 		} else if (language == ScriptLanguage::Bash) {
 			string_save(scriptPath, generatedCode, CharacterEncoding::BOM_UTF8, LineEncoding::Lf);
 		}
