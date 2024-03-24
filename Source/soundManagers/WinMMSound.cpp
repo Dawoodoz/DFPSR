@@ -4,6 +4,7 @@
 #include "soundManagers.h"
 #include <windows.h>
 #include <mmsystem.h>
+#include "../DFPSR/math/scalar.h"
 #include "../DFPSR/base/simd.h"
 
 using namespace dsr;
