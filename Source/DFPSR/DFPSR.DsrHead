@@ -23,6 +23,12 @@ if Windows
 	Message "Building for Windows\n"
 end if
 
+# Standard math library
+Link "m"
+
+# Standard threading library
+Link "pthread"
+
 # Paths are relative to the current script, even if imported somewhere else
 #   so we use .. to leave the Source/DFPSR folder and then go into the windowManagers folder.
 WindowManager = "../windowManagers/NoWindow.cpp"
