@@ -14,12 +14,12 @@ Title2: Minimum system requirements
 1.4 GHz quad-core ARMv8 CPU is enough for medium-resolution realtime 2D graphics, using ARM NEON.
 
 *
-3 GHz quad-core Intel/AMD CPU is enough for high resolution 2D/isometric/3D graphics with advanced light effects, using SSE2.
+3 GHz quad-core Intel/AMD CPU with SSE2 is enough for high resolution 2D/isometric/3D graphics with advanced light effects.
 
 *
 4 GHz hexa-core Intel/AMD CPU is enough to not notice that the 3D graphics is software rendered.
 Enabling SSSE3 (-mssse3) can give a performance boost in image processing and shading to textures by making vector extraction faster.
-Enabling AVX2 (-mavx2) can make texture sampling faster by enabling the gather instructions.
+Enabling AVX2 (-mavx2) can make texture sampling faster by enabling the gather instructions and 256-bit integer operations.
 
 *
 Truecolor (8 bits per channel) is a minimum requirement to create a window.
@@ -29,7 +29,7 @@ Windows XP (from year 2001) is the oldest supported version of MS-Windows becaus
 The file API also assumes access to Unicode versions of functions from Windows 2000.
 
 *
-Big-endian support is only theoretical and has never actually been tested, because big-endian desktops were practically extinct when the library was created. If you happen to own such a rare museum item in working condition, sending the <B>DSR_BIG_ENDIAN</B> macro to compilation should activate the big-endian mode and shift the direction of bit shift meant to be equivalent with the address space.
+Big-endian support is only theoretical and has never actually been tested, because big-endian desktops were practically extinct when the library was created. If you happen to own such a rare museum item in working condition, sending the <B>DSR_BIG_ENDIAN</B> macro to compilation should activate the big-endian mode and shift the direction of bit shifts that are meant to be equivalent with the address space.
 ---
 Title2: Buliding the wizard application on Linux
 
@@ -37,7 +37,12 @@ Image: Images/Warning.png | Warning
 Linux has many different ways to create a window, so you might need to write a new window manager and add its dependencies to Source/DFPSR/DFPSR.DsrHead if new Linux distributions are not compatible.
 
 Image: Images/Warning.png | Warning
-Light-weight Linux distributions (such as Linux Mint) might require you to install GNU's compiler toolchain <B>"gcc"</B> and X11 headers <B>"libx11-dev"</B>.
+Light-weight Linux distributions (such as Linux Mint) might require you to install GNU's compiler toolchain <B>"gcc"</B>, X11 developer libraries <B>"libx11-dev"</B> and Alsa developer libraries <B>"libasound2-dev"</B>.
+
+On Debian based systems:
+<PRE><BLOCKQUOTE>sudo apt install gcc
+sudo apt install libx11-dev
+sudo apt install libasound2-dev</BLOCKQUOTE></PRE>
 
 *
 Check that you have g++ installed at /usr/bin/g++ and change CPP_COMPILER_PATH in Source/tools/builder/buildProject.sh if it's located somewhere else.
