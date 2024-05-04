@@ -34,14 +34,8 @@ void dsrMain(List<String> args) {
 	window = window_create(U"Integration test", 800, 600);
 
 	// Create tests.
-	// TODO: Allow selecting which tests to add using settings and white which categories were skipped in the final summary.
-	//       Can have a screen where one gets to check types of tests and available device features.
-	//       Some might want to skip tests that require certain types of input.
-	//       One should have a mouse with vertical scroll wheel and three buttons to test it all. (The scroll wheel can often be clicked on as a middle mouse button)
-	//       The media layer currently does not support horizontal scrolling, because otherwise one would need a laptop with each operating system just to test it.
-	//       It is however cheap and easy to attach a three button mouse.
-	//       A stylus pen with only two buttons, no scroll and no relative input will only be able to perform some of the tests.
-	inputTests_populate(context.tests);
+	// TODO: Ask the user which kinds of inputs are available and use that information to select the correct tests.
+	inputTests_populate(context.tests, 3, true, true);
 
 	// Create finishing screen showing results.
 	context.tests.pushConstruct(
@@ -49,8 +43,12 @@ void dsrMain(List<String> args) {
 	,
 		[](AlignedImageRgbaU8 &canvas, TestContext &context) {
 			image_fill(canvas, ColorRgbaI32(255, 255, 255, 255));
-			font_printLine(canvas, font_getDefault(), U"Completed integration test.", IVector2D(40, 40), ColorRgbaI32(0, 0, 0, 255));
-			// TODO: Print a summary with named tests and their grades in a colored table.
+			font_printLine(canvas, font_getDefault(), U"Test summary:", IVector2D(40, 40), ColorRgbaI32(0, 0, 0, 255));
+			for (int t = 0; t < context.tests.length() - 1; t++) {
+				font_printLine(canvas, font_getDefault(), string_combine(context.tests[t].result, U" - ", context.tests[t].name), IVector2D(60, t * 20 + 60), ColorRgbaI32(0, 0, 0, 255));
+			}
+			// TODO: Allow scrolling through the results if it gets too much to fit inside the window.
+			// TODO: Also print this information to the terminal, in case that it is difficult to see.
 		}
 	,
 		[](const MouseEvent& event, TestContext &context) {}

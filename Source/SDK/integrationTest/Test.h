@@ -14,6 +14,8 @@ enum class Grade {
 	Failed
 };
 
+dsr::String& string_toStreamIndented(dsr::String& target, const Grade& grade, const dsr::ReadableString& indentation);
+
 struct Test {
 	dsr::String name;
 	DrawContextCallback drawEvent;
@@ -22,7 +24,7 @@ struct Test {
 	bool activeDrawing;
 	Grade result = Grade::Waiting;
 	Test(const dsr::ReadableString& name, const DrawContextCallback &drawEvent, const MouseContextCallback &mouseCallback, const KeyboardContextCallback &keyboardCallback, bool activeDrawing)
-	: drawEvent(drawEvent), mouseCallback(mouseCallback), keyboardCallback(keyboardCallback), activeDrawing(activeDrawing) {}
+	: name(name), drawEvent(drawEvent), mouseCallback(mouseCallback), keyboardCallback(keyboardCallback), activeDrawing(activeDrawing) {}
 };
 
 struct TestContext {
@@ -33,22 +35,10 @@ struct TestContext {
 	int taskIndex = 0; // To avoid cluttering the summary with lots of small tests, tests are divided into smaller tasks.
 
 	// Call when completing a task but not a whole test.
-	void passTask() {
-		taskIndex++;
-	}
+	void passTask();
 
 	// Call when completing a test.
-	void finishTest(Grade result) {
-		if (result == Grade::Passed) {
-			printText(U"Passed \"", tests[testIndex].name, U"\".");
-		} else if (result == Grade::Skipped) {
-			printText(U"Skipped \"", tests[testIndex].name, U"\".");
-		} else if (result == Grade::Failed) {
-			printText(U"Failed \"", tests[testIndex].name, U"\".");
-		}
-		tests[testIndex].result = result;
-		testIndex++;
-	}
+	void finishTest(Grade result);
 
 	bool leftMouseDown = false;
 	bool middleMouseDown = false;
