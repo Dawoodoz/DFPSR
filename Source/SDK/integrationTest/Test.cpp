@@ -25,12 +25,13 @@ void TestContext::passTask() {
 
 void TestContext::finishTest(Grade result) {
 	if (result == Grade::Passed) {
-		printText(U"Passed \"", tests[testIndex].name, U"\".");
+		printText(U"Passed \"", tests[testIndex].name, U"\"\n.");
 	} else if (result == Grade::Skipped) {
-		sendWarning(U"Skipped \"", tests[testIndex].name, U"\".");
+		sendWarning(U"Skipped \"", tests[testIndex].name, U"\"\n.");
 	} else if (result == Grade::Failed) {
-		sendWarning(U"Failed \"", tests[testIndex].name, U"\".");
+		sendWarning(U"Failed \"", tests[testIndex].name, U"\"\n.");
 	}
 	tests[testIndex].result = result;
 	testIndex++;
+	taskIndex = 0;
 }
