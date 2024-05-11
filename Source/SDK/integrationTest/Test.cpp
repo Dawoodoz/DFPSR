@@ -39,6 +39,6 @@ void TestContext::finishTest(Grade result) {
 void TestContext::drawAides(AlignedImageRgbaU8 &canvas) {
 	int width = image_getWidth(canvas);
 	int height = image_getHeight(canvas);
-	draw_rectangle(canvas, IRect(0, this->lastPosition.y - 1, width, 3), ColorRgbaI32(0, 0, 0, 255));
-	draw_rectangle(canvas, IRect(this->lastPosition.x - 1, 0, 3, height), ColorRgbaI32(0, 0, 0, 255));
+	draw_rectangle(canvas, IRect(0, this->lastPosition.y - 1, width, 3), ColorRgbaI32(180, 180, 180, 255));
+	draw_rectangle(canvas, IRect(this->lastPosition.x - 1, 0, 3, height), ColorRgbaI32(180, 180, 180, 255));
 }
