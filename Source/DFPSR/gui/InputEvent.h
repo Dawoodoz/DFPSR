@@ -57,9 +57,6 @@ enum DsrKey {
 	DsrKey_Unhandled
 };
 
-inline String getName(DsrKey v);
-String& string_toStreamIndented(String& target, const DsrKey& source, const ReadableString& indentation);
-
 class KeyboardEvent : public InputEvent {
 public:
 	// What the user did to the key.
@@ -132,6 +129,21 @@ static IndexCallback indexCallback = [](int64_t index) {};
 static SizeCallback sizeCallback = [](int width, int height) {};
 static KeyboardCallback keyboardCallback = [](const KeyboardEvent& event) {};
 static MouseCallback mouseCallback = [](const MouseEvent& event) {};
+
+// Conversion to text for easy debugging.
+String getName(DsrKey v);
+String getName(KeyboardEventType v);
+String getName(MouseKeyEnum v);
+String getName(MouseEventType v);
+String getName(WindowEventType v);
+String& string_toStreamIndented(String& target, const DsrKey& source, const ReadableString& indentation);
+String& string_toStreamIndented(String& target, const KeyboardEventType& source, const ReadableString& indentation);
+String& string_toStreamIndented(String& target, const MouseKeyEnum& source, const ReadableString& indentation);
+String& string_toStreamIndented(String& target, const MouseEventType& source, const ReadableString& indentation);
+String& string_toStreamIndented(String& target, const WindowEventType& source, const ReadableString& indentation);
+String& string_toStreamIndented(String& target, const KeyboardEvent& source, const ReadableString& indentation);
+String& string_toStreamIndented(String& target, const MouseEvent& source, const ReadableString& indentation);
+String& string_toStreamIndented(String& target, const WindowEvent& source, const ReadableString& indentation);
 
 }
 

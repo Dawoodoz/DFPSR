@@ -25,7 +25,7 @@
 
 using namespace dsr;
 
-inline String dsr::getName(DsrKey v) {
+String dsr::getName(DsrKey v) {
 	if (v == DsrKey_Unhandled) {
 		return U"Other";
 	} else if (v == DsrKey_Escape) {
@@ -169,5 +169,108 @@ inline String dsr::getName(DsrKey v) {
 
 String& dsr::string_toStreamIndented(String& target, const DsrKey& source, const ReadableString& indentation) {
 	string_append(target, indentation, getName(source));
+	return target;
+}
+
+String dsr::getName(KeyboardEventType v) {
+	if (v == KeyboardEventType::KeyDown) {
+		return U"KeyDown"; // Pressing down a key on the keyboard.
+	} else if (v == KeyboardEventType::KeyUp) {
+		return U"KeyUp"; // Releasing a key on the keyboard.
+	} else if (v == KeyboardEventType::KeyType) {
+		return U"KeyType"; // The event that is sent repeatedly after holding down a character for a while.
+	} else {
+		return U"Invalid keyboard event type";
+	}
+}
+
+String& dsr::string_toStreamIndented(String& target, const KeyboardEventType& source, const ReadableString& indentation) {
+	string_append(target, indentation, getName(source));
+	return target;
+}
+
+String dsr::getName(MouseKeyEnum v) {
+	if (v == MouseKeyEnum::NoKey) {
+		return U"NoKey"; // For mouse move events.
+	} else if (v == MouseKeyEnum::Left) {
+		return U"Left"; // For mouse up and down events.
+	} else if (v == MouseKeyEnum::Right) {
+		return U"Right"; // For mouse up and down events.
+	} else if (v == MouseKeyEnum::Middle) {
+		return U"Middle"; // For mouse up and down events.
+	} else if (v == MouseKeyEnum::ScrollUp) {
+		return U"ScrollUp"; // For scroll events.
+	} else if (v == MouseKeyEnum::ScrollDown) {
+		return U"ScrollDown"; // For scroll events.
+	} else {
+		return U"Invalid mouse key enumeration";
+	}
+}
+
+String& dsr::string_toStreamIndented(String& target, const MouseKeyEnum& source, const ReadableString& indentation) {
+	string_append(target, indentation, getName(source));
+	return target;
+}
+
+String dsr::getName(MouseEventType v) {
+	if (v == MouseEventType::MouseDown) {
+		return U"MouseDown";
+	} else if (v == MouseEventType::MouseUp) {
+		return U"MouseUp";
+	} else if (v == MouseEventType::MouseMove) {
+		return U"MouseMove";
+	} else if (v == MouseEventType::Scroll) {
+		return U"Scroll";
+	} else {
+		return U"Invalid mouse event type";
+	}
+}
+
+String& dsr::string_toStreamIndented(String& target, const MouseEventType& source, const ReadableString& indentation) {
+	string_append(target, indentation, getName(source));
+	return target;
+}
+
+String dsr::getName(WindowEventType v) {
+	if (v == WindowEventType::Close) {
+		return U"Close";
+	} else if (v == WindowEventType::Redraw) {
+		return U"Redraw";
+	} else {
+		return U"Invalid window event type";
+	}
+}
+
+String& dsr::string_toStreamIndented(String& target, const WindowEventType& source, const ReadableString& indentation) {
+	string_append(target, indentation, getName(source));
+	return target;
+}
+
+String& dsr::string_toStreamIndented(String& target, const KeyboardEvent& source, const ReadableString& indentation) {
+	string_append(target, indentation, U"KeyboardEvent(");
+	string_append(target, U"keyboardEventType = ", source.keyboardEventType);
+	string_append(target, U", dsrKey = ", source.dsrKey);
+	string_append(target, U", character = ", source.character);
+	string_append(target, U")");
+	return target;
+}
+
+String& dsr::string_toStreamIndented(String& target, const MouseEvent& source, const ReadableString& indentation) {
+	string_append(target, indentation, U"MouseEvent(");
+	string_append(target, U"mouseEventType = ", source.mouseEventType);
+	// TODO: Assert that only the keys allowed by the mouse event type are given.
+	string_append(target, U", key = ", source.key);
+	string_append(target, U", position = ", source.position);
+	string_append(target, U")");
+	return target;
+}
+
+String& dsr::string_toStreamIndented(String& target, const WindowEvent& source, const ReadableString& indentation) {
+	string_append(target, indentation, U"WindowEvent(");
+	string_append(target, U"windowEventType = ", source.windowEventType);
+	// TODO: Assert that width and height are zero when not used by the event type.
+	string_append(target, U", width = ", source.width);
+	string_append(target, U", height = ", source.height);
+	string_append(target, U")");
 	return target;
 }
