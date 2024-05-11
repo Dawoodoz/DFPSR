@@ -40,9 +40,13 @@ struct TestContext {
 	// Call when completing a test.
 	void finishTest(Grade result);
 
+	void drawAides(dsr::AlignedImageRgbaU8 &canvas);
+
 	bool leftMouseDown = false;
 	bool middleMouseDown = false;
 	bool rightMouseDown = false;
+
+	dsr::IVector2D lastPosition;
 
 	TestContext() {}
 };

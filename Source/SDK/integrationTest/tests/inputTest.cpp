@@ -13,6 +13,7 @@ void inputTests_populate(List<Test> &target, int buttonCount, bool relative, boo
 		,
 			[](AlignedImageRgbaU8 &canvas, TestContext &context) {
 				image_fill(canvas, ColorRgbaI32(255, 255, 255, 255));
+				context.drawAides(canvas);
 				if (TASK_IS(0)) {
 					font_printLine(canvas, font_getDefault(), U"Press down the left mouse button, .", IVector2D(40, 40), ColorRgbaI32(0, 0, 0, 255));
 				} else if (TASK_IS(1)) {
@@ -62,7 +63,7 @@ void inputTests_populate(List<Test> &target, int buttonCount, bool relative, boo
 			false
 		);
 	} else {
-		sendWarning(U"Skipped the left mouse button test due to settings.");
+		sendWarning(U"Skipped the mouse button test due to settings.\n");
 	}
 
 	if (buttonCount >= 1) {
@@ -71,6 +72,7 @@ void inputTests_populate(List<Test> &target, int buttonCount, bool relative, boo
 		,
 			[](AlignedImageRgbaU8 &canvas, TestContext &context) {
 				image_fill(canvas, ColorRgbaI32(255, 255, 255, 255));
+				context.drawAides(canvas);
 				if (TASK_IS(0)) {
 					font_printLine(canvas, font_getDefault(), U"Hover the cursor over the window.", IVector2D(40, 40), ColorRgbaI32(0, 0, 0, 255));
 				} else if (TASK_IS(1)) {
@@ -110,7 +112,7 @@ void inputTests_populate(List<Test> &target, int buttonCount, bool relative, boo
 			false
 		);
 	} else {
-		sendWarning(U"Skipped the left mouse button test due to settings.");
+		sendWarning(U"Skipped the mouse button drag test due to settings.\n");
 	}
 	if (buttonCount >= 1 && verticalScroll) {
 		target.pushConstruct(
@@ -118,6 +120,7 @@ void inputTests_populate(List<Test> &target, int buttonCount, bool relative, boo
 		,
 			[](AlignedImageRgbaU8 &canvas, TestContext &context) {
 				image_fill(canvas, ColorRgbaI32(255, 255, 255, 255));
+				context.drawAides(canvas);
 				// TODO: Show something moving in the background while scrolling to show the direction. Only pass once the end has been reached.
 				if (TASK_IS(0)) {
 					font_printLine(canvas, font_getDefault(), U"Scroll in the direction used to reach the top of a document by moving content down.", IVector2D(40, 40), ColorRgbaI32(0, 0, 0, 255));
