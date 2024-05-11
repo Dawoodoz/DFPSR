@@ -61,6 +61,9 @@ void dsrMain(List<String> args) {
 	// TODO: Move to a method taking window as the argument in Test.cpp.
 	window_setMouseEvent(window, [](const MouseEvent& event) {
 		if (event.mouseEventType == MouseEventType::MouseDown) {
+			if (context.lastPosition != event.position) {
+				sendWarning(U"A mouse (button) down event changed the cursor location! Unless the window moved while the mouse was standing still, something might be wrong. Check if mouse move events are missing, off or arriving too late.\n");
+			}
 			if (event.key == MouseKeyEnum::Left) {
 				context.leftMouseDown = true;
 			} else if (event.key == MouseKeyEnum::Middle) {
@@ -69,6 +72,9 @@ void dsrMain(List<String> args) {
 				context.rightMouseDown = true;
 			}
 		} else if (event.mouseEventType == MouseEventType::MouseUp) {
+			if (context.lastPosition != event.position) {
+				sendWarning(U"A mouse (button) up event changed the cursor location! Unless the window moved while the mouse was standing still, something might be wrong. Check if mouse move events are missing, off or arriving too late.\n");
+			}
 			if (event.key == MouseKeyEnum::Left) {
 				context.leftMouseDown = false;
 			} else if (event.key == MouseKeyEnum::Middle) {
@@ -77,6 +83,7 @@ void dsrMain(List<String> args) {
 				context.rightMouseDown = false;
 			}
 		}
+		context.lastPosition = event.position;
 		if (context.testIndex >= 0 && context.testIndex < context.tests.length()) {
 			context.tests[context.testIndex].mouseCallback(event, context);
 		}
