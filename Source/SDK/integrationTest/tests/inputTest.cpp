@@ -29,7 +29,6 @@ void inputTests_populate(List<Test> &target, int buttonCount, bool relative, boo
 				}
 				// TODO: Draw expanding circles from lowering and raising buttons together with names of the keys used.
 				// TODO: Draw fading lines from move events.
-				// TODO: Make a reusable drawing system to be enabled or disabled as a reusable mouse visualization feature.
 			}
 		,
 			[](const MouseEvent& event, TestContext &context) {
@@ -82,9 +81,6 @@ void inputTests_populate(List<Test> &target, int buttonCount, bool relative, boo
 				} else if (TASK_IS(3)) {
 					font_printLine(canvas, font_getDefault(), U"Release the left key.", IVector2D(40, 40), ColorRgbaI32(0, 0, 0, 255));
 				}
-				// TODO: Draw expanding circles from lowering and raising buttons together with names of the keys used.
-				// TODO: Draw fading lines from move events.
-				// TODO: Make a reusable drawing system to be enabled or disabled as a reusable mouse visualization feature.
 			}
 		,
 			[](const MouseEvent& event, TestContext &context) {
@@ -164,7 +160,36 @@ void inputTests_populate(List<Test> &target, int buttonCount, bool relative, boo
 	} else {
 		sendWarning(U"Skipped the vertical scroll test due to settings.\n");
 	}
-	// TODO: Create tests for other mouse buttons by reusing code in functions.
-	// TODO: Create tests for keyboards, that display pressed physical keys on a QWERTY keyboard and unicode values of characters.
-	//       The actual printed values depend on language settings, so this might have to be checked manually.
+	target.pushConstruct(
+		U"Keyboard test"
+	,
+		[](AlignedImageRgbaU8 &canvas, TestContext &context) {
+			image_fill(canvas, ColorRgbaI32(255, 255, 255, 255));
+			// TODO: Draw a keyboard showing which key is expected and which key was detected.
+			if (context.taskIndex < DsrKey::DsrKey_Unhandled) {
+				font_printLine(canvas, font_getDefault(), string_combine(U"Press down ", (DsrKey)context.taskIndex, " on your physical or virtual keyboard."), IVector2D(40, 40), ColorRgbaI32(0, 0, 0, 255));
+			}
+		}
+	,
+		[](const MouseEvent& event, TestContext &context) {
+			sendWarning(U"Detected a mouse event with ", event.key, " instead of a keyboard event!\n");
+		}
+	,
+		[](const KeyboardEvent& event, TestContext &context) {
+			if (event.keyboardEventType == KeyboardEventType::KeyDown && event.dsrKey == context.taskIndex) {
+				// TODO: Require both down and up events.
+				if (context.taskIndex >= DsrKey::DsrKey_Unhandled - 1) {
+					context.finishTest(Grade::Passed);
+				} else {
+					context.passTask();
+					// Skip testing the escape key, because it is currently reserved for skipping tests.
+					if (context.taskIndex == DsrKey::DsrKey_Escape) {
+						context.passTask();
+					}
+				}
+			}
+		}
+	,
+		false
+	);
 }
