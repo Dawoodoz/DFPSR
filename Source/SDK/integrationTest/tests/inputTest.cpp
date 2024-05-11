@@ -7,6 +7,64 @@ using namespace dsr;
 #define EVENT_TYPE_IS(TYPE) event.mouseEventType == MouseEventType::TYPE
 
 void inputTests_populate(List<Test> &target, int buttonCount, bool relative, bool verticalScroll) {
+	if (buttonCount >= 3) {
+		target.pushConstruct(
+			U"Mouse button test"
+		,
+			[](AlignedImageRgbaU8 &canvas, TestContext &context) {
+				image_fill(canvas, ColorRgbaI32(255, 255, 255, 255));
+				if (TASK_IS(0)) {
+					font_printLine(canvas, font_getDefault(), U"Press down the left mouse button, .", IVector2D(40, 40), ColorRgbaI32(0, 0, 0, 255));
+				} else if (TASK_IS(1)) {
+					font_printLine(canvas, font_getDefault(), U"Release the left mouse button.", IVector2D(40, 40), ColorRgbaI32(0, 0, 0, 255));
+				} else if (TASK_IS(2)) {
+					font_printLine(canvas, font_getDefault(), U"Press down the right mouse button.", IVector2D(40, 40), ColorRgbaI32(0, 0, 0, 255));
+				} else if (TASK_IS(3)) {
+					font_printLine(canvas, font_getDefault(), U"Release the right mouse button.", IVector2D(40, 40), ColorRgbaI32(0, 0, 0, 255));
+				} else if (TASK_IS(4)) {
+					font_printLine(canvas, font_getDefault(), U"Press down the middle mouse button.", IVector2D(40, 40), ColorRgbaI32(0, 0, 0, 255));
+				} else if (TASK_IS(5)) {
+					font_printLine(canvas, font_getDefault(), U"Release the middle mouse button.", IVector2D(40, 40), ColorRgbaI32(0, 0, 0, 255));
+				}
+				// TODO: Draw expanding circles from lowering and raising buttons together with names of the keys used.
+				// TODO: Draw fading lines from move events.
+				// TODO: Make a reusable drawing system to be enabled or disabled as a reusable mouse visualization feature.
+			}
+		,
+			[](const MouseEvent& event, TestContext &context) {
+				if (EVENT_TYPE_IS(MouseDown)) {
+					if (TASK_IS(0) && event.key == MouseKeyEnum::Left) {
+						context.passTask();
+					} else if (TASK_IS(2) && event.key == MouseKeyEnum::Right) {
+						context.passTask();
+					} else if (TASK_IS(4) && event.key == MouseKeyEnum::Middle) {
+						context.passTask();
+					} else {
+						sendWarning(U"Detected a different key!\n");
+					}
+				} else if (EVENT_TYPE_IS(MouseUp)) {
+					if (TASK_IS(1) && event.key == MouseKeyEnum::Left) {
+						context.passTask();
+					} else if (TASK_IS(3) && event.key == MouseKeyEnum::Right) {
+						context.passTask();
+					} else if (TASK_IS(5) && event.key == MouseKeyEnum::Middle) {
+						context.finishTest(Grade::Passed);
+					} else {
+						sendWarning(U"Detected a different key!\n");
+					}
+				}
+			}
+		,
+			[](const KeyboardEvent& event, TestContext &context) {
+				sendWarning(U"Detected a keyboard event with ", event.dsrKey, " instead of a mouse button!\n");
+			}
+		,
+			false
+		);
+	} else {
+		sendWarning(U"Skipped the left mouse button test due to settings.");
+	}
+
 	if (buttonCount >= 1) {
 		target.pushConstruct(
 			U"Mouse drag test"
