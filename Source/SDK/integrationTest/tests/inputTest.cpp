@@ -52,7 +52,56 @@ void inputTests_populate(List<Test> &target, int buttonCount, bool relative, boo
 			false
 		);
 	} else {
-		sendWarning(U"Skipped the left mouse button test, because no mouse buttons were told to be available in the call to inputTests_populate.");
+		sendWarning(U"Skipped the left mouse button test due to settings.");
+	}
+	if (buttonCount >= 1 && verticalScroll) {
+		target.pushConstruct(
+			U"Mouse scroll test"
+		,
+			[](AlignedImageRgbaU8 &canvas, TestContext &context) {
+				image_fill(canvas, ColorRgbaI32(255, 255, 255, 255));
+				// TODO: Show something moving in the background while scrolling to show the direction. Only pass once the end has been reached.
+				if (TASK_IS(0)) {
+					font_printLine(canvas, font_getDefault(), U"Scroll in the direction used to reach the top of a document by moving content down.", IVector2D(40, 40), ColorRgbaI32(0, 0, 0, 255));
+				} else if (TASK_IS(1)) {
+					font_printLine(canvas, font_getDefault(), U"Click when you are down scrolling up.", IVector2D(40, 40), ColorRgbaI32(0, 0, 0, 255));
+				} else if (TASK_IS(2)) {
+					font_printLine(canvas, font_getDefault(), U"Scroll in the direction used to reach the bottom of a document by moving content up.", IVector2D(40, 40), ColorRgbaI32(0, 0, 0, 255));
+				} else if (TASK_IS(3)) {
+					font_printLine(canvas, font_getDefault(), U"Click when you are down scrolling down.", IVector2D(40, 40), ColorRgbaI32(0, 0, 0, 255));
+				}
+			}
+		,
+			[](const MouseEvent& event, TestContext &context) {
+				// Due to many laptops having the scroll direction inverted by default so that draging down scrolls up
+				// Comparing how scrolling works in external text editors would be a useful addition to this test,
+				// because many users probably don't know what is scrolling up and what is scrolling down when the direction is inverted on a track-pad.
+				if (TASK_IS(0) && EVENT_TYPE_IS(Scroll)) {
+					if (event.key == MouseKeyEnum::ScrollUp) {
+						context.passTask();
+					} else if (event.key == MouseKeyEnum::ScrollDown) {
+						// Just give a warning, because this test can be very
+						sendWarning(U"Scroll down was detected when attempting to scroll up. Compare the scrolling direction of a textbox with an external text editor to ensure consistent behavior.\n");
+					}
+				} else if (TASK_IS(1) && EVENT_TYPE_IS(MouseDown)) {
+					context.passTask();
+				} else if (TASK_IS(2) && EVENT_TYPE_IS(Scroll)) {
+					if (event.key == MouseKeyEnum::ScrollDown) {
+						context.passTask();
+					} else if (event.key == MouseKeyEnum::ScrollUp) {
+						sendWarning(U"Scroll up was detected when attempting to scroll down. Compare the scrolling direction of a textbox with an external text editor to ensure consistent behavior.\n");
+					}
+				} else if (TASK_IS(3) && EVENT_TYPE_IS(MouseDown)) {
+					context.finishTest(Grade::Passed);
+				}
+			}
+		,
+			[](const KeyboardEvent& event, TestContext &context) {}
+		,
+			false
+		);
+	} else {
+		sendWarning(U"Skipped the vertical scroll test due to settings.\n");
 	}
 	// TODO: Create tests for other mouse buttons by reusing code in functions.
 	// TODO: Create tests for keyboards, that display pressed physical keys on a QWERTY keyboard and unicode values of characters.
