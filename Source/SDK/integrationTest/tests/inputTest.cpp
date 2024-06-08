@@ -15,7 +15,7 @@ void inputTests_populate(List<Test> &target, int buttonCount, bool relative, boo
 				image_fill(canvas, ColorRgbaI32(255, 255, 255, 255));
 				context.drawAides(canvas);
 				if (TASK_IS(0)) {
-					font_printLine(canvas, font_getDefault(), U"Press down the left mouse button, .", IVector2D(40, 40), ColorRgbaI32(0, 0, 0, 255));
+					font_printLine(canvas, font_getDefault(), U"Press down the left mouse button.", IVector2D(40, 40), ColorRgbaI32(0, 0, 0, 255));
 				} else if (TASK_IS(1)) {
 					font_printLine(canvas, font_getDefault(), U"Release the left mouse button.", IVector2D(40, 40), ColorRgbaI32(0, 0, 0, 255));
 				} else if (TASK_IS(2)) {
