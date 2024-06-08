@@ -559,7 +559,7 @@ static LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT message, WPARAM wParam, 
 			}
 		}
 		break;
-	case WM_KEYDOWN: case WM_KEYUP:
+	case WM_KEYDOWN: case WM_SYSKEYDOWN: case WM_KEYUP: case WM_SYSKEYUP:
 		{
 			dsr::DsrChar character;
 			if (IsWindowUnicode(hwnd)) {
@@ -570,18 +570,30 @@ static LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT message, WPARAM wParam, 
 				character = wParam; // Raw ansi character
 			}
 			dsr::DsrKey dsrKey = getDsrKey(wParam); // Portable key-code
+			
 			bool previouslyPressed = lParam & (1 << 30);
-			if (message == WM_KEYDOWN) {
-				// If not repeated
-				if (!previouslyPressed) {
-					// Physical key down
-					parent->queueInputEvent(new dsr::KeyboardEvent(dsr::KeyboardEventType::KeyDown, character, dsrKey));
+
+			// TODO: How can we filter out false Ctrl events from Alt-Gr so that Alt-Gr is the same as Alt for the physical key code?
+			//       The character code should already contain any modifications,
+			//         so we do not need it again for the physical key code when not writing text.
+			// Check if the key event is for a system key or regular key.
+			bool system_event = message == WM_SYSKEYDOWN || message == WM_SYSKEYUP;
+			// Check if the key code is Alt or F10.
+			bool system_key = wParam == VK_MENU || wParam == VK_F10;
+			// If key codes match the type of event, we use it.
+			if (system_event == system_key) {
+				if (message == WM_KEYDOWN || message == WM_SYSKEYDOWN) {
+					// If not repeated
+					if (!previouslyPressed) {
+						// Physical key down
+						parent->queueInputEvent(new dsr::KeyboardEvent(dsr::KeyboardEventType::KeyDown, character, dsrKey));
+					}
+					// Press typing with repeat
+					parent->queueInputEvent(new dsr::KeyboardEvent(dsr::KeyboardEventType::KeyType, character, dsrKey));
+				} else { // message == WM_KEYUP
+					// Physical key up
+					parent->queueInputEvent(new dsr::KeyboardEvent(dsr::KeyboardEventType::KeyUp, character, dsrKey));
 				}
-				// Press typing with repeat
-				parent->queueInputEvent(new dsr::KeyboardEvent(dsr::KeyboardEventType::KeyType, character, dsrKey));
-			} else { // message == WM_KEYUP
-				// Physical key up
-				parent->queueInputEvent(new dsr::KeyboardEvent(dsr::KeyboardEventType::KeyUp, character, dsrKey));
 			}
 		}
 		break;
