@@ -33,6 +33,8 @@ public:
 	HWND hwnd;
 	// The cursors
 	HCURSOR noCursor, defaultCursor;
+	// Because scroll events don't give a cursor location, remember it from other mouse events.
+	dsr::IVector2D lastMousePos;
 	// Keep track of when the cursor is inside of the window,
 	// so that we can show it again when leaving the window
 	bool cursorIsInside = false;
@@ -358,7 +360,7 @@ static dsr::DsrKey getDsrKey(WPARAM keyCode) {
 	} else if (keyCode == VK_F9) {
 		result = dsr::DsrKey_F9;
 	} else if (keyCode == VK_F10) {
-		result = dsr::DsrKey_F10;
+		result = dsr::DsrKey_F10; // Windows 11 may send a mouse event when pressing the F10 key.
 	} else if (keyCode == VK_F11) {
 		result = dsr::DsrKey_F11;
 	} else if (keyCode == VK_F12) {
@@ -378,7 +380,7 @@ static dsr::DsrKey getDsrKey(WPARAM keyCode) {
 	} else if (keyCode == VK_LCONTROL || keyCode == VK_CONTROL || keyCode == VK_RCONTROL) {
 		result = dsr::DsrKey_Control;
 	} else if (keyCode == VK_LMENU || keyCode == VK_MENU || keyCode == VK_RMENU) {
-		result = dsr::DsrKey_Alt;
+		result = dsr::DsrKey_Alt; // Sometimes only AltGr is working on Windows 11, while the Alt key sends a mouse event instead.
 	} else if (keyCode == VK_DELETE) {
 		result = dsr::DsrKey_Delete;
 	} else if (keyCode == VK_LEFT) {
@@ -495,6 +497,17 @@ static LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT message, WPARAM wParam, 
 			return DefWindowProc(hwnd, message, wParam, lParam);
 		}
 	}
+	// Get the cursor location relative to the window.
+	// Excluding scroll events that don't provide valid cursor locations.
+	if (message == WM_LBUTTONDOWN
+	 || message == WM_LBUTTONUP
+	 || message == WM_RBUTTONDOWN
+	 || message == WM_RBUTTONUP
+	 || message == WM_MBUTTONDOWN
+	 || message == WM_MBUTTONUP
+	 || message == WM_MOUSEMOVE) {
+		parent->lastMousePos = dsr::IVector2D(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+	}
 	// Check that we're using the correct window instance (This might not be the case while toggling full-screen)
 	// Handle the message
 	int result = 0;
@@ -507,25 +520,25 @@ static LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT message, WPARAM wParam, 
 		DestroyWindow(hwnd);
 		break;
 	case WM_LBUTTONDOWN:
-		parent->queueInputEvent(new dsr::MouseEvent(dsr::MouseEventType::MouseDown, dsr::MouseKeyEnum::Left, dsr::IVector2D(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam))));
+		parent->queueInputEvent(new dsr::MouseEvent(dsr::MouseEventType::MouseDown, dsr::MouseKeyEnum::Left, parent->lastMousePos));
 		break;
 	case WM_LBUTTONUP:
-		parent->queueInputEvent(new dsr::MouseEvent(dsr::MouseEventType::MouseUp, dsr::MouseKeyEnum::Left, dsr::IVector2D(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam))));
+		parent->queueInputEvent(new dsr::MouseEvent(dsr::MouseEventType::MouseUp, dsr::MouseKeyEnum::Left, parent->lastMousePos));
 		break;
 	case WM_RBUTTONDOWN:
-		parent->queueInputEvent(new dsr::MouseEvent(dsr::MouseEventType::MouseDown, dsr::MouseKeyEnum::Right, dsr::IVector2D(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam))));
+		parent->queueInputEvent(new dsr::MouseEvent(dsr::MouseEventType::MouseDown, dsr::MouseKeyEnum::Right, parent->lastMousePos));
 		break;
 	case WM_RBUTTONUP:
-		parent->queueInputEvent(new dsr::MouseEvent(dsr::MouseEventType::MouseUp, dsr::MouseKeyEnum::Right, dsr::IVector2D(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam))));
+		parent->queueInputEvent(new dsr::MouseEvent(dsr::MouseEventType::MouseUp, dsr::MouseKeyEnum::Right, parent->lastMousePos));
 		break;
 	case WM_MBUTTONDOWN:
-		parent->queueInputEvent(new dsr::MouseEvent(dsr::MouseEventType::MouseDown, dsr::MouseKeyEnum::Middle, dsr::IVector2D(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam))));
+		parent->queueInputEvent(new dsr::MouseEvent(dsr::MouseEventType::MouseDown, dsr::MouseKeyEnum::Middle, parent->lastMousePos));
 		break;
 	case WM_MBUTTONUP:
-		parent->queueInputEvent(new dsr::MouseEvent(dsr::MouseEventType::MouseUp, dsr::MouseKeyEnum::Middle, dsr::IVector2D(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam))));
+		parent->queueInputEvent(new dsr::MouseEvent(dsr::MouseEventType::MouseUp, dsr::MouseKeyEnum::Middle, parent->lastMousePos));
 		break;
 	case WM_MOUSEMOVE:
-		parent->queueInputEvent(new dsr::MouseEvent(dsr::MouseEventType::MouseMove, dsr::MouseKeyEnum::NoKey, dsr::IVector2D(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam))));
+		parent->queueInputEvent(new dsr::MouseEvent(dsr::MouseEventType::MouseMove, dsr::MouseKeyEnum::NoKey, parent->lastMousePos));
 		break;
 	case WM_SETCURSOR:
 		if (LOWORD(lParam) == HTCLIENT) {
@@ -540,9 +553,9 @@ static LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT message, WPARAM wParam, 
 		{
 			int delta = GET_WHEEL_DELTA_WPARAM(wParam);
 			if (delta > 0) {
-				parent->queueInputEvent(new dsr::MouseEvent(dsr::MouseEventType::Scroll, dsr::MouseKeyEnum::ScrollUp, dsr::IVector2D(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam))));
+				parent->queueInputEvent(new dsr::MouseEvent(dsr::MouseEventType::Scroll, dsr::MouseKeyEnum::ScrollUp, parent->lastMousePos));
 			} else if (delta < 0) {
-				parent->queueInputEvent(new dsr::MouseEvent(dsr::MouseEventType::Scroll, dsr::MouseKeyEnum::ScrollDown, dsr::IVector2D(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam))));
+				parent->queueInputEvent(new dsr::MouseEvent(dsr::MouseEventType::Scroll, dsr::MouseKeyEnum::ScrollDown, parent->lastMousePos));
 			}
 		}
 		break;
