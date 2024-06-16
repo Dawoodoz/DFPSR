@@ -1186,38 +1186,34 @@ static void blockMagnify_reference(
 //   * clipWidth % 2 == 0
 //   * clipHeight % 2 == 0
 static void blockMagnify_2x2(ImageRgbaU8Impl& target, const ImageRgbaU8Impl& source, int clipWidth, int clipHeight) {
-	#ifdef USE_SIMD_EXTRA
-		const SafePointer<uint32_t> sourceRow = imageInternal::getSafeData<uint32_t>(source);
-		SafePointer<uint32_t> targetRowA = imageInternal::getSafeData<uint32_t>(target, 0);
-		SafePointer<uint32_t> targetRowB = imageInternal::getSafeData<uint32_t>(target, 1);
-		int blockTargetStride = target.stride * 2;
-		for (int upperTargetY = 0; upperTargetY + 2 <= clipHeight; upperTargetY+=2) {
-			// Carriage return
-			const SafePointer<uint32_t> sourcePixel = sourceRow;
-			SafePointer<uint32_t> targetPixelA = targetRowA;
-			SafePointer<uint32_t> targetPixelB = targetRowB;
-			// Write to whole multiples of 8 pixels
-			int writeLeftX = 0;
-			while (writeLeftX + 2 <= clipWidth) {
-				// Read one pixel at a time
-				uint32_t scalarValue = *sourcePixel;
-				sourcePixel += 1;
-				// Write to a whole block of pixels
-				targetPixelA[0] = scalarValue; targetPixelA[1] = scalarValue;
-				targetPixelB[0] = scalarValue; targetPixelB[1] = scalarValue;
-				targetPixelA += 2;
-				targetPixelB += 2;
-				// Count
-				writeLeftX += 2;
-			}
-			// Line feed
-			sourceRow.increaseBytes(source.stride);
-			targetRowA.increaseBytes(blockTargetStride);
-			targetRowB.increaseBytes(blockTargetStride);
+	const SafePointer<uint32_t> sourceRow = imageInternal::getSafeData<uint32_t>(source);
+	SafePointer<uint32_t> targetRowA = imageInternal::getSafeData<uint32_t>(target, 0);
+	SafePointer<uint32_t> targetRowB = imageInternal::getSafeData<uint32_t>(target, 1);
+	int blockTargetStride = target.stride * 2;
+	for (int upperTargetY = 0; upperTargetY + 2 <= clipHeight; upperTargetY+=2) {
+		// Carriage return
+		const SafePointer<uint32_t> sourcePixel = sourceRow;
+		SafePointer<uint32_t> targetPixelA = targetRowA;
+		SafePointer<uint32_t> targetPixelB = targetRowB;
+		// Write to whole multiples of 8 pixels
+		int writeLeftX = 0;
+		while (writeLeftX + 2 <= clipWidth) {
+			// Read one pixel at a time
+			uint32_t scalarValue = *sourcePixel;
+			sourcePixel += 1;
+			// Write to a whole block of pixels
+			targetPixelA[0] = scalarValue; targetPixelA[1] = scalarValue;
+			targetPixelB[0] = scalarValue; targetPixelB[1] = scalarValue;
+			targetPixelA += 2;
+			targetPixelB += 2;
+			// Count
+			writeLeftX += 2;
 		}
-	#else
-		blockMagnify_reference<false>(target, source, 2, 2, clipWidth, clipHeight);
-	#endif
+		// Line feed
+		sourceRow.increaseBytes(source.stride);
+		targetRowA.increaseBytes(blockTargetStride);
+		targetRowB.increaseBytes(blockTargetStride);
+	}
 }
 
 // Pre-condition:
