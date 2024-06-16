@@ -694,7 +694,7 @@ void X11Window::prefetchEvents() {
 							&actualType, &actualFormat, &count, &bytesAfter, &data);
 						if (selection.target == this->targetsAtom) {
 							Atom* list = (Atom*)data;
-							for (int i = 0; i < count; i++) {
+							for (unsigned long i = 0; i < count; i++) {
 								if (list[i] == XA_STRING) {
 									this->targetAtom = XA_STRING;
 								} else if (list[i] == this->utf8StringAtom) {
