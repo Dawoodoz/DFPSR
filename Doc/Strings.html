@@ -25,27 +25,29 @@ A:active { color: #FFFFFF; background: #444444; }
 <A href="Manual.html">Back to main page</A>
 </P><P>
 </P><H1> Basic text operations</H1><P>The string API can be found in Source/DFPSR/api/stringAPI.h, where you can read the specific documentation for each method.
-The methods allow easily loading and parsing files using a single page of code without the risk of corrupting memory.
 Element access it read-only even for writable strings, so you're supposed to create strings by clearing and appending.
-This could probably be done with a single string type, but it's easier to reason about using one that heap allocates (String) and one that's lighter (ReadableString).
 </P><IMG SRC="Images/Border.png"><P>
-</P><H2> Encoding</H2><P>Both dsr::String and dsr::ReadableString are encoded in the UTF-32 format
- using only line-feed for line-breaks.
-This takes more memory but guarantees that each character is one element
- which makes algorithms a lot easier to implement when you cannot get corrupted
- characters or line-breaks by mistake.
+</P><H2> Why have a custom string type instead of using std::string?</H2><P>Developers often wonder why many C++ frameworks have their own string types instead of using std::string.
+While std::string might be enough when simply passing on a filename in a native format and maybe merge some strings, it is not nearly powerful enough for parsing text files.
+The problem comes from the simple fact that std::string is an entirely undefined type across platforms.
+All you know about the std::string format is that it uses the char type, which is defined as a signed or unsigned integer of 8 or more bits, using any character encoding.
+If you for example attempt to search for the letter 'A' in std::string, you don't know if an element matching 'A' represents the letter as a whole, or is a part of a Chinese character represented using multiple char elements in UTF-8.
+You could spend the rest of your life implementing your most basic parsing functions for every character encoding on earth, just to handle std::string correctly.
+Another option would be to use std:u32string, which does have a fixed format, but then other people will insist on using std::u8string instead.
+Then you might as well just use a custom string type and get both a standard representation and modern optimizations.
+dsr::String will save you heap allocations when passed by value, because the buffer is reference counted and reused until actually modified by appending data to it.
+It will behave just as if the content was cloned every time you pass it by value, but it automatically reuses allocations when doing so will save time and memory.
+Because dsr::ReadableString stores the length as an integer per view instead of writing a null terminator into the character data, splitting a string will create many views to the same allocation instead of creating lots of small heap allocations.
+</P><IMG SRC="Images/Border.png"><P>
+</P><H2> Encoding</H2><P>Both dsr::String and dsr::ReadableString are encoded in the UTF-32 format using only line-feed for line-breaks.
+This takes more memory but guarantees that each character is one element which makes algorithms a lot easier to implement when you cannot get corrupted characters or line-breaks by mistake.
 </P><IMG SRC="Images/Border.png"><P>
 </P><H2> string_load</H2><P>Loading text from a file using string_load supports UTF-8 and UTF-16.
-If no byte order mark is detected, the content is loaded as raw Latin-1
- by treating each byte in the file as U+00 to U+FF.
-Loading a string from a file using string_load removes carriage-return (U'\r' or 13)
- and null terminators (U'\0' or 0).
+If no byte order mark is detected, the content is loaded as raw Latin-1 by treating each byte in the file as U+00 to U+FF.
+Loading a string from a file using string_load removes carriage-return (U'\r' or 13) and null terminators (U'\0' or 0).
 </P><IMG SRC="Images/Border.png"><P>
-</P><H2> string_save</H2><P>Saving text to a file using string_save lets you select the encodings for
- characters and line-breaks.
-By default, text is stored as UTF-8 (only takes more space when needed)
- with a byte order mark (so that other programs know that it's UTF-8)
- and CR-LF line-breaks (so that it can be read on all major desktop systems).
+</P><H2> string_save</H2><P>Saving text to a file using string_save lets you select the encodings for characters and line-breaks.
+By default, text is stored as UTF-8 (only takes more space when needed) with a byte order mark (so that other programs know that it's UTF-8) and CR-LF line-breaks (so that it can be read on all major desktop systems).
 
 </P><P>
 </P><IMG SRC="Images/Border.png"><P>
