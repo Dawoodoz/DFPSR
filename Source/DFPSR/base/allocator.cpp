@@ -119,7 +119,7 @@ void* operator new(size_t contentSize) {
 			head = garbagePiles[bufferIndex].getAllocation();
 		}
 	allocationLock.unlock();
-    return getContent(head);
+	return getContent(head);
 }
 
 void operator delete(void* content) {
@@ -133,7 +133,7 @@ void operator delete(void* content) {
 			garbagePiles[bufferIndex].recycleAllocation(head);
 			//printf("Freed memory of size %li from size group %i\n", head->contentSize, bufferIndex);
 		}
-    allocationLock.unlock();
+	allocationLock.unlock();
 }
 
 #endif
