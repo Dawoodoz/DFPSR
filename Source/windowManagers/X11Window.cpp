@@ -107,8 +107,8 @@ public:
 	void listContentInClipboard();
 	void initializeClipboard();
 	void terminateClipboard();		
-	dsr::ReadableString loadFromClipboard(double timeoutInSeconds);
-	void saveToClipboard(const dsr::ReadableString &text, double timeoutInSeconds);
+	dsr::ReadableString loadFromClipboard(double timeoutInSeconds) override;
+	void saveToClipboard(const dsr::ReadableString &text, double timeoutInSeconds) override;
 };
 
 void X11Window::initializeClipboard() {

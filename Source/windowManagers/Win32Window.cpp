@@ -95,8 +95,8 @@ public:
 	void redraw(HWND& hwnd, bool locked, bool swap); // HWND is passed by argument because drawing might be called before the constructor has assigned it to this->hwnd
 	void showCanvas() override;
 	// Clipboard		
-	dsr::ReadableString loadFromClipboard(double timeoutInSeconds);
-	void saveToClipboard(const dsr::ReadableString &text, double timeoutInSeconds);
+	dsr::ReadableString loadFromClipboard(double timeoutInSeconds) override;
+	void saveToClipboard(const dsr::ReadableString &text, double timeoutInSeconds) override;
 };
 
 static LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
