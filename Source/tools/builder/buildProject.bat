@@ -38,7 +38,7 @@ if exist %BUILDER_EXECUTABLE% (
 ) else (
 	echo Building the Builder build system for first time use.
 	pushd %CPP_COMPILER_FOLDER%
-		%CPP_COMPILER_PATH% -o %BUILDER_EXECUTABLE% %BUILDER_SOURCE% -static -static-libgcc -static-libstdc++ -std=c++14
+		%CPP_COMPILER_PATH% -o %BUILDER_EXECUTABLE% %BUILDER_SOURCE% -static -static-libgcc -static-libstdc++ -std=c++14 -lstdc++
 	popd
 	if errorlevel 0 (
 		echo Completed building the Builder build system.
