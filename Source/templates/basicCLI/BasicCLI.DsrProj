@@ -1,5 +1,9 @@
 ﻿# No need to import DFPSR.DsrHead with stub backends when only including essential headers.
 CompilerFlag "-std=c++14"
+
+# If compiling using CLANG instead of GCC in tools/builder/buildProject.sh, you need to include the C++ standard library explicitly.
+#Link "stdc++"
+
 Crawl "main.cpp"
 
 # Linking statically to standard C/C++ libraries allow running the program without installing them.

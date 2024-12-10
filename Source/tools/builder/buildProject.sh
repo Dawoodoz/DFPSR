@@ -1,7 +1,14 @@
 
 # Local build settings that should be configured before building for the first time.
 
+# Make sure to erase all objects in the temporary folder before changing compiler.
+
+# Compile using GCC's C++ compiler
 CPP_COMPILER_PATH="/usr/bin/g++"
+
+# Compile using CLANG (Needs a 'Link "stdc++"' command in each project)
+#CPP_COMPILER_PATH="/usr/bin/clang"
+
 echo "Change CPP_COMPILER_PATH in ${BUILDER_FOLDER}/buildProject.sh if you are not using ${CPP_COMPILER_PATH} as your compiler."
 
 # Change TEMPORARY_FOLDER if you don't want to recompile everything after each reboot, or your operating system has a different path to the temporary folder.
@@ -35,7 +42,7 @@ else
 	echo "Building the Builder build system for first time use."
 	LIBRARY_PATH="$(realpath ${BUILDER_FOLDER}/../../DFPSR)"
 	SOURCE_CODE="${BUILDER_FOLDER}/code/main.cpp ${BUILDER_FOLDER}/code/Machine.cpp ${BUILDER_FOLDER}/code/generator.cpp ${BUILDER_FOLDER}/code/analyzer.cpp ${BUILDER_FOLDER}/code/expression.cpp ${LIBRARY_PATH}/collection/collections.cpp ${LIBRARY_PATH}/api/fileAPI.cpp ${LIBRARY_PATH}/api/bufferAPI.cpp ${LIBRARY_PATH}/api/stringAPI.cpp ${LIBRARY_PATH}/api/timeAPI.cpp ${LIBRARY_PATH}/base/SafePointer.cpp"
-	"${CPP_COMPILER_PATH}" -o "${BUILDER_EXECUTABLE}" ${SOURCE_CODE} -std=c++14
+	"${CPP_COMPILER_PATH}" -o "${BUILDER_EXECUTABLE}" ${SOURCE_CODE} -std=c++14 -lstdc++
 	if [ $? -eq 0 ]; then
 		echo "Completed building the Builder build system."
 	else

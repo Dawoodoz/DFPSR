@@ -3,6 +3,9 @@ ReuseMemory
 Graphics
 #Sound
 
+# If compiling using CLANG instead of GCC in tools/builder/buildProject.sh, you need to include the C++ standard library explicitly.
+#Link "stdc++"
+
 # An include using quotation marks will detect the header and its headers recursively.
 # For each detected header, the build system looks for an implementation file of the same name in the same folder.
 # Because sandbox.cpp and tool.cpp don't have sandbox.h/hpp or tool.h/hpp, the build system can't know that main depends on them.
