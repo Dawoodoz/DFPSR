@@ -204,8 +204,8 @@ static void interpretLine(Machine &target, const List<String> &tokens, int64_t s
 				validateSettings(target, U"in target after adding a linker flag\n");
 			} else if (string_caseInsensitiveMatch(first, U"linkerflag")) {
 				// For linker flags that are not used to
-				target.compilerFlags.push(STRING_EXPR(startTokenIndex + 1, endTokenIndex));
-				validateSettings(target, U"in target after adding a compiler flag\n");
+				target.linkerFlags.push(STRING_EXPR(startTokenIndex + 1, endTokenIndex));
+				validateSettings(target, U"in target after adding a linker flag\n");
 			} else if (string_caseInsensitiveMatch(first, U"compilerflag")) {
 				target.compilerFlags.push(STRING_EXPR(startTokenIndex + 1, endTokenIndex));
 				validateSettings(target, U"in target after adding a compiler flag\n");
