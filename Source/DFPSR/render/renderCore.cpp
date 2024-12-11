@@ -24,6 +24,7 @@
 #include <cassert>
 #include "renderCore.h"
 #include "../image/internal/imageInternal.h"
+#include "../base/virtualStack.h"
 #include "shader/Shader.h"
 #include "shader/RgbaMultiply.h"
 #include "constants.h"
@@ -205,10 +206,11 @@ void dsr::executeTriangleDrawing(const TriangleDrawCommand &command, const IRect
 	int32_t rowCount = command.triangle.getBufferSize(finalClipBound, alignX, alignY);
 	if (rowCount > 0) {
 		int startRow;
-		RowInterval rows[rowCount];
-		command.triangle.getShape(startRow, rows, finalClipBound, alignX, alignY);
+		// TODO: Use SafePointer in shape functions.
+		VirtualStackAllocation<RowInterval> rows(rowCount);
+		command.triangle.getShape(startRow, rows.data.getUnsafe(), finalClipBound, alignX, alignY);
 		Projection projection = command.triangle.getProjection(command.subB, command.subC, command.perspective);
-		command.processTriangle(command.triangleInput, command.targetImage, command.depthBuffer, command.triangle, projection, RowShape(startRow, rowCount, rows), command.filter);
+		command.processTriangle(command.triangleInput, command.targetImage, command.depthBuffer, command.triangle, projection, RowShape(startRow, rowCount, rows.data.getUnsafe()), command.filter);
 		#ifdef SHOW_POST_CLIPPING_WIREFRAME
 			drawWireframe(command.targetImage, command.triangle);
 		#endif
