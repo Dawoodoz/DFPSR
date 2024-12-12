@@ -24,49 +24,95 @@
 #include "virtualStack.h"
 
 namespace dsr {
-	// How many bytes that are allocated directly in thread local memory.
-	static const size_t DSR_VIRTUAL_STACK_SIZE = 131072;
+	// A structure that is placed in front of each stack allocation while allocating backwards along decreasing addresses to allow aligning memory quickly using bit masking.
+	struct StackAllocationHeader {
+		uint32_t totalSize; // Size of both header and payload.
+		#ifdef SAFE_POINTER_CHECKS
+		uint32_t identity; // A unique identifier that can be used to reduce the risk of using a block of memory after it has been freed.
+		#endif
+		StackAllocationHeader(uint32_t totalSize);
+	};
 
-	// TODO: Allow expanding using recycled heap memory when running out of stack space.
-	// TODO: Align the first allocation in address space from unaligned memory.
-	//       The easiest way would be to allocate memory in reverse order from the end.
-	//       * Subtract the amount of allocated memory from the previous uint8_t pointer.
-	//       * Use the pre-defined alignment mask that has zeroes for the rounded bits in the address.
-	//       * Place the allocation in the aligned location.
-	//       * Store an allocation size integer in front of the allocation to allow freeing.
-	//         The integer stores the total size of the size integer, allocation with padded size and alignment padding.
-	//         Arrays are allowed to access the padded size of all elements to allow optimizations.
-	//       * Store the new stack location pointing at the integer, with a fixed offset from the topmost allocation.
-	//       This would also make it easier to unwind the allocations when freeing memory.
-	//       * Read the integer pointed to and add it to the pointer.
+	// How many bytes that are allocated directly in thread local memory.
+	static const size_t VIRTUAL_STACK_SIZE = 131072;
+	// How many bytes are reserved for the head.
+	static const size_t ALLOCATION_HEAD_SIZE = memory_getPaddedSize<StackAllocationHeader>();
+	
+	static const uintptr_t stackHeaderPaddedSize = memory_getPaddedSize<StackAllocationHeader>();
+	static const uintptr_t stackHeaderAlignmentAndMask = memory_createAlignmentAndMask((uintptr_t)alignof(StackAllocationHeader));
+
+	#ifdef SAFE_POINTER_CHECKS
+		// In debug mode, each new thread creates a hash from its own identity to catch most of the memory errors in debug mode.
+		std::hash<std::thread::id> hasher;
+		thread_local uint32_t threadIdentity = hasher(std::this_thread::get_id());
+		//   To check the allocation identity, subtract the padded size of the header from the base pointer, cast to the head type and compare to the pointer's identity.
+		thread_local uint32_t nextIdentity = threadIdentity;
+	#endif
+	StackAllocationHeader::StackAllocationHeader(uint32_t totalSize) : totalSize(totalSize) {
+		#ifdef SAFE_POINTER_CHECKS
+			// No identity may be zero, because identity zero is no identity.
+			if (nextIdentity == 0) nextIdentity++;
+			this->identity = nextIdentity;
+			nextIdentity++;
+		#endif
+	}
 
 	struct StackMemory {
-		uint8_t data[DSR_VIRTUAL_STACK_SIZE];
-		uint64_t stackLocation = 0;
-		// TODO: Try to store stack locations between the allocations to avoid heap allocations.
-		List<uint64_t> allocationEnds;
+		uint8_t data[VIRTUAL_STACK_SIZE];
+		uint8_t *top = nullptr;
+		StackMemory() {
+			this->top = this->data + VIRTUAL_STACK_SIZE;
+		}
 	};
 	thread_local StackMemory virtualStack;
 
-	uint8_t *virtualStack_push(uint64_t paddedSize, uint64_t alignment) {
-		uint64_t oldStackLocation = virtualStack.stackLocation;
-		// Align the start location by rounding up and then add padded elements.
-		uint64_t startOffset = roundUp(virtualStack.stackLocation, alignment);
-		virtualStack.stackLocation = startOffset + paddedSize;
-		if (virtualStack.stackLocation > DSR_VIRTUAL_STACK_SIZE) {
-			throwError(U"Ran out of stack memory!\n"); // TODO: Expand automatically using more memory blocks instead of crashing.
+	// Returns the size of the allocation including alignment.
+	inline uint64_t increaseTop(uint64_t paddedSize, uintptr_t alignmentAndMask) {
+		// Add the padded payload and align.
+		uintptr_t oldAddress = (uintptr_t)virtualStack.top;
+		uintptr_t newAddress = (oldAddress - paddedSize) & alignmentAndMask;
+		virtualStack.top = (uint8_t*)newAddress;
+		return oldAddress - newAddress;
+	}
+
+	inline void decreaseTop(uint64_t totalSize) {
+		// Remove the data and alignment.
+		virtualStack.top += totalSize;
+	}
+
+	uint8_t *virtualStack_push(uint64_t paddedSize, uintptr_t alignmentAndMask) {
+		uint8_t *oldTop = virtualStack.top;
+		// Allocate memory for payload.
+		uint64_t payloadTotalSize = increaseTop(paddedSize, alignmentAndMask);
+		// Get a pointer to the payload.
+		uint8_t *result = virtualStack.top;
+		// Allocate memory for header.
+		uint64_t headerTotalSize = increaseTop(stackHeaderPaddedSize, stackHeaderAlignmentAndMask);
+		// Check that we did not run out of memory.
+		if (virtualStack.top < virtualStack.data) {
+			// TODO: Expand automatically using heap memory instead of crashing.
+			throwError(U"Ran out of stack memory to allocate!\n");
+			virtualStack.top = oldTop;
 			return nullptr;
 		} else {
-			virtualStack.allocationEnds.push(oldStackLocation);
-			// Clear the allocation for determinism.
-			std::memset((char*)(virtualStack.data + startOffset), 0, paddedSize);
-			return virtualStack.data + startOffset;
+			// Write the header to memory.
+			*((StackAllocationHeader*)virtualStack.top) = StackAllocationHeader(payloadTotalSize + headerTotalSize);
+			// Clear the new allocation for determinism.
+			std::memset((char*)result, 0, payloadTotalSize);
+			// Return a pointer to the payload.
+			return result;
 		}
 	}
 
 	void virtualStack_pop() {
-		virtualStack.stackLocation = virtualStack.allocationEnds.last();
-		virtualStack.allocationEnds.pop();
+		if (virtualStack.top + stackHeaderPaddedSize > virtualStack.data + VIRTUAL_STACK_SIZE) {
+			throwError(U"No more stack memory to pop!\n");
+		} else {
+			// Read the header.
+			StackAllocationHeader header = *((StackAllocationHeader*)virtualStack.top);
+			// Deallocate both header and payload using the stored total size.
+			decreaseTop(header.totalSize);
+		}
 	}
 
 }
