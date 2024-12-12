@@ -328,10 +328,10 @@ static void executeTriangleDrawingDepth(ImageF32Impl *depthBuffer, const ITriang
 	int32_t rowCount = triangle.getBufferSize(clipBound, 1, 1);
 	if (rowCount > 0) {
 		int startRow;
-		RowInterval rows[rowCount];
-		triangle.getShape(startRow, rows, clipBound, 1, 1);
+		VirtualStackAllocation<RowInterval> rows(rowCount);
+		triangle.getShape(startRow, rows.data.getUnsafe(), clipBound, 1, 1);
 		Projection projection = triangle.getProjection(FVector3D(), FVector3D(), !AFFINE); // TODO: Create a weight using only depth to save time
-		RowShape shape = RowShape(startRow, rowCount, rows);
+		RowShape shape = RowShape(startRow, rowCount, rows.data.getUnsafe());
 		// Draw the triangle
 		const int depthBufferStride = imageInternal::getStride(depthBuffer);
 		SafePointer<float> depthDataRow = imageInternal::getSafeData<float>(depthBuffer, shape.startRow);
