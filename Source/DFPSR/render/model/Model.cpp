@@ -28,6 +28,7 @@
 #include "../../api/imageAPI.h"
 #include "../../image/ImageRgbaU8.h"
 #include "../../image/ImageF32.h"
+#include "../../base/virtualStack.h"
 
 using namespace dsr;
 
@@ -189,12 +190,12 @@ void ModelImpl::render(CommandQueue *commandQueue, ImageRgbaU8& targetImage, Ima
 	if (camera.isBoxSeen(this->minBound, this->maxBound, modelToWorldTransform)) {
 		// Transform and project all vertices
 		int positionCount = positionBuffer.length();
-		ProjectedPoint projected[positionCount]; // TODO: Only use stack memory with VLA when the number of points is resonable
+		VirtualStackAllocation<ProjectedPoint> projected(positionCount);
 		for (int vert = 0; vert < positionCount; vert++) {
 			projected[vert] = camera.worldToScreen(modelToWorldTransform.transformPoint(positionBuffer[vert]));
 		}
 		for (int partIndex = 0; partIndex < this->partBuffer.length(); partIndex++) {
-			this->partBuffer[partIndex].render(commandQueue, targetImage, depthBuffer, modelToWorldTransform, camera, this->filter, projected);
+			this->partBuffer[partIndex].render(commandQueue, targetImage, depthBuffer, modelToWorldTransform, camera, this->filter, projected.getUnsafe());
 		}
 	}
 }
@@ -203,12 +204,12 @@ void ModelImpl::renderDepth(ImageF32& depthBuffer, const Transform3D &modelToWor
 	if (camera.isBoxSeen(this->minBound, this->maxBound, modelToWorldTransform)) {
 		// Transform and project all vertices
 		int positionCount = positionBuffer.length();
-		ProjectedPoint projected[positionCount]; // TODO: Only use stack memory with VLA when the number of points is resonable
+		VirtualStackAllocation<ProjectedPoint> projected(positionCount);
 		for (int vert = 0; vert < positionCount; vert++) {
 			projected[vert] = camera.worldToScreen(modelToWorldTransform.transformPoint(positionBuffer[vert]));
 		}
 		for (int partIndex = 0; partIndex < this->partBuffer.length(); partIndex++) {
-			this->partBuffer[partIndex].renderDepth(depthBuffer, modelToWorldTransform, camera, projected);
+			this->partBuffer[partIndex].renderDepth(depthBuffer, modelToWorldTransform, camera, projected.getUnsafe());
 		}
 	}
 }

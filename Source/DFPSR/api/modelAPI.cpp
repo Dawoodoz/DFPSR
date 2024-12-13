@@ -28,6 +28,7 @@
 #include "drawAPI.h"
 #include "../render/model/Model.h"
 #include <limits>
+#include "../base/virtualStack.h"
 
 #define MUST_EXIST(OBJECT, METHOD) if (OBJECT.get() == nullptr) { throwError("The " #OBJECT " handle was null in " #METHOD "\n"); }
 
@@ -469,7 +470,7 @@ struct RendererImpl {
 	// Occlusion test for whole model bounds.
 	// Returns false if the convex hull of the corners has a chance to be seen from the camera.
 	bool isHullOccluded(ProjectedPoint* outputHullCorners, const FVector3D* inputHullCorners, int cornerCount, const Transform3D &modelToWorldTransform, const Camera &camera) {
-		FVector3D cameraPoints[cornerCount];
+		VirtualStackAllocation<FVector3D> cameraPoints(cornerCount);
 		for (int p = 0; p < cornerCount; p++) {
 			cameraPoints[p] = camera.worldToCamera(modelToWorldTransform.transformPoint(inputHullCorners[p]));
 			outputHullCorners[p] = camera.cameraToScreen(cameraPoints[p]);

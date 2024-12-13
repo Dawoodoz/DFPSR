@@ -27,7 +27,7 @@ set BUILDER_EXECUTABLE=%BUILDER_FOLDER%builder.exe
 echo BUILDER_EXECUTABLE = %BUILDER_EXECUTABLE%
 set DFPSR_LIBRARY=%BUILDER_FOLDER%..\..\DFPSR
 echo DFPSR_LIBRARY = %DFPSR_LIBRARY%
-set BUILDER_SOURCE=%BUILDER_FOLDER%\code\main.cpp %BUILDER_FOLDER%\code\Machine.cpp %BUILDER_FOLDER%\code\generator.cpp %BUILDER_FOLDER%\code\analyzer.cpp %BUILDER_FOLDER%\code\expression.cpp %DFPSR_LIBRARY%\collection\collections.cpp %DFPSR_LIBRARY%\api\fileAPI.cpp %DFPSR_LIBRARY%\api\bufferAPI.cpp %DFPSR_LIBRARY%\api\stringAPI.cpp %DFPSR_LIBRARY%\api\timeAPI.cpp %DFPSR_LIBRARY%\base\SafePointer.cpp
+set BUILDER_SOURCE=%BUILDER_FOLDER%\code\main.cpp %BUILDER_FOLDER%\code\Machine.cpp %BUILDER_FOLDER%\code\generator.cpp %BUILDER_FOLDER%\code\analyzer.cpp %BUILDER_FOLDER%\code\expression.cpp %DFPSR_LIBRARY%\collection\collections.cpp %DFPSR_LIBRARY%\api\fileAPI.cpp %DFPSR_LIBRARY%\api\bufferAPI.cpp %DFPSR_LIBRARY%\api\stringAPI.cpp %DFPSR_LIBRARY%\api\timeAPI.cpp %DFPSR_LIBRARY%\base\SafePointer.cpp %DFPSR_LIBRARY%\base\virtualStack.cpp
 echo BUILDER_SOURCE = %BUILDER_SOURCE%
 
 echo Change CPP_COMPILER_FOLDER and CPP_COMPILER_PATH in %BUILDER_FOLDER%\buildProject.bat if you are not using %CPP_COMPILER_PATH% as your compiler.

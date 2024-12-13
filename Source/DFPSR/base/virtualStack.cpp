@@ -34,7 +34,7 @@ namespace dsr {
 	};
 
 	// How many bytes that are allocated directly in thread local memory.
-	static const size_t VIRTUAL_STACK_SIZE = 131072;
+	static const size_t VIRTUAL_STACK_SIZE = 262144;
 	// How many bytes are reserved for the head.
 	static const size_t ALLOCATION_HEAD_SIZE = memory_getPaddedSize<StackAllocationHeader>();
 	
@@ -91,7 +91,7 @@ namespace dsr {
 		// Check that we did not run out of memory.
 		if (virtualStack.top < virtualStack.data) {
 			// TODO: Expand automatically using heap memory instead of crashing.
-			throwError(U"Ran out of stack memory to allocate!\n");
+			throwError(U"Ran out of virtual stack memory to allocate when trying to allocate ", paddedSize, U" bytes!\n");
 			virtualStack.top = oldTop;
 			return nullptr;
 		} else {
