@@ -208,9 +208,9 @@ void dsr::executeTriangleDrawing(const TriangleDrawCommand &command, const IRect
 		int startRow;
 		// TODO: Use SafePointer in shape functions.
 		VirtualStackAllocation<RowInterval> rows(rowCount);
-		command.triangle.getShape(startRow, rows.data.getUnsafe(), finalClipBound, alignX, alignY);
+		command.triangle.getShape(startRow, rows.getUnsafe(), finalClipBound, alignX, alignY);
 		Projection projection = command.triangle.getProjection(command.subB, command.subC, command.perspective);
-		command.processTriangle(command.triangleInput, command.targetImage, command.depthBuffer, command.triangle, projection, RowShape(startRow, rowCount, rows.data.getUnsafe()), command.filter);
+		command.processTriangle(command.triangleInput, command.targetImage, command.depthBuffer, command.triangle, projection, RowShape(startRow, rowCount, rows.getUnsafe()), command.filter);
 		#ifdef SHOW_POST_CLIPPING_WIREFRAME
 			drawWireframe(command.targetImage, command.triangle);
 		#endif
@@ -329,9 +329,9 @@ static void executeTriangleDrawingDepth(ImageF32Impl *depthBuffer, const ITriang
 	if (rowCount > 0) {
 		int startRow;
 		VirtualStackAllocation<RowInterval> rows(rowCount);
-		triangle.getShape(startRow, rows.data.getUnsafe(), clipBound, 1, 1);
+		triangle.getShape(startRow, rows.getUnsafe(), clipBound, 1, 1);
 		Projection projection = triangle.getProjection(FVector3D(), FVector3D(), !AFFINE); // TODO: Create a weight using only depth to save time
-		RowShape shape = RowShape(startRow, rowCount, rows.data.getUnsafe());
+		RowShape shape = RowShape(startRow, rowCount, rows.getUnsafe());
 		// Draw the triangle
 		const int depthBufferStride = imageInternal::getStride(depthBuffer);
 		SafePointer<float> depthDataRow = imageInternal::getSafeData<float>(depthBuffer, shape.startRow);
