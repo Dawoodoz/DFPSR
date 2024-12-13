@@ -77,10 +77,10 @@ namespace dsr {
 	// Allocate this array on the stack to automatically free the memory when the scope ends.
 	//   Replaces VLA or alloca.
 	template <typename T>
-	struct VirtualStackAllocation {
-		SafePointer<T> data;
+	class VirtualStackAllocation : public SafePointer<T> {
+	public:
 		VirtualStackAllocation(uint64_t elementCount)
-		: data(virtualStack_push<T>(elementCount, "virtual stack allocation")) {}
+		: SafePointer<T>(virtualStack_push<T>(elementCount, "virtual stack allocation")) {}
 		~VirtualStackAllocation() {
 			virtualStack_pop();
 		}
