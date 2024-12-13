@@ -173,7 +173,7 @@ public:
 Visibility dsr::getTriangleVisibility(const ITriangle2D &triangle, const Camera &camera, bool clipFrustum) {
 	static const int cornerCount = 3;
 	int planeCount = camera.getFrustumPlaneCount(clipFrustum);
-	bool outside[cornerCount * planeCount];
+	VirtualStackAllocation<bool> outside(cornerCount * planeCount);
 	// Check which corners are outside of the different planes
 	int offset = 0;
 	for (int c = 0; c < cornerCount; c++) {
@@ -438,7 +438,7 @@ void CommandQueue::execute(const IRect &clipBound, int jobCount) const {
 			}
 		}
 	} else {
-		std::function<void()> jobs[jobCount];
+		VirtualStackAllocation<std::function<void()>> jobs(jobCount);
 		int y1 = clipBound.top();
 		for (int j = 0; j < jobCount; j++) {
 			int y2 = clipBound.top() + ((clipBound.bottom() * (j + 1)) / jobCount);

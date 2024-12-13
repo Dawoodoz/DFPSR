@@ -43,6 +43,7 @@
 #include <fstream>
 #include <cstdlib>
 #include "bufferAPI.h"
+#include "../base/virtualStack.h"
 
 namespace dsr {
 
@@ -775,7 +776,7 @@ DsrProcess process_execute(const ReadableString& programPath, List<String> argum
 		// Count arguments.
 		int argc = arguments.length() + 1;
 		// Allocate an array of pointers for each argument and a null terminator.
-		const NativeChar *argv[argc + 1]; // TODO: Implement without VLA.
+		VirtualStackAllocation<const NativeChar *> argv(argc + 1);
 		// Fill the array with pointers to the native strings.
 		int64_t startOffset = 0;
 		int currentArg = 0;
@@ -788,7 +789,7 @@ DsrProcess process_execute(const ReadableString& programPath, List<String> argum
 		}
 		argv[currentArg] = nullptr;
 		pid_t pid = 0;
-		if (posix_spawn(&pid, nativePath, nullptr, nullptr, (char* const*)argv, environ) == 0) {
+		if (posix_spawn(&pid, nativePath, nullptr, nullptr, (char**)argv.getUnsafe(), environ) == 0) {
 			return std::make_shared<DsrProcessImpl>(pid); // Success
 		} else {
 			return DsrProcess(); // Failure

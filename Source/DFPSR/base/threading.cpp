@@ -22,6 +22,7 @@
 //    distribution.
 
 #include "threading.h"
+#include "virtualStack.h"
 
 // Requires -pthread for linking
 #include <future>
@@ -61,8 +62,8 @@ void threadedWorkFromArray(std::function<void()>* jobs, int jobCount) {
 				// Multi-threaded work loop
 				int workerCount = std::min((int)std::thread::hardware_concurrency() - 1, jobCount); // All used threads
 				int helperCount = workerCount - 1; // Excluding the main thread
-				std::function<void()> workers[workerCount];
-				std::future<void> helpers[helperCount];
+				VirtualStackAllocation<std::function<void()>> workers(workerCount);
+				VirtualStackAllocation<std::future<void>> helpers(helperCount);
 				for (int w = 0; w < workerCount; w++) {
 					workers[w] = [jobs, jobCount]() {
 						while (true) {
@@ -95,6 +96,10 @@ void threadedWorkFromArray(std::function<void()>* jobs, int jobCount) {
 	#endif
 }
 
+void threadedWorkFromArray(SafePointer<std::function<void()>> jobs, int jobCount) {
+	threadedWorkFromArray(jobs.getUnsafe(), jobCount);
+}
+
 void threadedWorkFromList(List<std::function<void()>> jobs) {
 	threadedWorkFromArray(&jobs[0], jobs.length());
 	jobs.clear();
@@ -111,7 +116,7 @@ void threadedSplit(int startIndex, int stopIndex, std::function<void(int startIn
 		task(startIndex, stopIndex);
 	} else {
 		// Use multiple threads
-		std::function<void()> jobs[jobCount];
+		VirtualStackAllocation<std::function<void()>> jobs(jobCount);
 		int givenRow = startIndex;
 		for (int s = 0; s < jobCount; s++) {
 			int remainingJobs = jobCount - s;
@@ -142,7 +147,7 @@ void threadedSplit(const IRect& bound, std::function<void(const IRect& bound)> t
 		task(bound);
 	} else {
 		// Use multiple threads
-		std::function<void()> jobs[jobCount];
+		VirtualStackAllocation<std::function<void()>> jobs(jobCount);
 		int givenRow = bound.top();
 		for (int s = 0; s < jobCount; s++) {
 			int remainingJobs = jobCount - s;

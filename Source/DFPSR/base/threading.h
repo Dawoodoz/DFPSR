@@ -31,6 +31,7 @@
 namespace dsr {
 
 // Executes every function in the array of jobs from jobs[0] to jobs[jobCount - 1].
+void threadedWorkFromArray(SafePointer<std::function<void()>> jobs, int jobCount);
 void threadedWorkFromArray(std::function<void()>* jobs, int jobCount);
 
 // Executes every function in the list of jobs.
