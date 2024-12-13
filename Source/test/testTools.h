@@ -65,7 +65,9 @@ inline bool nearValue(const FVector4D& a, const FVector4D& b) {
 try { \
 	(void)(A); \
 	return FAILED; \
-} catch(...) {}
+} catch(...) { \
+	printText("*"); \
+}
 #define ASSERT_NEAR(A, B) \
 	if (nearValue(A, B)) { \
 		printText("*"); \
