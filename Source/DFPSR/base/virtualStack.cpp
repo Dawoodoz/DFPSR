@@ -36,10 +36,9 @@ namespace dsr {
 	};
 
 	// How many bytes that are allocated directly in thread local memory.
-	static const size_t VIRTUAL_STACK_SIZE = 262144;
-	// How many bytes are reserved for the head.
-	static const size_t ALLOCATION_HEAD_SIZE = memory_getPaddedSize<StackAllocationHeader>();
-	
+	static const uint64_t VIRTUAL_STACK_SIZE = 262144;
+	static const int MAX_EXTRA_STACKS = 63;
+
 	static const uintptr_t stackHeaderPaddedSize = memory_getPaddedSize<StackAllocationHeader>();
 	static const uintptr_t stackHeaderAlignmentAndMask = memory_createAlignmentAndMask((uintptr_t)alignof(StackAllocationHeader));
 
@@ -60,60 +59,151 @@ namespace dsr {
 	}
 
 	struct StackMemory {
+		uint8_t *top = nullptr; // The stack pointer is here when completely full.
+		uint8_t *stackPointer = nullptr; // The virtual stack pointer.
+		uint8_t *bottom = nullptr; // The stack pointer is here when empty.
+	};
+	struct FixedStackMemory : public StackMemory {
 		uint8_t data[VIRTUAL_STACK_SIZE];
-		uint8_t *top = nullptr;
-		StackMemory() {
-			this->top = this->data + VIRTUAL_STACK_SIZE;
+		FixedStackMemory() {
+			this->top = this->data;
+			this->stackPointer = this->data + VIRTUAL_STACK_SIZE;
+			this->bottom = this->data + VIRTUAL_STACK_SIZE;
 		}
 	};
-	thread_local StackMemory virtualStack;
+	struct DynamicStackMemory : public StackMemory {
+		// Allocate the data dynamically in top when needed.
+		// Clean up when the thread terminates.
+		~DynamicStackMemory() {
+			if (this->top != nullptr) {
+				free(this->top);
+			}
+		}
+	};
 
 	// Returns the size of the allocation including alignment.
-	inline uint64_t increaseTop(uint64_t paddedSize, uintptr_t alignmentAndMask) {
+	inline uint64_t increaseStackPointer(uint8_t *&pointer, uint64_t paddedSize, uintptr_t alignmentAndMask) {
 		// Add the padded payload and align.
-		uintptr_t oldAddress = (uintptr_t)virtualStack.top;
+		uintptr_t oldAddress = (uintptr_t)pointer;
 		uintptr_t newAddress = (oldAddress - paddedSize) & alignmentAndMask;
-		virtualStack.top = (uint8_t*)newAddress;
+		pointer = (uint8_t*)newAddress;
 		return oldAddress - newAddress;
 	}
 
-	inline void decreaseTop(uint64_t totalSize) {
+	inline void decreaseStackPointer(uint8_t *&pointer, uint64_t totalSize) {
 		// Remove the data and alignment.
-		virtualStack.top += totalSize;
+		pointer += totalSize;
 	}
 
-	uint8_t *virtualStack_push(uint64_t paddedSize, uintptr_t alignmentAndMask) {
-		uint8_t *oldTop = virtualStack.top;
+	static uint8_t *stackAllocate(StackMemory& stack, uint64_t paddedSize, uintptr_t alignmentAndMask) {
+		uint8_t *newStackPointer = stack.stackPointer;
 		// Allocate memory for payload.
-		uint64_t payloadTotalSize = increaseTop(paddedSize, alignmentAndMask);
+		uint64_t payloadTotalSize = increaseStackPointer(newStackPointer, paddedSize, alignmentAndMask);
 		// Get a pointer to the payload.
-		uint8_t *result = virtualStack.top;
+		uint8_t *result = newStackPointer;
 		// Allocate memory for header.
-		uint64_t headerTotalSize = increaseTop(stackHeaderPaddedSize, stackHeaderAlignmentAndMask);
+		uint64_t headerTotalSize = increaseStackPointer(newStackPointer, stackHeaderPaddedSize, stackHeaderAlignmentAndMask);
 		// Check that we did not run out of memory.
-		if (virtualStack.top < virtualStack.data) {
-			// TODO: Expand automatically using heap memory instead of crashing.
-			throwError(U"Ran out of virtual stack memory to allocate when trying to allocate ", paddedSize, U" bytes!\n");
-			virtualStack.top = oldTop;
+		if (newStackPointer < stack.top) {
+			// Not enough space.
 			return nullptr;
 		} else {
+			stack.stackPointer = newStackPointer;
 			// Write the header to memory.
-			*((StackAllocationHeader*)virtualStack.top) = StackAllocationHeader(payloadTotalSize + headerTotalSize);
+			*((StackAllocationHeader*)stack.stackPointer) = StackAllocationHeader(payloadTotalSize + headerTotalSize);
 			// Clear the new allocation for determinism.
-			std::memset((char*)result, 0, payloadTotalSize);
+			std::memset((void*)result, 0, payloadTotalSize);
 			// Return a pointer to the payload.
 			return result;
 		}
 	}
 
-	void virtualStack_pop() {
-		if (virtualStack.top + stackHeaderPaddedSize > virtualStack.data + VIRTUAL_STACK_SIZE) {
-			throwError(U"No more stack memory to pop!\n");
+	thread_local FixedStackMemory fixedMemory; // Index -1
+	thread_local DynamicStackMemory dynamicMemory[MAX_EXTRA_STACKS]; // Index 0..MAX_EXTRA_STACKS-1
+	thread_local int32_t stackIndex = -1;
+
+	uint8_t *virtualStack_push(uint64_t paddedSize, uintptr_t alignmentAndMask) {
+		if (stackIndex < 0) {
+			uint8_t *result = stackAllocate(fixedMemory, paddedSize, alignmentAndMask);
+			// Check that we did not run out of memory.
+			if (result == nullptr) {
+				// Not enough space in thread local memory. Moving to the first dynamic stack.
+				stackIndex = 0;
+				goto allocateDynamic;
+			} else {
+				// Return a pointer to the payload.
+				return result;
+			}
+		}
+		allocateDynamic:
+		// We should only reach this place if allocating in dynamic stack memory.
+		assert(stackIndex >= 0);
+		// Never go above the maximum index.
+		assert(stackIndex < MAX_EXTRA_STACKS);
+		// Allocate memory in the dynamic stack if not yet allocated.
+		if (dynamicMemory[stackIndex].top == nullptr) {
+			uint64_t regionSize = 16777216 * (1 << stackIndex);
+			if (paddedSize * 4 > regionSize) {
+				regionSize = paddedSize * 4;
+			}
+			uint8_t *newMemory = (uint8_t*)malloc(regionSize);
+			if (newMemory == nullptr) {
+				throwError(U"Failed to allocate ", regionSize, U" bytes of heap memory for expanding the virtual stack when trying to allocate ", paddedSize, " bytes!\n");
+				return nullptr;
+			} else {
+				// Keep the new allocation.
+				dynamicMemory[stackIndex].top = newMemory;
+				// Start from the back of the new allocation.
+				dynamicMemory[stackIndex].stackPointer = newMemory + regionSize;
+				dynamicMemory[stackIndex].bottom = newMemory + regionSize;
+			}
+		}
+		assert(dynamicMemory[stackIndex].stackPointer != nullptr);
+		// Allocate memory.
+		uint8_t *result = stackAllocate(dynamicMemory[stackIndex], paddedSize, alignmentAndMask);
+		if (result == nullptr) {
+			if (stackIndex >= MAX_EXTRA_STACKS - 1) {
+				throwError(U"Exceeded MAX_EXTRA_STACKS to allocate more heap memory for a thread local virtual stack!\n");
+				return nullptr;
+			} else {
+				stackIndex++;
+				goto allocateDynamic;
+			}
 		} else {
+			// Return a pointer to the payload.
+			return result;
+		}
+	}
+
+	// Deallocates the topmost allocation in the stack or returns false if it does not contain any more allocations.
+	static bool stackDeallocate(StackMemory& stack) {
+		if (stack.stackPointer + stackHeaderPaddedSize > stack.bottom) {
+			// If the allocated memory does not fit a header, then it is empty.
+			return false;
+		} else {
+			// TODO: Prevent deallocating past the top.
 			// Read the header.
-			StackAllocationHeader header = *((StackAllocationHeader*)virtualStack.top);
+			StackAllocationHeader header = *((StackAllocationHeader*)stack.stackPointer);
 			// Deallocate both header and payload using the stored total size.
-			decreaseTop(header.totalSize);
+			decreaseStackPointer(stack.stackPointer, header.totalSize);
+			return true;
+		}
+	}
+
+	void virtualStack_pop() {
+		if (stackIndex < 0) {
+			if (!stackDeallocate(fixedMemory)) {
+				throwError(U"No more stack memory to pop!\n");
+			}
+		} else {
+			if (!stackDeallocate(dynamicMemory[stackIndex])) {
+				throwError(U"The virtual stack has been corrupted!\n");
+			} else {
+				// If the bottom has been reached then go to the lower stack.
+				if (dynamicMemory[stackIndex].stackPointer >= dynamicMemory[stackIndex].bottom) {
+					stackIndex--;
+				}
+			}
 		}
 	}
 
