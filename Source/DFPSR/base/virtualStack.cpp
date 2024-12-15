@@ -22,6 +22,8 @@
 //    distribution.
 
 #include "virtualStack.h"
+#include <thread>
+#include "../api/stringAPI.h"
 
 namespace dsr {
 	// A structure that is placed in front of each stack allocation while allocating backwards along decreasing addresses to allow aligning memory quickly using bit masking.

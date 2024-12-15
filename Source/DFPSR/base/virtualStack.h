@@ -21,21 +21,19 @@
 //    3. This notice may not be removed or altered from any source
 //    distribution.
 
-#include "SafePointer.h"
-#include "../api/stringAPI.h"
 
-#include <mutex>
-#include <thread>
+#ifndef DFPSR_VIRTUAL_STACK
+#define DFPSR_VIRTUAL_STACK
+
+#include "SafePointer.h"
 
 namespace dsr {
-	// TODO: Make overloaded versions for signed and unsigned integer types.
-	constexpr uint64_t roundUp(uint64_t size, uint64_t alignment) {
-		return size + (alignment - 1) - ((size - 1) % alignment);
-	}
-
 	template <typename T>
 	constexpr uint64_t memory_getPaddedSize() {
-		return roundUp((uint64_t)sizeof(T), (uint64_t)alignof(T));
+		uint64_t size = (uint64_t)sizeof(T);
+		uint64_t alignment = (uint64_t)alignof(T);
+		// Round up with unsigned integers.
+		return size + (alignment - 1) - ((size - 1) % alignment);
 	}
 
 	// Pre-condition:
@@ -86,3 +84,5 @@ namespace dsr {
 		}
 	};
 }
+
+#endif
