@@ -12,10 +12,6 @@
 #   Strings use a subset of the C standard for mangling, so \\ is used to write \.
 #     You can also use / and let the file abstraction layer convert it into \ automatically when running on Windows.
 
-if ReuseMemory
-	Crawl "base/allocator.cpp"
-end if
-
 if Linux
 	Message "Building for Linux\n"
 end if
