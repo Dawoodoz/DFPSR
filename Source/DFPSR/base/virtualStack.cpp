@@ -26,43 +26,20 @@
 #include "../api/stringAPI.h"
 
 namespace dsr {
-	// A structure that is placed in front of each stack allocation while allocating backwards along decreasing addresses to allow aligning memory quickly using bit masking.
-	struct StackAllocationHeader {
-		uint32_t totalSize; // Size of both header and payload.
-		#ifdef SAFE_POINTER_CHECKS
-		uint32_t identity; // A unique identifier that can be used to reduce the risk of using a block of memory after it has been freed.
-		#endif
-		StackAllocationHeader(uint32_t totalSize);
-	};
-
 	// How many bytes that are allocated directly in thread local memory.
 	static const uint64_t VIRTUAL_STACK_SIZE = 262144;
 	static const int MAX_EXTRA_STACKS = 63;
 
-	static const uintptr_t stackHeaderPaddedSize = memory_getPaddedSize<StackAllocationHeader>();
-	static const uintptr_t stackHeaderAlignmentAndMask = memory_createAlignmentAndMask((uintptr_t)alignof(StackAllocationHeader));
-
-	#ifdef SAFE_POINTER_CHECKS
-		// In debug mode, each new thread creates a hash from its own identity to catch most of the memory errors in debug mode.
-		std::hash<std::thread::id> hasher;
-		thread_local uint32_t threadIdentity = hasher(std::this_thread::get_id());
-		//   To check the allocation identity, subtract the padded size of the header from the base pointer, cast to the head type and compare to the pointer's identity.
-		thread_local uint32_t nextIdentity = threadIdentity;
-	#endif
-	StackAllocationHeader::StackAllocationHeader(uint32_t totalSize) : totalSize(totalSize) {
-		#ifdef SAFE_POINTER_CHECKS
-			// No identity may be zero, because identity zero is no identity.
-			if (nextIdentity == 0) nextIdentity++;
-			this->identity = nextIdentity;
-			nextIdentity++;
-		#endif
-	}
+	static const uintptr_t stackHeaderPaddedSize = memory_getPaddedSize<AllocationHeader>();
+	static const uintptr_t stackHeaderAlignmentAndMask = memory_createAlignmentAndMask((uintptr_t)alignof(AllocationHeader));
 
 	struct StackMemory {
 		uint8_t *top = nullptr; // The stack pointer is here when completely full.
 		uint8_t *stackPointer = nullptr; // The virtual stack pointer.
 		uint8_t *bottom = nullptr; // The stack pointer is here when empty.
 	};
+
+	// The first block of stack memory in stread local memory.
 	struct FixedStackMemory : public StackMemory {
 		uint8_t data[VIRTUAL_STACK_SIZE];
 		FixedStackMemory() {
@@ -71,9 +48,9 @@ namespace dsr {
 			this->bottom = this->data + VIRTUAL_STACK_SIZE;
 		}
 	};
+
+	// Additional stacks in heap memory.
 	struct DynamicStackMemory : public StackMemory {
-		// Allocate the data dynamically in top when needed.
-		// Clean up when the thread terminates.
 		~DynamicStackMemory() {
 			if (this->top != nullptr) {
 				free(this->top);
@@ -110,7 +87,7 @@ namespace dsr {
 		} else {
 			stack.stackPointer = newStackPointer;
 			// Write the header to memory.
-			*((StackAllocationHeader*)stack.stackPointer) = StackAllocationHeader(payloadTotalSize + headerTotalSize);
+			*((AllocationHeader*)stack.stackPointer) = AllocationHeader(payloadTotalSize + headerTotalSize, true);
 			// Clear the new allocation for determinism.
 			std::memset((void*)result, 0, payloadTotalSize);
 			// Return a pointer to the payload.
@@ -181,9 +158,10 @@ namespace dsr {
 			// If the allocated memory does not fit a header, then it is empty.
 			return false;
 		} else {
-			// TODO: Prevent deallocating past the top.
 			// Read the header.
-			StackAllocationHeader header = *((StackAllocationHeader*)stack.stackPointer);
+			AllocationHeader header = *((AllocationHeader*)stack.stackPointer);
+			// Overwrite the header.
+			*((AllocationHeader*)stack.stackPointer) = AllocationHeader();
 			// Deallocate both header and payload using the stored total size.
 			decreaseStackPointer(stack.stackPointer, header.totalSize);
 			return true;
