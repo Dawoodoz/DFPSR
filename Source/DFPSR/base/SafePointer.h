@@ -52,9 +52,23 @@
 
 namespace dsr {
 
-// Generic implementaions
-void assertInsideSafePointer(const char* method, const char* name, const uint8_t* pointer, const uint8_t* data, const uint8_t* regionStart, const uint8_t* regionEnd, intptr_t claimedSize, intptr_t elementSize);
-void assertNonNegativeSize(intptr_t size);
+struct AllocationHeader {
+	uintptr_t totalSize; // Size of both header and payload.
+	#ifdef SAFE_POINTER_CHECKS
+		uint64_t threadHash; // Hash of the owning thread identity for thread local memory, 0 for shared memory.
+		uint64_t allocationIdentity; // Rotating identity of the allocation, to know if the memory has been freed and reused within a memory allocator.
+	#endif
+	// Header for freed memory.
+	AllocationHeader();
+	// Header for allocated memory.
+	// threadLocal should be true iff the memory may not be accessed from other threads, such as virtual stack memory.
+	AllocationHeader(uintptr_t totalSize, bool threadLocal);
+};
+
+#ifdef SAFE_POINTER_CHECKS
+	void assertInsideSafePointer(const char* method, const char* name, const uint8_t* pointer, const uint8_t* data, const uint8_t* regionStart, const uint8_t* regionEnd, const AllocationHeader *header, uint64_t allocationIdentity, intptr_t claimedSize, intptr_t elementSize);
+	void assertNonNegativeSize(intptr_t size);
+#endif
 
 template<typename T>
 class SafePointer {
@@ -63,30 +77,43 @@ private:
 	//   Mutable because only the data being pointed to is write protected in a const SafePointer
 	mutable T *data;
 	#ifdef SAFE_POINTER_CHECKS
+		// Optional pointer to an allocation header to know if it still exists and which threads are allowed to access it.
+		mutable AllocationHeader *header = nullptr;
+		// The identity that should match the allocation header's identity.
+		mutable uint64_t allocationIdentity = 0;
+		// Points to the first accessible byte, which should have the same alignment as the data pointer.
 		mutable T *regionStart;
+		// Marks the end of the allowed region, pointing to the first byte that is not accessible.
 		mutable T *regionEnd;
-		mutable const char * name;
+		// Pointer to an ascii literal containing the name for improving error messages for crashes in debug mode.
+		mutable const char *name;
 	#endif
 public:
 	#ifdef SAFE_POINTER_CHECKS
 	SafePointer() : data(nullptr), regionStart(nullptr), regionEnd(nullptr), name("Unnamed null pointer") {}
 	explicit SafePointer(const char* name) : data(nullptr), regionStart(nullptr), regionEnd(nullptr), name(name) {}
-	SafePointer(const char* name, T* regionStart, intptr_t regionByteSize = sizeof(T)) : data(regionStart), regionStart(regionStart), regionEnd((T*)(((uint8_t*)regionStart) + (intptr_t)regionByteSize)), name(name) {
+	SafePointer(const char* name, T* regionStart, intptr_t regionByteSize = sizeof(T), AllocationHeader *header = nullptr)
+	: data(regionStart), regionStart(regionStart), regionEnd((T*)(((uint8_t*)regionStart) + (intptr_t)regionByteSize)), name(name), header(header) {
 		assertNonNegativeSize(regionByteSize);
+		// If the pointer has a header, then store the allocation's identity in the pointer.
+		if (header != nullptr) {
+			this->allocationIdentity = header->allocationIdentity;
+		}
 	}
-	SafePointer(const char* name, T* regionStart, intptr_t regionByteSize, T* data) : data(data), regionStart(regionStart), regionEnd((T*)(((uint8_t*)regionStart) + (intptr_t)regionByteSize)), name(name) {
+	SafePointer(const char* name, T* regionStart, intptr_t regionByteSize, T* data, AllocationHeader *header = nullptr)
+	: data(data), regionStart(regionStart), regionEnd((T*)(((uint8_t*)regionStart) + (intptr_t)regionByteSize)), name(name), header(header) {
 		assertNonNegativeSize(regionByteSize);
 	}
 	#else
 	SafePointer() : data(nullptr) {}
 	explicit SafePointer(const char* name) : data(nullptr) {}
-	SafePointer(const char* name, T* regionStart, intptr_t regionByteSize = sizeof(T)) : data(regionStart) {}
-	SafePointer(const char* name, T* regionStart, intptr_t regionByteSize, T* data) : data(data) {}
+	SafePointer(const char* name, T* regionStart, intptr_t regionByteSize = sizeof(T), AllocationHeader *header = nullptr) : data(regionStart) {}
+	SafePointer(const char* name, T* regionStart, intptr_t regionByteSize, T* data, AllocationHeader *header = nullptr) : data(data) {}
 	#endif
 public:
 	#ifdef SAFE_POINTER_CHECKS
 	inline void assertInside(const char* method, const T* pointer, intptr_t size = (intptr_t)sizeof(T)) const {
-		assertInsideSafePointer(method, this->name, (const uint8_t*)pointer, (const uint8_t*)this->data, (const uint8_t*)this->regionStart, (const uint8_t*)this->regionEnd, size, sizeof(T));
+		assertInsideSafePointer(method, this->name, (const uint8_t*)pointer, (const uint8_t*)this->data, (const uint8_t*)this->regionStart, (const uint8_t*)this->regionEnd, this->header, this->allocationIdentity, size, sizeof(T));
 	}
 	inline void assertInside(const char* method) const {
 		this->assertInside(method, this->data);
@@ -233,6 +260,8 @@ public:
 	inline const SafePointer<T>& operator=(const SafePointer<T>& source) const {
 		this->data = source.data;
 		#ifdef SAFE_POINTER_CHECKS
+			this->header = source.header;
+			this->allocationIdentity = source.allocationIdentity;
 			this->regionStart = source.regionStart;
 			this->regionEnd = source.regionEnd;
 			this->name = source.name;
