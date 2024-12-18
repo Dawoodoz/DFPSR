@@ -17,8 +17,10 @@ START_TEST(VirtualStack)
 			x[6] = 67;
 			x[7] = 78;
 			x[8] = 89;
-			VirtualStackAllocation<int32_t> y(3);
+			SafePointer<int32_t> pointerY;
 			{
+				VirtualStackAllocation<int32_t> y(3);
+				pointerY = y;
 				ASSERT_EQUAL((uintptr_t)(y.getUnsafe()) % alignof(int32_t), 0);
 				y[0] =  2147483000;
 				y[1] = -2147483000;
@@ -33,9 +35,9 @@ START_TEST(VirtualStack)
 					ASSERT_CRASH(y[3]);
 				#endif
 			}
-			//#ifdef SAFE_POINTER_CHECKS
-			// TODO: Implement and test memory safety against deallocated data by remembering the allocation's identity in the pointer and erasing it when freeing.
-			//#endif
+			#ifdef SAFE_POINTER_CHECKS
+				ASSERT_CRASH(pointerY[0]);
+			#endif
 		}
 		#ifdef SAFE_POINTER_CHECKS
 			ASSERT_CRASH(x[-1]);

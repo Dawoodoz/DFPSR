@@ -77,16 +77,16 @@ private:
 	//   Mutable because only the data being pointed to is write protected in a const SafePointer
 	mutable T *data;
 	#ifdef SAFE_POINTER_CHECKS
-		// Optional pointer to an allocation header to know if it still exists and which threads are allowed to access it.
-		mutable AllocationHeader *header = nullptr;
-		// The identity that should match the allocation header's identity.
-		mutable uint64_t allocationIdentity = 0;
 		// Points to the first accessible byte, which should have the same alignment as the data pointer.
 		mutable T *regionStart;
 		// Marks the end of the allowed region, pointing to the first byte that is not accessible.
 		mutable T *regionEnd;
 		// Pointer to an ascii literal containing the name for improving error messages for crashes in debug mode.
 		mutable const char *name;
+		// Optional pointer to an allocation header to know if it still exists and which threads are allowed to access it.
+		mutable AllocationHeader *header = nullptr;
+		// The identity that should match the allocation header's identity.
+		mutable uint64_t allocationIdentity = 0;
 	#endif
 public:
 	#ifdef SAFE_POINTER_CHECKS

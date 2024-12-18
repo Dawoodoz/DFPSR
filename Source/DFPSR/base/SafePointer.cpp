@@ -36,8 +36,9 @@ static uint64_t ANY_THREAD_HASH = 0xF986BA1496E872A5;
 
 #ifdef SAFE_POINTER_CHECKS
 	// Hashed thread identity.
+	// TODO: Create a function for geterating a better thread hash with better entropy.
 	std::hash<std::thread::id> hasher;
-	thread_local uint64_t threadHash = hasher(std::this_thread::get_id());
+	thread_local const uint64_t currentThreadHash = hasher(std::this_thread::get_id());
 
 	// Globally unique identifiers for memory allocations.
 	// Different allocations can have the same address at different times when allocations are recycled,
@@ -57,8 +58,7 @@ static uint64_t ANY_THREAD_HASH = 0xF986BA1496E872A5;
 	: totalSize(0), threadHash(0), allocationIdentity(0) {}
 
 	AllocationHeader::AllocationHeader(uintptr_t totalSize, bool threadLocal)
-	: totalSize(totalSize), threadHash(threadLocal ? threadHash : ANY_THREAD_HASH), allocationIdentity(createIdentity()) {
-	}
+	: totalSize(totalSize), threadHash(threadLocal ? currentThreadHash : ANY_THREAD_HASH), allocationIdentity(createIdentity()) {}
 #else
 	AllocationHeader::AllocationHeader()
 	: totalSize(0) {}
@@ -75,28 +75,28 @@ static uint64_t ANY_THREAD_HASH = 0xF986BA1496E872A5;
 	}
 
 	void dsr::assertInsideSafePointer(const char* method, const char* name, const uint8_t* pointer, const uint8_t* data, const uint8_t* regionStart, const uint8_t* regionEnd, const AllocationHeader *header, uint64_t allocationIdentity, intptr_t claimedSize, intptr_t elementSize) {
+		if (regionStart == nullptr) {
+			throwError(U"SafePointer exception! Tried to use a null pointer!\n");
+			return;
+		}
 		// If the pointer has an allocation header, check that the identity matches the one stored in the pointer.
 		if (header != nullptr) {
-			// TODO: Print more useful information.
+			uint64_t headerIdentity, headerHash;
 			try {
 				// Both allocation identity and thread hash may match by mistake, but in most of the cases this will give more information about why it happened.
-				uint64_t headerIdentity = header->allocationIdentity;
-				uint64_t headerHash = header->threadHash;
-				if (headerIdentity != allocationIdentity) {
-					throwError(U"SafePointer exception! Accessing freed memory or currupted allocation header!\n");
-					return;
-				} else if (headerHash != ANY_THREAD_HASH && headerHash != threadHash) {
-					throwError(U"SafePointer exception! Accessing another thread's private memory!\n");
-					return;
-				}
+				headerIdentity = header->allocationIdentity;
+				headerHash = header->threadHash;
 			} catch(...) {
 				throwError(U"SafePointer exception! Tried to access memory not available to the application!\n");
 				return;
 			}
-		}
-		if (regionStart == nullptr) {
-			throwError(U"SafePointer exception! Tried to use a null pointer!\n");
-			return;
+			if (headerIdentity != allocationIdentity) {
+				throwError(U"SafePointer exception! Accessing freed memory or corrupted allocation header!\n  headerIdentity = ", headerIdentity, U"\n  allocationIdentity = ", allocationIdentity, U"");
+				return;
+			} else if (headerHash != ANY_THREAD_HASH && headerHash != currentThreadHash) {
+				throwError(U"SafePointer exception! Accessing another thread's private memory!\n  headerHash = ", headerHash, U"\n  currentThreadHash = ", currentThreadHash, U"\n");
+				return;
+			}
 		}
 		if (pointer < regionStart || pointer + claimedSize > regionEnd) {
 			String message;

@@ -49,10 +49,16 @@ namespace dsr {
 		return ~(alignment - 1);
 	}
 
+	struct UnsafeAllocation {
+		uint8_t *data;
+		AllocationHeader *header;
+		UnsafeAllocation(uint8_t *data, AllocationHeader *header)
+		: data(data), header(header) {}
+	};
 	// Allocate memory in the virtual stack owned by the current thread.
 	//   paddedSize is the number of bytes to allocate including all elements and internal padding.
 	//   alignmentMask should only contain zeroes at the bits to round away for alignment.
-	uint8_t *virtualStack_push(uint64_t paddedSize, uintptr_t alignmentAndMask);
+	UnsafeAllocation virtualStack_push(uint64_t paddedSize, uintptr_t alignmentAndMask);
 
 	// A simpler way to get the correct alignment is to allocate a number of elements with a specific type.
 	// TODO: Create another function for manual alignment exceeding the type's alignment using another template argument.
@@ -63,9 +69,9 @@ namespace dsr {
 		// Calculate element size and multiply by element count to get the total size.
 		uint64_t paddedSize = memory_getPaddedSize<T>() * elementCount;
 		// Allocate the data with the amount of alignment requested by the element type T.
-		uint8_t *data = virtualStack_push(paddedSize, memory_createAlignmentAndMask((uintptr_t)alignof(T)));
+		UnsafeAllocation result = virtualStack_push(paddedSize, memory_createAlignmentAndMask((uintptr_t)alignof(T)));
 		// Return a safe pointer to the allocated data.
-		return SafePointer<T>(name, (T*)data, (intptr_t)paddedSize);
+		return SafePointer<T>(name, (T*)(result.data), (intptr_t)paddedSize, result.header);
 	}
 
 	// Free the last allocation from the virtual stack.

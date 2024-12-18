@@ -72,26 +72,27 @@ namespace dsr {
 		pointer += totalSize;
 	}
 
-	static uint8_t *stackAllocate(StackMemory& stack, uint64_t paddedSize, uintptr_t alignmentAndMask) {
+	static UnsafeAllocation stackAllocate(StackMemory& stack, uint64_t paddedSize, uintptr_t alignmentAndMask) {
 		uint8_t *newStackPointer = stack.stackPointer;
 		// Allocate memory for payload.
 		uint64_t payloadTotalSize = increaseStackPointer(newStackPointer, paddedSize, alignmentAndMask);
 		// Get a pointer to the payload.
-		uint8_t *result = newStackPointer;
+		uint8_t *data = newStackPointer;
 		// Allocate memory for header.
 		uint64_t headerTotalSize = increaseStackPointer(newStackPointer, stackHeaderPaddedSize, stackHeaderAlignmentAndMask);
 		// Check that we did not run out of memory.
 		if (newStackPointer < stack.top) {
 			// Not enough space.
-			return nullptr;
+			return UnsafeAllocation(nullptr, nullptr);
 		} else {
 			stack.stackPointer = newStackPointer;
 			// Write the header to memory.
-			*((AllocationHeader*)stack.stackPointer) = AllocationHeader(payloadTotalSize + headerTotalSize, true);
+			AllocationHeader *header = (AllocationHeader*)(stack.stackPointer);
+			*header = AllocationHeader(payloadTotalSize + headerTotalSize, true);
 			// Clear the new allocation for determinism.
-			std::memset((void*)result, 0, payloadTotalSize);
+			std::memset((void*)data, 0, payloadTotalSize);
 			// Return a pointer to the payload.
-			return result;
+			return UnsafeAllocation(data, header);
 		}
 	}
 
@@ -99,11 +100,11 @@ namespace dsr {
 	thread_local DynamicStackMemory dynamicMemory[MAX_EXTRA_STACKS]; // Index 0..MAX_EXTRA_STACKS-1
 	thread_local int32_t stackIndex = -1;
 
-	uint8_t *virtualStack_push(uint64_t paddedSize, uintptr_t alignmentAndMask) {
+	UnsafeAllocation virtualStack_push(uint64_t paddedSize, uintptr_t alignmentAndMask) {
 		if (stackIndex < 0) {
-			uint8_t *result = stackAllocate(fixedMemory, paddedSize, alignmentAndMask);
+			UnsafeAllocation result = stackAllocate(fixedMemory, paddedSize, alignmentAndMask);
 			// Check that we did not run out of memory.
-			if (result == nullptr) {
+			if (result.data == nullptr) {
 				// Not enough space in thread local memory. Moving to the first dynamic stack.
 				stackIndex = 0;
 				goto allocateDynamic;
@@ -126,7 +127,7 @@ namespace dsr {
 			uint8_t *newMemory = (uint8_t*)malloc(regionSize);
 			if (newMemory == nullptr) {
 				throwError(U"Failed to allocate ", regionSize, U" bytes of heap memory for expanding the virtual stack when trying to allocate ", paddedSize, " bytes!\n");
-				return nullptr;
+				return UnsafeAllocation(nullptr, nullptr);
 			} else {
 				// Keep the new allocation.
 				dynamicMemory[stackIndex].top = newMemory;
@@ -137,11 +138,11 @@ namespace dsr {
 		}
 		assert(dynamicMemory[stackIndex].stackPointer != nullptr);
 		// Allocate memory.
-		uint8_t *result = stackAllocate(dynamicMemory[stackIndex], paddedSize, alignmentAndMask);
-		if (result == nullptr) {
+		UnsafeAllocation result = stackAllocate(dynamicMemory[stackIndex], paddedSize, alignmentAndMask);
+		if (result.data == nullptr) {
 			if (stackIndex >= MAX_EXTRA_STACKS - 1) {
 				throwError(U"Exceeded MAX_EXTRA_STACKS to allocate more heap memory for a thread local virtual stack!\n");
-				return nullptr;
+				return UnsafeAllocation(nullptr, nullptr);
 			} else {
 				stackIndex++;
 				goto allocateDynamic;
