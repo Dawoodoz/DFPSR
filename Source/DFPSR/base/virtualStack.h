@@ -57,7 +57,10 @@ namespace dsr {
 	};
 	// Allocate memory in the virtual stack owned by the current thread.
 	//   paddedSize is the number of bytes to allocate including all elements and internal padding.
+	//     paddedSize must be at least 1, but has no rounding requirements.
 	//   alignmentMask should only contain zeroes at the bits to round away for alignment.
+	//     alignmentMask should be the bitwise negation of the alignment minus one, where the alignment is a power of two.
+	//     ~(alignment - 1)
 	UnsafeAllocation virtualStack_push(uint64_t paddedSize, uintptr_t alignmentAndMask);
 
 	// A simpler way to get the correct alignment is to allocate a number of elements with a specific type.

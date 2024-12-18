@@ -101,6 +101,7 @@ namespace dsr {
 	thread_local int32_t stackIndex = -1;
 
 	UnsafeAllocation virtualStack_push(uint64_t paddedSize, uintptr_t alignmentAndMask) {
+		// TODO: Assert that the alignment mask begins with ones and ends with zeroes, in case that the caller accidentally truncated the beginning of the mask.
 		if (stackIndex < 0) {
 			UnsafeAllocation result = stackAllocate(fixedMemory, paddedSize, alignmentAndMask);
 			// Check that we did not run out of memory.
