@@ -303,7 +303,9 @@ void VirtualMachine::addCallInstructions(const List<String>& arguments) {
 	addMachineWord([](VirtualMachine& machine, PlanarMemory& memory, const List<VMA>& args) {
 		// Get the method to call
 		int calledMethodIndex = args[0].value.getMantissa();
-		int oldMethodIndex = memory.current.methodIndex;
+		#ifdef VIRTUAL_MACHINE_DEBUG_PRINT
+			int oldMethodIndex = memory.current.methodIndex;
+		#endif
 		Method* calledMethod = &machine.methods[calledMethodIndex];
 		#ifdef VIRTUAL_MACHINE_DEBUG_PRINT
 			printText(U"Calling \"", calledMethod->name, U"\".\n");
