@@ -35,14 +35,51 @@ using namespace dsr;
 static uint64_t ANY_THREAD_HASH = 0xF986BA1496E872A5;
 
 #ifdef SAFE_POINTER_CHECKS
+	// A primitive hash function that assumes that all compared objects have the same length, so that trailing zeroes can be ignored.
+	static uint64_t hash(const uint8_t *bytes, size_t size) {
+		uint64_t result = 527950984572370412;
+		uint64_t a = 701348790128743674;
+		uint64_t b = 418235620918472195;
+		uint64_t c = 405871623857064987;
+		uint64_t d = 685601283756306982;
+		uint64_t e = 560123876058723749;
+		uint64_t f = 123875604857293847;
+		uint64_t g = 906123857648761038;
+		uint64_t h = 720862395187683741;
+		for (size_t byteIndex = 0; byteIndex < size; byteIndex++) {
+			uint8_t byte = bytes[byteIndex];
+			a = (a * 5819 + byteIndex * 75364 + 1746983) ^ 8761236358;
+			b = (b * 4870 + byteIndex * 64294 + 6891364) ^ 2346987034;
+			c = (c * 7059 + byteIndex * 91724 + 9234068) ^ 8016458371;
+			d = (d * 2987 + byteIndex * 35729 + 5298712) ^ 1589721358;
+			e = (e * 6198 + byteIndex * 11635 + 6349823) ^ 2938479216;
+			f = (f * 5613 + byteIndex * 31873 + 7468895) ^ 5368713452;
+			g = (g * 7462 + byteIndex * 98271 + 1287650) ^ 9120572938;
+			h = (h * 1670 + byteIndex * 37488 + 6361083) ^ 4867350662;
+			if (byte &   1) result = result ^ a;
+			if (byte &   2) result = result ^ b;
+			if (byte &   4) result = result ^ c;
+			if (byte &   8) result = result ^ d;
+			if (byte &  16) result = result ^ e;
+			if (byte &  32) result = result ^ f;
+			if (byte &  64) result = result ^ g;
+			if (byte & 128) result = result ^ h;
+		}
+		return result;
+	}
+
 	// Hashed thread identity.
-	// TODO: Create a function for geterating a better thread hash with better entropy.
-	std::hash<std::thread::id> hasher;
-	thread_local const uint64_t currentThreadHash = hasher(std::this_thread::get_id());
+	static uint64_t createThreadHash() {
+		std::thread::id id = std::this_thread::get_id();
+		const uint8_t *bytes = (const uint8_t*)&id;
+		return hash(bytes, sizeof(std::thread::id));
+	}
+	thread_local const uint64_t currentThreadHash = createThreadHash();
 
 	// Globally unique identifiers for memory allocations.
 	// Different allocations can have the same address at different times when allocations are recycled,
 	//   so a globally unique identifier is needed to make sure that we access the same allocation.
+	// We start at a constant of high entropy to minimize the risk of accidental matches and then increase by one in modulo 2⁶⁴ to prevent repetition of the exact same value.
 	static std::mutex idLock;
 	static uint64_t idCounter = 0xD13A98271E08BF57;
 	static uint64_t createIdentity() {
