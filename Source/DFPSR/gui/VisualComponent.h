@@ -58,7 +58,8 @@ public: // Relations
 	std::shared_ptr<VisualComponent> dragComponent;
 private: // States
 	// Use methods to set the current state, then have it copied to previousState after calling updateStateEvent in sendNotifications.
-	ComponentState currentState, previousState;
+	ComponentState currentState = 0;
+	ComponentState previousState = 0;
 private: // State updates
 	// TODO: Can a faster update be made using a limited traversal from changed component to root, while reusing the same code for the update?
 	// Called after changing direct states.
