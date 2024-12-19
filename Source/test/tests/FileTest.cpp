@@ -91,6 +91,7 @@ START_TEST(File)
 		ASSERT_EQUAL(file_getExtension(U"\\file."), U"");
 		ASSERT_EQUAL(file_getExtension(U"file"), U"");
 		ASSERT_EQUAL(file_getExtension(U""), U"");
+		ASSERT_EQUAL(file_getExtension(U"/folder/com.dawoodoz.www/file.txt"), U"txt");
 		ASSERT_EQUAL(file_getExtension(U"/folder/./file.txt"), U"txt");
 		ASSERT_EQUAL(file_getExtension(U"/folder/file.h"), U"h");
 		ASSERT_EQUAL(file_getExtension(U"/folder/../file.h"), U"h");
