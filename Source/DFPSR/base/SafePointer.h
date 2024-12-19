@@ -44,26 +44,9 @@
 #include <cstring>
 #include <cassert>
 #include <cstdint>
-
-// Disabled in release mode
-#ifndef NDEBUG
-	#define SAFE_POINTER_CHECKS
-#endif
+#include "memory.h"
 
 namespace dsr {
-
-struct AllocationHeader {
-	uintptr_t totalSize; // Size of both header and payload.
-	#ifdef SAFE_POINTER_CHECKS
-		uint64_t threadHash; // Hash of the owning thread identity for thread local memory, 0 for shared memory.
-		uint64_t allocationIdentity; // Rotating identity of the allocation, to know if the memory has been freed and reused within a memory allocator.
-	#endif
-	// Header for freed memory.
-	AllocationHeader();
-	// Header for allocated memory.
-	// threadLocal should be true iff the memory may not be accessed from other threads, such as virtual stack memory.
-	AllocationHeader(uintptr_t totalSize, bool threadLocal);
-};
 
 #ifdef SAFE_POINTER_CHECKS
 	void assertInsideSafePointer(const char* method, const char* name, const uint8_t* pointer, const uint8_t* data, const uint8_t* regionStart, const uint8_t* regionEnd, const AllocationHeader *header, uint64_t allocationIdentity, intptr_t claimedSize, intptr_t elementSize);
