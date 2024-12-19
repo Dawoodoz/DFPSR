@@ -1100,10 +1100,10 @@ static void resize_aux(ImageU8Impl& target, const ImageU8Impl& source, bool inte
 
 // Creating an image to replacedImage with the same pack order as originalImage when applicable to the image format.
 static ImageRgbaU8Impl createWithSamePackOrder(const ImageRgbaU8Impl& originalImage, int32_t width, int32_t height) {
-	return ImageRgbaU8Impl(width, height, originalImage.packOrder.packOrderIndex, DSR_DEFAULT_ALIGNMENT);
+	return ImageRgbaU8Impl(width, height, originalImage.packOrder.packOrderIndex);
 }
 static ImageU8Impl createWithSamePackOrder(const ImageU8Impl& originalImage, int32_t width, int32_t height) {
-	return ImageU8Impl(width, height, DSR_DEFAULT_ALIGNMENT);
+	return ImageU8Impl(width, height);
 }
 
 template <typename IMAGE_TYPE>

@@ -37,7 +37,7 @@ Another option would be to use std:u32string, which does have a fixed format, bu
 Then you might as well just use a custom string type and get both a standard representation and modern optimizations.
 dsr::String will save you heap allocations when passed by value, because the buffer is reference counted and reused until actually modified by appending data to it.
 It will behave just as if the content was cloned every time you pass it by value, but it automatically reuses allocations when doing so will save time and memory.
-Because dsr::ReadableString stores the length as an integer per view instead of writing a null terminator into the character data, splitting a string will create many views to the same allocation instead of creating lots of small heap allocations.
+Because dsr::ReadableString stores the length as an integer per view instead of writing a null terminator into the character data, splitting a string will create many views to the same allocation instead of creating lots of small heap allocations just to insert null terminators.
 </P><IMG SRC="Images/Border.png"><P>
 </P><H2> Encoding</H2><P>Both dsr::String and dsr::ReadableString are encoded in the UTF-32 format using only line-feed for line-breaks.
 This takes more memory but guarantees that each character is one element which makes algorithms a lot easier to implement when you cannot get corrupted characters or line-breaks by mistake.

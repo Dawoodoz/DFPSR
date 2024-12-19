@@ -32,8 +32,8 @@ ImageU16Impl::ImageU16Impl(int32_t newWidth, int32_t newHeight, int32_t newStrid
 	assert(buffer_getSize(buffer) - startOffset >= imageInternal::getUsedBytes(this));
 }
 
-ImageU16Impl::ImageU16Impl(int32_t newWidth, int32_t newHeight, int32_t alignment) :
-  ImageImpl(newWidth, newHeight, roundUp(newWidth * sizeof(uint16_t), alignment), sizeof(uint16_t), alignment) {
+ImageU16Impl::ImageU16Impl(int32_t newWidth, int32_t newHeight) :
+  ImageImpl(newWidth, newHeight, roundUp(newWidth * sizeof(uint16_t), DSR_MAXIMUM_ALIGNMENT), sizeof(uint16_t)) {
 }
 
 IMAGE_DEFINITION(ImageU16Impl, 1, uint16_t, uint16_t);

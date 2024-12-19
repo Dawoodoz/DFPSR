@@ -93,15 +93,15 @@ struct TextureRgba {
 class ImageRgbaU8Impl : public ImageImpl {
 public:
 	static const int32_t channelCount = 4;
-	static const int32_t pixelSize = channelCount;
+	//static const int32_t pixelSize = channelCount;
 	PackOrder packOrder;
 	// Macro defined functions
 	IMAGE_DECLARATION(ImageRgbaU8Impl, 4, Color4xU8, uint8_t);
 	// Constructors
 	ImageRgbaU8Impl(int32_t newWidth, int32_t newHeight, int32_t newStride, Buffer buffer, intptr_t startOffset, const PackOrder &packOrder);
-	ImageRgbaU8Impl(int32_t newWidth, int32_t newHeight, int32_t alignment);
+	ImageRgbaU8Impl(int32_t newWidth, int32_t newHeight);
 	// Native canvas constructor
-	ImageRgbaU8Impl(int32_t newWidth, int32_t newHeight, PackOrderIndex packOrderIndex, int32_t alignment);
+	ImageRgbaU8Impl(int32_t newWidth, int32_t newHeight, PackOrderIndex packOrderIndex);
 	// The texture view for fast reading
 	TextureRgba texture;
 	// Points to level 0 from all bins to allow rendering

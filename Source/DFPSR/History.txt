@@ -29,3 +29,11 @@ Changes since version 0.1.0
 			Rethink the design if you relied on distinguishing between left and right control, shift or alt.
 	* If you used a custom theme before the system was finished, you will now have to add the assignment "filter = 1" for components where rounded edges became black from adding the filter setting.
 		Because one can not let default values depend on which component is used when theme classes are shared freely between components.
+
+Changes since version 0.2.0
+	* DSR_DEFAULT_ALIGNMENT and DSR_FLOAT_ALIGNMENT in simd.h were replaced with DSR_MAXIMUM_ALIGNMENT in settings.h to simplify correct memory alignment.
+		All buffers allocated by the framework and all pixel rows in aligned images are aligned with both the largest SIMD vector and cache lines.
+		On missing DSR_DEFAULT_ALIGNMENT or DSR_FLOAT_ALIGNMENT:
+			Replace 'DSR_DEFAULT_ALIGNMENT' with 'DSR_MAXIMUM_ALIGNMENT'
+			Replace 'DSR_FLOAT_ALIGNMENT' with 'DSR_MAXIMUM_ALIGNMENT'
+		This was done because the new heap allocator had to align all memory to whole cache lines for thread safety and easy memory recycling, which usually exceeds the largest SIMD vectors.

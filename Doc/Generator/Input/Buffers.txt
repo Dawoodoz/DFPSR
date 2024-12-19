@@ -3,7 +3,7 @@
 Title: Buffers
 Every file that is saved or loaded in the framework will pass through a Buffer.
 Buffers can not refer to each other in cycles and are automatically reference counted and deleted, so that you don't have to worry about memory leaks from them unless you explicitly call buffer_replaceDestructor.
-They store a fixed size allocation of 128-bit padded and aligned memory to work well with 128-bit SIMD intrinsics.
+They store a fixed size allocation of memory padded and aligned with DSR_MAXIMUM_ALIGNMENT bytes to work well with the largest SIMD vectors without false sharing of cache lines between threads.
 
 ---
 Title2: Construction

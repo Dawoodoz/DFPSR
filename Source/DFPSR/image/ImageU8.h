@@ -31,12 +31,12 @@ namespace dsr {
 class ImageU8Impl : public ImageImpl {
 public:
 	static const int32_t channelCount = 1;
-	static const int32_t pixelSize = channelCount;
+	//static const int32_t pixelSize = channelCount;
 	// Inherit constructors
 	using ImageImpl::ImageImpl;
 	// Constructors
 	ImageU8Impl(int32_t newWidth, int32_t newHeight, int32_t newStride, Buffer buffer, intptr_t startOffset);
-	ImageU8Impl(int32_t newWidth, int32_t newHeight, int32_t alignment);
+	ImageU8Impl(int32_t newWidth, int32_t newHeight);
 	// Macro defined functions
 	IMAGE_DECLARATION(ImageU8Impl, 1, uint8_t, uint8_t);
 };

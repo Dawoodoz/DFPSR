@@ -312,8 +312,8 @@ Then you might want to take advantage of 256-bit SIMD vectors, but don't want to
 For functions working directly on values without reading nor writing, you can use templates to have multiple vector lengths supported at the same time.
 For a filter however, you only need to generate the code for the biggest available vector size, so we use U8xX and laneCountX_8Bit for processing 8-bit monochrome images using type aliases.
 When building with AVX2 (-mavx2 for g++), the X vector types (F32xX, I32xX, U32xX, U16xX, U8xX) change size from 128 bits to 256 bits and their lane counts (laneCountX_32Bit, laneCountX_16Bit, laneCountX_8Bit) also double.
-If you do not have AVX2 on your computer for testing this, you can force the X vector to be at least 256 bits by defining the macro EMULATE_256BIT_X_SIMD globally.
-The aligned image types and buffers allocated by the library are always aligned with at least the X vector's DSR_DEFAULT_ALIGNMENT, so you can safely use the X vector on any aligned image and most of the buffers.
+If you do not have AVX2 on your computer for testing this, you can force the X vector to be at least 256 bits by defining the macro EMULATE_256BIT_X_SIMD globally or in settings.h.
+The aligned image types and buffers allocated by the library are always aligned with DSR_MAXIMUM_ALIGNMENT from settings.h, so you can safely use the X and F vectors on any buffer or aligned image.
 
 </P><P>
 Replaced <B>U8x16</B> with <B>U8xX</B> and <B>16</B> with <B>laneCountX_8Bit</B> to work with any future SIMD vector length:
