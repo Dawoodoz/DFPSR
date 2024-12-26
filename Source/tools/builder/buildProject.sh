@@ -41,7 +41,7 @@ if [ -e "${BUILDER_EXECUTABLE}" ]; then
 else
 	echo "Building the Builder build system for first time use."
 	LIBRARY_PATH="$(realpath ${BUILDER_FOLDER}/../../DFPSR)"
-	SOURCE_CODE="${BUILDER_FOLDER}/code/main.cpp ${BUILDER_FOLDER}/code/Machine.cpp ${BUILDER_FOLDER}/code/generator.cpp ${BUILDER_FOLDER}/code/analyzer.cpp ${BUILDER_FOLDER}/code/expression.cpp ${LIBRARY_PATH}/collection/collections.cpp ${LIBRARY_PATH}/api/fileAPI.cpp ${LIBRARY_PATH}/api/bufferAPI.cpp ${LIBRARY_PATH}/api/stringAPI.cpp ${LIBRARY_PATH}/api/timeAPI.cpp ${LIBRARY_PATH}/base/SafePointer.cpp ${LIBRARY_PATH}/base/virtualStack.cpp"
+	SOURCE_CODE="${BUILDER_FOLDER}/code/main.cpp ${BUILDER_FOLDER}/code/Machine.cpp ${BUILDER_FOLDER}/code/generator.cpp ${BUILDER_FOLDER}/code/analyzer.cpp ${BUILDER_FOLDER}/code/expression.cpp ${LIBRARY_PATH}/collection/collections.cpp ${LIBRARY_PATH}/api/fileAPI.cpp ${LIBRARY_PATH}/api/bufferAPI.cpp ${LIBRARY_PATH}/api/stringAPI.cpp ${LIBRARY_PATH}/api/timeAPI.cpp ${LIBRARY_PATH}/base/SafePointer.cpp ${LIBRARY_PATH}/base/virtualStack.cpp ${LIBRARY_PATH}/base/heap.cpp"
 	"${CPP_COMPILER_PATH}" -o "${BUILDER_EXECUTABLE}" ${SOURCE_CODE} -std=c++14 -lstdc++
 	if [ $? -eq 0 ]; then
 		echo "Completed building the Builder build system."

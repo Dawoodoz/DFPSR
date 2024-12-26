@@ -39,19 +39,19 @@ using namespace dsr;
 
 // Constructors
 AlignedImageU8 dsr::image_create_U8(int32_t width, int32_t height) {
-	return AlignedImageU8(std::make_shared<ImageU8Impl>(width, height, DSR_DEFAULT_ALIGNMENT));
+	return AlignedImageU8(std::make_shared<ImageU8Impl>(width, height));
 }
 AlignedImageU16 dsr::image_create_U16(int32_t width, int32_t height) {
-	return AlignedImageU16(std::make_shared<ImageU16Impl>(width, height, DSR_DEFAULT_ALIGNMENT));
+	return AlignedImageU16(std::make_shared<ImageU16Impl>(width, height));
 }
 AlignedImageF32 dsr::image_create_F32(int32_t width, int32_t height) {
-	return AlignedImageF32(std::make_shared<ImageF32Impl>(width, height, DSR_FLOAT_ALIGNMENT));
+	return AlignedImageF32(std::make_shared<ImageF32Impl>(width, height));
 }
 OrderedImageRgbaU8 dsr::image_create_RgbaU8(int32_t width, int32_t height) {
-	return OrderedImageRgbaU8(std::make_shared<ImageRgbaU8Impl>(width, height, DSR_DEFAULT_ALIGNMENT));
+	return OrderedImageRgbaU8(std::make_shared<ImageRgbaU8Impl>(width, height));
 }
 AlignedImageRgbaU8 dsr::image_create_RgbaU8_native(int32_t width, int32_t height, PackOrderIndex packOrderIndex) {
-	return AlignedImageRgbaU8(std::make_shared<ImageRgbaU8Impl>(width, height, packOrderIndex, DSR_DEFAULT_ALIGNMENT));
+	return AlignedImageRgbaU8(std::make_shared<ImageRgbaU8Impl>(width, height, packOrderIndex));
 }
 
 // Loading from data pointer

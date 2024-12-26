@@ -32,8 +32,8 @@ ImageF32Impl::ImageF32Impl(int32_t newWidth, int32_t newHeight, int32_t newStrid
 	assert(buffer_getSize(buffer) - startOffset >= imageInternal::getUsedBytes(this));
 }
 
-ImageF32Impl::ImageF32Impl(int32_t newWidth, int32_t newHeight, int32_t alignment) :
-  ImageImpl(newWidth, newHeight, roundUp(newWidth * sizeof(float), alignment), sizeof(float), alignment) {
+ImageF32Impl::ImageF32Impl(int32_t newWidth, int32_t newHeight) :
+  ImageImpl(newWidth, newHeight, roundUp(newWidth * sizeof(float), DSR_MAXIMUM_ALIGNMENT), sizeof(float)) {
 }
 
 IMAGE_DEFINITION(ImageF32Impl, 1, float, float);

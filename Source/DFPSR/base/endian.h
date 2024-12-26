@@ -21,6 +21,9 @@
 //    3. This notice may not be removed or altered from any source
 //    distribution.
 
+// Get settings from here.
+#include "../settings.h"
+
 // Endianness abstraction layer for manipulating byte arrays within unsigned integers
 //   ENDIAN_POS_ADDR
 //     Bit-shift in the positive direction of addresses
@@ -37,7 +40,6 @@
 #ifndef DFPSR_ENDIAN
 #define DFPSR_ENDIAN
 	#include <cstdint>
-	// TODO: Detect endianness automatically
 	#ifdef DSR_BIG_ENDIAN
 		// TODO: Not yet tested on a big-endian machine!
 		#define ENDIAN_POS_ADDR(VALUE,OFFSET) ((VALUE) >> (OFFSET))

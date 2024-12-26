@@ -22,11 +22,10 @@
 //    distribution.
 
 #include <fstream>
-#include <cstdlib>
 #include "bufferAPI.h"
 #include "stringAPI.h"
 #include "../math/scalar.h"
-#include "../base/simd.h"
+#include "../base/heap.h"
 
 namespace dsr {
 
@@ -37,14 +36,13 @@ public:
 	// A Buffer cannot have a name, because each String contains a buffer
 	const int64_t size; // The actually used data
 	const int64_t bufferSize; // The accessible data
-	const int alignment;
 	uint8_t *data;
 	std::function<void(uint8_t *)> destructor;
 public:
 	// Create head without data.
 	BufferImpl();
 	// Create head with newly allocated data.
-	explicit BufferImpl(int64_t newSize, int alignment);
+	explicit BufferImpl(int64_t newSize);
 	// Create head with inherited data.
 	BufferImpl(int64_t newSize, uint8_t *newData);
 	~BufferImpl();
@@ -56,44 +54,18 @@ public:
 
 // Internal methods
 
-// Get the largest alignment and confirm that it is a power of two.
-static int getFinalAlignment(int requestedAlignment) {
-	// Find any power of two alignment divisible by both requestedAlignment and DSR_DEFAULT_ALIGNMENT
-	int largestAlignment = max(requestedAlignment, DSR_DEFAULT_ALIGNMENT);
-	for (uint32_t e = 0; e < 32; e++) {
-		if (1 << e == largestAlignment) return largestAlignment;
-	}
-	return -1;
+static uint8_t* buffer_allocate(int64_t newSize, std::function<void(uint8_t *)>& targetDestructor) {
+	uint8_t* allocation = heap_allocate(newSize).data;
+	targetDestructor = [](uint8_t *data) { heap_free(data); };
+	return allocation;
 }
 
-// If this C++ version additionally includes the C11 features then we may assume that aligned_alloc is available
-#ifdef _ISOC11_SOURCE
-	// Allocate data of newSize and write the corresponding destructor function to targetDestructor
-	static uint8_t* buffer_allocate(int64_t newSize, int alignment, std::function<void(uint8_t *)>& targetDestructor) {
-		uint8_t* allocation = (uint8_t*)aligned_alloc(alignment, newSize);
-		targetDestructor = [](uint8_t *data) { free(data); };
-		return allocation;
-	}
-#else
-	// Allocate data of newSize and write the corresponding destructor function to targetDestructor
-	static uint8_t* buffer_allocate(int64_t newSize, int alignment, std::function<void(uint8_t *)>& targetDestructor) {
-		uintptr_t padding = alignment - 1;
-		uint8_t* allocation = (uint8_t*)malloc(newSize + padding);
-		uintptr_t buffer_alignment_mask = ~((uintptr_t)(alignment - 1));
-		uint8_t* aligned = (uint8_t*)(((uintptr_t)allocation + padding) & buffer_alignment_mask);
-		uintptr_t offset = allocation - aligned;
-		targetDestructor = [offset](uint8_t *data) { free(data - offset); };
-		return aligned;
-	}
-#endif
+BufferImpl::BufferImpl() : size(0), bufferSize(0), data(nullptr) {}
 
-BufferImpl::BufferImpl() : size(0), bufferSize(0), alignment(DSR_DEFAULT_ALIGNMENT), data(nullptr) {}
-
-BufferImpl::BufferImpl(int64_t newSize, int alignment) :
+BufferImpl::BufferImpl(int64_t newSize) :
   size(newSize),
-  bufferSize(roundUp(newSize, alignment)),
-  alignment(alignment) {
-	this->data = buffer_allocate(this->bufferSize, alignment, this->destructor);
+  bufferSize(roundUp(newSize, DSR_MAXIMUM_ALIGNMENT)) {
+	this->data = buffer_allocate(this->bufferSize, this->destructor);
 	if (this->data == nullptr) {
 		throwError(U"Failed to allocate buffer of ", newSize, " bytes!\n");
 	}
@@ -101,7 +73,7 @@ BufferImpl::BufferImpl(int64_t newSize, int alignment) :
 }
 
 BufferImpl::BufferImpl(int64_t newSize, uint8_t *newData)
-: size(newSize), bufferSize(newSize), alignment(1), data(newData), destructor([](uint8_t *data) { free(data); }) {}
+: size(newSize), bufferSize(newSize), data(newData), destructor([](uint8_t *data) { heap_free(data); }) {}
 
 BufferImpl::~BufferImpl() {
 	if (this->data) {
@@ -121,10 +93,21 @@ Buffer buffer_clone(const Buffer &buffer) {
 			return buffer;
 		} else {
 			// Clone the data so that content of the allocations can be modified individually without affecting each other.
-			Buffer newBuffer = std::make_shared<BufferImpl>(buffer->size, max(buffer->alignment, DSR_DEFAULT_ALIGNMENT));
+			Buffer newBuffer = std::make_shared<BufferImpl>(buffer->size);
 			memcpy(newBuffer->data, buffer->data, buffer->size);
 			return newBuffer;
 		}
+	}
+}
+
+Buffer buffer_create(int64_t newSize) {
+	if (newSize < 0) newSize = 0;
+	if (newSize == 0) {
+		// Allocate empty head to indicate that an empty buffer exists.
+		return std::make_shared<BufferImpl>();
+	} else {
+		// Allocate head and data.
+		return std::make_shared<BufferImpl>(newSize);
 	}
 }
 
@@ -133,15 +116,12 @@ Buffer buffer_create(int64_t newSize, int minimumAlignment) {
 	if (newSize == 0) {
 		// Allocate empty head to indicate that an empty buffer exists.
 		return std::make_shared<BufferImpl>();
+	} else if (minimumAlignment > DSR_MAXIMUM_ALIGNMENT) {
+		throwError(U"Maximum alignment exceeded when creating a buffer!\n");
+		return Buffer();
 	} else {
 		// Allocate head and data.
-		int finalAlignment = getFinalAlignment(minimumAlignment);
-		if (finalAlignment != -1) {
-			return std::make_shared<BufferImpl>(newSize, finalAlignment);
-		} else {
-			throwError(U"buffer_create: Minimum alignment ", minimumAlignment, " is not a power of two!\n");
-			return Buffer(); // Invalid alignment argument was not a power of two.
-		}
+		return std::make_shared<BufferImpl>(newSize);
 	}
 }
 

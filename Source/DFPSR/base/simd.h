@@ -88,62 +88,8 @@
 	#include "../math/IVector.h"
 	#include "../math/UVector.h"
 
-	// Determine which SIMD extensions to use when compiling this executable
-	// Use the standard compiler flags for enabling SIMD extensions and having them as a minimum system requirement for the specific build.
-	#if defined(__SSE2__)
-		#define USE_SSE2 // Comment out this line to test without SSE2
-		#ifdef USE_SSE2
-			#ifdef __SSSE3__
-				#define USE_SSSE3 // Comment out this line to test without SSSE3
-			#endif
-			#ifdef __AVX__
-				#define USE_AVX // Comment out this line to test without AVX
-				#ifdef USE_AVX
-					#ifdef __AVX2__
-						#define USE_AVX2 // Comment out this line to test without AVX2
-					#endif
-				#endif
-			#endif
-		#endif
-	#elif defined(__ARM_NEON)
-		#define USE_NEON // Comment out this line to test without NEON
-	#endif
-
-	// Enable the EMULATE_X_256BIT_SIMD macro to force use of 256-bit vectors even when there is no hardware instructions supporting it.
-	//   F32xX will then be an alias for F32x8, laneCountX_32Bit will be 8 for iterating your algorithms in larger steps, buffers and image rows will padd and align for 256 bits, et cetera...
-	//   This will be slower if only compiling with 128-bit SIMD instructions enabled, but can show if the algorithm is using variable lane count correctly before profiling on a processor that has the extension.
-	//   Useful for testing algorithms when the computer used for programming does not have the hardware instructions.
-	//   To get real 256-bit SIMD on an Intel processor with AVX2 hardware instructions, enable the AVX2 compiler flag for the library and your project (which is -mavx2 in GCC).
-	//#define EMULATE_256BIT_X_SIMD
-
-	// Enable the EMULATE_F_256BIT_SIMD macro to force use of 256-bit float vectors even when there is no hardware instructions supporting it.
-	//   F32xF will then be an alias for F32x8, laneCountF will be 8 for iterating your float algorithms in larger steps.
-	//   Buffers are however default aligned based on X, so using the F vector length require aligning your buffers using DSR_FLOAT_ALIGNMENT instead of defaulting to DSR_DEFAULT_ALIGNMENT.
-	//   Useful for testing algorithms when the computer used for programming does not have the hardware instructions.
-	//   To get real 256-bit float SIMD on an Intel processor with AVX hardware instructions, enable the AVX compiler flag for the library and your project (which is -mavx in GCC).
-	//#define EMULATE_256BIT_F_SIMD
-
-	// A platform independent summary of which features are enabled.
-	#ifdef USE_SSE2
-		// We have hardware support for 128-bit SIMD, which is enough to make memory bandwidth the bottleneck for light computation.
-		#define USE_BASIC_SIMD
-		#ifdef USE_AVX
-			// We have hardware support for 256-bit float SIMD, so that we get a performance boost from using F32x8 or its alias F32xF instead of F32x4
-			#define USE_256BIT_F_SIMD
-			#ifdef USE_AVX2
-				// We also have hardware support for the other 256-bit SIMD types, pushing the size of an X vector and default alignment to 256 bits.
-				//   F32xX will now refer to F32x8
-				//   I32xX will now refer to I32x8
-				//   U32xX will now refer to U32x8
-				//   U16xX will now refer to U16x16
-				//   U8xX will now refer to U8x32
-				#define USE_256BIT_X_SIMD
-			#endif
-		#endif
-	#endif
-	#ifdef USE_NEON
-		#define USE_BASIC_SIMD
-	#endif
+	// Get settings from here.
+	#include "../settings.h"
 
 	// Alignment in bytes
 	#define ALIGN_BYTES(SIZE)  __attribute__((aligned(SIZE)))
@@ -3544,11 +3490,6 @@
 	// The F vector using the longest SIMD length that is efficient to use when only processing float values, even if no integer types are available in the same size.
 	//   Used when you know that your algorithm is only going to work with float types and you need the extra performance.
 	//     Some processors have AVX but not AVX2, meaning that it has 256-bit SIMD for floats, but only 128-bit SIMD for integers.
-	//   To use the F vector size correctly, only use it with buffers allocated with DSR_FLOAT_ALIGNMENT or a larger alignment.
-	//     Images are allocated using the X vector size's default alignment from DSR_DEFAULT_ALIGNMENT, because images are impossible to use without integer types.
-	//   DSR_FLOAT_ALIGNMENT
-	//     The number of bytes memory should be aligned with manually when creating buffers for processing with the F vector.
-	//     If this sounds too advanced, you can just stick with the X vectors and not release builds with partial support of a SIMD length.
 	//   F32xF
 	//     The longest available SIMD vector for storing 32-bit float values. Iterating laneCountF_32Bit floats at a time.
 	#if defined USE_256BIT_F_SIMD || defined EMULATE_256BIT_F_SIMD
