@@ -24,9 +24,8 @@
 #include "heap.h"
 #include <mutex>
 #include <thread>
-
-// TODO: Avoid dynamic memory allocation in error messages from failed memory allocation.
-#include "../api/stringAPI.h"
+#include <stdio.h>
+#include <new>
 
 // Get settings from here.
 #include "../settings.h"
@@ -93,13 +92,13 @@ namespace dsr {
 		uint8_t *allocationPointer = nullptr; // The allocation pointer that moves from bottom to top when filling the arena.
 		uint8_t *bottom = nullptr; // The end of the arena, where the allocation pointer is when empty.
 		HeapMemory(uintptr_t size) {
-			this->top = (uint8_t*)malloc(size);
+			this->top = (uint8_t*)(operator new (size));
 			this->bottom = this->top + size;
 			this->allocationPointer = this->bottom;
 		}
 		~HeapMemory() {
 			if (this->top != nullptr) {
-				free(this->top);
+				delete this->top;
 				this->top = nullptr;
 			}
 			this->allocationPointer = nullptr;
@@ -121,7 +120,7 @@ namespace dsr {
 				while (nextHeap != nullptr) {
 					HeapMemory *currentHeap = nextHeap;
 					nextHeap = currentHeap->prevHeap;
-					delete currentHeap;
+					operator delete(currentHeap);
 				}
 			this->poolLock.unlock();
 		}
@@ -171,7 +170,7 @@ namespace dsr {
 		UnsafeAllocation result(nullptr, nullptr);
 		if (binIndex == -1) {
 			// If the requested allocation is so big that there is no power of two that can contain it without overflowing the address space, then it can not be allocated.
-			throwError(U"Exceeded the maximum size when trying to allocate ", minimumSize, U" bytes in heap_allocate!.\n");
+			printf("Heap error: Exceeded the maximum size when trying to allocate!\n");
 		} else {
 			uintptr_t paddedSize = ((uintptr_t)1 << binIndex) * heapAlignment;
 			defaultHeap.poolLock.lock();
@@ -188,7 +187,7 @@ namespace dsr {
 					// Look for a heap with enough space for a new allocation.
 					result = tryToAllocate(defaultHeap, paddedSize, heapAlignmentAndMask, binIndex);
 					if (result.data == nullptr) {
-						throwError(U"Failed to allocate ", minimumSize, U" bytes of data with heap_allocate!\n");
+						printf("Heap error: Failed to allocate more memory!\n");
 					}
 				}
 			}
@@ -204,14 +203,11 @@ namespace dsr {
 			// Get the recycled allocation's header and its bin index.
 			HeapHeader *newHeader = headerFromAllocation(allocation);
 			if (newHeader->flags & heapFlag_recycled) {
-				throwError(U"A heap allocation was freed twice!\n");
-				//#ifdef SAFE_POINTER_CHECKS
-				// TODO: Print more information when possible.
-				//#endif
+				printf("Heap error: A heap allocation was freed twice!\n");
 			} else {
 				int binIndex = header->binIndex;
 				if (binIndex >= MAX_BIN_COUNT) {
-					throwError(U"Out of bound recycling bin index in corrupted head of freed allocation!\n");
+					printf("Heap error: Out of bound recycling bin index in corrupted head of freed allocation!\n");
 				} else {
 					// Make any previous head from the bin into the new tail.
 					HeapHeader *oldHeader = defaultHeap.recyclingBin[binIndex];
