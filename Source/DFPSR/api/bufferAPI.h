@@ -29,6 +29,7 @@
 #include <functional>
 #include "../base/SafePointer.h"
 #include "../settings.h"
+#include "../base/heap.h"
 
 // The types of buffer handles to consider when designing algorithms:
 // * Null handle suggesting that there is nothing, such as when loading a file failed.
@@ -109,7 +110,7 @@ namespace dsr {
 			return SafePointer<T>();
 		} else {
 			uint8_t *data = buffer_dangerous_getUnsafeData(buffer);
-			return SafePointer<T>(name, (T*)data, buffer_getSize(buffer), (T*)data);
+			return SafePointer<T>(name, (T*)data, buffer_getSize(buffer), (T*)data, heap_getHeader(data));
 		}
 	}
 

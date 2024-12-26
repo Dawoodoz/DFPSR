@@ -72,15 +72,19 @@ namespace dsr {
 	};
 	static const uintptr_t heapHeaderPaddedSize = memory_getPaddedSize(sizeof(HeapHeader), heapAlignment);
 
-	inline HeapHeader *headerFromAllocation(uint8_t* allocation) {
+	AllocationHeader *heap_getHeader(uint8_t const * const allocation) {
+		return (AllocationHeader*)(allocation - heapHeaderPaddedSize);
+	}
+
+	inline HeapHeader *headerFromAllocation(uint8_t const * const allocation) {
 		return (HeapHeader*)(allocation - heapHeaderPaddedSize);
 	}
 
-	inline uint8_t *allocationFromHeader(HeapHeader* header) {
+	inline uint8_t *allocationFromHeader(HeapHeader const * const header) {
 		return (uint8_t*)header + heapHeaderPaddedSize;
 	}
 
-	uint64_t heap_getAllocationSize(uint8_t* allocation) {
+	uint64_t heap_getAllocationSize(uint8_t const * const allocation) {
 		return headerFromAllocation(allocation)->totalSize - heapHeaderPaddedSize;
 	}
 
@@ -196,7 +200,7 @@ namespace dsr {
 		return result;
 	}
 
-	void heap_free(uint8_t *allocation) {
+	void heap_free(uint8_t * const allocation) {
 		defaultHeap.poolLock.lock();
 		if (!(defaultHeap.terminating)) {
 			HeapHeader *header = (HeapHeader*)(allocation - heapHeaderPaddedSize);
