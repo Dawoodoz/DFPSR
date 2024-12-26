@@ -25,7 +25,6 @@
 #include "bufferAPI.h"
 #include "stringAPI.h"
 #include "../math/scalar.h"
-#include "../base/heap.h"
 
 namespace dsr {
 

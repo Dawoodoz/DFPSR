@@ -86,6 +86,10 @@ public:
 	SafePointer(const char* name, T* regionStart, intptr_t regionByteSize, T* data, AllocationHeader *header = nullptr)
 	: data(data), regionStart(regionStart), regionEnd((T*)(((uint8_t*)regionStart) + (intptr_t)regionByteSize)), name(name), header(header) {
 		assertNonNegativeSize(regionByteSize);
+		// If the pointer has a header, then store the allocation's identity in the pointer.
+		if (header != nullptr) {
+			this->allocationIdentity = header->allocationIdentity;
+		}
 	}
 	#else
 	SafePointer() : data(nullptr) {}
@@ -143,7 +147,7 @@ public:
 		T *newStart = (T*)(((uint8_t*)(this->data)) + byteOffset);
 		#ifdef SAFE_POINTER_CHECKS
 		assertInside("getSlice", newStart, size);
-		return SafePointer<T>(name, newStart, size);
+		return SafePointer<T>(name, newStart, size, this->header);
 		#else
 		return SafePointer<T>(name, newStart);
 		#endif
@@ -152,7 +156,7 @@ public:
 		T *newStart = (T*)(((uint8_t*)(this->data)) + byteOffset);
 		#ifdef SAFE_POINTER_CHECKS
 		assertInside("getSlice", newStart, size);
-		return SafePointer<T>(name, newStart, size);
+		return SafePointer<T>(name, newStart, size, this->header);
 		#else
 		return SafePointer<T>(name, newStart);
 		#endif
