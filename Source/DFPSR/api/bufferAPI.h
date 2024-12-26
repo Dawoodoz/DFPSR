@@ -28,6 +28,7 @@
 #include <memory>
 #include <functional>
 #include "../base/SafePointer.h"
+#include "../settings.h"
 
 // The types of buffer handles to consider when designing algorithms:
 // * Null handle suggesting that there is nothing, such as when loading a file failed.
@@ -55,17 +56,15 @@ namespace dsr {
 	class BufferImpl;
 	using Buffer = std::shared_ptr<BufferImpl>;
 
-	// Pre-condition:
-	//   minimumAlignment must be a power of two, otherwise an exception will be thrown.
 	// Side-effect: Creates a new buffer head regardless of newSize, but only allocates a zeroed data allocation if newSize > 0.
 	// Post-condition: Returns a handle to the new buffer.
 	// Creating a buffer without a size will only allocate the buffer's head referring to null data with size zero.
-	// The minimumAlignment argument represents the number of bytes the allocation must be aligned with in memory when DSR_DEFAULT_ALIGNMENT is not enough.
-	//   Useful for when using a longer SIMD vector that only exists for a certain type (such as AVX without AVX2) or you use a signal processor.
-	//   Any minimumAlignment smaller than DSR_DEFAULT_ALIGNMENT will be ignored, because then DSR_DEFAULT_ALIGNMENT is larger than the minimum.
-	Buffer buffer_create(int64_t newSize, int minimumAlignment = 1);
+	Buffer buffer_create(int64_t newSize);
+	// The buffer always allocate with DSR_MAXIMUM_ALIGNMENT, but you can check that your requested alignment is not too much.
+	Buffer buffer_create(int64_t newSize, int minimumAlignment);
 
 	// Pre-conditions:
+	//   newData must be padded and aligned by DSR_MAXIMUM_ALIGNMENT from settings.h if you plan to use it for SIMD or multi-threading.
 	//   newSize may not be larger than the size of newData in bytes.
 	//     Breaking this pre-condition may cause crashes, so only provide a newData pointer if you know what you are doing.
 	// Side-effect: Creates a new buffer of newSize bytes inheriting ownership of newData.

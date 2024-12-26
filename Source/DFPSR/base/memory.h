@@ -59,13 +59,16 @@ namespace dsr {
 		#endif
 	};
 
+	// Post-condition: Returns size rounded up by alignment.
+	constexpr uint64_t memory_getPaddedSize(uint64_t size, uint64_t alignment) {
+		// Round up with unsigned integers.
+		return size + (alignment - 1) - ((size - 1) % alignment);
+	}
+
 	// Post-condition: Returns the size of T rounded up by T's own alignment, which becomes the stride between elements in a memory aligned array.
 	template <typename T>
 	constexpr uint64_t memory_getPaddedSize() {
-		uint64_t size = (uint64_t)sizeof(T);
-		uint64_t alignment = (uint64_t)alignof(T);
-		// Round up with unsigned integers.
-		return size + (alignment - 1) - ((size - 1) % alignment);
+		return memory_getPaddedSize((uint64_t)sizeof(T), (uint64_t)alignof(T));
 	}
 
 	// Create a mask for aligning memory in descending address space.

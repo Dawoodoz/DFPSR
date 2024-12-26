@@ -9,6 +9,7 @@
 #include "../DFPSR/api/drawAPI.h"
 #include "../DFPSR/api/timeAPI.h"
 #include "../DFPSR/gui/BackendWindow.h"
+#include "../DFPSR/base/heap.h"
 
 // According to this documentation, XInitThreads doesn't have to be used if a mutex is wrapped around all the calls to XLib.
 //   https://tronche.com/gui/x/xlib/display/XInitThreads.html
@@ -721,6 +722,12 @@ void X11Window::prefetchEvents() {
 	}
 }
 
+int destroyImage(XImage *image) {
+	dsr::heap_free((uint8_t*)image->data);
+	image->data = nullptr;
+	return 1;
+}
+
 // Locked because it overrides
 void X11Window::resizeCanvas(int width, int height) {
 	windowLock.lock();
@@ -745,7 +752,10 @@ void X11Window::resizeCanvas(int width, int height) {
 				);
 				// When the canvas image buffer is garbage collected, the destructor will call XLib to free the memory
 				XImage *image = this->canvasX[b];
+				// Tell the buffer to deallocate the XImage instead of just freeing the allocation, because X11 might still use the data.
 				dsr::image_dangerous_replaceDestructor(this->canvas[b], [image](uint8_t *data) { XDestroyImage(image); });
+				// And when X11 frees the image, we say how to delete the memory allocation from our heap allocator.
+				image->f.destroy_image = destroyImage;
 			}
 		}
 	windowLock.unlock();

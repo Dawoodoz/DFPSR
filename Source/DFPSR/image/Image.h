@@ -42,19 +42,13 @@ public:
 	Buffer buffer; // Content
 	intptr_t startOffset; // Byte offset of the first pixel
 	bool isSubImage = false;
-private:
-	void validate() {
-		// Preconditions:
-		assert(this->width > 0);
-		assert(this->height > 0);
-		assert(this->stride >= this->width * this->pixelSize);
-		assert(this->pixelSize > 0);
-	}
 public:
 	// Sub-images
-	ImageImpl(int32_t width, int32_t height, int32_t stride, int32_t pixelSize, Buffer buffer, intptr_t startOffset);
+	ImageImpl(int32_t width, int32_t height, int32_t stride, int32_t pixelSize, Buffer buffer, intptr_t startOffset) :
+	  width(width), height(height), stride(stride), pixelSize(pixelSize), buffer(buffer), startOffset(startOffset), isSubImage(true) {}
 	// New images
-	ImageImpl(int32_t width, int32_t height, int32_t stride, int32_t pixelSize, int alignment);
+	ImageImpl(int32_t width, int32_t height, int32_t stride, int32_t pixelSize) :
+	  width(width), height(height), stride(stride), pixelSize(pixelSize), buffer(buffer_create(stride * height)), startOffset(0), isSubImage(false) {}
 };
 
 #define IMAGE_DECLARATION(IMAGE_TYPE,CHANNELS,COLOR_TYPE,ELEMENT_TYPE) \

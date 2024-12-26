@@ -40,14 +40,14 @@ ImageRgbaU8Impl::ImageRgbaU8Impl(int32_t newWidth, int32_t newHeight, int32_t ne
 	this->initializeRgbaImage();
 }
 
-ImageRgbaU8Impl::ImageRgbaU8Impl(int32_t newWidth, int32_t newHeight, int32_t alignment) :
-  ImageImpl(newWidth, newHeight, roundUp(newWidth * sizeof(Color4xU8), alignment), sizeof(Color4xU8), alignment) {
+ImageRgbaU8Impl::ImageRgbaU8Impl(int32_t newWidth, int32_t newHeight) :
+  ImageImpl(newWidth, newHeight, roundUp(newWidth * sizeof(Color4xU8), DSR_MAXIMUM_ALIGNMENT), sizeof(Color4xU8)) {
 	this->initializeRgbaImage();
 }
 
 // Native canvas constructor
-ImageRgbaU8Impl::ImageRgbaU8Impl(int32_t newWidth, int32_t newHeight, PackOrderIndex packOrderIndex, int32_t alignment) :
-  ImageImpl(newWidth, newHeight, roundUp(newWidth * sizeof(Color4xU8), 16), sizeof(Color4xU8), alignment) {
+ImageRgbaU8Impl::ImageRgbaU8Impl(int32_t newWidth, int32_t newHeight, PackOrderIndex packOrderIndex) :
+  ImageImpl(newWidth, newHeight, roundUp(newWidth * sizeof(Color4xU8), DSR_MAXIMUM_ALIGNMENT), sizeof(Color4xU8)) {
 	this->packOrder = PackOrder::getPackOrder(packOrderIndex);
 	this->initializeRgbaImage();
 }
@@ -66,7 +66,7 @@ ImageRgbaU8Impl ImageRgbaU8Impl::getWithoutPadding() const {
 		return *this;
 	} else {
 		// Copy each row without padding
-		ImageRgbaU8Impl result = ImageRgbaU8Impl(this->width, this->height, this->packOrder.packOrderIndex, DSR_DEFAULT_ALIGNMENT);
+		ImageRgbaU8Impl result = ImageRgbaU8Impl(this->width, this->height, this->packOrder.packOrderIndex);
 		const SafePointer<uint8_t> sourceRow = imageInternal::getSafeData<uint8_t>(*this);
 		int32_t sourceStride = this->stride;
 		SafePointer<uint8_t> targetRow = imageInternal::getSafeData<uint8_t>(result);
@@ -102,7 +102,7 @@ ImageU8Impl ImageRgbaU8Impl::getChannel(int32_t channelIndex) const {
 	// Safety for release mode
 	if (channelIndex < 0) { channelIndex = 0; }
 	if (channelIndex > channelCount) { channelIndex = channelCount; }
-	ImageU8Impl result(this->width, this->height, DSR_DEFAULT_ALIGNMENT);
+	ImageU8Impl result(this->width, this->height);
 	extractChannel(imageInternal::getSafeData<uint8_t>(result), result.stride, imageInternal::getSafeData<uint8_t>(*this), this->stride, channelCount, channelIndex, this->width, this->height);
 	return result;
 }
@@ -282,7 +282,7 @@ void ImageRgbaU8Impl::makeIntoTexture() {
 		int newWidth = roundSize(this->width);
 		int newHeight = roundSize(this->height);
 		// Create a new image with the correct dimensions.
-		ImageRgbaU8Impl result = ImageRgbaU8Impl(newWidth, newHeight, DSR_DEFAULT_ALIGNMENT);
+		ImageRgbaU8Impl result = ImageRgbaU8Impl(newWidth, newHeight);
 		// Resize the image content with bi-linear interpolation.
 		imageImpl_resizeToTarget(result, *this, true);
 		// Take over the new image's content.
