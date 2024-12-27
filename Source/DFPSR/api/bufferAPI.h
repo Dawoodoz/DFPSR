@@ -79,7 +79,7 @@ namespace dsr {
 	void buffer_replaceDestructor(const Buffer &buffer, const std::function<void(uint8_t *)>& newDestructor);
 
 	// Returns true iff buffer exists, even if it is empty without any data allocation.
-	inline bool buffer_exists(Buffer buffer) {
+	inline bool buffer_exists(const Buffer &buffer) {
 		return buffer.get() != nullptr;
 	}
 
