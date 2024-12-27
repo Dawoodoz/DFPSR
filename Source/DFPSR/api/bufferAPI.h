@@ -58,7 +58,7 @@ namespace dsr {
 	using Buffer = std::shared_ptr<BufferImpl>;
 
 	// Side-effect: Creates a new buffer head regardless of newSize, but only allocates a zeroed data allocation if newSize > 0.
-	// Post-condition: Returns a handle to the new buffer.
+	// Post-condition: Returns a handle to the new buffer, which is initialized to zeroes.
 	// Creating a buffer without a size will only allocate the buffer's head referring to null data with size zero.
 	Buffer buffer_create(int64_t newSize);
 	// The buffer always allocate with DSR_MAXIMUM_ALIGNMENT, but you can check that your requested alignment is not too much.
