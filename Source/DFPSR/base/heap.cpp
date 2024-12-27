@@ -169,7 +169,7 @@ namespace dsr {
 
 	static HeapPool defaultHeap;
 
-	UnsafeAllocation heap_allocate(uintptr_t minimumSize) {
+	UnsafeAllocation heap_allocate(uintptr_t minimumSize, bool zeroed) {
 		int32_t binIndex = getBinIndex(minimumSize);
 		UnsafeAllocation result(nullptr, nullptr);
 		if (binIndex == -1) {
@@ -196,6 +196,9 @@ namespace dsr {
 				}
 			}
 			defaultHeap.poolLock.unlock();
+			if (zeroed && result.data != nullptr) {
+				memset(result.data, 0, paddedSize);
+			}
 		}
 		return result;
 	}

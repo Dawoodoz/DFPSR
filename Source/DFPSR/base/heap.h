@@ -28,9 +28,10 @@
 
 namespace dsr {
 	// Allocate memory in the heap.
-	//   The size argument is the minimum number of bytes to allocate, but the result may give you more than you asked for.
+	//   The minimumSize argument is the minimum number of bytes to allocate, but the result may give you more than you asked for.
+	//   When zeroed is true, the new memory will be zeroed. Otherwise it may contain uninitialized data.
 	// Post-condition: Returns pointers to the payload and header.
-	UnsafeAllocation heap_allocate(uint64_t minimumSize);
+	UnsafeAllocation heap_allocate(uint64_t minimumSize, bool zeroed = true);
 
 	// Pre-condition: The allocation pointer must point to the start of a payload allocated using heap_allocate, no offsets nor other allocators allowed.
 	// Post-condition: Returns the number of available bytes in the allocation.
