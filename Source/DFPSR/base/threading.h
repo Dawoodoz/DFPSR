@@ -1,6 +1,6 @@
 ﻿// zlib open source license
 //
-// Copyright (c) 2017 to 2019 David Forsgren Piuva
+// Copyright (c) 2017 to 2024 David Forsgren Piuva
 // 
 // This software is provided 'as-is', without any express or implied
 // warranty. In no event will the authors be held liable for any damages
@@ -30,13 +30,19 @@
 
 namespace dsr {
 
+// Get the number of threads available.
+int getThreadCount();
+
 // Executes every function in the array of jobs from jobs[0] to jobs[jobCount - 1].
-void threadedWorkFromArray(SafePointer<std::function<void()>> jobs, int jobCount);
-void threadedWorkFromArray(std::function<void()>* jobs, int jobCount);
+//   The maxThreadCount argument is the maximum number of threads to use when enough threads are available.
+//     Letting maxThreadCount be 0 removes the limit and uses as many threads as possible, limited only by getThreadCount() - 1 and jobCount.
+//     Letting maxThreadCount be 1 forces single-threaded execution on the calling thread.
+void threadedWorkFromArray(SafePointer<std::function<void()>> jobs, int jobCount, int maxThreadCount = 0);
+void threadedWorkFromArray(std::function<void()>* jobs, int jobCount, int maxThreadCount = 0);
 
 // Executes every function in the list of jobs.
 //   Also clears the list when done.
-void threadedWorkFromList(List<std::function<void()>> jobs);
+void threadedWorkFromList(List<std::function<void()>> jobs, int maxThreadCount = 0);
 
 // Calling the given function with sub-sets of the interval using multiple threads in parallel.
 //   Useful when you have lots of tiny jobs that can be grouped together into larger jobs.

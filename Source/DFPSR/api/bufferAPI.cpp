@@ -1,6 +1,6 @@
 ﻿// zlib open source license
 //
-// Copyright (c) 2019 to 2023 David Forsgren Piuva
+// Copyright (c) 2019 to 2024 David Forsgren Piuva
 // 
 // This software is provided 'as-is', without any express or implied
 // warranty. In no event will the authors be held liable for any damages
