@@ -27,6 +27,7 @@
 #include <fstream>
 #include <streambuf>
 #include <cstring>
+#include <string>
 #include <stdexcept>
 #include "stringAPI.h"
 #include "../api/fileAPI.h"
@@ -923,11 +924,6 @@ String& dsr::string_toStreamIndented(String& target, const ReadableString& value
 	return target;
 }
 String& dsr::string_toStreamIndented(String& target, const char32_t* value, const ReadableString& indentation) {
-	atomic_append(target, indentation);
-	atomic_append(target, value);
-	return target;
-}
-String& dsr::string_toStreamIndented(String& target, const std::string& value, const ReadableString& indentation) {
 	atomic_append(target, indentation);
 	atomic_append(target, value);
 	return target;

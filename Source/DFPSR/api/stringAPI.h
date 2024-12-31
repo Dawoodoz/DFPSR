@@ -25,7 +25,6 @@
 #define DFPSR_API_STRING
 
 #include <cstdint>
-#include <string>
 #include <iostream>
 #include <sstream>
 #include <functional>
@@ -130,7 +129,6 @@ String& string_toStreamIndented(String& target, const Printable& source, const R
 String& string_toStreamIndented(String& target, const char* value, const ReadableString& indentation);
 String& string_toStreamIndented(String& target, const ReadableString& value, const ReadableString& indentation);
 String& string_toStreamIndented(String& target, const char32_t* value, const ReadableString& indentation);
-String& string_toStreamIndented(String& target, const std::string& value, const ReadableString& indentation);
 String& string_toStreamIndented(String& target, const float& value, const ReadableString& indentation);
 String& string_toStreamIndented(String& target, const double& value, const ReadableString& indentation);
 String& string_toStreamIndented(String& target, const int64_t& value, const ReadableString& indentation);
