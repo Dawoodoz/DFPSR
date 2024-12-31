@@ -31,7 +31,6 @@ namespace dsr {
 class ImageF32Impl : public ImageImpl {
 public:
 	static const int32_t channelCount = 1;
-	//static const int32_t pixelSize = 4;
 	// Inherit constructors
 	using ImageImpl::ImageImpl;
 	ImageF32Impl(int32_t newWidth, int32_t newHeight, int32_t newStride, Buffer buffer, intptr_t startOffset);

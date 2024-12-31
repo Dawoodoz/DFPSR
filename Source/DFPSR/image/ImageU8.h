@@ -31,7 +31,6 @@ namespace dsr {
 class ImageU8Impl : public ImageImpl {
 public:
 	static const int32_t channelCount = 1;
-	//static const int32_t pixelSize = channelCount;
 	// Inherit constructors
 	using ImageImpl::ImageImpl;
 	// Constructors
