@@ -366,28 +366,65 @@ static void intToString_arabic(String& target, int64_t value) {
 	}
 }
 
-// TODO: Implement own version to ensure that nothing strange is happening from buggy std implementations
-static void doubleToString_arabic(String& target, double value) {
-	std::ostringstream buffer;
-	buffer << std::fixed << value; // Generate using a fixed number of decimals
-	std::string result = buffer.str();
-	// Remove trailing zero decimal digits
-	int64_t decimalCount = 0;
-	int64_t lastValueIndex = -1;
-	for (size_t c = 0; c < result.length(); c++) {
-		if (result[c] == '.') {
-			decimalCount++;
-		} else if (result[c] == ',') {
-			result[c] = '.'; // Convert nationalized french decimal serialization into international decimals
-			decimalCount++;
-		} else if (decimalCount > 0 && result[c] >= '1' && result[c] <= '9') {
-			lastValueIndex = c;
-		} else  if (decimalCount == 0 && result[c] >= '0' && result[c] <= '9') {
-			lastValueIndex = c;
-		}
+static const int MAX_DECIMALS = 16;
+static double decimalMultipliers[MAX_DECIMALS] = {
+	10.0,
+	100.0,
+	1000.0,
+	10000.0,
+	100000.0,
+	1000000.0,
+	10000000.0,
+	100000000.0,
+	1000000000.0,
+	10000000000.0,
+	100000000000.0,
+	1000000000000.0,
+	10000000000000.0,
+	100000000000000.0,
+	1000000000000000.0,
+	10000000000000000.0
+};
+static void doubleToString_arabic(String& target, double value, int decimalCount = 6, bool removeTrailingZeroes = true, DsrChar decimalCharacter = U'.', DsrChar negationCharacter = U'-') {
+	if (decimalCount < 1) decimalCount = 1;
+	if (decimalCount > MAX_DECIMALS) decimalCount = MAX_DECIMALS;
+	double remainder = value;
+	// Get negation
+	if (remainder < 0.0) {
+		string_appendChar(target, negationCharacter);
+		remainder = -remainder;
 	}
-	for (int64_t c = 0; c <= lastValueIndex; c++) {
-		string_appendChar(target, result[c]);
+	// Get whole part
+	uint64_t whole = (uint64_t)remainder;
+	uintToString_arabic(target, whole);
+	remainder = remainder - whole;
+	// Print the decimal
+	string_appendChar(target, decimalCharacter);
+	// Get decimals
+	uint64_t scaledDecimals = (uint64_t)((remainder * decimalMultipliers[decimalCount - 1]) + 0.5f);
+	DsrChar digits[MAX_DECIMALS]; // Using 0 to decimalCount - 1
+	int writeIndex = decimalCount - 1;
+	for (int d = 0; d < decimalCount; d++) {
+		int digit = scaledDecimals % 10;
+		digits[writeIndex] = U'0' + digit;
+		scaledDecimals = scaledDecimals / 10;
+		writeIndex--;
+	}
+	if (removeTrailingZeroes) {
+		// Find the last non-zero decimal, but keep at least one zero.
+		int lastValue = 0;
+		for (int d = 0; d < decimalCount; d++) {
+			if (digits[d] != U'0') lastValue = d;
+		}
+		// Print until the last value or the only zero.
+		for (int d = 0; d <= lastValue; d++) {
+			string_appendChar(target, digits[d]);
+		}
+	} else {
+		// Print fixed decimals.
+		for (int d = 0; d < decimalCount; d++) {
+			string_appendChar(target, digits[d]);
+		}
 	}
 }
 
