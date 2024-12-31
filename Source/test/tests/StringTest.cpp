@@ -242,6 +242,26 @@ START_TEST(String)
 	ASSERT_EQUAL(dsr::string_combine(1u), U"1");
 	ASSERT_EQUAL(dsr::string_combine(14u), U"14");
 	ASSERT_EQUAL(dsr::string_combine(135u), U"135");
+	ASSERT_EQUAL(dsr::string_combine(0.0), U"0.0");
+	ASSERT_EQUAL(dsr::string_combine(-0.0), U"0.0");
+	ASSERT_EQUAL(dsr::string_combine(1.0), U"1.0");
+	ASSERT_EQUAL(dsr::string_combine(10.0), U"10.0");
+	ASSERT_EQUAL(dsr::string_combine(100.0), U"100.0");
+	ASSERT_EQUAL(dsr::string_combine(1000.0), U"1000.0");
+	ASSERT_EQUAL(dsr::string_combine(10000.0), U"10000.0");
+	ASSERT_EQUAL(dsr::string_combine(100000.0), U"100000.0");
+	ASSERT_EQUAL(dsr::string_combine(1000000.0), U"1000000.0");
+	ASSERT_EQUAL(dsr::string_combine(-1.0), U"-1.0");
+	ASSERT_EQUAL(dsr::string_combine(-10.0), U"-10.0");
+	ASSERT_EQUAL(dsr::string_combine(-100.0), U"-100.0");
+	ASSERT_EQUAL(dsr::string_combine(-1000.0), U"-1000.0");
+	ASSERT_EQUAL(dsr::string_combine(-10000.0), U"-10000.0");
+	ASSERT_EQUAL(dsr::string_combine(-100000.0), U"-100000.0");
+	ASSERT_EQUAL(dsr::string_combine(-1000000.0), U"-1000000.0");
+	ASSERT_EQUAL(dsr::string_combine(0.5), U"0.5");
+	ASSERT_EQUAL(dsr::string_combine(-0.5), U"-0.5");
+	ASSERT_EQUAL(dsr::string_combine(789.123456), U"789.123456");
+	ASSERT_EQUAL(dsr::string_combine(-789.123456), U"-789.123456");
 	// Number parsing
 	ASSERT_EQUAL(string_toInteger(U"0"), 0);
 	ASSERT_EQUAL(string_toInteger(U"-0"), 0);
