@@ -93,7 +93,6 @@ struct TextureRgba {
 class ImageRgbaU8Impl : public ImageImpl {
 public:
 	static const int32_t channelCount = 4;
-	//static const int32_t pixelSize = channelCount;
 	PackOrder packOrder;
 	// Macro defined functions
 	IMAGE_DECLARATION(ImageRgbaU8Impl, 4, Color4xU8, uint8_t);

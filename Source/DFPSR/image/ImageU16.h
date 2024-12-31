@@ -32,7 +32,6 @@ namespace dsr {
 class ImageU16Impl : public ImageImpl {
 public:
 	static const int32_t channelCount = 1;
-	//static const int32_t pixelSize = 2;
 	// Inherit constructors
 	using ImageImpl::ImageImpl;
 	ImageU16Impl(int32_t newWidth, int32_t newHeight, int32_t newStride, Buffer buffer, intptr_t startOffset);
