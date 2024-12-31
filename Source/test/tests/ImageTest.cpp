@@ -10,7 +10,7 @@ START_TEST(Image)
 		ASSERT_EQUAL(image_useCount(imageA), 1);
 		ASSERT_EQUAL(image_getWidth(imageA), 17);
 		ASSERT_EQUAL(image_getHeight(imageA), 9);
-		ASSERT_EQUAL(image_getStride(imageA), 32);
+		ASSERT_EQUAL(image_getStride(imageA), 64);
 		ASSERT_EQUAL(image_getBound(imageA), IRect(0, 0, 17, 9));
 		ImageU8 imageB; // Create empty image reference
 		ASSERT_EQUAL(image_useCount(imageA), 1);
@@ -30,7 +30,7 @@ START_TEST(Image)
 		ASSERT_EQUAL(image_useCount(image), 1);
 		ASSERT_EQUAL(image_getWidth(image), 3);
 		ASSERT_EQUAL(image_getHeight(image), 48);
-		ASSERT_EQUAL(image_getStride(image), 16);
+		ASSERT_EQUAL(image_getStride(image), 64);
 		ASSERT_EQUAL(image_getBound(image), IRect(0, 0, 3, 48));
 	}
 	{ // ImageRgbaU8
@@ -41,7 +41,7 @@ START_TEST(Image)
 		ASSERT_EQUAL(image_useCount(image), 1);
 		ASSERT_EQUAL(image_getWidth(image), 52);
 		ASSERT_EQUAL(image_getHeight(image), 12);
-		ASSERT_EQUAL(image_getStride(image), 208);
+		ASSERT_EQUAL(image_getStride(image), 256);
 		ASSERT_EQUAL(image_getBound(image), IRect(0, 0, 52, 12));
 	}
 	{ // RGBA Texture
