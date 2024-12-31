@@ -37,7 +37,6 @@ namespace dsr {
 
 	// Calculates the largest power of two allocation size that does not overflow a pointer on the target platform.
 	constexpr int calculateBinCount() {
-		int largestBinIndex = 0;
 		intptr_t p = 0;
 		while (true) {
 			uintptr_t result = ((uintptr_t)1 << p) * heapAlignment;
