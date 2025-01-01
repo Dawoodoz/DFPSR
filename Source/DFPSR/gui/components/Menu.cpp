@@ -290,7 +290,7 @@ void Menu::receiveMouseEvent(const MouseEvent& event) {
 	bool inHead = this->pointIsInside(event.position);
 	if (event.mouseEventType == MouseEventType::MouseUp) {
 		// Pass on mouse up events to dragged components, even if not inside of them.
-		if (this->dragComponent.exists()) {
+		if (this->dragComponent.isNotNull()) {
 			MouseEvent childEvent = localEvent;
 			childEvent.position -= this->dragComponent->location.upperLeft();
 			this->dragComponent->sendMouseEvent(childEvent, true);

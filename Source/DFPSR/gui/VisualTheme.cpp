@@ -352,7 +352,7 @@ VisualTheme theme_createFromFile(const MediaMachine &machine, const ReadableStri
 }
 
 bool theme_exists(const VisualTheme &theme) {
-	return theme.exists();
+	return theme.isNotNull();
 }
 
 int theme_getClassIndex(const VisualTheme &theme, const ReadableString &className) {

@@ -347,7 +347,7 @@ Handle<VisualComponent> VisualComponent::findChildByName(ReadableString name) co
 			return current; // Found the component
 		} else {
 			Handle<VisualComponent> searchResult = current->findChildByName(name);
-			if (searchResult.exists()) {
+			if (searchResult.isNotNull()) {
 				return searchResult; // Found the component recursively
 			}
 		}
@@ -362,7 +362,7 @@ Handle<VisualComponent> VisualComponent::findChildByNameAndIndex(ReadableString 
 			return current; // Found the component
 		} else {
 			Handle<VisualComponent> searchResult = current->findChildByNameAndIndex(name, index);
-			if (searchResult.exists()) {
+			if (searchResult.isNotNull()) {
 				return searchResult; // Found the component recursively
 			}
 		}
@@ -550,7 +550,7 @@ void VisualComponent::sendMouseEvent(const MouseEvent& event, bool recursive) {
 	//   Grabbing with the dragComponent pointer makes sure that move and up events can be given even if the cursor moves outside of the component.
 	VisualComponent *childComponent = nullptr;
 	// Find the component to interact with.
-	if (event.mouseEventType == MouseEventType::MouseDown || this->dragComponent.exists()) {
+	if (event.mouseEventType == MouseEventType::MouseDown || this->dragComponent.isNotNull()) {
 		// Check the overlays first when getting mouse events to the root component.
 		if (this->parent == nullptr) {
 			childComponent = getTopmostOverlay(this, event.position);
@@ -560,11 +560,11 @@ void VisualComponent::sendMouseEvent(const MouseEvent& event, bool recursive) {
 		//   which component is at the top without asking the components that manage interaction with their children.
 		if (childComponent == nullptr && !this->managesChildren()) {
 			Handle<VisualComponent> nextContainer = this->getDirectChild(event.position);
-			if (nextContainer.exists()) {
+			if (nextContainer.isNotNull()) {
 				childComponent = nextContainer.getUnsafe();
 			}
 		}
-	} else if (dragComponent.exists()) {
+	} else if (dragComponent.isNotNull()) {
 		// If we're grabbing a component, keep sending events to it.
 		childComponent = this->dragComponent.getUnsafe();
 	}

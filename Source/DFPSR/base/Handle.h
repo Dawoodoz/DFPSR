@@ -111,8 +111,6 @@ namespace dsr {
 		inline bool isNull() const { return this->unsafePointer == nullptr; }
 		// Check if the handle points to anything, using explicit syntax to explain the code.
 		inline bool isNotNull() const { return this->unsafePointer != nullptr; }
-		// Check if the handle points to anything, using explicit syntax to explain the code.
-		inline bool exists() const { return this->unsafePointer != nullptr; } // TODO: Replace with isNotNull for consistency with SafePointer.
 		// Check if the handle points to anything, using the handle as a boolean expression.
 		inline operator bool() const { return this->unsafePointer != nullptr; }
 		// Access content through the handle using the -> operator.

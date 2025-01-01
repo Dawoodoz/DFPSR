@@ -80,7 +80,7 @@ namespace dsr {
 
 	// Returns true iff buffer exists, even if it is empty without any data allocation.
 	inline bool buffer_exists(const Buffer &buffer) {
-		return buffer.exists();
+		return buffer.isNotNull();
 	}
 
 	// Returns a clone of the buffer.

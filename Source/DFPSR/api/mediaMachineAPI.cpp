@@ -1137,7 +1137,7 @@ OrderedImageRgbaU8 machine_getImageRgbaU8OutputByIndex(const MediaMachine& machi
 }
 
 bool machine_exists(const MediaMachine& machine) {
-	return machine.exists();
+	return machine.isNotNull();
 }
 
 int machine_findMethod(const MediaMachine& machine, const ReadableString& methodName) {

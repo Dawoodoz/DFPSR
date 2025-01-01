@@ -40,7 +40,7 @@ Window dsr::window_create(const String& title, int32_t width, int32_t height) {
 	if (width < 1) { width = 1; }
 	if (height < 1) { height = 1; }
 	Handle<dsr::BackendWindow> backend = createBackendWindow(title, width, height);
-	if (backend.exists()) {
+	if (backend.isNotNull()) {
 		return handle_create<DsrWindow>(backend);
 	} else {
 		return Handle<DsrWindow>();
@@ -52,11 +52,11 @@ Window dsr::window_create_fullscreen(const String& title) {
 }
 
 bool dsr::window_exists(const Window& window) {
-	return window.exists();
+	return window.isNotNull();
 }
 
 bool dsr::component_exists(const Component& component) {
-	return component.exists();
+	return component.isNotNull();
 }
 
 void dsr::window_loadInterfaceFromString(const Window& window, const String& content, const ReadableString &fromPath) {

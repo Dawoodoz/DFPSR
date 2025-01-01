@@ -54,7 +54,7 @@ Filter model_getFilter(const Model& model) {
 }
 
 bool model_exists(const Model& model) {
-	return model.exists();
+	return model.isNotNull();
 }
 
 int model_addEmptyPart(Model& model, const String &name) {
@@ -194,12 +194,12 @@ void model_setLightMapByName(Model& model, int partIndex, ResourcePool &pool, co
 
 // Single-threaded rendering for the simple cases where you just want it to work
 void model_render(const Model& model, const Transform3D &modelToWorldTransform, ImageRgbaU8& colorBuffer, ImageF32& depthBuffer, const Camera &camera) {
-	if (model.exists()) {
+	if (model.isNotNull()) {
 		model->render((CommandQueue*)nullptr, colorBuffer, depthBuffer, modelToWorldTransform, camera);
 	}
 }
 void model_renderDepth(const Model& model, const Transform3D &modelToWorldTransform, ImageF32& depthBuffer, const Camera &camera) {
-	if (model.exists()) {
+	if (model.isNotNull()) {
 		model->renderDepth(depthBuffer, modelToWorldTransform, camera);
 	}
 }
@@ -672,7 +672,7 @@ Renderer renderer_create() {
 }
 
 bool renderer_exists(const Renderer& renderer) {
-	return renderer.exists();
+	return renderer.isNotNull();
 }
 
 void renderer_begin(Renderer& renderer, ImageRgbaU8& colorBuffer, ImageF32& depthBuffer) {
@@ -690,7 +690,7 @@ void renderer_begin(Renderer& renderer, ImageRgbaU8& colorBuffer, ImageF32& dept
 //         Enabling vertex light, reflection maps and bone animation
 void renderer_giveTask(Renderer& renderer, const Model& model, const Transform3D &modelToWorldTransform, const Camera &camera) {
 	MUST_EXIST(renderer,renderer_giveTask);
-	if (model.exists()) {
+	if (model.isNotNull()) {
 		renderer->giveTask(model, modelToWorldTransform, camera);
 	}
 }
