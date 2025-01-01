@@ -26,6 +26,7 @@
 
 #include "heap.h"
 #include <utility>
+#include <type_traits>
 
 namespace dsr {
 	template <typename T>

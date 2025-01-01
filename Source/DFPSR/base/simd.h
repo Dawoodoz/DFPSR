@@ -507,7 +507,7 @@
 			}
 		#endif
 		// Bound and alignment checked reading
-		static inline F32x4 readAligned(const dsr::SafePointer<float> data, const char* methodName) {
+		static inline F32x4 readAligned(dsr::SafePointer<const float> data, const char* methodName) {
 			const float* pointer = data.getUnsafe();
 			assert(((uintptr_t)pointer & 15) == 0);
 			#if defined SAFE_POINTER_CHECKS
@@ -727,7 +727,7 @@
 			}
 		#endif
 		// Bound and alignment checked reading
-		static inline I32x4 readAligned(const dsr::SafePointer<int32_t> data, const char* methodName) {
+		static inline I32x4 readAligned(dsr::SafePointer<const int32_t> data, const char* methodName) {
 			const int32_t* pointer = data.getUnsafe();
 			assert(((uintptr_t)pointer & 15) == 0);
 			#if defined SAFE_POINTER_CHECKS
@@ -824,7 +824,7 @@
 			}
 		#endif
 		// Bound and alignment checked reading
-		static inline U32x4 readAligned(const dsr::SafePointer<uint32_t> data, const char* methodName) {
+		static inline U32x4 readAligned(dsr::SafePointer<const uint32_t> data, const char* methodName) {
 			const uint32_t* pointer = data.getUnsafe();
 			assert(((uintptr_t)pointer & 15) == 0);
 			#if defined SAFE_POINTER_CHECKS
@@ -975,7 +975,7 @@
 			#endif
 		}
 		// Bound and alignment checked reading
-		static inline U16x8 readAligned(const dsr::SafePointer<uint16_t> data, const char* methodName) {
+		static inline U16x8 readAligned(dsr::SafePointer<const uint16_t> data, const char* methodName) {
 			const uint16_t* pointer = data.getUnsafe();
 			assert(((uintptr_t)pointer & 15) == 0);
 			#if defined SAFE_POINTER_CHECKS
@@ -1127,7 +1127,7 @@
 			#endif
 		}
 		// Bound and alignment checked reading
-		static inline U8x16 readAligned(const dsr::SafePointer<uint8_t> data, const char* methodName) {
+		static inline U8x16 readAligned(dsr::SafePointer<const uint8_t> data, const char* methodName) {
 			const uint8_t* pointer = data.getUnsafe();
 			assert(((uintptr_t)pointer & 15) == 0);
 			#if defined SAFE_POINTER_CHECKS
@@ -1236,7 +1236,7 @@
 			#endif
 		}
 		// Bound and alignment checked reading
-		static inline F32x8 readAligned(const dsr::SafePointer<float> data, const char* methodName) {
+		static inline F32x8 readAligned(dsr::SafePointer<const float> data, const char* methodName) {
 			const float* pointer = data.getUnsafe();
 			assert(((uintptr_t)pointer & 31) == 0);
 			#if defined SAFE_POINTER_CHECKS
@@ -1488,7 +1488,7 @@
 			#endif
 		}
 		// Bound and alignment checked reading
-		static inline I32x8 readAligned(const dsr::SafePointer<int32_t> data, const char* methodName) {
+		static inline I32x8 readAligned(dsr::SafePointer<const int32_t> data, const char* methodName) {
 			const int32_t* pointer = data.getUnsafe();
 			assert(((uintptr_t)pointer & 31) == 0);
 			#if defined SAFE_POINTER_CHECKS
@@ -1597,7 +1597,7 @@
 			#endif
 		}
 		// Bound and alignment checked reading
-		static inline U32x8 readAligned(const dsr::SafePointer<uint32_t> data, const char* methodName) {
+		static inline U32x8 readAligned(dsr::SafePointer<const uint32_t> data, const char* methodName) {
 			const uint32_t* pointer = data.getUnsafe();
 			assert(((uintptr_t)pointer & 31) == 0);
 			#if defined SAFE_POINTER_CHECKS
@@ -1803,7 +1803,7 @@
 			#endif
 		}
 		// Bound and alignment checked reading
-		static inline U16x16 readAligned(const dsr::SafePointer<uint16_t> data, const char* methodName) {
+		static inline U16x16 readAligned(dsr::SafePointer<const uint16_t> data, const char* methodName) {
 			const uint16_t* pointer = data.getUnsafe();
 			assert(((uintptr_t)pointer & 31) == 0);
 			#if defined SAFE_POINTER_CHECKS
@@ -1960,7 +1960,7 @@
 			#endif
 		}
 		// Bound and alignment checked reading
-		static inline U8x32 readAligned(const dsr::SafePointer<uint8_t> data, const char* methodName) {
+		static inline U8x32 readAligned(dsr::SafePointer<const uint8_t> data, const char* methodName) {
 			const uint8_t* pointer = data.getUnsafe();
 			assert(((uintptr_t)pointer & 31) == 0);
 			#if defined SAFE_POINTER_CHECKS
@@ -2592,7 +2592,7 @@
 		#define GATHER_U32x4_AVX2(SOURCE, FOUR_OFFSETS, SCALE) _mm_i32gather_epi32((const int32_t*)(SOURCE), FOUR_OFFSETS, SCALE)
 		#define GATHER_F32x4_AVX2(SOURCE, FOUR_OFFSETS, SCALE) _mm_i32gather_ps((const float*)(SOURCE), FOUR_OFFSETS, SCALE)
 	#endif
-	static inline U32x4 gather(const dsr::SafePointer<uint32_t> data, const U32x4 &elementOffset) {
+	static inline U32x4 gather(dsr::SafePointer<const uint32_t> data, const U32x4 &elementOffset) {
 		#if defined USE_AVX2
 			// TODO: Implement safety checks for debug mode.
 			return U32x4(GATHER_U32x4_AVX2(data.getUnsafe(), elementOffset.v, 4));
@@ -2607,7 +2607,7 @@
 			);
 		#endif
 	}
-	static inline I32x4 gather(const dsr::SafePointer<int32_t> data, const U32x4 &elementOffset) {
+	static inline I32x4 gather(dsr::SafePointer<const int32_t> data, const U32x4 &elementOffset) {
 		#if defined USE_AVX2
 			// TODO: Implement safety checks for debug mode.
 			return I32x4(GATHER_U32x4_AVX2(data.getUnsafe(), elementOffset.v, 4));
@@ -2622,7 +2622,7 @@
 			);
 		#endif
 	}
-	static inline F32x4 gather(const dsr::SafePointer<float> data, const U32x4 &elementOffset) {
+	static inline F32x4 gather(dsr::SafePointer<const float> data, const U32x4 &elementOffset) {
 		#if defined USE_AVX2
 			// TODO: Implement safety checks for debug mode.
 			return F32x4(GATHER_F32x4_AVX2(data.getUnsafe(), elementOffset.v, 4));
@@ -3344,7 +3344,7 @@
 		#define GATHER_U32x8_AVX2(SOURCE, EIGHT_OFFSETS, SCALE) _mm256_i32gather_epi32((const int32_t*)(SOURCE), EIGHT_OFFSETS, SCALE)
 		#define GATHER_F32x8_AVX2(SOURCE, EIGHT_OFFSETS, SCALE) _mm256_i32gather_ps((const float*)(SOURCE), EIGHT_OFFSETS, SCALE)
 	#endif
-	static inline U32x8 gather(const dsr::SafePointer<uint32_t> data, const U32x8 &elementOffset) {
+	static inline U32x8 gather(dsr::SafePointer<const uint32_t> data, const U32x8 &elementOffset) {
 		#if defined USE_AVX2
 			// TODO: Implement safety checks for debug mode.
 			return U32x8(GATHER_I32x8_AVX2(data.getUnsafe(), elementOffset.v, 4));
@@ -3363,7 +3363,7 @@
 			);
 		#endif
 	}
-	static inline I32x8 gather(const dsr::SafePointer<int32_t> data, const U32x8 &elementOffset) {
+	static inline I32x8 gather(dsr::SafePointer<const int32_t> data, const U32x8 &elementOffset) {
 		#if defined USE_AVX2
 			// TODO: Implement safety checks for debug mode.
 			return I32x8(GATHER_U32x8_AVX2(data.getUnsafe(), elementOffset.v, 4));
@@ -3382,7 +3382,7 @@
 			);
 		#endif
 	}
-	static inline F32x8 gather(const dsr::SafePointer<float> data, const U32x8 &elementOffset) {
+	static inline F32x8 gather(dsr::SafePointer<const float> data, const U32x8 &elementOffset) {
 		#if defined USE_AVX2
 			// TODO: Implement safety checks for debug mode.
 			return F32x8(GATHER_F32x8_AVX2(data.getUnsafe(), elementOffset.v, 4));

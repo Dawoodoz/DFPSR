@@ -55,13 +55,13 @@ inline PackOrder getPackOrder(const ImageRgbaU8Impl *image) { return image ? ima
 //   The pointer has access to the whole parent buffer,
 //   to allow aligning SIMD vectors outside of the used region.
 template <typename T>
-static inline const SafePointer<T> getSafeData(const ImageImpl &image, int rowIndex = 0) {
+static inline SafePointer<const T> getSafeData(const ImageImpl &image, int rowIndex = 0) {
 	auto result = buffer_getSafeData<T>(image.buffer, "Image buffer");
 	result.increaseBytes(image.startOffset + image.stride * rowIndex);
 	return result;
 }
 template <typename T>
-inline const SafePointer<T> getSafeData(const ImageImpl *image, int rowIndex = 0) {
+inline SafePointer<const T> getSafeData(const ImageImpl *image, int rowIndex = 0) {
 	return image ? getSafeData<T>(*image, rowIndex) : SafePointer<T>("Null image buffer");
 }
 template <typename T>

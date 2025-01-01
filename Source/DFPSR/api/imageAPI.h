@@ -155,7 +155,7 @@ namespace dsr {
 	// A faster and more flexible way to load compressed images from memory.
 	// If you just want to point directly to a memory location to avoid allocating many small buffers, you can use a safe pointer and a size in bytes.
 	// Failure will return an empty handle.
-	OrderedImageRgbaU8 image_decode_RgbaU8(const SafePointer<uint8_t> data, int size);
+	OrderedImageRgbaU8 image_decode_RgbaU8(SafePointer<const uint8_t> data, int size);
 
 // Saving
 	// Save the image to the path specified by filename and return true iff the operation was successful.

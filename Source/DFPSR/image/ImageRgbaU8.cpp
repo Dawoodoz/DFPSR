@@ -67,7 +67,7 @@ ImageRgbaU8Impl ImageRgbaU8Impl::getWithoutPadding() const {
 	} else {
 		// Copy each row without padding
 		ImageRgbaU8Impl result = ImageRgbaU8Impl(this->width, this->height, this->packOrder.packOrderIndex);
-		const SafePointer<uint8_t> sourceRow = imageInternal::getSafeData<uint8_t>(*this);
+		SafePointer<const uint8_t> sourceRow = imageInternal::getSafeData<uint8_t>(*this);
 		int32_t sourceStride = this->stride;
 		SafePointer<uint8_t> targetRow = imageInternal::getSafeData<uint8_t>(result);
 		int32_t targetStride = result.stride;
@@ -80,11 +80,11 @@ ImageRgbaU8Impl ImageRgbaU8Impl::getWithoutPadding() const {
 	}
 }
 
-static void extractChannel(SafePointer<uint8_t> targetData, int targetStride, const SafePointer<uint8_t> sourceData, int sourceStride, int sourceChannels, int channelIndex, int width, int height) {
-	const SafePointer<uint8_t> sourceRow = sourceData + channelIndex;
+static void extractChannel(SafePointer<uint8_t> targetData, int targetStride, SafePointer<const uint8_t> sourceData, int sourceStride, int sourceChannels, int channelIndex, int width, int height) {
+	SafePointer<const uint8_t> sourceRow = sourceData + channelIndex;
 	SafePointer<uint8_t> targetRow = targetData;
 	for (int y = 0; y < height; y++) {
-		const SafePointer<uint8_t> sourceElement = sourceRow;
+		SafePointer<const uint8_t> sourceElement = sourceRow;
 		SafePointer<uint8_t> targetElement = targetRow;
 		for (int x = 0; x < width; x++) {
 			*targetElement = *sourceElement; // Copy one channel from the soruce
@@ -194,14 +194,14 @@ inline U32xX pairwiseAverageColor(const U32xX &colorA, const U32xX &colorB) {
 	return U32xX::readAlignedUnsafe((uint32_t*)elementsR);
 }
 
-static void downScaleByTwo(SafePointer<uint32_t> targetData, const SafePointer<uint32_t> sourceData, int32_t targetWidth, int32_t targetHeight, int32_t targetStride) {
+static void downScaleByTwo(SafePointer<uint32_t> targetData, SafePointer<const uint32_t> sourceData, int32_t targetWidth, int32_t targetHeight, int32_t targetStride) {
 	int32_t sourceStride = targetStride * 2;
 	int32_t doubleSourceStride = sourceStride * 2;
 	SafePointer<uint32_t> targetRow = targetData;
-	const SafePointer<uint32_t> sourceRow = sourceData;
+	SafePointer<const uint32_t> sourceRow = sourceData;
 	for (int32_t y = 0; y < targetHeight; y++) {
-		const SafePointer<uint32_t> upperSourcePixel = sourceRow;
-		const SafePointer<uint32_t> lowerSourcePixel = sourceRow;
+		SafePointer<const uint32_t> upperSourcePixel = sourceRow;
+		SafePointer<const uint32_t> lowerSourcePixel = sourceRow;
 		lowerSourcePixel.increaseBytes(sourceStride);
 		SafePointer<uint32_t> targetPixel = targetRow;
 		for (int32_t x = 0; x < targetWidth; x += laneCountX_32Bit) {

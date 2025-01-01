@@ -45,6 +45,7 @@
 #include <cassert>
 #include <cstdint>
 #include "memory.h"
+#include <type_traits>
 
 namespace dsr {
 
@@ -55,21 +56,21 @@ namespace dsr {
 
 template<typename T>
 class SafePointer {
-private:
+public:
 	// A pointer from regionStart to regionEnd
 	//   Mutable because only the data being pointed to is write protected in a const SafePointer
-	mutable T *data;
+	T *data;
 	#ifdef SAFE_POINTER_CHECKS
 		// Points to the first accessible byte, which should have the same alignment as the data pointer.
-		mutable T *regionStart;
+		T *regionStart;
 		// Marks the end of the allowed region, pointing to the first byte that is not accessible.
-		mutable T *regionEnd;
+		T *regionEnd;
 		// Pointer to an ascii literal containing the name for improving error messages for crashes in debug mode.
-		mutable const char *name;
+		const char *name;
 		// Optional pointer to an allocation header to know if it still exists and which threads are allowed to access it.
-		mutable AllocationHeader *header = nullptr;
+		AllocationHeader *header = nullptr;
 		// The identity that should match the allocation header's identity.
-		mutable uint64_t allocationIdentity = 0;
+		uint64_t allocationIdentity = 0;
 	#endif
 public:
 	#ifdef SAFE_POINTER_CHECKS
@@ -112,29 +113,15 @@ public:
 	// Back to unsafe pointer with a clearly visible method name as a warning
 	// The same can be done by mistake using the & operator on a reference
 	// p.getUnsafe() = &(*p) = &(p[0])
-	inline T* getUnsafe() {
-		#ifdef SAFE_POINTER_CHECKS
-		this->assertInside("getUnsafe");
-		#endif
-		return this->data;
-	}
-	inline const T* getUnsafe() const {
+	inline T* getUnsafe() const {
 		#ifdef SAFE_POINTER_CHECKS
 		this->assertInside("getUnsafe");
 		#endif
 		return this->data;
 	}
 	// Get unsafe pointer without bound checks for implementing your own safety
-	inline T* getUnchecked() {
+	inline T* getUnchecked() const {
 		return this->data;
-	}
-	inline const T* getUnchecked() const {
-		return this->data;
-	}
-	// Returns the pointer in modulo byteAlignment
-	// Returns 0 if the pointer is aligned with byteAlignment
-	inline int32_t getAlignmentOffset(int32_t byteAlignment) const {
-		return ((uintptr_t)this->data) % byteAlignment;
 	}
 	inline bool isNull() const {
 		return this->data == nullptr;
@@ -154,67 +141,34 @@ public:
 		return SafePointer<T>(name, newStart);
 		#endif
 	}
-	inline const SafePointer<T> slice(const char* name, intptr_t byteOffset, intptr_t size) const {
-		T *newStart = (T*)(((uint8_t*)(this->data)) + byteOffset);
-		#ifdef SAFE_POINTER_CHECKS
-		assertInside("getSlice", newStart, size);
-		return SafePointer<T>(this->header, this->allocationIdentity, name, newStart, size);
-		#else
-		return SafePointer<T>(name, newStart);
-		#endif
-	}
 	// Dereference
 	template <typename S = T>
-	inline S& get() {
+	inline S& get() const {
 		#ifdef SAFE_POINTER_CHECKS
 		assertInside("get", this->data, sizeof(S));
 		#endif
 		return *((S*)this->data);
 	}
-	template <typename S = T>
-	inline const S& get() const {
-		#ifdef SAFE_POINTER_CHECKS
-		assertInside("get", this->data, sizeof(S));
-		#endif
-		return *((const S*)this->data);
-	}
-	inline T& operator*() {
+	inline T& operator*() const {
 		#ifdef SAFE_POINTER_CHECKS
 		assertInside("operator*");
 		#endif
 		return *(this->data);
 	}
-	inline const T& operator*() const {
-		#ifdef SAFE_POINTER_CHECKS
-		assertInside("operator*");
-		#endif
-		return *(this->data);
-	}
-	inline T& operator[] (intptr_t index) {
+	inline T& operator[] (intptr_t index) const {
 		T* address = this->data + index;
 		#ifdef SAFE_POINTER_CHECKS
 		assertInside("operator[]", address);
 		#endif
 		return *address;
 	}
-	inline const T& operator[] (intptr_t index) const {
-		T* address = this->data + index;
-		#ifdef SAFE_POINTER_CHECKS
-		assertInside("operator[]", address);
-		#endif
-		return *address;
-	}
-	inline void increaseBytes(intptr_t byteOffset) const {
+	inline void increaseBytes(intptr_t byteOffset) {
 		this->data = (T*)(((uint8_t*)(this->data)) + byteOffset);
 	}
-	inline void increaseElements(intptr_t elementOffset) const {
+	inline void increaseElements(intptr_t elementOffset) {
 		this->data += elementOffset;
 	}
 	inline SafePointer<T>& operator+=(intptr_t elementOffset) {
-		this->data += elementOffset;
-		return *this;
-	}
-	inline const SafePointer<T>& operator+=(intptr_t elementOffset) const {
 		this->data += elementOffset;
 		return *this;
 	}
@@ -222,16 +176,7 @@ public:
 		this->data -= elementOffset;
 		return *this;
 	}
-	inline const SafePointer<T>& operator-=(intptr_t elementOffset) const {
-		this->data -= elementOffset;
-		return *this;
-	}
 	inline SafePointer<T> operator+(intptr_t elementOffset) {
-		SafePointer<T> result = *this;
-		result += elementOffset;
-		return result;
-	}
-	inline const SafePointer<T> operator+(intptr_t elementOffset) const {
 		SafePointer<T> result = *this;
 		result += elementOffset;
 		return result;
@@ -241,26 +186,58 @@ public:
 		result -= elementOffset;
 		return result;
 	}
-	inline const SafePointer<T> operator-(intptr_t elementOffset) const {
-		SafePointer<T> result = *this;
-		result -= elementOffset;
-		return result;
-	}
-	inline const SafePointer<T>& operator=(const SafePointer<T>& source) const {
-		this->data = source.data;
+	// Copy constructor.
+	SafePointer(const SafePointer<T> &other) noexcept
+	: data(other.data) {
 		#ifdef SAFE_POINTER_CHECKS
-			this->header = source.header;
-			this->allocationIdentity = source.allocationIdentity;
-			this->regionStart = source.regionStart;
-			this->regionEnd = source.regionEnd;
-			this->name = source.name;
+			this->header = other.header;
+			this->allocationIdentity = other.allocationIdentity;
+			this->regionStart = other.regionStart;
+			this->regionEnd = other.regionEnd;
+			this->name = other.name;
+		#endif
+	}
+	// Copy constructor from non-const to const.
+	template <typename U, typename = typename std::enable_if<std::is_same<T, const U>::value>::type>
+    SafePointer(const SafePointer<U> &other) noexcept
+	: data(other.data) {
+		#ifdef SAFE_POINTER_CHECKS
+			this->header = other.header;
+			this->allocationIdentity = other.allocationIdentity;
+			this->regionStart = other.regionStart;
+			this->regionEnd = other.regionEnd;
+			this->name = other.name;
+		#endif
+	}
+	// Assignment.
+	SafePointer<T>& operator = (const SafePointer<T> &other) noexcept {
+		this->data = other.data;
+		#ifdef SAFE_POINTER_CHECKS
+			this->header = other.header;
+			this->allocationIdentity = other.allocationIdentity;
+			this->regionStart = other.regionStart;
+			this->regionEnd = other.regionEnd;
+			this->name = other.name;
+		#endif
+		return *this;
+	}
+	// Assignment from non-const to const.
+	template <typename U, typename = typename std::enable_if<std::is_same<T, const U>::value>::type>
+	SafePointer<T>& operator = (const SafePointer<U> &other) noexcept {
+		this->data = other.data;
+		#ifdef SAFE_POINTER_CHECKS
+			this->header = other.header;
+			this->allocationIdentity = other.allocationIdentity;
+			this->regionStart = other.regionStart;
+			this->regionEnd = other.regionEnd;
+			this->name = other.name;
 		#endif
 		return *this;
 	}
 };
 
-template <typename T, typename S>
-inline void safeMemoryCopy(SafePointer<T> target, const SafePointer<S>& source, intptr_t byteSize) {
+template <typename T, typename S, typename = typename std::enable_if<!std::is_const<T>::value>::type>
+inline void safeMemoryCopy(SafePointer<T> target, SafePointer<S> source, intptr_t byteSize) {
 	#ifdef SAFE_POINTER_CHECKS
 		// Both target and source must be in valid memory
 		target.assertInside("memoryCopy (target)", target.getUnchecked(), (size_t)byteSize);
@@ -272,8 +249,8 @@ inline void safeMemoryCopy(SafePointer<T> target, const SafePointer<S>& source, 
 	std::memcpy(target.getUnchecked(), source.getUnchecked(), (size_t)byteSize);
 }
 
-template <typename T>
-inline void safeMemorySet(SafePointer<T>& target, uint8_t value, intptr_t byteSize) {
+template <typename T, typename = typename std::enable_if<!std::is_const<T>::value>::type>
+inline void safeMemorySet(SafePointer<T> target, uint8_t value, intptr_t byteSize) {
 	#ifdef SAFE_POINTER_CHECKS
 		// Target must be in valid memory
 		target.assertInside("memoryCopy (target)", target.getUnchecked(), byteSize);

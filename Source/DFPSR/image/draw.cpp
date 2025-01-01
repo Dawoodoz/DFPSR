@@ -992,8 +992,8 @@ static void resize_optimized(ImageRgbaU8Impl& target, const ImageRgbaU8Impl& sou
 				uint32_t upperRatio = 65536 - lowerRatio;
 				SafePointer<uint32_t> targetPixel = targetRow;
 				if (SIMD_ALIGNED) {
-					const SafePointer<uint32_t> sourceRowUpper = imageInternal::getSafeData<uint32_t>(source, upperY);
-					const SafePointer<uint32_t> sourceRowLower = imageInternal::getSafeData<uint32_t>(source, lowerY);
+					SafePointer<const uint32_t> sourceRowUpper = imageInternal::getSafeData<uint32_t>(source, upperY);
+					SafePointer<const uint32_t> sourceRowLower = imageInternal::getSafeData<uint32_t>(source, lowerY);
 					for (int32_t x = 0; x < target.width; x += 4) {
 						ALIGN16 U32x4 vUpperPackedColor = U32x4::readAligned(sourceRowUpper, "resize_optimized @ read vUpperPackedColor");
 						ALIGN16 U32x4 vLowerPackedColor = U32x4::readAligned(sourceRowLower, "resize_optimized @ read vLowerPackedColor");
@@ -1014,7 +1014,7 @@ static void resize_optimized(ImageRgbaU8Impl& target, const ImageRgbaU8Impl& sou
 					}
 				}
 			} else {
-				const SafePointer<uint32_t> sourceRowUpper = imageInternal::getSafeData<uint32_t>(source, upperY);
+				SafePointer<const uint32_t> sourceRowUpper = imageInternal::getSafeData<uint32_t>(source, upperY);
 				// Nearest neighbor sampling from a same width can be done using one copy per row
 				safeMemoryCopy(targetRow, sourceRowUpper, source.width * 4);
 			}
@@ -1186,13 +1186,13 @@ static void blockMagnify_reference(
 //   * clipWidth % 2 == 0
 //   * clipHeight % 2 == 0
 static void blockMagnify_2x2(ImageRgbaU8Impl& target, const ImageRgbaU8Impl& source, int clipWidth, int clipHeight) {
-	const SafePointer<uint32_t> sourceRow = imageInternal::getSafeData<uint32_t>(source);
+	SafePointer<const uint32_t> sourceRow = imageInternal::getSafeData<uint32_t>(source);
 	SafePointer<uint32_t> targetRowA = imageInternal::getSafeData<uint32_t>(target, 0);
 	SafePointer<uint32_t> targetRowB = imageInternal::getSafeData<uint32_t>(target, 1);
 	int blockTargetStride = target.stride * 2;
 	for (int upperTargetY = 0; upperTargetY + 2 <= clipHeight; upperTargetY+=2) {
 		// Carriage return
-		const SafePointer<uint32_t> sourcePixel = sourceRow;
+		SafePointer<const uint32_t> sourcePixel = sourceRow;
 		SafePointer<uint32_t> targetPixelA = targetRowA;
 		SafePointer<uint32_t> targetPixelB = targetRowB;
 		// Write to whole multiples of 8 pixels
@@ -1222,14 +1222,14 @@ static void blockMagnify_2x2(ImageRgbaU8Impl& target, const ImageRgbaU8Impl& sou
 //   * clipWidth % 3 == 0
 //   * clipHeight % 3 == 0
 static void blockMagnify_3x3(ImageRgbaU8Impl& target, const ImageRgbaU8Impl& source, int clipWidth, int clipHeight) {
-	const SafePointer<uint32_t> sourceRow = imageInternal::getSafeData<uint32_t>(source);
+	SafePointer<const uint32_t> sourceRow = imageInternal::getSafeData<uint32_t>(source);
 	SafePointer<uint32_t> targetRowA = imageInternal::getSafeData<uint32_t>(target, 0);
 	SafePointer<uint32_t> targetRowB = imageInternal::getSafeData<uint32_t>(target, 1);
 	SafePointer<uint32_t> targetRowC = imageInternal::getSafeData<uint32_t>(target, 2);
 	int blockTargetStride = target.stride * 3;
 	for (int upperTargetY = 0; upperTargetY + 3 <= clipHeight; upperTargetY+=3) {
 		// Carriage return
-		const SafePointer<uint32_t> sourcePixel = sourceRow;
+		SafePointer<const uint32_t> sourcePixel = sourceRow;
 		SafePointer<uint32_t> targetPixelA = targetRowA;
 		SafePointer<uint32_t> targetPixelB = targetRowB;
 		SafePointer<uint32_t> targetPixelC = targetRowC;
@@ -1262,7 +1262,7 @@ static void blockMagnify_3x3(ImageRgbaU8Impl& target, const ImageRgbaU8Impl& sou
 //   * clipWidth % 4 == 0
 //   * clipHeight % 4 == 0
 static void blockMagnify_4x4(ImageRgbaU8Impl& target, const ImageRgbaU8Impl& source, int clipWidth, int clipHeight) {
-	const SafePointer<uint32_t> sourceRow = imageInternal::getSafeData<uint32_t>(source);
+	SafePointer<const uint32_t> sourceRow = imageInternal::getSafeData<uint32_t>(source);
 	SafePointer<uint32_t> targetRowA = imageInternal::getSafeData<uint32_t>(target, 0);
 	SafePointer<uint32_t> targetRowB = imageInternal::getSafeData<uint32_t>(target, 1);
 	SafePointer<uint32_t> targetRowC = imageInternal::getSafeData<uint32_t>(target, 2);
@@ -1270,7 +1270,7 @@ static void blockMagnify_4x4(ImageRgbaU8Impl& target, const ImageRgbaU8Impl& sou
 	int quadTargetStride = target.stride * 4;
 	for (int upperTargetY = 0; upperTargetY + 4 <= clipHeight; upperTargetY+=4) {
 		// Carriage return
-		const SafePointer<uint32_t> sourcePixel = sourceRow;
+		SafePointer<const uint32_t> sourcePixel = sourceRow;
 		SafePointer<uint32_t> targetPixelA = targetRowA;
 		SafePointer<uint32_t> targetPixelB = targetRowB;
 		SafePointer<uint32_t> targetPixelC = targetRowC;
@@ -1309,7 +1309,7 @@ static void blockMagnify_4x4(ImageRgbaU8Impl& target, const ImageRgbaU8Impl& sou
 //   * clipWidth % 5 == 0
 //   * clipHeight % 5 == 0
 static void blockMagnify_5x5(ImageRgbaU8Impl& target, const ImageRgbaU8Impl& source, int clipWidth, int clipHeight) {
-	const SafePointer<uint32_t> sourceRow = imageInternal::getSafeData<uint32_t>(source);
+	SafePointer<const uint32_t> sourceRow = imageInternal::getSafeData<uint32_t>(source);
 	SafePointer<uint32_t> targetRowA = imageInternal::getSafeData<uint32_t>(target, 0);
 	SafePointer<uint32_t> targetRowB = imageInternal::getSafeData<uint32_t>(target, 1);
 	SafePointer<uint32_t> targetRowC = imageInternal::getSafeData<uint32_t>(target, 2);
@@ -1318,7 +1318,7 @@ static void blockMagnify_5x5(ImageRgbaU8Impl& target, const ImageRgbaU8Impl& sou
 	int blockTargetStride = target.stride * 5;
 	for (int upperTargetY = 0; upperTargetY + 5 <= clipHeight; upperTargetY+=5) {
 		// Carriage return
-		const SafePointer<uint32_t> sourcePixel = sourceRow;
+		SafePointer<const uint32_t> sourcePixel = sourceRow;
 		SafePointer<uint32_t> targetPixelA = targetRowA;
 		SafePointer<uint32_t> targetPixelB = targetRowB;
 		SafePointer<uint32_t> targetPixelC = targetRowC;
@@ -1359,7 +1359,7 @@ static void blockMagnify_5x5(ImageRgbaU8Impl& target, const ImageRgbaU8Impl& sou
 //   * clipWidth % 6 == 0
 //   * clipHeight % 6 == 0
 static void blockMagnify_6x6(ImageRgbaU8Impl& target, const ImageRgbaU8Impl& source, int clipWidth, int clipHeight) {
-	const SafePointer<uint32_t> sourceRow = imageInternal::getSafeData<uint32_t>(source);
+	SafePointer<const uint32_t> sourceRow = imageInternal::getSafeData<uint32_t>(source);
 	SafePointer<uint32_t> targetRowA = imageInternal::getSafeData<uint32_t>(target, 0);
 	SafePointer<uint32_t> targetRowB = imageInternal::getSafeData<uint32_t>(target, 1);
 	SafePointer<uint32_t> targetRowC = imageInternal::getSafeData<uint32_t>(target, 2);
@@ -1369,7 +1369,7 @@ static void blockMagnify_6x6(ImageRgbaU8Impl& target, const ImageRgbaU8Impl& sou
 	int blockTargetStride = target.stride * 6;
 	for (int upperTargetY = 0; upperTargetY + 6 <= clipHeight; upperTargetY+=6) {
 		// Carriage return
-		const SafePointer<uint32_t> sourcePixel = sourceRow;
+		SafePointer<const uint32_t> sourcePixel = sourceRow;
 		SafePointer<uint32_t> targetPixelA = targetRowA;
 		SafePointer<uint32_t> targetPixelB = targetRowB;
 		SafePointer<uint32_t> targetPixelC = targetRowC;
@@ -1414,7 +1414,7 @@ static void blockMagnify_6x6(ImageRgbaU8Impl& target, const ImageRgbaU8Impl& sou
 //   * clipWidth % 7 == 0
 //   * clipHeight % 7 == 0
 static void blockMagnify_7x7(ImageRgbaU8Impl& target, const ImageRgbaU8Impl& source, int clipWidth, int clipHeight) {
-	const SafePointer<uint32_t> sourceRow = imageInternal::getSafeData<uint32_t>(source);
+	SafePointer<const uint32_t> sourceRow = imageInternal::getSafeData<uint32_t>(source);
 	SafePointer<uint32_t> targetRowA = imageInternal::getSafeData<uint32_t>(target, 0);
 	SafePointer<uint32_t> targetRowB = imageInternal::getSafeData<uint32_t>(target, 1);
 	SafePointer<uint32_t> targetRowC = imageInternal::getSafeData<uint32_t>(target, 2);
@@ -1425,7 +1425,7 @@ static void blockMagnify_7x7(ImageRgbaU8Impl& target, const ImageRgbaU8Impl& sou
 	int blockTargetStride = target.stride * 7;
 	for (int upperTargetY = 0; upperTargetY + 7 <= clipHeight; upperTargetY+=7) {
 		// Carriage return
-		const SafePointer<uint32_t> sourcePixel = sourceRow;
+		SafePointer<const uint32_t> sourcePixel = sourceRow;
 		SafePointer<uint32_t> targetPixelA = targetRowA;
 		SafePointer<uint32_t> targetPixelB = targetRowB;
 		SafePointer<uint32_t> targetPixelC = targetRowC;
@@ -1474,7 +1474,7 @@ static void blockMagnify_7x7(ImageRgbaU8Impl& target, const ImageRgbaU8Impl& sou
 //   * clipWidth % 8 == 0
 //   * clipHeight % 8 == 0
 static void blockMagnify_8x8(ImageRgbaU8Impl& target, const ImageRgbaU8Impl& source, int clipWidth, int clipHeight) {
-	const SafePointer<uint32_t> sourceRow = imageInternal::getSafeData<uint32_t>(source);
+	SafePointer<const uint32_t> sourceRow = imageInternal::getSafeData<uint32_t>(source);
 	SafePointer<uint32_t> targetRowA = imageInternal::getSafeData<uint32_t>(target, 0);
 	SafePointer<uint32_t> targetRowB = imageInternal::getSafeData<uint32_t>(target, 1);
 	SafePointer<uint32_t> targetRowC = imageInternal::getSafeData<uint32_t>(target, 2);
@@ -1486,7 +1486,7 @@ static void blockMagnify_8x8(ImageRgbaU8Impl& target, const ImageRgbaU8Impl& sou
 	int blockTargetStride = target.stride * 8;
 	for (int upperTargetY = 0; upperTargetY + 8 <= clipHeight; upperTargetY+=8) {
 		// Carriage return
-		const SafePointer<uint32_t> sourcePixel = sourceRow;
+		SafePointer<const uint32_t> sourcePixel = sourceRow;
 		SafePointer<uint32_t> targetPixelA = targetRowA;
 		SafePointer<uint32_t> targetPixelB = targetRowB;
 		SafePointer<uint32_t> targetPixelC = targetRowC;

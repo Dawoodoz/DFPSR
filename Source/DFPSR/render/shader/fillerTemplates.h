@@ -108,7 +108,7 @@ inline void clipPixels(int x, const RowInterval &upperRow, const RowInterval &lo
 }
 
 template<bool CLIP_SIDES, bool DEPTH_READ, bool AFFINE>
-inline void getVisibility(int x, const RowInterval &upperRow, const RowInterval &lowerRow, const FVector4D &depth, const SafePointer<float> depthDataUpper, const SafePointer<float> depthDataLower, bool &vis0, bool &vis1, bool &vis2, bool &vis3) {
+inline void getVisibility(int x, const RowInterval &upperRow, const RowInterval &lowerRow, const FVector4D &depth, SafePointer<const float> depthDataUpper, SafePointer<const float> depthDataLower, bool &vis0, bool &vis1, bool &vis2, bool &vis3) {
 	// Clip pixels
 	bool clip0, clip1, clip2, clip3;
 	clipPixels<CLIP_SIDES>(x, upperRow, lowerRow, clip0, clip1, clip2, clip3);

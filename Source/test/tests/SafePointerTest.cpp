@@ -30,8 +30,8 @@ START_TEST(SafePointer)
 			bufferC[i] = 0;
 		}
 		// Calculate
-		const SafePointer<int32_t> readerA = bufferA;
-		const SafePointer<int32_t> readerB = bufferB;
+		SafePointer<const int32_t> readerA = bufferA;
+		SafePointer<const int32_t> readerB = bufferB;
 		for (int i = 0; i < elements; i++) {
 			bufferC[i] = (*readerA * *readerB) + 5;
 			readerA += 1; readerB += 1;

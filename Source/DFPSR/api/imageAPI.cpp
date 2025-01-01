@@ -55,7 +55,7 @@ AlignedImageRgbaU8 dsr::image_create_RgbaU8_native(int32_t width, int32_t height
 }
 
 // Loading from data pointer
-OrderedImageRgbaU8 dsr::image_decode_RgbaU8(const SafePointer<uint8_t> data, int size) {
+OrderedImageRgbaU8 dsr::image_decode_RgbaU8(SafePointer<const uint8_t> data, int size) {
 	if (data.isNotNull()) {
 		return image_stb_decode_RgbaU8(data, size);
 	} else {
@@ -718,11 +718,11 @@ ELEMENT_TYPE maxDifference_template(const IMAGE_TYPE& imageA, const IMAGE_TYPE& 
 		return std::numeric_limits<ELEMENT_TYPE>::max();
 	} else {
 		ELEMENT_TYPE maxDifference = 0;
-		const SafePointer<ELEMENT_TYPE> rowDataA = imageInternal::getSafeData<ELEMENT_TYPE>(imageA);
-		const SafePointer<ELEMENT_TYPE> rowDataB = imageInternal::getSafeData<ELEMENT_TYPE>(imageB);
+		SafePointer<const ELEMENT_TYPE> rowDataA = imageInternal::getSafeData<ELEMENT_TYPE>(imageA);
+		SafePointer<const ELEMENT_TYPE> rowDataB = imageInternal::getSafeData<ELEMENT_TYPE>(imageB);
 		for (int y = 0; y < imageA.height; y++) {
-			const SafePointer<ELEMENT_TYPE> pixelDataA = rowDataA;
-			const SafePointer<ELEMENT_TYPE> pixelDataB = rowDataB;
+			SafePointer<const ELEMENT_TYPE> pixelDataA = rowDataA;
+			SafePointer<const ELEMENT_TYPE> pixelDataB = rowDataB;
 			for (int x = 0; x < imageA.width; x++) {
 				for (int c = 0; c < CHANNELS; c++) {
 					ELEMENT_TYPE difference = absDiff(*pixelDataA, *pixelDataB);
