@@ -30,17 +30,17 @@
 #include <limits>
 #include "../base/virtualStack.h"
 
-#define MUST_EXIST(OBJECT, METHOD) if (OBJECT.get() == nullptr) { throwError("The " #OBJECT " handle was null in " #METHOD "\n"); }
+#define MUST_EXIST(OBJECT, METHOD) if (OBJECT.isNull()) { throwError("The " #OBJECT " handle was null in " #METHOD "\n"); }
 
 namespace dsr {
 
 Model model_create() {
-	return std::make_shared<ModelImpl>();
+	return handle_create<ModelImpl>();
 }
 
 Model model_clone(const Model& model) {
 	MUST_EXIST(model,model_clone);
-	return std::make_shared<ModelImpl>(model->filter, model->partBuffer, model->positionBuffer);
+	return handle_create<ModelImpl>(model->filter, model->partBuffer, model->positionBuffer);
 }
 
 void model_setFilter(const Model& model, Filter filter) {
@@ -54,7 +54,7 @@ Filter model_getFilter(const Model& model) {
 }
 
 bool model_exists(const Model& model) {
-	return model.get() != nullptr;
+	return model.exists();
 }
 
 int model_addEmptyPart(Model& model, const String &name) {
@@ -194,12 +194,12 @@ void model_setLightMapByName(Model& model, int partIndex, ResourcePool &pool, co
 
 // Single-threaded rendering for the simple cases where you just want it to work
 void model_render(const Model& model, const Transform3D &modelToWorldTransform, ImageRgbaU8& colorBuffer, ImageF32& depthBuffer, const Camera &camera) {
-	if (model.get() != nullptr) {
+	if (model.exists()) {
 		model->render((CommandQueue*)nullptr, colorBuffer, depthBuffer, modelToWorldTransform, camera);
 	}
 }
 void model_renderDepth(const Model& model, const Transform3D &modelToWorldTransform, ImageF32& depthBuffer, const Camera &camera) {
-	if (model.get() != nullptr) {
+	if (model.exists()) {
 		model->renderDepth(depthBuffer, modelToWorldTransform, camera);
 	}
 }
@@ -668,11 +668,11 @@ struct RendererImpl {
 };
 
 Renderer renderer_create() {
-	return std::make_shared<RendererImpl>();
+	return handle_create<RendererImpl>();
 }
 
 bool renderer_exists(const Renderer& renderer) {
-	return renderer.get() != nullptr;
+	return renderer.exists();
 }
 
 void renderer_begin(Renderer& renderer, ImageRgbaU8& colorBuffer, ImageF32& depthBuffer) {
@@ -690,7 +690,7 @@ void renderer_begin(Renderer& renderer, ImageRgbaU8& colorBuffer, ImageF32& dept
 //         Enabling vertex light, reflection maps and bone animation
 void renderer_giveTask(Renderer& renderer, const Model& model, const Transform3D &modelToWorldTransform, const Camera &camera) {
 	MUST_EXIST(renderer,renderer_giveTask);
-	if (model.get() != nullptr) {
+	if (model.exists()) {
 		renderer->giveTask(model, modelToWorldTransform, camera);
 	}
 }
@@ -711,9 +711,9 @@ void renderer_giveTask_triangle(Renderer& renderer,
 		MUST_EXIST(renderer,renderer_addTriangle);
 	#endif
 	renderTriangleFromData(
-	  &(renderer->commandQueue), renderer->colorBuffer.get(), renderer->depthBuffer.get(), camera,
+	  &(renderer->commandQueue), renderer->colorBuffer.getUnsafe(), renderer->depthBuffer.getUnsafe(), camera,
 	  posA, posB, posC,
-	  filter, diffuseMap.get(), lightMap.get(),
+	  filter, diffuseMap.getUnsafe(), lightMap.getUnsafe(),
 	  TriangleTexCoords(texCoordA, texCoordB, texCoordC),
 	  TriangleColors(colorA, colorB, colorC)
 	);

@@ -75,7 +75,7 @@ BufferImpl::BufferImpl(int64_t newSize, uint8_t *newData)
 : size(newSize), bufferSize(newSize), data(newData), destructor([](uint8_t *data) { heap_free(data); }) {}
 
 BufferImpl::~BufferImpl() {
-	if (this->data) {
+	if (this->data != nullptr) {
 		this->destructor(this->data);
 	}
 }
@@ -92,7 +92,7 @@ Buffer buffer_clone(const Buffer &buffer) {
 			return buffer;
 		} else {
 			// Clone the data so that content of the allocations can be modified individually without affecting each other.
-			Buffer newBuffer = std::make_shared<BufferImpl>(buffer->size);
+			Buffer newBuffer = handle_create<BufferImpl>(buffer->size);
 			memcpy(newBuffer->data, buffer->data, buffer->size);
 			return newBuffer;
 		}
@@ -103,10 +103,10 @@ Buffer buffer_create(int64_t newSize) {
 	if (newSize < 0) newSize = 0;
 	if (newSize == 0) {
 		// Allocate empty head to indicate that an empty buffer exists.
-		return std::make_shared<BufferImpl>();
+		return Buffer(std::move(handle_create<BufferImpl>()));
 	} else {
 		// Allocate head and data.
-		return std::make_shared<BufferImpl>(newSize);
+		return Buffer(std::move(handle_create<BufferImpl>(newSize)));
 	}
 }
 
@@ -114,22 +114,22 @@ Buffer buffer_create(int64_t newSize, int minimumAlignment) {
 	if (newSize < 0) newSize = 0;
 	if (newSize == 0) {
 		// Allocate empty head to indicate that an empty buffer exists.
-		return std::make_shared<BufferImpl>();
+		return Buffer(std::move(handle_create<BufferImpl>()));
 	} else if (minimumAlignment > DSR_MAXIMUM_ALIGNMENT) {
 		throwError(U"Maximum alignment exceeded when creating a buffer!\n");
 		return Buffer();
 	} else {
 		// Allocate head and data.
-		return std::make_shared<BufferImpl>(newSize);
+		return Buffer(std::move(handle_create<BufferImpl>(newSize)));
 	}
 }
 
 Buffer buffer_create(int64_t newSize, uint8_t *newData) {
 	if (newSize < 0) newSize = 0;
-	return std::make_shared<BufferImpl>(newSize, newData);
+	return Buffer(std::move(handle_create<BufferImpl>(newSize, newData)));
 }
 
-void buffer_replaceDestructor(const Buffer &buffer, const std::function<void(uint8_t *)>& newDestructor) {
+void buffer_replaceDestructor(Buffer &buffer, const std::function<void(uint8_t *)>& newDestructor) {
 	if (!buffer_exists(buffer)) {
 		throwError(U"buffer_replaceDestructor: Cannot replace destructor for a buffer that don't exist.\n");
 	} else if (buffer->bufferSize > 0) {
@@ -149,7 +149,7 @@ int64_t buffer_getUseCount(const Buffer &buffer) {
 	if (!buffer_exists(buffer)) {
 		return 0;
 	} else {
-		return buffer.use_count();
+		return buffer.getUseCount();
 	}
 }
 

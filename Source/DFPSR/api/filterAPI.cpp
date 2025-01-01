@@ -53,8 +53,8 @@ static void mapRgbaU8(ImageRgbaU8Impl& target, const ImageGenRgbaU8& lambda, int
 	}
 }
 void dsr::filter_mapRgbaU8(ImageRgbaU8 target, const ImageGenRgbaU8& lambda, int startX, int startY) {
-	if (target.get() != nullptr) {
-		mapRgbaU8(*target, lambda, startX, startY);
+	if (target.exists()) {
+		mapRgbaU8(target.getReference(), lambda, startX, startY);
 	}
 }
 OrderedImageRgbaU8 dsr::filter_generateRgbaU8(int width, int height, const ImageGenRgbaU8& lambda, int startX, int startY) {
@@ -82,8 +82,8 @@ static void mapMonochrome(IMAGE_TYPE& target, const ImageGenI32& lambda, int sta
 	}
 }
 void dsr::filter_mapU8(ImageU8 target, const ImageGenI32& lambda, int startX, int startY) {
-	if (target.get() != nullptr) {
-		mapMonochrome<ImageU8Impl, uint8_t, 0, 255>(*target, lambda, startX, startY);
+	if (target.exists()) {
+		mapMonochrome<ImageU8Impl, uint8_t, 0, 255>(target.getReference(), lambda, startX, startY);
 	}
 }
 AlignedImageU8 dsr::filter_generateU8(int width, int height, const ImageGenI32& lambda, int startX, int startY) {
@@ -92,8 +92,8 @@ AlignedImageU8 dsr::filter_generateU8(int width, int height, const ImageGenI32& 
 	return result;
 }
 void dsr::filter_mapU16(ImageU16 target, const ImageGenI32& lambda, int startX, int startY) {
-	if (target.get() != nullptr) {
-		mapMonochrome<ImageU16Impl, uint16_t, 0, 65535>(*target, lambda, startX, startY);
+	if (target.exists()) {
+		mapMonochrome<ImageU16Impl, uint16_t, 0, 65535>(target.getReference(), lambda, startX, startY);
 	}
 }
 AlignedImageU16 dsr::filter_generateU16(int width, int height, const ImageGenI32& lambda, int startX, int startY) {
@@ -117,8 +117,8 @@ static void mapF32(ImageF32Impl& target, const ImageGenF32& lambda, int startX, 
 	}
 }
 void dsr::filter_mapF32(ImageF32 target, const ImageGenF32& lambda, int startX, int startY) {
-	if (target.get() != nullptr) {
-		mapF32(*target, lambda, startX, startY);
+	if (target.exists()) {
+		mapF32(target.getReference(), lambda, startX, startY);
 	}
 }
 AlignedImageF32 dsr::filter_generateF32(int width, int height, const ImageGenF32& lambda, int startX, int startY) {
@@ -132,9 +132,9 @@ AlignedImageF32 dsr::filter_generateF32(int width, int height, const ImageGenF32
 
 
 OrderedImageRgbaU8 dsr::filter_resize(const ImageRgbaU8 &source, Sampler interpolation, int32_t newWidth, int32_t newHeight) {
-	if (source.get() != nullptr) {
+	if (source.exists()) {
 		OrderedImageRgbaU8 resultImage = image_create_RgbaU8(newWidth, newHeight);
-		imageImpl_resizeToTarget(*resultImage, *source, interpolation == Sampler::Linear);
+		imageImpl_resizeToTarget(resultImage.getReference(), source.getReference(), interpolation == Sampler::Linear);
 		return resultImage;
 	} else {
 		return OrderedImageRgbaU8(); // Null gives null
@@ -142,9 +142,9 @@ OrderedImageRgbaU8 dsr::filter_resize(const ImageRgbaU8 &source, Sampler interpo
 }
 
 AlignedImageU8 dsr::filter_resize(const ImageU8 &source, Sampler interpolation, int32_t newWidth, int32_t newHeight) {
-	if (source.get() != nullptr) {
+	if (source.exists()) {
 		AlignedImageU8 resultImage = image_create_U8(newWidth, newHeight);
-		imageImpl_resizeToTarget(*resultImage, *source, interpolation == Sampler::Linear);
+		imageImpl_resizeToTarget(resultImage.getReference(), source.getReference(), interpolation == Sampler::Linear);
 		return resultImage;
 	} else {
 		return AlignedImageU8(); // Null gives null
@@ -152,8 +152,8 @@ AlignedImageU8 dsr::filter_resize(const ImageU8 &source, Sampler interpolation, 
 }
 
 void dsr::filter_blockMagnify(ImageRgbaU8 &target, const ImageRgbaU8& source, int pixelWidth, int pixelHeight) {
-	if (target.get() != nullptr && source.get() != nullptr) {
-		imageImpl_blockMagnify(*target, *source, pixelWidth, pixelHeight);
+	if (target.exists() && source.exists()) {
+		imageImpl_blockMagnify(target.getReference(), source.getReference(), pixelWidth, pixelHeight);
 	}
 }
 

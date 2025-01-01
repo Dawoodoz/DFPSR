@@ -150,17 +150,17 @@ static void renderTriangleFromPolygon(CommandQueue *commandQueue, ImageRgbaU8Imp
 
 void Part::render(CommandQueue *commandQueue, ImageRgbaU8& targetImage, ImageF32& depthBuffer, const Transform3D &modelToWorldTransform, const Camera &camera, Filter filter, const ProjectedPoint* projected) const {
 	// Get textures
-	const ImageRgbaU8Impl *diffuse = this->diffuseMap.get();
-	const ImageRgbaU8Impl *light = this->lightMap.get();
+	const ImageRgbaU8Impl *diffuse = this->diffuseMap.getUnsafe();
+	const ImageRgbaU8Impl *light = this->lightMap.getUnsafe();
 	for (int p = 0; p < this->polygonBuffer.length(); p++) {
 		Polygon polygon = this->polygonBuffer[p];
 		if (polygon.pointIndices[3] == -1) {
 			// Render triangle
-			renderTriangleFromPolygon(commandQueue, targetImage.get(), depthBuffer.get(), camera, polygon, 0, projected, filter, diffuse, light);
+			renderTriangleFromPolygon(commandQueue, targetImage.getUnsafe(), depthBuffer.getUnsafe(), camera, polygon, 0, projected, filter, diffuse, light);
 		} else {
 			// Render quad
-			renderTriangleFromPolygon(commandQueue, targetImage.get(), depthBuffer.get(), camera, polygon, 0, projected, filter, diffuse, light);
-			renderTriangleFromPolygon(commandQueue, targetImage.get(), depthBuffer.get(), camera, polygon, 1, projected, filter, diffuse, light);
+			renderTriangleFromPolygon(commandQueue, targetImage.getUnsafe(), depthBuffer.getUnsafe(), camera, polygon, 0, projected, filter, diffuse, light);
+			renderTriangleFromPolygon(commandQueue, targetImage.getUnsafe(), depthBuffer.getUnsafe(), camera, polygon, 1, projected, filter, diffuse, light);
 		}
 	}
 }
@@ -173,15 +173,15 @@ void Part::renderDepth(ImageF32& depthBuffer, const Transform3D &modelToWorldTra
 			ProjectedPoint posA = projected[polygon.pointIndices[0]];
 			ProjectedPoint posB = projected[polygon.pointIndices[1]];
 			ProjectedPoint posC = projected[polygon.pointIndices[2]];
-			renderTriangleFromDataDepth(depthBuffer.get(), camera, posA, posB, posC);
+			renderTriangleFromDataDepth(depthBuffer.getUnsafe(), camera, posA, posB, posC);
 		} else {
 			// Render quad
 			ProjectedPoint posA = projected[polygon.pointIndices[0]];
 			ProjectedPoint posB = projected[polygon.pointIndices[1]];
 			ProjectedPoint posC = projected[polygon.pointIndices[2]];
 			ProjectedPoint posD = projected[polygon.pointIndices[3]];
-			renderTriangleFromDataDepth(depthBuffer.get(), camera, posA, posB, posC);
-			renderTriangleFromDataDepth(depthBuffer.get(), camera, posA, posC, posD);
+			renderTriangleFromDataDepth(depthBuffer.getUnsafe(), camera, posA, posB, posC);
+			renderTriangleFromDataDepth(depthBuffer.getUnsafe(), camera, posA, posC, posD);
 		}
 	}
 }

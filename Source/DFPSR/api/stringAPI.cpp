@@ -838,7 +838,7 @@ static void reallocateBuffer(String &target, int64_t newLength, bool preserve) {
 // Call before writing to the buffer
 //   This hides that Strings share buffers when assigning by value or taking partial strings
 static void cloneIfShared(String &target) {
-	if (target.buffer.use_count() > 1) {
+	if (target.buffer.getUseCount() > 1) {
 		reallocateBuffer(target, target.length, true);
 	}
 }
@@ -1238,5 +1238,5 @@ bool dsr::string_isDouble(const ReadableString& source, bool allowWhiteSpace) {
 }
 
 int64_t dsr::string_getBufferUseCount(const ReadableString& text) {
-	return text.buffer.use_count();
+	return text.buffer.getUseCount();
 }

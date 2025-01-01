@@ -42,14 +42,14 @@ ImageRgbaU8::ImageRgbaU8() {}
 MediaMachine::MediaMachine() {}
 
 // Existing shared pointer
-ImageU8::ImageU8(const std::shared_ptr<ImageU8Impl>& image) : std::shared_ptr<ImageU8Impl>(image) {}
-ImageU16::ImageU16(const std::shared_ptr<ImageU16Impl>& image) : std::shared_ptr<ImageU16Impl>(image) {}
-ImageF32::ImageF32(const std::shared_ptr<ImageF32Impl>& image) : std::shared_ptr<ImageF32Impl>(image) {}
-ImageRgbaU8::ImageRgbaU8(const std::shared_ptr<ImageRgbaU8Impl>& image) : std::shared_ptr<ImageRgbaU8Impl>(image) {}
-MediaMachine::MediaMachine(const std::shared_ptr<VirtualMachine>& machine) : std::shared_ptr<VirtualMachine>(machine) {}
+ImageU8::ImageU8(const Handle<ImageU8Impl>& image) : Handle<ImageU8Impl>(image) {}
+ImageU16::ImageU16(const Handle<ImageU16Impl>& image) : Handle<ImageU16Impl>(image) {}
+ImageF32::ImageF32(const Handle<ImageF32Impl>& image) : Handle<ImageF32Impl>(image) {}
+ImageRgbaU8::ImageRgbaU8(const Handle<ImageRgbaU8Impl>& image) : Handle<ImageRgbaU8Impl>(image) {}
+MediaMachine::MediaMachine(const Handle<VirtualMachine>& machine) : Handle<VirtualMachine>(machine) {}
 
 // Shallow copy
-ImageU8::ImageU8(const ImageU8Impl& image) : std::shared_ptr<ImageU8Impl>(std::make_shared<ImageU8Impl>(image)) {}
-ImageU16::ImageU16(const ImageU16Impl& image) : std::shared_ptr<ImageU16Impl>(std::make_shared<ImageU16Impl>(image)) {}
-ImageF32::ImageF32(const ImageF32Impl& image) : std::shared_ptr<ImageF32Impl>(std::make_shared<ImageF32Impl>(image)) {}
-ImageRgbaU8::ImageRgbaU8(const ImageRgbaU8Impl& image) : std::shared_ptr<ImageRgbaU8Impl>(std::make_shared<ImageRgbaU8Impl>(image)) {}
+ImageU8::ImageU8(const ImageU8Impl& image) : Handle<ImageU8Impl>(handle_create<ImageU8Impl>(image)) {}
+ImageU16::ImageU16(const ImageU16Impl& image) : Handle<ImageU16Impl>(handle_create<ImageU16Impl>(image)) {}
+ImageF32::ImageF32(const ImageF32Impl& image) : Handle<ImageF32Impl>(handle_create<ImageF32Impl>(image)) {}
+ImageRgbaU8::ImageRgbaU8(const ImageRgbaU8Impl& image) : Handle<ImageRgbaU8Impl>(handle_create<ImageRgbaU8Impl>(image)) {}

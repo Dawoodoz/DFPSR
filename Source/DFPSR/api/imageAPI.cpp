@@ -39,19 +39,19 @@ using namespace dsr;
 
 // Constructors
 AlignedImageU8 dsr::image_create_U8(int32_t width, int32_t height) {
-	return AlignedImageU8(std::make_shared<ImageU8Impl>(width, height));
+	return AlignedImageU8(handle_create<ImageU8Impl>(width, height));
 }
 AlignedImageU16 dsr::image_create_U16(int32_t width, int32_t height) {
-	return AlignedImageU16(std::make_shared<ImageU16Impl>(width, height));
+	return AlignedImageU16(handle_create<ImageU16Impl>(width, height));
 }
 AlignedImageF32 dsr::image_create_F32(int32_t width, int32_t height) {
-	return AlignedImageF32(std::make_shared<ImageF32Impl>(width, height));
+	return AlignedImageF32(handle_create<ImageF32Impl>(width, height));
 }
 OrderedImageRgbaU8 dsr::image_create_RgbaU8(int32_t width, int32_t height) {
-	return OrderedImageRgbaU8(std::make_shared<ImageRgbaU8Impl>(width, height));
+	return OrderedImageRgbaU8(handle_create<ImageRgbaU8Impl>(width, height));
 }
 AlignedImageRgbaU8 dsr::image_create_RgbaU8_native(int32_t width, int32_t height, PackOrderIndex packOrderIndex) {
-	return AlignedImageRgbaU8(std::make_shared<ImageRgbaU8Impl>(width, height, packOrderIndex));
+	return AlignedImageRgbaU8(handle_create<ImageRgbaU8Impl>(width, height, packOrderIndex));
 }
 
 // Loading from data pointer
@@ -175,10 +175,10 @@ bool dsr::image_exists(const ImageU16& image)    { GET_OPTIONAL(true, false); }
 bool dsr::image_exists(const ImageF32& image)    { GET_OPTIONAL(true, false); }
 bool dsr::image_exists(const ImageRgbaU8& image) { GET_OPTIONAL(true, false); }
 
-int dsr::image_useCount(const ImageU8& image)     { return image.use_count(); }
-int dsr::image_useCount(const ImageU16& image)    { return image.use_count(); }
-int dsr::image_useCount(const ImageF32& image)    { return image.use_count(); }
-int dsr::image_useCount(const ImageRgbaU8& image) { return image.use_count(); }
+int dsr::image_useCount(const ImageU8& image)     { return image.getUseCount(); }
+int dsr::image_useCount(const ImageU16& image)    { return image.getUseCount(); }
+int dsr::image_useCount(const ImageF32& image)    { return image.getUseCount(); }
+int dsr::image_useCount(const ImageRgbaU8& image) { return image.getUseCount(); }
 
 PackOrderIndex dsr::image_getPackOrderIndex(const ImageRgbaU8& image) {
 	GET_OPTIONAL(image->packOrder.packOrderIndex, PackOrderIndex::RGBA);
@@ -222,7 +222,7 @@ void dsr::image_writePixel(ImageU8& image, int32_t x, int32_t y, int32_t color) 
 		if (INSIDE_XY) {
 			if (color < 0) { color = 0; }
 			if (color > 255) { color = 255; }
-			ImageU8Impl::writePixel_unsafe(*image, x, y, color);
+			ImageU8Impl::writePixel_unsafe(image.getReference(), x, y, color);
 		}
 	}
 }
@@ -231,28 +231,28 @@ void dsr::image_writePixel(ImageU16& image, int32_t x, int32_t y, int32_t color)
 		if (INSIDE_XY) {
 			if (color < 0) { color = 0; }
 			if (color > 65535) { color = 65535; }
-			ImageU16Impl::writePixel_unsafe(*image, x, y, color);
+			ImageU16Impl::writePixel_unsafe(image.getReference(), x, y, color);
 		}
 	}
 }
 void dsr::image_writePixel(ImageF32& image, int32_t x, int32_t y, float color) {
 	if (image) {
 		if (INSIDE_XY) {
-			ImageF32Impl::writePixel_unsafe(*image, x, y, color);
+			ImageF32Impl::writePixel_unsafe(image.getReference(), x, y, color);
 		}
 	}
 }
 void dsr::image_writePixel(ImageRgbaU8& image, int32_t x, int32_t y, const ColorRgbaI32& color) {
 	if (image) {
 		if (INSIDE_XY) {
-			ImageRgbaU8Impl::writePixel_unsafe(*image, x, y, image->packRgba(color.saturate()));
+			ImageRgbaU8Impl::writePixel_unsafe(image.getReference(), x, y, image->packRgba(color.saturate()));
 		}
 	}
 }
 int32_t dsr::image_readPixel_border(const ImageU8& image, int32_t x, int32_t y, int32_t border) {
 	if (image) {
 		if (INSIDE_XY) {
-			return ImageU8Impl::readPixel_unsafe(*image, x, y);
+			return ImageU8Impl::readPixel_unsafe(image.getReference(), x, y);
 		} else {
 			return border;
 		}
@@ -263,7 +263,7 @@ int32_t dsr::image_readPixel_border(const ImageU8& image, int32_t x, int32_t y, 
 int32_t dsr::image_readPixel_border(const ImageU16& image, int32_t x, int32_t y, int32_t border) {
 	if (image) {
 		if (INSIDE_XY) {
-			return ImageU16Impl::readPixel_unsafe(*image, x, y);
+			return ImageU16Impl::readPixel_unsafe(image.getReference(), x, y);
 		} else {
 			return border;
 		}
@@ -274,7 +274,7 @@ int32_t dsr::image_readPixel_border(const ImageU16& image, int32_t x, int32_t y,
 float dsr::image_readPixel_border(const ImageF32& image, int32_t x, int32_t y, float border) {
 	if (image) {
 		if (INSIDE_XY) {
-			return ImageF32Impl::readPixel_unsafe(*image, x, y);
+			return ImageF32Impl::readPixel_unsafe(image.getReference(), x, y);
 		} else {
 			return border;
 		}
@@ -285,7 +285,7 @@ float dsr::image_readPixel_border(const ImageF32& image, int32_t x, int32_t y, f
 ColorRgbaI32 dsr::image_readPixel_border(const ImageRgbaU8& image, int32_t x, int32_t y, const ColorRgbaI32& border) {
 	if (image) {
 		if (INSIDE_XY) {
-			return image->unpackRgba(ImageRgbaU8Impl::readPixel_unsafe(*image, x, y));
+			return image->unpackRgba(ImageRgbaU8Impl::readPixel_unsafe(image.getReference(), x, y));
 		} else {
 			return border; // Can return unsaturated colors as error codes
 		}
@@ -296,7 +296,7 @@ ColorRgbaI32 dsr::image_readPixel_border(const ImageRgbaU8& image, int32_t x, in
 uint8_t dsr::image_readPixel_clamp(const ImageU8& image, int32_t x, int32_t y) {
 	if (image) {
 		CLAMP_XY;
-		return ImageU8Impl::readPixel_unsafe(*image, x, y);
+		return ImageU8Impl::readPixel_unsafe(image.getReference(), x, y);
 	} else {
 		return 0;
 	}
@@ -304,7 +304,7 @@ uint8_t dsr::image_readPixel_clamp(const ImageU8& image, int32_t x, int32_t y) {
 uint16_t dsr::image_readPixel_clamp(const ImageU16& image, int32_t x, int32_t y) {
 	if (image) {
 		CLAMP_XY;
-		return ImageU16Impl::readPixel_unsafe(*image, x, y);
+		return ImageU16Impl::readPixel_unsafe(image.getReference(), x, y);
 	} else {
 		return 0;
 	}
@@ -312,7 +312,7 @@ uint16_t dsr::image_readPixel_clamp(const ImageU16& image, int32_t x, int32_t y)
 float dsr::image_readPixel_clamp(const ImageF32& image, int32_t x, int32_t y) {
 	if (image) {
 		CLAMP_XY;
-		return ImageF32Impl::readPixel_unsafe(*image, x, y);
+		return ImageF32Impl::readPixel_unsafe(image.getReference(), x, y);
 	} else {
 		return 0.0f;
 	}
@@ -320,7 +320,7 @@ float dsr::image_readPixel_clamp(const ImageF32& image, int32_t x, int32_t y) {
 ColorRgbaI32 dsr::image_readPixel_clamp(const ImageRgbaU8& image, int32_t x, int32_t y) {
 	if (image) {
 		CLAMP_XY;
-		return image->unpackRgba(ImageRgbaU8Impl::readPixel_unsafe(*image, x, y));
+		return image->unpackRgba(ImageRgbaU8Impl::readPixel_unsafe(image.getReference(), x, y));
 	} else {
 		return ColorRgbaI32();
 	}
@@ -328,7 +328,7 @@ ColorRgbaI32 dsr::image_readPixel_clamp(const ImageRgbaU8& image, int32_t x, int
 uint8_t dsr::image_readPixel_tile(const ImageU8& image, int32_t x, int32_t y) {
 	if (image) {
 		TILE_XY;
-		return ImageU8Impl::readPixel_unsafe(*image, x, y);
+		return ImageU8Impl::readPixel_unsafe(image.getReference(), x, y);
 	} else {
 		return 0;
 	}
@@ -336,7 +336,7 @@ uint8_t dsr::image_readPixel_tile(const ImageU8& image, int32_t x, int32_t y) {
 uint16_t dsr::image_readPixel_tile(const ImageU16& image, int32_t x, int32_t y) {
 	if (image) {
 		TILE_XY;
-		return ImageU16Impl::readPixel_unsafe(*image, x, y);
+		return ImageU16Impl::readPixel_unsafe(image.getReference(), x, y);
 	} else {
 		return 0;
 	}
@@ -344,7 +344,7 @@ uint16_t dsr::image_readPixel_tile(const ImageU16& image, int32_t x, int32_t y) 
 float dsr::image_readPixel_tile(const ImageF32& image, int32_t x, int32_t y) {
 	if (image) {
 		TILE_XY;
-		return ImageF32Impl::readPixel_unsafe(*image, x, y);
+		return ImageF32Impl::readPixel_unsafe(image.getReference(), x, y);
 	} else {
 		return 0.0f;
 	}
@@ -352,7 +352,7 @@ float dsr::image_readPixel_tile(const ImageF32& image, int32_t x, int32_t y) {
 ColorRgbaI32 dsr::image_readPixel_tile(const ImageRgbaU8& image, int32_t x, int32_t y) {
 	if (image) {
 		TILE_XY;
-		return image->unpackRgba(ImageRgbaU8Impl::readPixel_unsafe(*image, x, y));
+		return image->unpackRgba(ImageRgbaU8Impl::readPixel_unsafe(image.getReference(), x, y));
 	} else {
 		return ColorRgbaI32();
 	}
@@ -360,22 +360,22 @@ ColorRgbaI32 dsr::image_readPixel_tile(const ImageRgbaU8& image, int32_t x, int3
 
 void dsr::image_fill(ImageU8& image, int32_t color) {
 	if (image) {
-		imageImpl_draw_solidRectangle(*image, imageInternal::getBound(*image), color);
+		imageImpl_draw_solidRectangle(image.getReference(), imageInternal::getBound(image.getReference()), color);
 	}
 }
 void dsr::image_fill(ImageU16& image, int32_t color) {
 	if (image) {
-		imageImpl_draw_solidRectangle(*image, imageInternal::getBound(*image), color);
+		imageImpl_draw_solidRectangle(image.getReference(), imageInternal::getBound(image.getReference()), color);
 	}
 }
 void dsr::image_fill(ImageF32& image, float color) {
 	if (image) {
-		imageImpl_draw_solidRectangle(*image, imageInternal::getBound(*image), color);
+		imageImpl_draw_solidRectangle(image.getReference(), imageInternal::getBound(image.getReference()), color);
 	}
 }
 void dsr::image_fill(ImageRgbaU8& image, const ColorRgbaI32& color) {
 	if (image) {
-		imageImpl_draw_solidRectangle(*image, imageInternal::getBound(*image), color);
+		imageImpl_draw_solidRectangle(image.getReference(), imageInternal::getBound(image.getReference()), color);
 	}
 }
 
@@ -458,7 +458,7 @@ AlignedImageU8 dsr::image_get_alpha(const ImageRgbaU8& image) {
 }
 
 static inline int32_t readColor(const ImageU8& channel, int x, int y) {
-	return ImageU8Impl::readPixel_unsafe(*channel, x, y);
+	return ImageU8Impl::readPixel_unsafe(channel.getReference(), x, y);
 }
 static inline int32_t readColor(int32_t color, int x, int y) {
 	return color;
@@ -675,10 +675,10 @@ AlignedImageU8 dsr::image_fromAscii(const String& content) {
 template <typename IMAGE_TYPE, typename VALUE_TYPE>
 static inline IMAGE_TYPE subImage_template(const IMAGE_TYPE& image, const IRect& region) {
 	if (image) {
-		IRect cut = IRect::cut(imageInternal::getBound(*image), region);
+		IRect cut = IRect::cut(imageInternal::getBound(image.getReference()), region);
 		if (cut.hasArea()) {
 			intptr_t newOffset = image->startOffset + (cut.left() * image->pixelSize) + (cut.top() * image->stride);
-			return IMAGE_TYPE(std::make_shared<VALUE_TYPE>(cut.width(), cut.height(), image->stride, image->buffer, newOffset));
+			return IMAGE_TYPE(handle_create<VALUE_TYPE>(cut.width(), cut.height(), image->stride, image->buffer, newOffset));
 		}
 	}
 	return IMAGE_TYPE(); // Null if where are no overlapping pixels
@@ -687,10 +687,10 @@ static inline IMAGE_TYPE subImage_template(const IMAGE_TYPE& image, const IRect&
 template <typename IMAGE_TYPE, typename VALUE_TYPE>
 static inline IMAGE_TYPE subImage_template_withPackOrder(const IMAGE_TYPE& image, const IRect& region) {
 	if (image) {
-		IRect cut = IRect::cut(imageInternal::getBound(*image), region);
+		IRect cut = IRect::cut(imageInternal::getBound(image.getReference()), region);
 		if (cut.hasArea()) {
 			intptr_t newOffset = image->startOffset + (cut.left() * image->pixelSize) + (cut.top() * image->stride);
-			return IMAGE_TYPE(std::make_shared<VALUE_TYPE>(cut.width(), cut.height(), image->stride, image->buffer, newOffset, image->packOrder));
+			return IMAGE_TYPE(handle_create<VALUE_TYPE>(cut.width(), cut.height(), image->stride, image->buffer, newOffset, image->packOrder));
 		}
 	}
 	return IMAGE_TYPE(); // Null if where are no overlapping pixels
@@ -741,28 +741,28 @@ ELEMENT_TYPE maxDifference_template(const IMAGE_TYPE& imageA, const IMAGE_TYPE& 
 }
 uint8_t dsr::image_maxDifference(const ImageU8& imageA, const ImageU8& imageB) {
 	if (imageA && imageB) {
-		return maxDifference_template<ImageU8Impl, 1, uint8_t>(*imageA, *imageB);
+		return maxDifference_template<ImageU8Impl, 1, uint8_t>(imageA.getReference(), imageB.getReference());
 	} else {
 		return std::numeric_limits<uint8_t>::infinity();
 	}
 }
 uint16_t dsr::image_maxDifference(const ImageU16& imageA, const ImageU16& imageB) {
 	if (imageA && imageB) {
-		return maxDifference_template<ImageU16Impl, 1, uint16_t>(*imageA, *imageB);
+		return maxDifference_template<ImageU16Impl, 1, uint16_t>(imageA.getReference(), imageB.getReference());
 	} else {
 		return std::numeric_limits<uint16_t>::infinity();
 	}
 }
 float dsr::image_maxDifference(const ImageF32& imageA, const ImageF32& imageB) {
 	if (imageA && imageB) {
-		return maxDifference_template<ImageF32Impl, 1, float>(*imageA, *imageB);
+		return maxDifference_template<ImageF32Impl, 1, float>(imageA.getReference(), imageB.getReference());
 	} else {
 		return std::numeric_limits<float>::infinity();
 	}
 }
 uint8_t dsr::image_maxDifference(const ImageRgbaU8& imageA, const ImageRgbaU8& imageB) {
 	if (imageA && imageB) {
-		return maxDifference_template<ImageRgbaU8Impl, 4, uint8_t>(*imageA, *imageB);
+		return maxDifference_template<ImageRgbaU8Impl, 4, uint8_t>(imageA.getReference(), imageB.getReference());
 	} else {
 		return std::numeric_limits<uint8_t>::infinity();
 	}
@@ -770,35 +770,35 @@ uint8_t dsr::image_maxDifference(const ImageRgbaU8& imageA, const ImageRgbaU8& i
 
 SafePointer<uint8_t> dsr::image_getSafePointer(const ImageU8& image, int rowIndex) {
 	if (image) {
-		return imageInternal::getSafeData<uint8_t>(image.get(), rowIndex);
+		return imageInternal::getSafeData<uint8_t>(image.getReference(), rowIndex);
 	} else {
 		return SafePointer<uint8_t>();
 	}
 }
 SafePointer<uint16_t> dsr::image_getSafePointer(const ImageU16& image, int rowIndex) {
 	if (image) {
-		return imageInternal::getSafeData<uint16_t>(image.get(), rowIndex);
+		return imageInternal::getSafeData<uint16_t>(image.getReference(), rowIndex);
 	} else {
 		return SafePointer<uint16_t>();
 	}
 }
 SafePointer<float> dsr::image_getSafePointer(const ImageF32& image, int rowIndex) {
 	if (image) {
-		return imageInternal::getSafeData<float>(image.get(), rowIndex);
+		return imageInternal::getSafeData<float>(image.getReference(), rowIndex);
 	} else {
 		return SafePointer<float>();
 	}
 }
 SafePointer<uint32_t> dsr::image_getSafePointer(const ImageRgbaU8& image, int rowIndex) {
 	if (image) {
-		return imageInternal::getSafeData<uint32_t>(image.get(), rowIndex);
+		return imageInternal::getSafeData<uint32_t>(image.getReference(), rowIndex);
 	} else {
 		return SafePointer<uint32_t>();
 	}
 }
 SafePointer<uint8_t> dsr::image_getSafePointer_channels(const ImageRgbaU8& image, int rowIndex) {
 	if (image) {
-		return imageInternal::getSafeData<uint8_t>(image.get(), rowIndex);
+		return imageInternal::getSafeData<uint8_t>(image.getReference(), rowIndex);
 	} else {
 		return SafePointer<uint8_t>();
 	}
@@ -819,28 +819,28 @@ void dsr::image_dangerous_replaceDestructor(ImageRgbaU8& image, const std::funct
 
 uint8_t* dsr::image_dangerous_getData(const ImageU8& image) {
 	if (image) {
-		return imageInternal::getSafeData<uint8_t>(*image).getUnsafe();
+		return imageInternal::getSafeData<uint8_t>(image.getReference()).getUnsafe();
 	} else {
 		return nullptr;
 	}
 }
 uint8_t* dsr::image_dangerous_getData(const ImageU16& image) {
 	if (image) {
-		return imageInternal::getSafeData<uint8_t>(*image).getUnsafe();
+		return imageInternal::getSafeData<uint8_t>(image.getReference()).getUnsafe();
 	} else {
 		return nullptr;
 	}
 }
 uint8_t* dsr::image_dangerous_getData(const ImageF32& image) {
 	if (image) {
-		return imageInternal::getSafeData<uint8_t>(*image).getUnsafe();
+		return imageInternal::getSafeData<uint8_t>(image.getReference()).getUnsafe();
 	} else {
 		return nullptr;
 	}
 }
 uint8_t* dsr::image_dangerous_getData(const ImageRgbaU8& image) {
 	if (image) {
-		return imageInternal::getSafeData<uint8_t>(*image).getUnsafe();
+		return imageInternal::getSafeData<uint8_t>(image.getReference()).getUnsafe();
 	} else {
 		return nullptr;
 	}

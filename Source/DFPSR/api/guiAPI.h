@@ -31,7 +31,7 @@
 
 // createBackendWindow should be implemented outside of the core framework
 //   Choose one of the window backends in SDK/native to compile and link with your application.
-// std::shared_ptr<dsr::BackendWindow> createBackendWindow(const dsr::String& title, int width, int height);
+// Handle<dsr::BackendWindow> createBackendWindow(const dsr::String& title, int width, int height);
 
 // Constness on handles doesn't propagate to any inner types
 //   "const Comopnent&" only means that the writable Component handle can be created from a sub-expression

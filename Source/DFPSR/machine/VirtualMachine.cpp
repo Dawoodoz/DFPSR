@@ -26,7 +26,7 @@
 
 using namespace dsr;
 
-VirtualMachine::VirtualMachine(const ReadableString& code, const std::shared_ptr<PlanarMemory>& memory,
+VirtualMachine::VirtualMachine(const ReadableString& code, const Handle<PlanarMemory>& memory,
   const InsSig* machineInstructions, int32_t machineInstructionCount,
   const VMTypeDef* machineTypes, int32_t machineTypeCount)
 : memory(memory), machineInstructions(machineInstructions), machineInstructionCount(machineInstructionCount),
@@ -466,7 +466,7 @@ void VirtualMachine::executeMethod(int methodIndex) {
 				}
 				printText(U")");
 			}
-			word->operation(*this, *(this->memory.get()), word->args);
+			word->operation(*this, this->memory.getReference(), word->args);
 			if (signature) {
 				if (signature->targetCount > 0) {
 					printText(U" -> ");
@@ -480,7 +480,7 @@ void VirtualMachine::executeMethod(int methodIndex) {
 			}
 			printText(U"\n");
 		#else
-			word->operation(*this, *(this->memory.get()), word->args);
+			word->operation(*this, this->memory.getReference(), word->args);
 		#endif
 	}
 	#ifdef VIRTUAL_MACHINE_PROFILE

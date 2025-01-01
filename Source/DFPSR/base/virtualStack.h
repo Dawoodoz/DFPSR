@@ -47,7 +47,7 @@ namespace dsr {
 		UnsafeAllocation result = virtualStack_push(paddedSize, memory_createAlignmentAndMask((uintptr_t)alignof(T)));
 		// Return a safe pointer to the allocated data.
 		#ifdef SAFE_POINTER_CHECKS
-			return SafePointer<T>(name, (T*)(result.data), (intptr_t)paddedSize, result.header);
+			return SafePointer<T>(result.header, result.header->allocationIdentity, name, (T*)(result.data), (intptr_t)paddedSize);
 		#else
 			return SafePointer<T>(name, (T*)(result.data), (intptr_t)paddedSize);
 		#endif

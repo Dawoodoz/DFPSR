@@ -42,7 +42,7 @@ namespace dsr {
 	//     image_getHeight(atlas) >= 16
 	RasterFont font_createLatinOne(const String& name, const ImageU8& atlas);
 	// Post-condition: Returns true iff font exists
-	bool font_exists(const RasterFont font);
+	inline bool font_exists(const RasterFont font) { return font.exists(); }
 	// Pre-condition: font must exist
 	// Post-condition: Returns font's name, as given on construction
 	String font_getName(const RasterFont font);

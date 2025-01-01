@@ -40,9 +40,9 @@ RasterFontImpl::RasterFontImpl(const String& name, int32_t size, int32_t spacing
 
 RasterFontImpl::~RasterFontImpl() {}
 
-std::shared_ptr<RasterFontImpl> RasterFontImpl::createLatinOne(const String& name, const ImageU8& atlas) {
+Handle<RasterFontImpl> RasterFontImpl::createLatinOne(const String& name, const ImageU8& atlas) {
 	int32_t size = image_getHeight(atlas) / 16;
-	std::shared_ptr<RasterFontImpl> result = std::make_shared<RasterFontImpl>(name, size, size / 16, size / 2);
+	Handle<RasterFontImpl> result = handle_create<RasterFontImpl>(name, size, size / 16, size / 2);
 	result->registerLatinOne16x16(atlas);
 	return result;
 }

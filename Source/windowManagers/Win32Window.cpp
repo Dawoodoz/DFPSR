@@ -728,7 +728,6 @@ void Win32Window::showCanvas() {
 	this->redraw(this->hwnd, true, true);
 }
 
-std::shared_ptr<dsr::BackendWindow> createBackendWindow(const dsr::String& title, int width, int height) {
-	auto backend = std::make_shared<Win32Window>(title, width, height);
-	return std::dynamic_pointer_cast<dsr::BackendWindow>(backend);
+dsr::Handle<dsr::BackendWindow> createBackendWindow(const dsr::String& title, int width, int height) {
+	return dsr::handle_create<Win32Window>(title, width, height);
 }

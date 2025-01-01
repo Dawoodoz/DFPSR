@@ -39,33 +39,33 @@ using namespace dsr;
 
 void dsr::draw_rectangle(ImageU8& image, const IRect& bound, int color) {
 	if (image) {
-		imageImpl_draw_solidRectangle(*image, bound, color);
+		imageImpl_draw_solidRectangle(image.getReference(), bound, color);
 	}
 }
 void dsr::draw_rectangle(ImageF32& image, const IRect& bound, float color) {
 	if (image) {
-		imageImpl_draw_solidRectangle(*image, bound, color);
+		imageImpl_draw_solidRectangle(image.getReference(), bound, color);
 	}
 }
 void dsr::draw_rectangle(ImageRgbaU8& image, const IRect& bound, const ColorRgbaI32& color) {
 	if (image) {
-		imageImpl_draw_solidRectangle(*image, bound, color);
+		imageImpl_draw_solidRectangle(image.getReference(), bound, color);
 	}
 }
 
 void dsr::draw_line(ImageU8& image, int32_t x1, int32_t y1, int32_t x2, int32_t y2, int color) {
 	if (image) {
-		imageImpl_draw_line(*image, x1, y1, x2, y2, color);
+		imageImpl_draw_line(image.getReference(), x1, y1, x2, y2, color);
 	}
 }
 void dsr::draw_line(ImageF32& image, int32_t x1, int32_t y1, int32_t x2, int32_t y2, float color) {
 	if (image) {
-		imageImpl_draw_line(*image, x1, y1, x2, y2, color);
+		imageImpl_draw_line(image.getReference(), x1, y1, x2, y2, color);
 	}
 }
 void dsr::draw_line(ImageRgbaU8& image, int32_t x1, int32_t y1, int32_t x2, int32_t y2, const ColorRgbaI32& color) {
 	if (image) {
-		imageImpl_draw_line(*image, x1, y1, x2, y2, color);
+		imageImpl_draw_line(image.getReference(), x1, y1, x2, y2, color);
 	}
 }
 
@@ -76,7 +76,7 @@ void dsr::draw_line(ImageRgbaU8& image, int32_t x1, int32_t y1, int32_t x2, int3
 #define DRAW_COPY_WRAPPER(TARGET_TYPE, SOURCE_TYPE) \
 	void dsr::draw_copy(TARGET_TYPE& target, const SOURCE_TYPE& source, int32_t left, int32_t top) { \
 		if (target && source) { \
-			imageImpl_drawCopy(*target, *source, left, top); \
+			imageImpl_drawCopy(target.getReference(), source.getReference(), left, top); \
 		} \
 	}
 DRAW_COPY_WRAPPER(ImageRgbaU8, ImageRgbaU8);
@@ -95,56 +95,56 @@ DRAW_COPY_WRAPPER(ImageF32, ImageU16);
 
 void dsr::draw_alphaFilter(ImageRgbaU8& target, const ImageRgbaU8& source, int32_t left, int32_t top) {
 	if (target && source) {
-		imageImpl_drawAlphaFilter(*target, *source, left, top);
+		imageImpl_drawAlphaFilter(target.getReference(), source.getReference(), left, top);
 	}
 }
 void dsr::draw_maxAlpha(ImageRgbaU8& target, const ImageRgbaU8& source, int32_t left, int32_t top, int32_t sourceAlphaOffset) {
 	if (target && source) {
-		imageImpl_drawMaxAlpha(*target, *source, left, top, sourceAlphaOffset);
+		imageImpl_drawMaxAlpha(target.getReference(), source.getReference(), left, top, sourceAlphaOffset);
 	}
 }
 void dsr::draw_alphaClip(ImageRgbaU8& target, const ImageRgbaU8& source, int32_t left, int32_t top, int32_t threshold) {
 	if (target && source) {
-		imageImpl_drawAlphaClip(*target, *source, left, top, threshold);
+		imageImpl_drawAlphaClip(target.getReference(), source.getReference(), left, top, threshold);
 	}
 }
 void dsr::draw_silhouette(ImageRgbaU8& target, const ImageU8& source, const ColorRgbaI32& color, int32_t left, int32_t top) {
 	if (target && source) {
-		imageImpl_drawSilhouette(*target, *source, color, left, top);
+		imageImpl_drawSilhouette(target.getReference(), source.getReference(), color, left, top);
 	}
 }
 void dsr::draw_higher(ImageU16& targetHeight, const ImageU16& sourceHeight, int32_t left, int32_t top, int32_t sourceHeightOffset) {
 	if (targetHeight && sourceHeight) {
-		imageImpl_drawHigher(*targetHeight, *sourceHeight, left, top, sourceHeightOffset);
+		imageImpl_drawHigher(targetHeight.getReference(), sourceHeight.getReference(), left, top, sourceHeightOffset);
 	}
 }
 void dsr::draw_higher(ImageU16& targetHeight, const ImageU16& sourceHeight, ImageRgbaU8& targetA, const ImageRgbaU8& sourceA,
   int32_t left, int32_t top, int32_t sourceHeightOffset) {
 	if (targetHeight && sourceHeight && targetA && sourceA) {
-		imageImpl_drawHigher(*targetHeight, *sourceHeight, *targetA, *sourceA, left, top, sourceHeightOffset);
+		imageImpl_drawHigher(targetHeight.getReference(), sourceHeight.getReference(), targetA.getReference(), sourceA.getReference(), left, top, sourceHeightOffset);
 	}
 }
 void dsr::draw_higher(ImageU16& targetHeight, const ImageU16& sourceHeight, ImageRgbaU8& targetA, const ImageRgbaU8& sourceA,
   ImageRgbaU8& targetB, const ImageRgbaU8& sourceB, int32_t left, int32_t top, int32_t sourceHeightOffset) {
 	if (targetHeight && sourceHeight && targetA && sourceA && targetB && sourceB) {
-		imageImpl_drawHigher(*targetHeight, *sourceHeight, *targetA, *sourceA, *targetB, *sourceB, left, top, sourceHeightOffset);
+		imageImpl_drawHigher(targetHeight.getReference(), sourceHeight.getReference(), targetA.getReference(), sourceA.getReference(), targetB.getReference(), sourceB.getReference(), left, top, sourceHeightOffset);
 	}
 }
 void dsr::draw_higher(ImageF32& targetHeight, const ImageF32& sourceHeight, int32_t left, int32_t top, float sourceHeightOffset) {
 	if (targetHeight && sourceHeight) {
-		imageImpl_drawHigher(*targetHeight, *sourceHeight, left, top, sourceHeightOffset);
+		imageImpl_drawHigher(targetHeight.getReference(), sourceHeight.getReference(), left, top, sourceHeightOffset);
 	}
 }
 void dsr::draw_higher(ImageF32& targetHeight, const ImageF32& sourceHeight, ImageRgbaU8& targetA, const ImageRgbaU8& sourceA,
   int32_t left, int32_t top, float sourceHeightOffset) {
 	if (targetHeight && sourceHeight && targetA && sourceA) {
-		imageImpl_drawHigher(*targetHeight, *sourceHeight, *targetA, *sourceA, left, top, sourceHeightOffset);
+		imageImpl_drawHigher(targetHeight.getReference(), sourceHeight.getReference(), targetA.getReference(), sourceA.getReference(), left, top, sourceHeightOffset);
 	}
 }
 void dsr::draw_higher(ImageF32& targetHeight, const ImageF32& sourceHeight, ImageRgbaU8& targetA, const ImageRgbaU8& sourceA,
   ImageRgbaU8& targetB, const ImageRgbaU8& sourceB, int32_t left, int32_t top, float sourceHeightOffset) {
 	if (targetHeight && sourceHeight && targetA && sourceA && targetB && sourceB) {
-		imageImpl_drawHigher(*targetHeight, *sourceHeight, *targetA, *sourceA, *targetB, *sourceB, left, top, sourceHeightOffset);
+		imageImpl_drawHigher(targetHeight.getReference(), sourceHeight.getReference(), targetA.getReference(), sourceA.getReference(), targetB.getReference(), sourceB.getReference(), left, top, sourceHeightOffset);
 	}
 }
 

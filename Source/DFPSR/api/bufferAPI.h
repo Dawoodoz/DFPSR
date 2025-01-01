@@ -29,7 +29,7 @@
 #include <functional>
 #include "../base/SafePointer.h"
 #include "../settings.h"
-#include "../base/heap.h"
+#include "../base/Handle.h"
 
 // The types of buffer handles to consider when designing algorithms:
 // * Null handle suggesting that there is nothing, such as when loading a file failed.
@@ -55,7 +55,7 @@ namespace dsr {
 	// Guarantees that internal addresses will not be invalidated during its lifetime.
 	//   Just remember to always keep a handle together with any pointers to the data to prevent the buffer from being freed.
 	class BufferImpl;
-	using Buffer = std::shared_ptr<BufferImpl>;
+	using Buffer = Handle<BufferImpl>;
 
 	// Side-effect: Creates a new buffer head regardless of newSize, but only allocates a zeroed data allocation if newSize > 0.
 	// Post-condition: Returns a handle to the new buffer, which is initialized to zeroes.
@@ -76,11 +76,11 @@ namespace dsr {
 	// Sets the allocation's destructor, to be called when there are no more reference counted pointers to the buffer.
 	// Pre-condition: The buffer exists.
 	//   If the buffer has a head but no data allocation, the command will be ignored because there is no allocation to delete.
-	void buffer_replaceDestructor(const Buffer &buffer, const std::function<void(uint8_t *)>& newDestructor);
+	void buffer_replaceDestructor(Buffer &buffer, const std::function<void(uint8_t *)>& newDestructor);
 
 	// Returns true iff buffer exists, even if it is empty without any data allocation.
 	inline bool buffer_exists(const Buffer &buffer) {
-		return buffer.get() != nullptr;
+		return buffer.exists();
 	}
 
 	// Returns a clone of the buffer.
@@ -110,7 +110,12 @@ namespace dsr {
 			return SafePointer<T>();
 		} else {
 			uint8_t *data = buffer_dangerous_getUnsafeData(buffer);
-			return SafePointer<T>(name, (T*)data, buffer_getSize(buffer), (T*)data, heap_getHeader(data));
+			#ifdef SAFE_POINTER_CHECKS
+				AllocationHeader *header = heap_getHeader(data);
+				return SafePointer<T>(header, header->allocationIdentity, name, (T*)data, buffer_getSize(buffer), (T*)data);
+			#else
+				return SafePointer<T>(name, (T*)data, buffer_getSize(buffer), (T*)data);
+			#endif
 		}
 	}
 

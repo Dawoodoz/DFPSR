@@ -28,10 +28,6 @@
 
 namespace dsr {
 
-bool font_exists(const RasterFont font) {
-	return font.get() != nullptr;
-}
-
 static const RasterFont defaultFont = RasterFontImpl::createLatinOne(U"UbuntuMono", image_fromAscii(defaultFontAscii));
 
 RasterFont font_getDefault() {

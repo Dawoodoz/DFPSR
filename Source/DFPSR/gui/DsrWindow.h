@@ -44,10 +44,10 @@ public:
 	// TODO: Should there be a separate interface context object to reduce the number of variables placed in each component?
 	//       If they all store a handle to the backend window, they could instead have a generic interface object storing pointers to the window, root, active components, et cetera...
 	// Window backend, which the API is allowed to call directly to bypass DsrWindow for trivial operations.
-	std::shared_ptr<BackendWindow> backend;
+	Handle<BackendWindow> backend;
 private:
 	// The root component
-	std::shared_ptr<VisualComponent> mainPanel;
+	Handle<VisualComponent> mainPanel;
 	AlignedImageF32 depthBuffer;
 	// The inner window dimensions that are synchronized with the canvas.
 	//   The backend on the contrary may have its size changed before the resize event has been fetched.
@@ -57,7 +57,7 @@ private:
 	IVector2D lastMousePosition;
 public:
 	// Constructor
-	explicit DsrWindow(std::shared_ptr<BackendWindow> backend);
+	explicit DsrWindow(Handle<BackendWindow> backend);
 	// Destructor
 	virtual ~DsrWindow();
 public:
@@ -65,19 +65,19 @@ public:
 		void applyLayout();
 
 		// Component getters
-		std::shared_ptr<VisualComponent> findComponentByName(ReadableString name) const;
+		Handle<VisualComponent> findComponentByName(ReadableString name) const;
 		template <typename T>
-		std::shared_ptr<T> findComponentByName(ReadableString name) const {
-			return std::dynamic_pointer_cast<T>(this->findComponentByName(name));
+		Handle<T> findComponentByName(ReadableString name) const {
+			return handle_dynamicCast<T>(this->findComponentByName(name));
 		}
-		std::shared_ptr<VisualComponent> findComponentByNameAndIndex(ReadableString name, int index) const;
+		Handle<VisualComponent> findComponentByNameAndIndex(ReadableString name, int index) const;
 		template <typename T>
-		std::shared_ptr<T> findComponentByNameAndIndex(ReadableString name, int index) const {
-			return std::dynamic_pointer_cast<T>(this->findComponentByNameAndIndex(name, index));
+		Handle<T> findComponentByNameAndIndex(ReadableString name, int index) const {
+			return handle_dynamicCast<T>(this->findComponentByNameAndIndex(name, index));
 		}
 
 		// Get the root component that contains all other components in the window
-		std::shared_ptr<VisualComponent> getRootComponent() const;
+		Handle<VisualComponent> getRootComponent() const;
 		void resetInterface();
 		void loadInterfaceFromString(String layout, const ReadableString &fromPath);
 		String saveInterfaceToString();
