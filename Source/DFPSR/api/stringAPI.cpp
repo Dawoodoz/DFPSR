@@ -27,7 +27,6 @@
 #include <fstream>
 #include <streambuf>
 #include <cstring>
-#include <string>
 #include <stdexcept>
 #include "stringAPI.h"
 #include "../api/fileAPI.h"

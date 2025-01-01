@@ -27,6 +27,7 @@
 #include <cstdint>
 #include <iostream>
 #include <sstream>
+#include <string>
 #include <functional>
 #include "bufferAPI.h"
 #include "../collection/List.h"
@@ -84,7 +85,6 @@ public:
 	virtual ~ReadableString();
 public:
 	// Converting to unknown character encoding using only the ascii character subset
-	// A bug in GCC linking forces these to be virtual
 	virtual std::ostream& toStream(std::ostream& out) const;
 	virtual std::string toStdString() const;
 };
