@@ -66,6 +66,7 @@ class String;
 //   because it's not allowed to create a new allocation for the UTF-32 conversion.
 class ReadableString {
 IMPL_ACCESS:
+	// TODO: Replace the buffer with a Handle of char32_t for more useful debug information.
 	// A reference counted pointer to the buffer to allow passing strings around without having to clone the buffer each time
 	// ReadableString only uses it for reference counting but String use it for reallocating
 	Buffer buffer;

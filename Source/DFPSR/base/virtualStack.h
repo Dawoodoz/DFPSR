@@ -36,13 +36,13 @@ namespace dsr {
 	UnsafeAllocation virtualStack_push(uint64_t paddedSize, uintptr_t alignmentAndMask);
 
 	// A simpler way to get the correct alignment is to allocate a number of elements with a specific type.
-	// TODO: Create another function for manual alignment exceeding the type's alignment using another template argument.
-	// TODO: Let the address offset be negated and start with the allocation size going down to zero,
-	//       so that rounding up addresses can be done by simply masking the least significant bits.
+	// Pre-condition:
+	//   T's size must be rounded by its own alignment, or alignof(T) will be violated when accessed as an array.
+	//   sizeof(T) % alignof(T) == 0
 	template <typename T>
 	SafePointer<T> virtualStack_push(uint64_t elementCount, const char *name) {
 		// Calculate element size and multiply by element count to get the total size.
-		uint64_t paddedSize = memory_getPaddedSize<T>() * elementCount;
+		uint64_t paddedSize = sizeof(T) * elementCount;
 		// Allocate the data with the amount of alignment requested by the element type T.
 		UnsafeAllocation result = virtualStack_push(paddedSize, memory_createAlignmentAndMask((uintptr_t)alignof(T)));
 		// Return a safe pointer to the allocated data.

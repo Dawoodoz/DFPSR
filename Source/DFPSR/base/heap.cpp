@@ -1,6 +1,6 @@
 // zlib open source license
 //
-// Copyright (c) 2024 David Forsgren Piuva
+// Copyright (c) 2024 to 2025 David Forsgren Piuva
 // 
 // This software is provided 'as-is', without any express or implied
 // warranty. In no event will the authors be held liable for any damages
@@ -72,10 +72,22 @@ namespace dsr {
 
 	static const uint8_t heapFlag_recycled = 1 << 0;
 	struct HeapHeader : public AllocationHeader {
-		HeapHeader *nextRecycled = nullptr;
-		HeapDestructor destructor = nullptr;
+		union {
+			// When allocated
+			uintptr_t usedSize;
+			// When recycled
+			HeapHeader *nextRecycled = nullptr;
+		};
+		HeapDestructor destructor;
 		uintptr_t useCount = 0; // How many handles that point to the data.
+		#ifdef SAFE_POINTER_CHECKS
+			// TODO: Replace the name with a function pointer serializing the buffer's data into a human readable format.
+			//       Because it is only for the debug version, lambdas with capture may be used to store additional information.
+			//       If string_toStreamIndented has been defined for the type, it should try to use it if no serialization function was provided manually.
+			const char *name = nullptr; // Debug name of the allocation.
+		#endif
 		// TODO: Reset to zero when allocating and let the caller place additional information here.
+		//       This could be used to let images be value types and still contain the stride and a pointer to a texture.
 		//void *userPtrA = nullptr;
 		//void *userPtrB = nullptr;
 		//void *userPtrC = nullptr;
@@ -83,50 +95,117 @@ namespace dsr {
 		uint8_t flags = 0; // Flags use the heapFlag_ prefix.
 		uint8_t binIndex; // Recycling bin index to use when freeing the allocation.
 		HeapHeader(uintptr_t totalSize, uint8_t binIndex)
-		: AllocationHeader(totalSize, false), binIndex(binIndex) {}
+		: AllocationHeader(totalSize, false),
+		  binIndex(binIndex) {}
+		inline uintptr_t getUsedSize() {
+			if (this->flags & heapFlag_recycled) {
+				return 0;
+			} else {
+				return this->usedSize;
+			}
+		}
+		inline void setUsedSize(uintptr_t size) {
+			if (!(this->flags & heapFlag_recycled)) {
+				this->usedSize = size;
+			}
+		}
 	};
 	static const uintptr_t heapHeaderPaddedSize = memory_getPaddedSize(sizeof(HeapHeader), heapAlignment);
 
-	AllocationHeader *heap_getHeader(uint8_t const * const allocation) {
-		return (AllocationHeader*)(allocation - heapHeaderPaddedSize);
+	AllocationHeader *heap_getHeader(void * const allocation) {
+		return (AllocationHeader*)((uint8_t*)allocation - heapHeaderPaddedSize);
 	}
 
-	inline HeapHeader *headerFromAllocation(uint8_t const * const allocation) {
-		return (HeapHeader*)(allocation - heapHeaderPaddedSize);
+	inline HeapHeader *headerFromAllocation(void const * const allocation) {
+		return (HeapHeader *)((uint8_t*)allocation - heapHeaderPaddedSize);
 	}
 
-	inline uint8_t *allocationFromHeader(HeapHeader const * const header) {
-		return (uint8_t*)header + heapHeaderPaddedSize;
+	inline void *allocationFromHeader(HeapHeader * const header) {
+		return ((uint8_t*)header) + heapHeaderPaddedSize;
+	}
+	inline void const *allocationFromHeader(HeapHeader const * const header) {
+		return ((uint8_t const *)header) + heapHeaderPaddedSize;
 	}
 
-	void heap_increaseUseCount(uint8_t const * const allocation) {
-		HeapHeader *header = headerFromAllocation(allocation);
-		if (lockDepth == 0) memoryLock.lock();
-		header->useCount++;
-		if (lockDepth == 0) memoryLock.unlock();
-	}
-
-	void heap_decreaseUseCount(uint8_t const * const allocation) {
-		HeapHeader *header = headerFromAllocation(allocation);
-		if (lockDepth == 0) memoryLock.lock();
-		if (header->useCount == 0) {
-			printf("Heap error: Decreasing a count that is already zero!\n");
-		} else {
-			header->useCount--;
-			if (header->useCount == 0) {
-				lockDepth++;
-				heap_free((uint8_t*)allocation);
-				lockDepth--;
+	#ifdef SAFE_POINTER_CHECKS
+		void heap_setAllocationName(void * const allocation, const char *name) {
+			if (allocation != nullptr) {
+				HeapHeader *header = headerFromAllocation(allocation);
+				header->name = name;
 			}
 		}
-		if (lockDepth == 0) memoryLock.unlock();
+
+		const char * heap_getAllocationName(void * const allocation) {
+			if (allocation == nullptr) {
+				return "none";
+			} else {
+				HeapHeader *header = headerFromAllocation(allocation);
+				return header->name;
+			}
+		}
+	#endif
+
+	uintptr_t heap_getSize(void const * const allocation) {
+		if (allocation == nullptr) {
+			return 0;
+		} else {
+			HeapHeader *header = headerFromAllocation(allocation);
+			return header->getUsedSize();
+		}
 	}
 
-	uintptr_t heap_getUseCount(uint8_t const * const allocation) {
+	void heap_setSize(void * const allocation, uintptr_t size) {
+		if (allocation != nullptr) {
+			HeapHeader *header = headerFromAllocation(allocation);
+			// TODO: Warn if size exceeds the available space and adjust to the limit.
+			return header->setUsedSize(size);
+		}
+	}
+
+	void heap_increaseUseCount(void const * const allocation) {
+		if (allocation != nullptr) {
+			HeapHeader *header = headerFromAllocation(allocation);
+			if (lockDepth == 0) memoryLock.lock();
+			printf("heap_increaseUseCount called for allocation @ %ld\n", (uintptr_t)allocation);
+			printf("    Use count: %ld -> %ld\n", header->useCount, header->useCount + 1);
+			#ifdef SAFE_POINTER_CHECKS
+				printf("    ID: %lu\n", header->allocationIdentity);
+				printf("    Name: %s\n", header->name ? header->name : "<nameless>");
+			#endif
+			header->useCount++;
+			if (lockDepth == 0) memoryLock.unlock();
+		}
+	}
+
+	void heap_decreaseUseCount(void const * const allocation) {
+		if (allocation != nullptr) {
+			HeapHeader *header = headerFromAllocation(allocation);
+			if (lockDepth == 0) memoryLock.lock();
+			printf("heap_decreaseUseCount called for allocation @ %ld\n", (uintptr_t)allocation);
+			printf("    Use count: %ld -> %ld\n", header->useCount, header->useCount - 1);
+			#ifdef SAFE_POINTER_CHECKS
+				printf("    ID: %lu\n", header->allocationIdentity);
+				printf("    Name: %s\n", header->name ? header->name : "<nameless>");
+			#endif
+			if (header->useCount == 0) {
+				printf("Heap error: Decreasing a count that is already zero!\n");
+			} else {
+				header->useCount--;
+				if (header->useCount == 0) {
+					lockDepth++;
+					heap_free((void*)allocation);
+					lockDepth--;
+				}
+			}
+			if (lockDepth == 0) memoryLock.unlock();
+		}
+	}
+
+	uintptr_t heap_getUseCount(void const * const allocation) {
 		return headerFromAllocation(allocation)->useCount;
 	}
 
-	uint64_t heap_getAllocationSize(uint8_t const * const allocation) {
+	uint64_t heap_getAllocationSize(void const * const allocation) {
 		return headerFromAllocation(allocation)->totalSize - heapHeaderPaddedSize;
 	}
 
@@ -250,7 +329,7 @@ namespace dsr {
 				defaultHeap.recyclingBin[binIndex] = binHeader->nextRecycled;
 				// Mark the allocation as not recycled. (assume that it was recycled when found in the bin)
 				binHeader->flags &= ~heapFlag_recycled;
-				result = UnsafeAllocation(allocationFromHeader(binHeader), binHeader);
+				result = UnsafeAllocation((uint8_t*)allocationFromHeader(binHeader), binHeader);
 			} else {
 				// Look for a heap with enough space for a new allocation.
 				result = tryToAllocate(defaultHeap, paddedSize, heapAlignmentAndMask, binIndex);
@@ -263,32 +342,50 @@ namespace dsr {
 				memset(result.data, 0, paddedSize);
 			}
 		}
+		if (result.data != nullptr) {
+			// Get the header.
+			HeapHeader *head = (HeapHeader*)(result.header);
+			// Tell the allocation how many of the bytes that are used.
+			head->setUsedSize(minimumSize);
+			// Give a debug name to the allocation if we are debugging.
+			printf("Allocated memory @ %ld\n", (uintptr_t)result.data);
+			printf("    Use count = %ld\n", head->useCount);
+			#ifdef SAFE_POINTER_CHECKS
+				printf("    ID = %lu\n", head->allocationIdentity);
+			#endif
+		}
 		return result;
 	}
 
-	void heap_setAllocationDestructor(uint8_t const * const allocation, HeapDestructor destructor) {
-		HeapHeader *header = headerFromAllocation(allocation);
+	void heap_setAllocationDestructor(void * const allocation, const HeapDestructor &destructor) {
+		HeapHeader *header = headerFromAllocation(allocation);		
 		header->destructor = destructor;
 	}
 
-	void heap_free(uint8_t * const allocation) {
-		// TODO: The mutex hangs when calling destructors recursively.
+	// TODO: Add names to the allocations.
+	void heap_free(void * const allocation) {
 		if (lockDepth == 0) memoryLock.lock();
 		// Get the recycled allocation's header.
 		HeapHeader *header = headerFromAllocation(allocation);
 		if (header->flags & heapFlag_recycled) {
 			printf("Heap error: A heap allocation was freed twice!\n");
 		} else {
-			// Check if a destructor needs to be called.
-			if (header->destructor != nullptr) {
-				// Call the destructor without using the mutex (lockDepth > 0).
-				lockDepth++;
-				header->destructor(allocation);
-				lockDepth--;
-				assert(lockDepth >= 0);
-				// Remove the pointer to the destructor so that it is not called again for the next allocation.
-				header->destructor = nullptr;
-			}
+			// Call the destructor without using the mutex (lockDepth > 0).
+			lockDepth++;
+			printf("heap_free called for allocation @ %ld\n", (uintptr_t)allocation);
+			printf("    Use count: %ld\n", header->useCount);
+			#ifdef SAFE_POINTER_CHECKS
+				printf("    ID: %lu\n", header->allocationIdentity);
+				printf("    Name: %s\n", header->name ? header->name : "<nameless>");
+			#endif
+			printf("    Calling destructor\n");
+			// Call the destructor provided with any external resource that also needs to be freed.
+			header->destructor.call(allocation, header->destructor.externalResource);
+			printf("    Finished destructor\n");
+			lockDepth--;
+			assert(lockDepth >= 0);
+			// Remove the destructor so that it is not called again for the next allocation.
+			header->destructor = HeapDestructor();
 			int binIndex = header->binIndex;
 			if (binIndex >= MAX_BIN_COUNT) {
 				printf("Heap error: Out of bound recycling bin index in corrupted head of freed allocation!\n");
@@ -298,6 +395,11 @@ namespace dsr {
 				header->nextRecycled = oldHeader;
 				// Mark the allocation as recycled.
 				header->flags |= heapFlag_recycled;
+				#ifdef SAFE_POINTER_CHECKS
+					// Remove the allocation identity, so that use of freed memory can be detected in SafePointer and Handle.
+					header->allocationIdentity = 0;
+					header->threadHash = 0;
+				#endif
 				// Store the newly recycled allocation in the bin.
 				defaultHeap.recyclingBin[binIndex] = header;
 				header->nextRecycled = oldHeader;
@@ -320,5 +422,9 @@ namespace dsr {
 
 	void impl_throwNullException() {
 		throwError(U"Null handle exception!\n");
+	}
+
+	void impl_throwIdentityMismatch(uint64_t allocationIdentity, uint64_t pointerIdentity) {
+		throwError(U"Identity mismatch! The allocation pointed to had identity ", allocationIdentity, U" but ", pointerIdentity, U" was expected by the pointer from when it was allocated.\n");
 	}
 }

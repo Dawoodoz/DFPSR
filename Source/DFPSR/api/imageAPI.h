@@ -26,7 +26,7 @@
 #define DFPSR_API_IMAGE
 
 #include "types.h"
-#include "../base/SafePointer.h"
+#include "../base/heap.h"
 
 namespace dsr {
 
@@ -254,14 +254,12 @@ namespace dsr {
 
 // The dangerous image API
 // Use of these methods can be spotted using a search for "_dangerous_" in your code
-	// Replaces the destructor in image's buffer.
-	//   newDestructor is responsible for freeing the given data.
-	//   Use when the buffer's pointer is being sent to a function that promises to free the memory
-	//   For example: Creating buffers being wrapped as XLib images
-	void image_dangerous_replaceDestructor(ImageU8& image, const std::function<void(uint8_t *)>& newDestructor);
-	void image_dangerous_replaceDestructor(ImageU16& image, const std::function<void(uint8_t *)>& newDestructor);
-	void image_dangerous_replaceDestructor(ImageF32& image, const std::function<void(uint8_t *)>& newDestructor);
-	void image_dangerous_replaceDestructor(ImageRgbaU8& image, const std::function<void(uint8_t *)>& newDestructor);
+	// Replaces the destructor in image's buffer, which.
+	//   newDestructor should not free the given data, only invoke destruction of any external resources that may depend on it before the data is freed automatically.
+	void image_dangerous_replaceDestructor(ImageU8& image, const HeapDestructor& newDestructor);
+	void image_dangerous_replaceDestructor(ImageU16& image, const HeapDestructor& newDestructor);
+	void image_dangerous_replaceDestructor(ImageF32& image, const HeapDestructor& newDestructor);
+	void image_dangerous_replaceDestructor(ImageRgbaU8& image, const HeapDestructor& newDestructor);
 	// Returns a pointer to the image's pixels
 	// Warning! Reading elements larger than 8 bits will have lower and higher bytes stored based on local endianness
 	// Warning! Using bytes outside of the [0 .. stride * height - 1] range may cause crashes and undefined behaviour

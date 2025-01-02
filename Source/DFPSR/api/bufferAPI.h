@@ -1,6 +1,6 @@
 ﻿// zlib open source license
 //
-// Copyright (c) 2018 to 2024 David Forsgren Piuva
+// Copyright (c) 2018 to 2025 David Forsgren Piuva
 // 
 // This software is provided 'as-is', without any express or implied
 // warranty. In no event will the authors be held liable for any damages
@@ -51,19 +51,17 @@
 //     buffer_getSize(buffer_create(bytes)) == bytes
 
 namespace dsr {
-	// A safer replacement for raw memory allocation when you don't need to resize the content.
-	// Guarantees that internal addresses will not be invalidated during its lifetime.
-	//   Just remember to always keep a handle together with any pointers to the data to prevent the buffer from being freed.
-	class BufferImpl;
-	using Buffer = Handle<BufferImpl>;
+	using Buffer = Handle<uint8_t>;
 
 	// Side-effect: Creates a new buffer head regardless of newSize, but only allocates a zeroed data allocation if newSize > 0.
 	// Post-condition: Returns a handle to the new buffer, which is initialized to zeroes.
 	// Creating a buffer without a size will only allocate the buffer's head referring to null data with size zero.
-	Buffer buffer_create(int64_t newSize);
+	Buffer buffer_create(intptr_t newSize);
 	// The buffer always allocate with DSR_MAXIMUM_ALIGNMENT, but you can check that your requested alignment is not too much.
-	Buffer buffer_create(int64_t newSize, int minimumAlignment);
+	Buffer buffer_create(intptr_t newSize, int minimumAlignment);
 
+	// TODO: It is probably better to just construct the buffer and copy the data into a new buffer if memory comes from outside,
+	//       because the new type of buffer only allow overriding object destruction, not freeing the memory itself.
 	// Pre-conditions:
 	//   newData must be padded and aligned by DSR_MAXIMUM_ALIGNMENT from settings.h if you plan to use it for SIMD or multi-threading.
 	//   newSize may not be larger than the size of newData in bytes.
@@ -71,12 +69,12 @@ namespace dsr {
 	// Side-effect: Creates a new buffer of newSize bytes inheriting ownership of newData.
 	//   If the given data cannot be freed as a C allocation, replaceDestructor must be called with the special destructor.
 	// Post-condition: Returns a handle to the manually constructed buffer.
-	Buffer buffer_create(int64_t newSize, uint8_t *newData);
+	//Buffer buffer_create(intptr_t newSize, uint8_t *newData);
 
 	// Sets the allocation's destructor, to be called when there are no more reference counted pointers to the buffer.
+	//   The destructor is not responsible for freeing the memory allocation itself, only calling destructors in the content.
 	// Pre-condition: The buffer exists.
-	//   If the buffer has a head but no data allocation, the command will be ignored because there is no allocation to delete.
-	void buffer_replaceDestructor(Buffer &buffer, const std::function<void(uint8_t *)>& newDestructor);
+	void buffer_replaceDestructor(Buffer &buffer, const HeapDestructor& newDestructor);
 
 	// Returns true iff buffer exists, even if it is empty without any data allocation.
 	inline bool buffer_exists(const Buffer &buffer) {
@@ -91,10 +89,10 @@ namespace dsr {
 
 	// Returns the buffer's size in bytes, as given when allocating it excluding allocation padding.
 	// Returns zero if buffer doesn't exist or has no data allocated.
-	int64_t buffer_getSize(const Buffer &buffer);
+	intptr_t buffer_getSize(const Buffer &buffer);
 
 	// Returns the number of reference counted handles to the buffer, or 0 if the buffer does not exist.
-	int64_t buffer_getUseCount(const Buffer &buffer);
+	intptr_t buffer_getUseCount(const Buffer &buffer);
 
 	// Returns a raw pointer to the data.
 	// An empty handle or buffer of length zero without data will return nullptr.

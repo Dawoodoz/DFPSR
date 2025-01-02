@@ -49,14 +49,9 @@ namespace dsr {
 	// A structure used to allocate memory before placing the content in SafePointer.
 	struct UnsafeAllocation {
 		uint8_t *data;
-		#ifdef SAFE_POINTER_CHECKS
-			AllocationHeader *header;
-			UnsafeAllocation(uint8_t *data, AllocationHeader *header)
-			: data(data), header(header) {}
-		#else
-			UnsafeAllocation(uint8_t *data, AllocationHeader *header)
-			: data(data) {}
-		#endif
+		AllocationHeader *header;
+		UnsafeAllocation(uint8_t *data, AllocationHeader *header)
+		: data(data), header(header) {}
 	};
 
 	// Post-condition: Returns size rounded up by alignment.

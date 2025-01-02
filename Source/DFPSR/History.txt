@@ -3,7 +3,7 @@ While every new feature may create naming conflicts from using the dsr namespace
 
 There are plans to create an automatic refactoring tool built into the Builder build system that could potentially do this automatically for you, but one must be very careful with overwriting people's code in case that someone does not use version control.
 
-Changes since version 0.1.0
+Changes from version 0.1.0 to version 0.2.0
 	* simdExtra.h was removed, because such a low depth of abstraction would risk making the code slower from not fitting well with future SIMD extensions.
 		The more features you add to the badly defined extra feature set, the less systems it will work on, until it is just a slower version of specific instruction sets.
 		On missing header when including simdExtra.h:
@@ -34,3 +34,6 @@ Changes since version 0.2.0
 	To make SafePointer fully typesafe so that one can't accidentally give write access to write protected data, the recursive constness had to be removed.
 		Replace 'const SafePointer<' with 'SafePointer<const '
 		Replace 'const dsr::SafePointer<' with 'dsr::SafePointer<const '
+	Because the new memory allocator allow reference counting directly for the payload's allocation, it is no longer possible to wrap a Buffer as a view around existing memory.
+		Instead the memory must be cloned to a new buffer.
+		image_dangerous_replaceDestructor should then no longer free the allocation itself, but can be used to free external resources using the memory before it is freed.

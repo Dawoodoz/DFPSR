@@ -108,9 +108,12 @@
 	//   Must be a power of two, and no less than the largest cache line among all CPU cores that might run the program.
 	//   Can be assigned using the DSR_THREAD_SAFE_ALIGNMENT macro externally or changed here.
 	#ifndef DSR_THREAD_SAFE_ALIGNMENT
+		// 64 bytes is generally a good choice, because it is large enough to align with cache lines on most computers and large enough to store an allocation header.
+		// Note that Apple M1 has a cache line of 128 bytes, which exceeds this default value.
 		#define DSR_THREAD_SAFE_ALIGNMENT 64
 	#endif
 
+	// TODO: Allow having a dynamic largest vector size to support SVE vectors of 1024 or 2048 bits in the future.
 	// When allocating memory for being reused many times for different purposes, we need to know the maximum alignment that will be required ahead of time.
 	//   Here we define it as the maximum of the largest SIMD vector and the thread safe alignment.
 	#if (DSR_LARGEST_VECTOR_SIZE > DSR_THREAD_SAFE_ALIGNMENT)
