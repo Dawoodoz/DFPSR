@@ -36,6 +36,10 @@ namespace dsr {
 	struct AllocationHeader {
 		uintptr_t totalSize; // Size of both header and payload.
 		#ifdef SAFE_POINTER_CHECKS
+			// TODO: Replace the name with a function pointer serializing the buffer's data into a human readable format.
+			//       Because it is only for the debug version, lambdas with capture may be used to store additional information.
+			//       If string_toStreamIndented has been defined for the type, it should try to use it if no serialization function was provided manually.
+			const char *name = nullptr; // Debug name of the allocation.
 			uint64_t threadHash; // Hash of the owning thread identity for thread local memory, 0 for shared memory.
 			uint64_t allocationIdentity; // Rotating identity of the allocation, to know if the memory has been freed and reused within a memory allocator.
 		#endif
@@ -43,7 +47,7 @@ namespace dsr {
 		AllocationHeader();
 		// Header for allocated memory.
 		// threadLocal should be true iff the memory may not be accessed from other threads, such as virtual stack memory.
-		AllocationHeader(uintptr_t totalSize, bool threadLocal);
+		AllocationHeader(uintptr_t totalSize, bool threadLocal, const char *name);
 	};
 
 	// A structure used to allocate memory before placing the content in SafePointer.

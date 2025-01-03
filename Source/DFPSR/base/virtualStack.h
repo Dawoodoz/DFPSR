@@ -33,18 +33,18 @@ namespace dsr {
 	//   alignmentMask should only contain zeroes at the bits to round away for alignment.
 	//     alignmentMask should be the bitwise negation of the alignment minus one, where the alignment is a power of two.
 	//     ~(alignment - 1)
-	UnsafeAllocation virtualStack_push(uint64_t paddedSize, uintptr_t alignmentAndMask);
+	UnsafeAllocation virtualStack_push(uint64_t paddedSize, uintptr_t alignmentAndMask, const char *name = "Nameless virtual stack allocation");
 
 	// A simpler way to get the correct alignment is to allocate a number of elements with a specific type.
 	// Pre-condition:
 	//   T's size must be rounded by its own alignment, or alignof(T) will be violated when accessed as an array.
 	//   sizeof(T) % alignof(T) == 0
 	template <typename T>
-	SafePointer<T> virtualStack_push(uint64_t elementCount, const char *name) {
+	SafePointer<T> virtualStack_push(uint64_t elementCount, const char *name = "Nameless virtual stack allocation") {
 		// Calculate element size and multiply by element count to get the total size.
 		uint64_t paddedSize = sizeof(T) * elementCount;
 		// Allocate the data with the amount of alignment requested by the element type T.
-		UnsafeAllocation result = virtualStack_push(paddedSize, memory_createAlignmentAndMask((uintptr_t)alignof(T)));
+		UnsafeAllocation result = virtualStack_push(paddedSize, memory_createAlignmentAndMask((uintptr_t)alignof(T)), name);
 		// Return a safe pointer to the allocated data.
 		#ifdef SAFE_POINTER_CHECKS
 			return SafePointer<T>(result.header, result.header->allocationIdentity, name, (T*)(result.data), (intptr_t)paddedSize);

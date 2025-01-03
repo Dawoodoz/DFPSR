@@ -72,7 +72,7 @@ namespace dsr {
 		pointer += totalSize;
 	}
 
-	static UnsafeAllocation stackAllocate(StackMemory& stack, uint64_t paddedSize, uintptr_t alignmentAndMask) {
+	static UnsafeAllocation stackAllocate(StackMemory& stack, uint64_t paddedSize, uintptr_t alignmentAndMask, const char *name) {
 		uint8_t *newStackPointer = stack.stackPointer;
 		// Allocate memory for payload.
 		uint64_t payloadTotalSize = increaseStackPointer(newStackPointer, paddedSize, alignmentAndMask);
@@ -88,7 +88,7 @@ namespace dsr {
 			stack.stackPointer = newStackPointer;
 			// Write the header to memory.
 			AllocationHeader *header = (AllocationHeader*)(stack.stackPointer);
-			*header = AllocationHeader(payloadTotalSize + headerTotalSize, true);
+			*header = AllocationHeader(payloadTotalSize + headerTotalSize, true, name);
 			// Clear the new allocation for determinism.
 			std::memset((void*)data, 0, payloadTotalSize);
 			// Return a pointer to the payload.
@@ -100,10 +100,10 @@ namespace dsr {
 	thread_local DynamicStackMemory dynamicMemory[MAX_EXTRA_STACKS]; // Index 0..MAX_EXTRA_STACKS-1
 	thread_local int32_t stackIndex = -1;
 
-	UnsafeAllocation virtualStack_push(uint64_t paddedSize, uintptr_t alignmentAndMask) {
+	UnsafeAllocation virtualStack_push(uint64_t paddedSize, uintptr_t alignmentAndMask, const char *name) {
 		// TODO: Assert that the alignment mask begins with ones and ends with zeroes, in case that the caller accidentally truncated the beginning of the mask.
 		if (stackIndex < 0) {
-			UnsafeAllocation result = stackAllocate(fixedMemory, paddedSize, alignmentAndMask);
+			UnsafeAllocation result = stackAllocate(fixedMemory, paddedSize, alignmentAndMask, name);
 			// Check that we did not run out of memory.
 			if (result.data == nullptr) {
 				// Not enough space in thread local memory. Moving to the first dynamic stack.
@@ -139,7 +139,7 @@ namespace dsr {
 		}
 		assert(dynamicMemory[stackIndex].stackPointer != nullptr);
 		// Allocate memory.
-		UnsafeAllocation result = stackAllocate(dynamicMemory[stackIndex], paddedSize, alignmentAndMask);
+		UnsafeAllocation result = stackAllocate(dynamicMemory[stackIndex], paddedSize, alignmentAndMask, name);
 		if (result.data == nullptr) {
 			if (stackIndex >= MAX_EXTRA_STACKS - 1) {
 				throwError(U"Exceeded MAX_EXTRA_STACKS to allocate more heap memory for a thread local virtual stack!\n");

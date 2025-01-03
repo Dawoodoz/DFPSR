@@ -72,6 +72,7 @@ namespace dsr {
 
 	static const uint8_t heapFlag_recycled = 1 << 0;
 	struct HeapHeader : public AllocationHeader {
+		// Because nextRecycled and usedSize have mutually exclusive lifetimes, they can share memory location.
 		union {
 			// When allocated
 			uintptr_t usedSize;
@@ -80,34 +81,39 @@ namespace dsr {
 		};
 		HeapDestructor destructor;
 		uintptr_t useCount = 0; // How many handles that point to the data.
-		#ifdef SAFE_POINTER_CHECKS
-			// TODO: Replace the name with a function pointer serializing the buffer's data into a human readable format.
-			//       Because it is only for the debug version, lambdas with capture may be used to store additional information.
-			//       If string_toStreamIndented has been defined for the type, it should try to use it if no serialization function was provided manually.
-			const char *name = nullptr; // Debug name of the allocation.
-		#endif
-		// TODO: Reset to zero when allocating and let the caller place additional information here.
-		//       This could be used to let images be value types and still contain the stride and a pointer to a texture.
-		//void *userPtrA = nullptr;
-		//void *userPtrB = nullptr;
-		//void *userPtrC = nullptr;
-		//uint32_t userData = 0;
+		// TODO: Allow placing a pointer to a singleton in another heap allocation, which will simply be freed using heap_free when the owner is freed.
+		//       This allow accessing any amount of additional information shared between all handles to the same payload.
+		//       Useful when you in hindsight realize that you need more information attached to something that is already created and shared, like a value allocated image needing a texture.
+		//       Check if it already exists. If it does not exist, lock the allocation mutex and check again if it still does not exist, before allocating the singleton.
+		//         Then there will only be a mutex overhead for accessing the singleton when accessed for the first time.
+		//         Once created, it can not go away until the allocation that knows about it is gone.
+		//       If using the reference counting, the singleton could also be reused between different allocations.
+		// void *singleton = nullptr;
 		uint8_t flags = 0; // Flags use the heapFlag_ prefix.
 		uint8_t binIndex; // Recycling bin index to use when freeing the allocation.
 		HeapHeader(uintptr_t totalSize, uint8_t binIndex)
-		: AllocationHeader(totalSize, false),
+		: AllocationHeader(totalSize, false, "Nameless heap allocation"),
 		  binIndex(binIndex) {}
 		inline uintptr_t getUsedSize() {
-			if (this->flags & heapFlag_recycled) {
+			if (this->isRecycled()) {
 				return 0;
 			} else {
 				return this->usedSize;
 			}
 		}
 		inline void setUsedSize(uintptr_t size) {
-			if (!(this->flags & heapFlag_recycled)) {
+			if (!(this->isRecycled())) {
 				this->usedSize = size;
 			}
+		}
+		inline bool isRecycled() const {
+			return (this->flags & heapFlag_recycled) != 0;
+		}
+		inline void makeRecycled() {
+			this->flags |= heapFlag_recycled;
+		}
+		inline void makeUsed() {
+			this->flags &= ~heapFlag_recycled;
 		}
 	};
 	static const uintptr_t heapHeaderPaddedSize = memory_getPaddedSize(sizeof(HeapHeader), heapAlignment);
@@ -327,8 +333,10 @@ namespace dsr {
 			if (binHeader != nullptr) {
 				// Make the recycled allocation's tail into the new head.
 				defaultHeap.recyclingBin[binIndex] = binHeader->nextRecycled;
+				// Clear the pointer to make room for the allocation's size in the union.
+				binHeader->nextRecycled = nullptr;
 				// Mark the allocation as not recycled. (assume that it was recycled when found in the bin)
-				binHeader->flags &= ~heapFlag_recycled;
+				binHeader->makeUsed();
 				result = UnsafeAllocation((uint8_t*)allocationFromHeader(binHeader), binHeader);
 			} else {
 				// Look for a heap with enough space for a new allocation.
@@ -367,7 +375,7 @@ namespace dsr {
 		if (lockDepth == 0) memoryLock.lock();
 		// Get the recycled allocation's header.
 		HeapHeader *header = headerFromAllocation(allocation);
-		if (header->flags & heapFlag_recycled) {
+		if (header->isRecycled()) {
 			printf("Heap error: A heap allocation was freed twice!\n");
 		} else {
 			// Call the destructor without using the mutex (lockDepth > 0).
@@ -380,7 +388,9 @@ namespace dsr {
 			#endif
 			printf("    Calling destructor\n");
 			// Call the destructor provided with any external resource that also needs to be freed.
-			header->destructor.call(allocation, header->destructor.externalResource);
+			if (header->destructor.destructor) {
+				header->destructor.destructor(allocation, header->destructor.externalResource);
+			}
 			printf("    Finished destructor\n");
 			lockDepth--;
 			assert(lockDepth >= 0);
@@ -394,7 +404,7 @@ namespace dsr {
 				HeapHeader *oldHeader = defaultHeap.recyclingBin[binIndex];
 				header->nextRecycled = oldHeader;
 				// Mark the allocation as recycled.
-				header->flags |= heapFlag_recycled;
+				header->makeRecycled();
 				#ifdef SAFE_POINTER_CHECKS
 					// Remove the allocation identity, so that use of freed memory can be detected in SafePointer and Handle.
 					header->allocationIdentity = 0;

@@ -44,11 +44,13 @@
 #include "SafePointer.h"
 
 namespace dsr {
+	// TODO: Replace with a lambda printing the name from capture and optional serialized content, because memory efficiency is not required in debug mode.
 	#ifdef SAFE_POINTER_CHECKS
 		// Assign a debug name to the allocation.
+		//   Does nothing if allocation is nullptr.
 		//   Only assign constant ascii string literals.
 		void heap_setAllocationName(void * const allocation, const char *name);
-		// Get the ascii name of allocation, or "none" if allocation is null.
+		// Get the ascii name of allocation, or "none" if allocation is nullptr.
 		const char * heap_getAllocationName(void * const allocation);
 	#endif
 
@@ -57,13 +59,6 @@ namespace dsr {
 	//   When zeroed is true, the new memory will be zeroed. Otherwise it may contain uninitialized data.
 	// Post-condition: Returns pointers to the payload and header.
 	UnsafeAllocation heap_allocate(uintptr_t minimumSize, bool zeroed = true);
-	inline UnsafeAllocation heap_allocate(uintptr_t minimumSize, bool zeroed, const char *name) {
-		UnsafeAllocation result = heap_allocate(minimumSize, zeroed);
-		#ifdef SAFE_POINTER_CHECKS
-			heap_setAllocationName(result.data, name);
-		#endif
-		return result;
-	}
 
 	// Increase the use count of an allocation.
 	//   Does nothing if the allocation is nullptr.
@@ -95,13 +90,9 @@ namespace dsr {
 		HeapDestructorPointer destructor = nullptr;
 		// A pointer for freeing external resources owning the allocation.
 		void *externalResource = nullptr;
+		// Constructor.
 		HeapDestructor(HeapDestructorPointer destructor = nullptr, void *externalResource = nullptr)
 		: destructor(destructor), externalResource(externalResource) {}
-		inline void call(void *allocation, void *externalResource) {
-			if (this->destructor) {
-				this->destructor(allocation, externalResource);
-			}
-		}
 	};
 
 	// Register a destructor function pointer to be called automatically when the allocation is freed.

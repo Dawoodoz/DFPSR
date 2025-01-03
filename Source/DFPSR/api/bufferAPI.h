@@ -31,7 +31,7 @@
 #include "../settings.h"
 #include "../base/Handle.h"
 
-// The types of buffer handles to consider when designing algorithms:
+// The types of buffers to consider when designing algorithms:
 // * Null handle suggesting that there is nothing, such as when loading a file failed.
 //     Size does not exist, but is substituted with zero when asked.
 //     buffer_exists(Buffer()) == false
@@ -53,23 +53,15 @@
 namespace dsr {
 	using Buffer = Handle<uint8_t>;
 
-	// Side-effect: Creates a new buffer head regardless of newSize, but only allocates a zeroed data allocation if newSize > 0.
-	// Post-condition: Returns a handle to the new buffer, which is initialized to zeroes.
-	// Creating a buffer without a size will only allocate the buffer's head referring to null data with size zero.
+	// Allocate a Buffer
+	//   The newSize argument should not include any padding.
+	//   The memory is allocated in whole aligned blocks of DSR_MAXIMUM_ALIGNMENT and buffer_getSafeData padds out the SafePointer region to the maximum alignment.
+	// Side-effect: Creates a new buffer containing newSize bytes.
+	// Post-condition: Returns the new buffer, which is initialized to zeroes.
 	Buffer buffer_create(intptr_t newSize);
+
 	// The buffer always allocate with DSR_MAXIMUM_ALIGNMENT, but you can check that your requested alignment is not too much.
 	Buffer buffer_create(intptr_t newSize, int minimumAlignment);
-
-	// TODO: It is probably better to just construct the buffer and copy the data into a new buffer if memory comes from outside,
-	//       because the new type of buffer only allow overriding object destruction, not freeing the memory itself.
-	// Pre-conditions:
-	//   newData must be padded and aligned by DSR_MAXIMUM_ALIGNMENT from settings.h if you plan to use it for SIMD or multi-threading.
-	//   newSize may not be larger than the size of newData in bytes.
-	//     Breaking this pre-condition may cause crashes, so only provide a newData pointer if you know what you are doing.
-	// Side-effect: Creates a new buffer of newSize bytes inheriting ownership of newData.
-	//   If the given data cannot be freed as a C allocation, replaceDestructor must be called with the special destructor.
-	// Post-condition: Returns a handle to the manually constructed buffer.
-	//Buffer buffer_create(intptr_t newSize, uint8_t *newData);
 
 	// Sets the allocation's destructor, to be called when there are no more reference counted pointers to the buffer.
 	//   The destructor is not responsible for freeing the memory allocation itself, only calling destructors in the content.
@@ -99,23 +91,10 @@ namespace dsr {
 	uint8_t* buffer_dangerous_getUnsafeData(const Buffer &buffer);
 
 	// A wrapper for getting a bound-checked pointer of the correct element type.
-	//   Only cast to trivially packed types with power of two dimensions so that the compiler does not add padding.
-	// The name must be an ansi encoded constant literal, because each String contains a Buffer which would cause a cyclic dependency.
+	// The name must be an ascii encoded constant literal.
 	// Returns a safe null pointer if buffer does not exist or there is no data allocation.
 	template <typename T>
-	SafePointer<T> buffer_getSafeData(const Buffer &buffer, const char* name) {
-		if (!buffer_exists(buffer)) {
-			return SafePointer<T>();
-		} else {
-			uint8_t *data = buffer_dangerous_getUnsafeData(buffer);
-			#ifdef SAFE_POINTER_CHECKS
-				AllocationHeader *header = heap_getHeader(data);
-				return SafePointer<T>(header, header->allocationIdentity, name, (T*)data, buffer_getSize(buffer), (T*)data);
-			#else
-				return SafePointer<T>(name, (T*)data, buffer_getSize(buffer), (T*)data);
-			#endif
-		}
-	}
+	SafePointer<T> buffer_getSafeData(const Buffer &buffer, const char* name) { return buffer.getSafe<T>(name); }
 
 	// Set all bytes to the same value.
 	// Pre-condition: buffer exists, or else an exception is thrown to warn you.

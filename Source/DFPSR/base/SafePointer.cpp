@@ -94,83 +94,99 @@ static uint64_t ANY_THREAD_HASH = 0xF986BA1496E872A5;
 	AllocationHeader::AllocationHeader()
 	: totalSize(0), threadHash(0), allocationIdentity(0) {}
 
-	AllocationHeader::AllocationHeader(uintptr_t totalSize, bool threadLocal)
-	: totalSize(totalSize), threadHash(threadLocal ? currentThreadHash : ANY_THREAD_HASH), allocationIdentity(createIdentity()) {}
+	AllocationHeader::AllocationHeader(uintptr_t totalSize, bool threadLocal, const char *name)
+	: totalSize(totalSize), name(name), threadHash(threadLocal ? currentThreadHash : ANY_THREAD_HASH), allocationIdentity(createIdentity()) {}
 #else
 	AllocationHeader::AllocationHeader()
 	: totalSize(0) {}
 
-	AllocationHeader::AllocationHeader(uintptr_t totalSize, bool threadLocal)
+	// TODO: Avoid passing the debug name in release mode by placing these functions in memory.h.
+	//       Create separate methods for getting the thread hash and the next allocation nonce.
+	AllocationHeader::AllocationHeader(uintptr_t totalSize, bool threadLocal, const char *name)
 	: totalSize(totalSize) {}
 #endif
 
 #ifdef SAFE_POINTER_CHECKS
-	void dsr::assertNonNegativeSize(intptr_t size) {
+	void dsr::impl_assertNonNegativeSize(intptr_t size) {
 		if (size < 0) {
 			throwError(U"Negative size of SafePointer!\n");
 		}
 	}
 
-	void dsr::assertInsideSafePointer(const char* method, const char* name, const uint8_t* pointer, const uint8_t* data, const uint8_t* regionStart, const uint8_t* regionEnd, const AllocationHeader *header, uint64_t allocationIdentity, intptr_t claimedSize, intptr_t elementSize) {
+	static bool isOutOfBound(const uint8_t* claimedStart, intptr_t claimedSize, const uint8_t* regionStart, const uint8_t* regionEnd) {
+		return claimedStart < regionStart || claimedStart + claimedSize > regionEnd;
+	}
+
+	static void throwPointerError(const ReadableString &title, const char* method, const char* name, const uint8_t* pointer, const uint8_t* regionStart, const uint8_t* regionEnd, const AllocationHeader *header, uint64_t allocationIdentity, intptr_t claimedSize, intptr_t elementSize, uint64_t headerIdentity, uint64_t headerHash) {
+		bool outOfBound = isOutOfBound(pointer, claimedSize, regionStart, regionEnd);
+		String message;
+		string_append(message, U"\n _______________________________________________________________________\n");
+		string_append(message, U"/\n");
+		string_append(message, U"|  ", title, U"\n");
+		string_append(message, U"|\n");
+		string_append(message, U"|  SafePointer operation: ", method, U"\n");
+		string_append(message, U"|  Pointer name: ", name, U"\n");
+		if (header != nullptr) {
+			const char *allocationName = nullptr;
+			try {
+				allocationName = header->name;
+			} catch(...) {
+				allocationName = "<Invalid>";
+			}
+			string_append(message, U"|  Allocation name: ", allocationName, U"\n");
+			string_append(message, U"|  Thread hash:\n");
+			if (header->threadHash == ANY_THREAD_HASH) {
+				string_append(message, U"|    Shared with all threads\n");
+			} else {
+				string_append(message, U"|    Owner thread: ", headerHash, U"\n");
+				string_append(message, U"|    Calling thread: ", currentThreadHash, U"\n");
+			}
+			string_append(message, U"|  Identity:\n");
+			string_append(message, U"|    Found: ", headerIdentity, U"\n");
+			string_append(message, U"|    Expected: ", allocationIdentity, U"\n");
+			// TODO: Check if the requested data is outside of the memory allocation's used size or just the permitted region within the allocation.
+		}
+		if (outOfBound) {
+			string_append(message, U"|  Claimed memory is outside of the pointer's permitted memory region!\n");
+		} else {
+			string_append(message, U"|  Claimed memory is safely within the permitted memory region.\n");
+		}
+		string_append(message, U"|    Permitted region: ", (uintptr_t)regionStart, U" to ", (uintptr_t)regionEnd, U" of ", (intptr_t)(regionEnd - regionStart), U" bytes\n");
+		string_append(message, U"|    Requested region: ", (uintptr_t)pointer, U" to ", ((uintptr_t)pointer) + claimedSize, U" of ", claimedSize, U" bytes\n");
+		string_append(message, U"|    Element size: ", elementSize, U" bytes\n");
+		string_append(message, U"\\_______________________________________________________________________\n\n");
+		throwError(message);
+	}
+
+	void dsr::impl_assertInsideSafePointer(const char* method, const char* name, const uint8_t* pointer, const uint8_t* regionStart, const uint8_t* regionEnd, const AllocationHeader *header, uint64_t allocationIdentity, intptr_t claimedSize, intptr_t elementSize) {
 		if (regionStart == nullptr) {
-			throwError(U"SafePointer exception! Tried to use a null pointer!\n");
+			throwPointerError(U"SafePointer identity exception! Tried to use a null pointer.", method, name, pointer, regionStart, regionEnd, header, allocationIdentity, claimedSize, elementSize, 0, 0);
 			return;
 		}
 		// If the pointer has an allocation header, check that the identity matches the one stored in the pointer.
+		uint64_t headerIdentity = 0;
+		uint64_t headerHash = 0;
 		if (header != nullptr) {
-			uint64_t headerIdentity, headerHash;
 			try {
 				// Both allocation identity and thread hash may match by mistake, but in most of the cases this will give more information about why it happened.
 				headerIdentity = header->allocationIdentity;
 				headerHash = header->threadHash;
 			} catch(...) {
-				throwError(U"SafePointer exception! Tried to access memory not available to the application!\n");
+				headerIdentity = 0;
+				headerHash = 0;
+				throwPointerError(U"SafePointer exception! Tried to access memory not available to the application.", method, name, pointer, regionStart, regionEnd, header, allocationIdentity, claimedSize, elementSize, headerIdentity, headerHash);
 				return;
 			}
 			if (headerIdentity != allocationIdentity) {
-				throwError(U"SafePointer exception! Accessing freed memory or corrupted allocation header!\n  headerIdentity = ", headerIdentity, U"\n  allocationIdentity = ", allocationIdentity, U"");
+				throwPointerError(U"SafePointer identity exception!", method, name, pointer, regionStart, regionEnd, header, allocationIdentity, claimedSize, elementSize, headerIdentity, headerHash);
 				return;
 			} else if (headerHash != ANY_THREAD_HASH && headerHash != currentThreadHash) {
-				throwError(U"SafePointer exception! Accessing another thread's private memory!\n  headerHash = ", headerHash, U"\n  currentThreadHash = ", currentThreadHash, U"\n");
+				throwPointerError(U"SafePointer thread hash exception!", method, name, pointer, regionStart, regionEnd, header, allocationIdentity, claimedSize, elementSize, headerIdentity, headerHash);
 				return;
 			}
 		}
-		if (pointer < regionStart || pointer + claimedSize > regionEnd) {
-			String message;
-			string_append(message, U"\n _________________ SafePointer out of bound exception! _________________\n");
-			string_append(message, U"/\n");
-			string_append(message, U"|  Name: ", name, U"\n");
-			string_append(message, U"|  Method: ", method, U"\n");
-			string_append(message, U"|  Region: ", (uintptr_t)regionStart, U" to ", (uintptr_t)regionEnd, U"\n");
-			string_append(message, U"|  Region size: ", (intptr_t)(regionEnd - regionStart), U" bytes\n");
-			string_append(message, U"|  Base pointer: ", (uintptr_t)data, U"\n");
-			string_append(message, U"|  Requested pointer: ", (uintptr_t)pointer, U"\n");
-			string_append(message, U"|  Requested size: ", claimedSize, U" bytes\n");
-
-			intptr_t startOffset = (intptr_t)pointer - (intptr_t)regionStart;
-			intptr_t baseOffset = (intptr_t)pointer - (intptr_t)data;
-
-			// Index relative to allocation start
-			//   regionStart is the start of the accessible memory region
-			if (startOffset != baseOffset) {
-				string_append(message, U"|  Start offset: ", startOffset, U" bytes\n");
-				if (startOffset % elementSize == 0) {
-					intptr_t index = startOffset / elementSize;
-					intptr_t elementCount = ((intptr_t)regionEnd - (intptr_t)regionStart) / elementSize;
-					string_append(message, U"|    Start index: ", index, U" [0..", (elementCount - 1), U"]\n");
-				}
-			}
-
-			// Base index relative to the stored pointer within the region
-			//   data is the base of the allocation at index zero
-			string_append(message, U"|  Base offset: ", baseOffset, U" bytes\n");
-			if (baseOffset % elementSize == 0) {
-				intptr_t index = baseOffset / elementSize;
-				intptr_t elementCount = ((intptr_t)regionEnd - (intptr_t)data) / elementSize;
-				string_append(message, U"|    Base index: ", index, U" [0..", (elementCount - 1), U"]\n");
-			}
-			string_append(message, U"\\_______________________________________________________________________\n\n");
-			throwError(message);
+		if (isOutOfBound(pointer, claimedSize, regionStart, regionEnd)) {
+			throwPointerError(U"SafePointer out of bound exception!", method, name, pointer, regionStart, regionEnd, header, allocationIdentity, claimedSize, elementSize, headerIdentity, headerHash);
 			return;
 		}
 	}

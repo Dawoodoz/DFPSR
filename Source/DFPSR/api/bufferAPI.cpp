@@ -56,16 +56,16 @@ Buffer buffer_clone(const Buffer &buffer) {
 	if (!buffer_exists(buffer)) {
 		return Handle<uint8_t>();
 	} else {
-		uintptr_t elementCount = buffer.getElementCount();
-		if (elementCount == 0) {
+		uintptr_t size = buffer.getSize();
+		if (size == 0) {
 			// Buffers of zero elements are reused with reference counting.
 			return buffer;
 		} else {
 			// Allocate new memory without setting it to zero, before cloning data into it.
-			Buffer result = handle_createArray<uint8_t>(AllocationInitialization::Uninitialized, elementCount);
+			Buffer result = handle_createArray<uint8_t>(AllocationInitialization::Uninitialized, size);
 			SafePointer<const uint8_t> source = buffer_getSafeData<const uint8_t>(buffer, "Buffer cloning source");
 			SafePointer<uint8_t> target = buffer_getSafeData<uint8_t>(result, "Buffer cloning target");
-			safeMemoryCopy(target, source, elementCount);
+			safeMemoryCopy(target, source, size);
 			return result;
 		}
 	}

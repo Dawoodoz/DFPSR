@@ -784,7 +784,7 @@ Buffer dsr::string_saveToMemory(const ReadableString& content, CharacterEncoding
 		byteCount++;
 	};
 	ENCODE_TEXT(counter, content, characterEncoding, lineEncoding, writeByteOrderMark, writeNullTerminator);
-	Buffer result = buffer_create(byteCount);
+	Buffer result = buffer_create(byteCount).setName("Buffer holding an encoded string");
 	SafePointer<uint8_t> byteWriter = buffer_getSafeData<uint8_t>(result, "Buffer for string encoding");
 	ByteWriterFunction receiver = [&byteWriter](uint8_t value) {
 		*byteWriter = value;
