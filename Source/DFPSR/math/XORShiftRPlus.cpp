@@ -28,10 +28,9 @@ For more information, please refer to <https://unlicense.org>
 */
 #include <cstddef>
 #include <cstdint>
-#include <iostream>
 
 // Starting seed values
-#define SEED1 0xA7B456D8041A283
+#define SEED1 0xA7B42348581A283
 #define SEED2 0xFF83C330BCD19FE
 
 class Xorshiftrplus {
@@ -107,11 +106,6 @@ public:
 
     uint64_t generate(){
 
-	// a, b & c add static entropy from buffers
-	uint64_t a = buff1[index1];
-	uint64_t b = buff2[index2];
-	uint64_t c = buff3[index3];
-
 	// Index incrementation for rotation of static entropy constants
 	index1++;
 	if (index1 >= primeNumbers[0]) index1 = 0u;
@@ -122,9 +116,8 @@ public:
 
 	// seed values are evolved and mixed in with static entropy
 	evolveState();
-	uint64_t result = seeds[0] + seeds[1] + a + b * c + nonce;
+	uint64_t result = seeds[0] + seeds[1] + nonce;
 	nonce++;
-
 		
         return result;
 	
@@ -137,17 +130,15 @@ private:
 	uint64_t x = this->seeds[0];
 	const uint64_t y = this->seeds[1];
 
-	this->seeds[0] = y;
+	// a, b & c add static entropy from buffers
+	uint64_t a = buff1[index1];
+	uint64_t b = buff2[index2];
+	uint64_t c = buff3[index3];
+
 	x ^= x << 23;
 	x ^= x >> 17;
-	x ^= y;
-	this->seeds[1] = x + y;
+	x ^= y + a + b * c; // Static entropy is mixed into the state
+	this->seeds[1] = x + y; // Updating second seed
+	this->seeds[0] = y; // cycling state.
     }
 };
-
-int main(){
-    Xorshiftrplus generator;
-    for (int i = 0 ; i < 1000 ; i++){
-	std::cout<< generator.generate() << std::endl;
-    }
-}
