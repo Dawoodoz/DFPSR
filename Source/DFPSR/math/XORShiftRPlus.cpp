@@ -26,7 +26,6 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 For more information, please refer to <https://unlicense.org>
 */
-#include <iostream>
 #include <cstddef>
 #include <cstdint>
 
@@ -145,10 +144,3 @@ private:
 	return x;
     }
 };
-
-int main(){
-    Xorshiftrplus generator;
-    for(int i = 0 ; i < 1000 ; i++){
-	std::cout << generator.generate() << std::endl;
-    }
-}
