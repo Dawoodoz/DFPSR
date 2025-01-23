@@ -26,12 +26,12 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 For more information, please refer to <https://unlicense.org>
 */
-
+#include <iostream>
 #include <cstddef>
 #include <cstdint>
 
 // Starting seed values
-#define SEED1 123456789
+#define SEED1 124523689
 #define SEED2 987654321
 
 class Xorshiftrplus {
@@ -43,7 +43,7 @@ public:
     uint64_t seeds[2];
 
     //Buffers for prime numbers modulo operations
-    static constexpr uint64_t buff1[primeNumbers[0]]{
+    uint64_t buff1[primeNumbers[0]]{
 	0xA9D5F38E6B72C104, 0x4B7F93E5C28A61D0, 0xE2C7A9F5B36D1048,
 	0x8D6A47C5B3E29F10, 0x5F38C9D6A47E210B, 0xC49A7E5D3B6F2081,
 	0x3D6C5A9F7E42B108, 0xB6F49A3D7C5E2108, 0x1A7F6D3C49E5B208,
@@ -52,7 +52,7 @@ public:
 	0x2F5C7A6D49E3B108, 0xA6D3B9C5F7E42108, 0xE4A9D6F3C57B2018,
 	0xF5C3D6A9E4B72108, 0x8B3D7A5F9C62E410, 0x6E7C49F5D2B3A108,
 	0xD9A6F3C5B47E2108, 0x4A5C7E9D3B62F108};
-    static constexpr uint64_t buff2[primeNumbers[1]]{
+    uint64_t buff2[primeNumbers[1]]{
 	0xB38A24C9E0F153DC, 0x1A37C49A2B7F4D6E, 0x4F8B13D7A92E56CF,
 	0xE9AB47C1D3F8057A, 0x7BC5A18E46F92D3B, 0x3FA9D8B7426CE8F0,
 	0xACD35F9E82B471C6, 0x59EF38A7D62C9B01, 0xD2B18F47E39C6A5D,
@@ -67,7 +67,7 @@ public:
 	0x5C7FA9B28D34E160, 0xACD5E47B39F28C10, 0x9F83B2A7D4C16E50,
 	0x3E7A5F49C1B86D20, 0xD4B7A9C3F85E6210, 0x2A8F57E49D36C150,
         0x6F7A2C9B85D41E30, 0xB28D4C5E7A9F1360};
-    static constexpr uint64_t buff3[primeNumbers[2]]{
+    uint64_t buff3[primeNumbers[2]]{
         0xA1D3F6B8C72E5940, 0x5C9F3E7B21D46A08, 0x7D1A5B9E46F82C30,
         0xE25A6F3C48B9D710, 0xF7A9D5B2E16C3048, 0x3C92F8A5D47E1B60,
         0x1D4B6F2C9E78A350, 0x9F4C7A2D3B5E1860, 0x6A7D5F9C32B48E10,
@@ -92,6 +92,7 @@ public:
         0x8E4C9A5B7D3F2108, 0x6A5F9B3D7C28E101, 0x2D9C7A3B5F48E601,
         0x1B6F3C5D9A27E408, 0xD7A49B3F6C58E210, 0xC4A6F9B7D3E58C20,
         0xF5D4A3B9C76E28F1, 0x3F9D6A5B4C7E2A10};
+
     size_t index1 = 0;
     size_t index2 = 0;
     size_t index3 = 0;
@@ -121,8 +122,11 @@ public:
 	uint64_t result = a + b * c + nonce;
 	nonce++;
 
-	
-	return result;
+	buff1[index1] = result ^ initGenerate();
+	buff2[index2] = result ^ initGenerate();
+	buff3[index3] = result ^ initGenerate();
+
+        return result;
 	
     }
 
@@ -141,3 +145,10 @@ private:
 	return x;
     }
 };
+
+int main(){
+    Xorshiftrplus generator;
+    for(int i = 0 ; i < 1000 ; i++){
+	std::cout << generator.generate() << std::endl;
+    }
+}
