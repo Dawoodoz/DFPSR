@@ -7,9 +7,11 @@
 
 #include "stbImageWrapper.h"
 
+#include "../../api/imageAPI.h"
+
 namespace dsr {
 
-OrderedImageRgbaU8 image_stb_decode_RgbaU8(const SafePointer<uint8_t> data, int size) {
+OrderedImageRgbaU8 image_stb_decode_RgbaU8(SafePointer<const uint8_t> data, int size) {
 	#ifdef SAFE_POINTER_CHECKS
 		// If the safe pointer has debug information, use it to assert that size is within bound.
 		data.assertInside("image_stb_decode_RgbaU8 (data)", data.getUnsafe(), (size_t)size);

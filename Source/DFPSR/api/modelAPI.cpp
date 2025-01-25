@@ -1,6 +1,6 @@
 ﻿// zlib open source license
 //
-// Copyright (c) 2019 David Forsgren Piuva
+// Copyright (c) 2019 to 2025 David Forsgren Piuva
 // 
 // This software is provided 'as-is', without any express or implied
 // warranty. In no event will the authors be held liable for any damages
@@ -21,7 +21,7 @@
 //    3. This notice may not be removed or altered from any source
 //    distribution.
 
-#define DFPSR_INTERNAL_ACCESS
+#define DSR_INTERNAL_ACCESS
 
 #include "modelAPI.h"
 #include "imageAPI.h"
@@ -30,17 +30,17 @@
 #include <limits>
 #include "../base/virtualStack.h"
 
-#define MUST_EXIST(OBJECT, METHOD) if (OBJECT.get() == nullptr) { throwError("The " #OBJECT " handle was null in " #METHOD "\n"); }
+#define MUST_EXIST(OBJECT, METHOD) if (OBJECT.isNull()) { throwError("The " #OBJECT " handle was null in " #METHOD "\n"); }
 
 namespace dsr {
 
 Model model_create() {
-	return std::make_shared<ModelImpl>();
+	return handle_create<ModelImpl>().setName("Model");
 }
 
 Model model_clone(const Model& model) {
 	MUST_EXIST(model,model_clone);
-	return std::make_shared<ModelImpl>(model->filter, model->partBuffer, model->positionBuffer);
+	return handle_create<ModelImpl>(model->filter, model->partBuffer, model->positionBuffer).setName("Cloned Model");
 }
 
 void model_setFilter(const Model& model, Filter filter) {
@@ -54,7 +54,7 @@ Filter model_getFilter(const Model& model) {
 }
 
 bool model_exists(const Model& model) {
-	return model.get() != nullptr;
+	return model.isNotNull();
 }
 
 int model_addEmptyPart(Model& model, const String &name) {
@@ -162,12 +162,12 @@ int model_getPolygonVertexCount(const Model& model, int partIndex, int polygonIn
 	return model->getPolygonVertexCount(partIndex, polygonIndex);
 }
 
-ImageRgbaU8 model_getDiffuseMap(const Model& model, int partIndex) {
+TextureRgbaU8 model_getDiffuseMap(const Model& model, int partIndex) {
 	MUST_EXIST(model,model_getDiffuseMap);
 	return model->getDiffuseMap(partIndex);
 }
 
-void model_setDiffuseMap(Model& model, int partIndex, const ImageRgbaU8 &diffuseMap) {
+void model_setDiffuseMap(Model& model, int partIndex, const TextureRgbaU8 &diffuseMap) {
 	MUST_EXIST(model,model_setDiffuseMap);
 	model->setDiffuseMap(diffuseMap, partIndex);
 }
@@ -177,12 +177,12 @@ void model_setDiffuseMapByName(Model& model, int partIndex, ResourcePool &pool, 
 	model->setDiffuseMapByName(pool, filename, partIndex);
 }
 
-ImageRgbaU8 model_getLightMap(Model& model, int partIndex) {
+TextureRgbaU8 model_getLightMap(Model& model, int partIndex) {
 	MUST_EXIST(model,model_getLightMap);
 	return model->getLightMap(partIndex);
 }
 
-void model_setLightMap(Model& model, int partIndex, const ImageRgbaU8 &lightMap) {
+void model_setLightMap(Model& model, int partIndex, const TextureRgbaU8 &lightMap) {
 	MUST_EXIST(model,model_setLightMap);
 	model->setLightMap(lightMap, partIndex);
 }
@@ -194,13 +194,13 @@ void model_setLightMapByName(Model& model, int partIndex, ResourcePool &pool, co
 
 // Single-threaded rendering for the simple cases where you just want it to work
 void model_render(const Model& model, const Transform3D &modelToWorldTransform, ImageRgbaU8& colorBuffer, ImageF32& depthBuffer, const Camera &camera) {
-	if (model.get() != nullptr) {
-		model->render((CommandQueue*)nullptr, colorBuffer, depthBuffer, modelToWorldTransform, camera);
+	if (model.isNotNull()) {
+		model->render((CommandQueue*)nullptr, image_exists(colorBuffer) ? &colorBuffer : nullptr, image_exists(depthBuffer) ? &depthBuffer : nullptr, modelToWorldTransform, camera);
 	}
 }
 void model_renderDepth(const Model& model, const Transform3D &modelToWorldTransform, ImageF32& depthBuffer, const Camera &camera) {
-	if (model.get() != nullptr) {
-		model->renderDepth(depthBuffer, modelToWorldTransform, camera);
+	if (model.isNotNull()) {
+		model->renderDepth(image_exists(depthBuffer) ? &depthBuffer : nullptr, modelToWorldTransform, camera);
 	}
 }
 
@@ -537,7 +537,7 @@ struct RendererImpl {
 		//           Because the model is being borrowed for vertex animation
 		//           To prevent the command queue from getting full hold as much as possible in a sorted list of instances
 		//           When the command queue is full, the solid instances will be drawn front to back before filtered is drawn back to front
-		model->render(&this->commandQueue, this->colorBuffer, this->depthBuffer, modelToWorldTransform, camera);
+		model->render(&this->commandQueue, image_exists(this->colorBuffer) ? &(this->colorBuffer) : nullptr, image_exists(this->depthBuffer) ? &(this->depthBuffer) : nullptr, modelToWorldTransform, camera);
 	}
 	void endFrame(bool debugWireframe) {
 		if (!this->receiving) {
@@ -668,15 +668,15 @@ struct RendererImpl {
 };
 
 Renderer renderer_create() {
-	return std::make_shared<RendererImpl>();
+	return handle_create<RendererImpl>().setName("Renderer");
 }
 
 bool renderer_exists(const Renderer& renderer) {
-	return renderer.get() != nullptr;
+	return renderer.isNotNull();
 }
 
 void renderer_begin(Renderer& renderer, ImageRgbaU8& colorBuffer, ImageF32& depthBuffer) {
-	MUST_EXIST(renderer,renderer_begin);
+	MUST_EXIST(renderer, renderer_begin);
 	renderer->beginFrame(colorBuffer, depthBuffer);
 }
 
@@ -689,8 +689,8 @@ void renderer_begin(Renderer& renderer, ImageRgbaU8& colorBuffer, ImageF32& dept
 //         This allow rendering many instances using the same model at different times
 //         Enabling vertex light, reflection maps and bone animation
 void renderer_giveTask(Renderer& renderer, const Model& model, const Transform3D &modelToWorldTransform, const Camera &camera) {
-	MUST_EXIST(renderer,renderer_giveTask);
-	if (model.get() != nullptr) {
+	MUST_EXIST(renderer, renderer_giveTask);
+	if (model.isNotNull()) {
 		renderer->giveTask(model, modelToWorldTransform, camera);
 	}
 }
@@ -699,48 +699,42 @@ void renderer_giveTask_triangle(Renderer& renderer,
   const ProjectedPoint &posA, const ProjectedPoint &posB, const ProjectedPoint &posC,
   const FVector4D &colorA, const FVector4D &colorB, const FVector4D &colorC,
   const FVector4D &texCoordA, const FVector4D &texCoordB, const FVector4D &texCoordC,
-  const ImageRgbaU8& diffuseMap, const ImageRgbaU8& lightMap,
+  const TextureRgbaU8& diffuseMap, const TextureRgbaU8& lightMap,
   Filter filter, const Camera &camera) {
 	#ifndef NDEBUG
-		if (image_exists(diffuseMap) && !image_isTexture(diffuseMap)) {
-			throwError("If renderer_addTriangle is given a diffuse map, it must be a valid texture according to the criterias of image_isTexture!");
-		}
-		if (image_exists(lightMap) && !image_isTexture(lightMap)) {
-			throwError("If renderer_addTriangle is given a light map, it must be a valid texture according to the criterias of image_isTexture!");
-		}
-		MUST_EXIST(renderer,renderer_addTriangle);
+		MUST_EXIST(renderer, renderer_addTriangle);
 	#endif
 	renderTriangleFromData(
-	  &(renderer->commandQueue), renderer->colorBuffer.get(), renderer->depthBuffer.get(), camera,
+	  &(renderer->commandQueue), &(renderer->colorBuffer), &(renderer->depthBuffer), camera,
 	  posA, posB, posC,
-	  filter, diffuseMap.get(), lightMap.get(),
+	  filter, &(diffuseMap), &(lightMap),
 	  TriangleTexCoords(texCoordA, texCoordB, texCoordC),
 	  TriangleColors(colorA, colorB, colorC)
 	);
 }
 
 void renderer_occludeFromBox(Renderer& renderer, const FVector3D& minimum, const FVector3D& maximum, const Transform3D &modelToWorldTransform, const Camera &camera, bool debugSilhouette) {
-	MUST_EXIST(renderer,renderer_occludeFromBox);
+	MUST_EXIST(renderer, renderer_occludeFromBox);
 	renderer->occludeFromBox(minimum, maximum, modelToWorldTransform, camera, debugSilhouette);
 }
 
 void renderer_occludeFromExistingTriangles(Renderer& renderer) {
-	MUST_EXIST(renderer,renderer_optimize);
+	MUST_EXIST(renderer, renderer_optimize);
 	renderer->occludeFromExistingTriangles();
 }
 
 void renderer_occludeFromTopRows(Renderer& renderer, const Camera &camera) {
-	MUST_EXIST(renderer,renderer_occludeFromTopRows);
+	MUST_EXIST(renderer, renderer_occludeFromTopRows);
 	renderer->occludeFromTopRows(camera);
 }
 
 bool renderer_isBoxVisible(Renderer& renderer, const FVector3D &minimum, const FVector3D &maximum, const Transform3D &modelToWorldTransform, const Camera &camera) {
-	MUST_EXIST(renderer,renderer_isBoxVisible);
+	MUST_EXIST(renderer, renderer_isBoxVisible);
 	return !(renderer->isBoxOccluded(minimum, maximum, modelToWorldTransform, camera));
 }
 
 void renderer_end(Renderer& renderer, bool debugWireframe) {
-	MUST_EXIST(renderer,renderer_end);
+	MUST_EXIST(renderer, renderer_end);
 	renderer->endFrame(debugWireframe);
 }
 

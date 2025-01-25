@@ -1,6 +1,6 @@
 ﻿// zlib open source license
 //
-// Copyright (c) 2017 to 2023 David Forsgren Piuva
+// Copyright (c) 2017 to 2025 David Forsgren Piuva
 // 
 // This software is provided 'as-is', without any express or implied
 // warranty. In no event will the authors be held liable for any damages
@@ -25,33 +25,54 @@
 #define DFPSR_IMAGE_PACK_ORDER
 
 #include <cstdint>
-#include "../api/types.h"
-#include "../base/simd.h"
+#include "Color.h"
 #include "../base/endian.h"
+#include "../base/DsrTraits.h"
 #include "../api/stringAPI.h"
+#include "../math/scalar.h"
 
 namespace dsr {
 
-// See types.h for the definition of PackOrderIndex
+// The pack order defines where each color channel should be when uint32_t is interpreted as an array of four bytes using local endianness.
+// Packed into 2 bits in ImageDimensions, because one can assume that future pack orders at least have visible colors sorted by wavelength.
+enum class PackOrderIndex : uint32_t {
+	RGBA, // Red   Green Blue  Alpha
+	BGRA, // Blue  Green Red   Alpha
+	ARGB, // Alpha Red   Green Blue
+	ABGR  // Alpha Blue  Green Red
+};
+
+inline String& string_toStreamIndented(String& target, const PackOrderIndex& index, const ReadableString& indentation) {
+	ReadableString name;
+	if (index == PackOrderIndex::RGBA) {
+		name = U"RGBA";
+	} else if (index == PackOrderIndex::BGRA) {
+		name = U"BGRA";
+	} else if (index == PackOrderIndex::ARGB) {
+		name = U"ARGB";
+	} else if (index == PackOrderIndex::ABGR) {
+		name = U"ABGR";
+	} else {
+		name = U"?";
+	}
+	string_append(target, indentation, name);
+	return target;
+}
 
 struct PackOrder {
 public:
-	// The index that it was constructed from
-	PackOrderIndex packOrderIndex;
 	// Byte array indices for each channel
 	// Indices are the locations of each color, not which color that holds each location
 	//   Example:
-	//     The indices for ARGB are (1, 2, 3, 0)
-	//     Because red is second at byte[1], green is third byte[2], blue is last in byte[3] and alpha is first in byte[0]
-	int redIndex, greenIndex, blueIndex, alphaIndex;
+	//     The indices for ARGB are (1, 2, 3, 0), because RGB are placed at byte indices 1..3 and A is placed first at byte index 0.
+	int32_t redIndex, greenIndex, blueIndex, alphaIndex;
 	// Pre-multipled bit offsets
-	int redOffset, greenOffset, blueOffset, alphaOffset;
+	int32_t redOffset, greenOffset, blueOffset, alphaOffset;
 	uint32_t redMask, greenMask, blueMask, alphaMask;
 private:
-	PackOrder(PackOrderIndex packOrderIndex, int redIndex, int greenIndex, int blueIndex, int alphaIndex) :
-	  packOrderIndex(packOrderIndex),
+	constexpr PackOrder(int32_t redIndex, int32_t greenIndex, int32_t blueIndex, int32_t alphaIndex) :
 	  redIndex(redIndex), greenIndex(greenIndex), blueIndex(blueIndex), alphaIndex(alphaIndex),
-	  redOffset(redIndex * 8), greenOffset(greenIndex * 8), blueOffset(blueIndex * 8), alphaOffset(alphaIndex * 8),
+	  redOffset(redIndex << 3), greenOffset(greenIndex << 3), blueOffset(blueIndex << 3), alphaOffset(alphaIndex << 3),
 	  redMask(ENDIAN_POS_ADDR(ENDIAN32_BYTE_0, this->redOffset)),
 	  greenMask(ENDIAN_POS_ADDR(ENDIAN32_BYTE_0, this->greenOffset)),
 	  blueMask(ENDIAN_POS_ADDR(ENDIAN32_BYTE_0, this->blueOffset)),
@@ -59,24 +80,22 @@ private:
 public:
 	// Constructors
 	PackOrder() :
-	  packOrderIndex(PackOrderIndex::RGBA),
 	  redIndex(0), greenIndex(1), blueIndex(2), alphaIndex(3),
 	  redOffset(0), greenOffset(8), blueOffset(16), alphaOffset(24),
 	  redMask(ENDIAN32_BYTE_0), greenMask(ENDIAN32_BYTE_1), blueMask(ENDIAN32_BYTE_2), alphaMask(ENDIAN32_BYTE_3) {}
 	static PackOrder getPackOrder(PackOrderIndex index) {
-		if (index == PackOrderIndex::RGBA) {
-			return PackOrder(index, 0, 1, 2, 3);
-		} else if (index == PackOrderIndex::BGRA) {
-			return PackOrder(index, 2, 1, 0, 3);
+		// Because the PackOrder constuctor is constexpr and all arguments are constant, these pack orders should be generated in compile time.
+		if (index == PackOrderIndex::BGRA) {
+			return PackOrder(2, 1, 0, 3); // PackOrderIndex::BGRA
 		} else if (index == PackOrderIndex::ARGB) {
-			return PackOrder(index, 1, 2, 3, 0);
+			return PackOrder(1, 2, 3, 0); // PackOrderIndex::ARGB
 		} else if (index == PackOrderIndex::ABGR) {
-			return PackOrder(index, 3, 2, 1, 0);
+			return PackOrder(3, 2, 1, 0); // PackOrderIndex::ABGR
 		} else {
-			printText("Warning! Unknown packing order index ", index, ". Falling back on RGBA.");
-			return PackOrder(index, 0, 1, 2, 3);
+			return PackOrder(0, 1, 2, 3); // PackOrderIndex::RGBA
 		}
 	}
+	// Pack the channels into a pixel color.
 	uint32_t packRgba(uint8_t red, uint8_t green, uint8_t blue, uint8_t alpha) const {
 		uint32_t result;
 		uint8_t *channels = (uint8_t*)(&result);
@@ -86,132 +105,114 @@ public:
 		channels[this->alphaIndex] = alpha;
 		return result;
 	}
+	// Limit color to a 0..255 range and pack the channels into a pixel color.
+	uint32_t saturateAndPackRgba(const ColorRgbaI32& color) {
+		return this->packRgba(clamp(0, color.red, 255), clamp(0, color.green, 255), clamp(0, color.blue, 255), clamp(0, color.alpha, 255));
+	}
+	// A faster way of limiting input when you are sure that it won't overflow.
+	uint32_t truncateAndPackRgba(const ColorRgbaI32& color) {
+		return this->packRgba((uint8_t)color.red, (uint8_t)color.green, (uint8_t)color.blue, (uint8_t)color.alpha);
+	}
+	// The inverse of packRgba putting the channels back in order.
+	ColorRgbaI32 unpackRgba(uint32_t packedColor) {
+		uint8_t *channels = (uint8_t*)(&packedColor);
+		return ColorRgbaI32(channels[this->redIndex], channels[this->greenIndex], channels[this->blueIndex], channels[this->alphaIndex]);
+	}
 };
 
-inline bool operator==(const PackOrder &left, const PackOrder &right) {
-	return left.packOrderIndex == right.packOrderIndex;
+template<typename U, DSR_ENABLE_IF(DSR_CHECK_PROPERTY(DsrTrait_Any_U32, U))> // Accepting uint32_t, U32x4, U32x8 ... U32xX
+inline U packOrder_getRed(U color) {
+	return color & ENDIAN32_BYTE_0;
+}
+template<typename U, DSR_ENABLE_IF(DSR_CHECK_PROPERTY(DsrTrait_Any_U32, U))> // Accepting uint32_t, U32x4, U32x8 ... U32xX
+inline U packOrder_getRed(U color, const PackOrder &order) {
+	return ENDIAN_NEG_ADDR(color & order.redMask, U(order.redOffset));
+}
+template<typename U, DSR_ENABLE_IF(DSR_CHECK_PROPERTY(DsrTrait_Any_U32, U))> // Accepting uint32_t, U32x4, U32x8 ... U32xX
+inline U packOrder_getGreen(U color) {
+	return ENDIAN_NEG_ADDR_IMM(color & ENDIAN32_BYTE_1, 8);
+}
+template<typename U, DSR_ENABLE_IF(DSR_CHECK_PROPERTY(DsrTrait_Any_U32, U))> // Accepting uint32_t, U32x4, U32x8 ... U32xX
+inline U packOrder_getGreen(U color, const PackOrder &order) {
+	return ENDIAN_NEG_ADDR(color & order.greenMask, U(order.greenOffset));
+}
+template<typename U, DSR_ENABLE_IF(DSR_CHECK_PROPERTY(DsrTrait_Any_U32, U))> // Accepting uint32_t, U32x4, U32x8 ... U32xX
+inline U packOrder_getBlue(U color) {
+	return ENDIAN_NEG_ADDR_IMM(color & ENDIAN32_BYTE_2, 16);
+}
+template<typename U, DSR_ENABLE_IF(DSR_CHECK_PROPERTY(DsrTrait_Any_U32, U))> // Accepting uint32_t, U32x4, U32x8 ... U32xX
+inline U packOrder_getBlue(U color, const PackOrder &order) {
+	return ENDIAN_NEG_ADDR(color & order.blueMask, U(order.blueOffset));
+}
+template<typename U, DSR_ENABLE_IF(DSR_CHECK_PROPERTY(DsrTrait_Any_U32, U))> // Accepting uint32_t, U32x4, U32x8 ... U32xX
+inline U packOrder_getAlpha(U color) {
+	return ENDIAN_NEG_ADDR_IMM(color & ENDIAN32_BYTE_3, 24);
+}
+template<typename U, DSR_ENABLE_IF(DSR_CHECK_PROPERTY(DsrTrait_Any_U32, U))> // Accepting uint32_t, U32x4, U32x8 ... U32xX
+inline U packOrder_getAlpha(U color, const PackOrder &order) {
+	return ENDIAN_NEG_ADDR(color & order.alphaMask, U(order.alphaOffset));
 }
 
 // Each input 32-bit element is from 0 to 255. Otherwise, the remainder will leak to other elements.
-template<typename T> // Accepting uint32_t, U32x4, U32x8...
-T packBytes(const T &s0, const T &s1, const T &s2) {
-	return s0 | ENDIAN_POS_ADDR(s1, 8) | ENDIAN_POS_ADDR(s2, 16);
+template<typename U, DSR_ENABLE_IF(DSR_CHECK_PROPERTY(DsrTrait_Any_U32, U))> // Accepting uint32_t, U32x4, U32x8 ... U32xX
+U packOrder_packBytes(const U &s0, const U &s1, const U &s2) {
+	return s0 | ENDIAN_POS_ADDR_IMM(s1, 8) | ENDIAN_POS_ADDR_IMM(s2, 16);
 }
 // Using a specified packing order
-template<typename T> // Accepting uint32_t, U32x4, U32x8...
-T packBytes(const T &s0, const T &s1, const T &s2, const PackOrder &order) {
-	return ENDIAN_POS_ADDR(s0, order.redOffset)
-	     | ENDIAN_POS_ADDR(s1, order.greenOffset)
-	     | ENDIAN_POS_ADDR(s2, order.blueOffset);
+template<typename U, DSR_ENABLE_IF(DSR_CHECK_PROPERTY(DsrTrait_Any_U32, U))> // Accepting uint32_t, U32x4, U32x8 ... U32xX
+U packOrder_packBytes(const U &s0, const U &s1, const U &s2, const PackOrder &order) {
+	return ENDIAN_POS_ADDR(s0, U(order.redOffset))
+		 | ENDIAN_POS_ADDR(s1, U(order.greenOffset))
+		 | ENDIAN_POS_ADDR(s2, U(order.blueOffset));
 }
 
 // Each input 32-bit element is from 0 to 255. Otherwise, the remainder will leak to other elements.
-template<typename T> // Accepting uint32_t, U32x4, U32x8...
-T packBytes(const T &s0, const T &s1, const T &s2, const T &s3) {
-	return s0 | ENDIAN_POS_ADDR(s1, 8) | ENDIAN_POS_ADDR(s2, 16) | ENDIAN_POS_ADDR(s3, 24);
+template<typename U, DSR_ENABLE_IF(DSR_CHECK_PROPERTY(DsrTrait_Any_U32, U))> // Accepting uint32_t, U32x4, U32x8 ... U32xX
+U packOrder_packBytes(const U &s0, const U &s1, const U &s2, const U &s3) {
+	return s0 | ENDIAN_POS_ADDR_IMM(s1, 8) | ENDIAN_POS_ADDR_IMM(s2, 16) | ENDIAN_POS_ADDR_IMM(s3, 24);
 }
 // Using a specified packing order
-template<typename T> // Accepting uint32_t, U32x4, U32x8...
-T packBytes(const T &s0, const T &s1, const T &s2, const T &s3, const PackOrder &order) {
-	return ENDIAN_POS_ADDR(s0, order.redOffset)
-	     | ENDIAN_POS_ADDR(s1, order.greenOffset)
-	     | ENDIAN_POS_ADDR(s2, order.blueOffset)
-	     | ENDIAN_POS_ADDR(s3, order.alphaOffset);
+template<typename U, DSR_ENABLE_IF(DSR_CHECK_PROPERTY(DsrTrait_Any_U32, U))> // Accepting uint32_t, U32x4, U32x8 ... U32xX
+U packOrder_packBytes(const U &s0, const U &s1, const U &s2, const U &s3, const PackOrder &order) {
+	return ENDIAN_POS_ADDR(s0, U(order.redOffset))
+		 | ENDIAN_POS_ADDR(s1, U(order.greenOffset))
+		 | ENDIAN_POS_ADDR(s2, U(order.blueOffset))
+		 | ENDIAN_POS_ADDR(s3, U(order.alphaOffset));
 }
 
 // Pack separate floats into saturated bytes
-inline U32x4 floatToSaturatedByte(const F32x4 &s0, const F32x4 &s1, const F32x4 &s2, const F32x4 &s3) {
-	return packBytes(
+//   From float to uint32_t
+//   From F32x4 to U32x4
+//   From F32x8 to U32x8
+//   From F32xX to U32xX
+//   From F32xF to U32xF
+template<typename U, typename F, DSR_ENABLE_IF(
+	 DSR_CHECK_PROPERTY(DsrTrait_Any_U32, U)
+  && DSR_CHECK_PROPERTY(DsrTrait_Any_F32, F)
+)>
+inline U packOrder_floatToSaturatedByte(const F &s0, const F &s1, const F &s2, const F &s3) {
+	return packOrder_packBytes(
 	  truncateToU32(s0.clamp(0.1f, 255.1f)),
 	  truncateToU32(s1.clamp(0.1f, 255.1f)),
 	  truncateToU32(s2.clamp(0.1f, 255.1f)),
 	  truncateToU32(s3.clamp(0.1f, 255.1f))
 	);
 }
-inline U32x8 floatToSaturatedByte(const F32x8 &s0, const F32x8 &s1, const F32x8 &s2, const F32x8 &s3) {
-	return packBytes(
-	  truncateToU32(s0.clamp(0.1f, 255.1f)),
-	  truncateToU32(s1.clamp(0.1f, 255.1f)),
-	  truncateToU32(s2.clamp(0.1f, 255.1f)),
-	  truncateToU32(s3.clamp(0.1f, 255.1f))
-	);
-}
-// Using a specified packing order
-inline U32x4 floatToSaturatedByte(const F32x4 &s0, const F32x4 &s1, const F32x4 &s2, const F32x4 &s3, const PackOrder &order) {
-	return packBytes(
+// Using a specified pack order
+template<typename U, typename F, DSR_ENABLE_IF(
+	 DSR_CHECK_PROPERTY(DsrTrait_Any_U32, U)
+  && DSR_CHECK_PROPERTY(DsrTrait_Any_F32, F)
+)>
+inline U packOrder_floatToSaturatedByte(const F &s0, const F &s1, const F &s2, const F &s3, const PackOrder &order) {
+	return packOrder_packBytes(
 	  truncateToU32(s0.clamp(0.1f, 255.1f)),
 	  truncateToU32(s1.clamp(0.1f, 255.1f)),
 	  truncateToU32(s2.clamp(0.1f, 255.1f)),
 	  truncateToU32(s3.clamp(0.1f, 255.1f)),
 	  order
 	);
-}
-inline U32x8 floatToSaturatedByte(const F32x8 &s0, const F32x8 &s1, const F32x8 &s2, const F32x8 &s3, const PackOrder &order) {
-	return packBytes(
-	  truncateToU32(s0.clamp(0.1f, 255.1f)),
-	  truncateToU32(s1.clamp(0.1f, 255.1f)),
-	  truncateToU32(s2.clamp(0.1f, 255.1f)),
-	  truncateToU32(s3.clamp(0.1f, 255.1f)),
-	  order
-	);
-}
-
-template<typename T> // Accepting uint32_t, U32x4, U32x8...
-inline T getRed(T color) {
-	return color & ENDIAN32_BYTE_0;
-}
-template<typename T> // Accepting uint32_t, U32x4, U32x8...
-inline T getRed(T color, const PackOrder &order) {
-	return ENDIAN_NEG_ADDR(color & order.redMask, order.redOffset);
-}
-template<typename T> // Accepting uint32_t, U32x4, U32x8...
-inline T getGreen(T color) {
-	return ENDIAN_NEG_ADDR(color & ENDIAN32_BYTE_1, 8);
-}
-template<typename T> // Accepting uint32_t, U32x4, U32x8...
-inline T getGreen(T color, const PackOrder &order) {
-	return ENDIAN_NEG_ADDR(color & order.greenMask, order.greenOffset);
-}
-template<typename T> // Accepting uint32_t, U32x4, U32x8...
-inline T getBlue(T color) {
-	return ENDIAN_NEG_ADDR(color & ENDIAN32_BYTE_2, 16);
-}
-template<typename T> // Accepting uint32_t, U32x4, U32x8...
-inline T getBlue(T color, const PackOrder &order) {
-	return ENDIAN_NEG_ADDR(color & order.blueMask, order.blueOffset);
-}
-template<typename T> // Accepting uint32_t, U32x4, U32x8...
-inline T getAlpha(T color) {
-	return ENDIAN_NEG_ADDR(color & ENDIAN32_BYTE_3, 24);
-}
-template<typename T> // Accepting uint32_t, U32x4, U32x8...
-inline T getAlpha(T color, const PackOrder &order) {
-	return ENDIAN_NEG_ADDR(color & order.alphaMask, order.alphaOffset);
-}
-
-inline String getName(PackOrderIndex index) {
-	if (index == PackOrderIndex::RGBA) {
-		return U"RGBA";
-	} else if (index == PackOrderIndex::BGRA) {
-		return U"BGRA";
-	} else if (index == PackOrderIndex::ARGB) {
-		return U"ARGB";
-	} else if (index == PackOrderIndex::ABGR) {
-		return U"ABGR";
-	} else {
-		return U"?";
-	}
-}
-inline String& string_toStreamIndented(String& target, const PackOrderIndex& source, const ReadableString& indentation) {
-	string_append(target, indentation, getName(source));
-	return target;
-}
-inline String& string_toStreamIndented(String& target, const PackOrder& source, const ReadableString& indentation) {
-	string_append(target, indentation, getName(source.packOrderIndex));
-	return target;
 }
 
 }
 
 #endif
-

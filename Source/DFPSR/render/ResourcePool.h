@@ -1,6 +1,6 @@
 ﻿// zlib open source license
 //
-// Copyright (c) 2017 to 2019 David Forsgren Piuva
+// Copyright (c) 2017 to 2025 David Forsgren Piuva
 // 
 // This software is provided 'as-is', without any express or implied
 // warranty. In no event will the authors be held liable for any damages
@@ -24,7 +24,7 @@
 #ifndef DFPSR_RENDER_RESOURCE_POOL
 #define DFPSR_RENDER_RESOURCE_POOL
 
-#include "../image/ImageRgbaU8.h"
+#include "../image/Texture.h"
 #include "../collection/List.h"
 #include "../api/stringAPI.h"
 
@@ -33,24 +33,30 @@ namespace dsr {
 // A resource pool is responsible for storing things that might be reused in order to avoid loading the same file multiple times
 class ResourcePool {
 public:
-	virtual const ImageRgbaU8 fetchImageRgba(const String& name) = 0;
+	virtual const ImageRgbaU8 fetchImageRgba(const ReadableString& name) = 0;
+	virtual const TextureRgbaU8 fetchTextureRgba(const ReadableString& name, int32_t resolutions = 4) = 0;
 };
 
-// TODO: Store names in images?
-struct imageRgbaEntry {
+// TODO: Keep track of reference count to resources and have a clean-up method for removing unused resources.
+template <typename T>
+struct namedEntry {
 	String name;
-	const ImageRgbaU8 ref;
-	imageRgbaEntry(const String& name, const ImageRgbaU8& ref) : name(name), ref(ref) {}
+	const T resource;
+	namedEntry(const String& name, const T& resource) : name(name), resource(resource) {}
 };
 
 class BasicResourcePool : public ResourcePool {
 private:
-	List<imageRgbaEntry> imageRgbaList;
-	int findImageRgba(const String& name) const;
+	List<namedEntry<ImageRgbaU8>> imageRgbaList;
+	List<namedEntry<TextureRgbaU8>> textureRgbaList;
+	int findImageRgba(const ReadableString& name) const;
+	int findTextureRgba(const ReadableString& name) const;
 public:
 	String path;
-	explicit BasicResourcePool(const String& path) : path(path) {}
-	const ImageRgbaU8 fetchImageRgba(const String& name) override;
+	explicit BasicResourcePool(const ReadableString& path) : path(path) {}
+	const ImageRgbaU8 fetchImageRgba(const ReadableString& name) override;
+	// The resolutions argument can be used to limit the number of mip levels for a specific rendering engine.
+	const TextureRgbaU8 fetchTextureRgba(const ReadableString& name, int32_t resolutions) override;
 };
 
 }

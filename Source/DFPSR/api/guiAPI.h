@@ -25,13 +25,15 @@
 #ifndef DFPSR_API_GUI
 #define DFPSR_API_GUI
 
-#include "types.h"
+#include "../base/Handle.h"
 #include "../api/stringAPI.h"
+#include "../image/Image.h"
 #include "../gui/InputEvent.h"
+#include "../gui/VisualTheme.h"
 
 // createBackendWindow should be implemented outside of the core framework
 //   Choose one of the window backends in SDK/native to compile and link with your application.
-// std::shared_ptr<dsr::BackendWindow> createBackendWindow(const dsr::String& title, int width, int height);
+// Handle<dsr::BackendWindow> createBackendWindow(const dsr::String& title, int width, int height);
 
 // Constness on handles doesn't propagate to any inner types
 //   "const Comopnent&" only means that the writable Component handle can be created from a sub-expression
@@ -39,6 +41,26 @@
 //   This allow getting a component by name and using it as an argument without being stored in a variable.
 
 namespace dsr {
+
+	enum class ReturnCode {
+		Good,
+		KeyNotFound,
+		ParsingFailure
+	};
+
+	// A handle to a window.
+	//  The Window wraps itself around native window backends to abstract away platform specific details.
+	//  It also makes it easy to load and use a graphical interface using the optional component system.
+	class DsrWindow;
+	using Window = Handle<DsrWindow>;
+
+	// A handle to a GUI component.
+	//   Components are an abstraction for graphical user interfaces, which might not always be powerful enough.
+	//   * If you're making something advanced that components cannot do,
+	//     you can also use draw calls and input events directly against the window without using Component.
+	class VisualComponent;
+	using Component = Handle<VisualComponent>;
+
 
 // Window Construction
 	// A portable window will be wrapped around a native window backend supplied from a call to createBackendWindow.

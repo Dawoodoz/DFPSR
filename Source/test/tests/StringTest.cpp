@@ -206,11 +206,11 @@ START_TEST(String)
 	ASSERT_EQUAL(dsr::string_mangleQuote(U"123"), U"\"123\"");
 	ASSERT_EQUAL(dsr::string_mangleQuote(U"abc"), U"\"abc\"");
 	// Not enough quote signs
-	ASSERT_CRASH(dsr::string_unmangleQuote(U""));
-	ASSERT_CRASH(dsr::string_unmangleQuote(U" "));
-	ASSERT_CRASH(dsr::string_unmangleQuote(U"ab\"cd"));
+	ASSERT_CRASH(dsr::string_unmangleQuote(U""), U"Cannot unmangle using string_unmangleQuote without beginning and ending with quote signs!");
+	ASSERT_CRASH(dsr::string_unmangleQuote(U" "), U"Cannot unmangle using string_unmangleQuote without beginning and ending with quote signs!");
+	ASSERT_CRASH(dsr::string_unmangleQuote(U"ab\"cd"), U"Cannot unmangle using string_unmangleQuote without beginning and ending with quote signs!");
 	// Too many quote signs
-	ASSERT_CRASH(dsr::string_unmangleQuote(U"ab\"cd\"ef\"gh"));
+	ASSERT_CRASH(dsr::string_unmangleQuote(U"ab\"cd\"ef\"gh"), U"Unmangled double quote sign detected in string_unmangleQuote!");
 	// Basic quote
 	ASSERT_EQUAL(dsr::string_unmangleQuote(U"\"ab\""), U"ab");
 	// Surrounded quote
@@ -310,38 +310,27 @@ START_TEST(String)
 		ASSERT_EQUAL(string_getBufferUseCount(source), 1);
 		ASSERT_EQUAL(string_getBufferUseCount(source2), 4);
 	}
-	{ // Using buffer remembered in ReadableString to reuse memory for splitting
-		String original = U" a . b . c . d ";
-		ReadableString borrowsTheBuffer = string_after(original, 3);
-		ASSERT_EQUAL(borrowsTheBuffer, U" b . c . d ");
-		List<String> result = string_split(borrowsTheBuffer, U'.', true);
-		ASSERT_EQUAL(result.length(), 3);
-		ASSERT_EQUAL(result[0], U"b");
-		ASSERT_EQUAL(result[1], U"c");
-		ASSERT_EQUAL(result[2], U"d");
-		ASSERT_EQUAL(string_getBufferUseCount(original), 5);
-		ASSERT_EQUAL(string_getBufferUseCount(borrowsTheBuffer), 5);
-		ASSERT_EQUAL(string_getBufferUseCount(result[0]), 5);
-		ASSERT_EQUAL(string_getBufferUseCount(result[1]), 5);
-		ASSERT_EQUAL(string_getBufferUseCount(result[2]), 5);
-	}
 	{ // Automatically allocating a shared buffer for many elements
-		List<String> result = string_split(U" a . b . c . d ", U'.', true);
+		// Splitting String shares memory.
+		String original = U" a . b . c . d ";
+		List<String> result = string_split(original, U'.', true);
 		ASSERT_EQUAL(result[0], U"a");
 		ASSERT_EQUAL(result[1], U"b");
 		ASSERT_EQUAL(result[2], U"c");
 		ASSERT_EQUAL(result[3], U"d");
-		ASSERT_EQUAL(string_getBufferUseCount(result[0]), 4);
-		ASSERT_EQUAL(string_getBufferUseCount(result[1]), 4);
-		ASSERT_EQUAL(string_getBufferUseCount(result[2]), 4);
-		ASSERT_EQUAL(string_getBufferUseCount(result[3]), 4);
+		ASSERT_EQUAL(string_getBufferUseCount(original), 5);
+		ASSERT_EQUAL(string_getBufferUseCount(result[0]), 5);
+		ASSERT_EQUAL(string_getBufferUseCount(result[1]), 5);
+		ASSERT_EQUAL(string_getBufferUseCount(result[2]), 5);
+		ASSERT_EQUAL(string_getBufferUseCount(result[3]), 5);
+		// Splitting a literal allocates no string buffers.
 		result = string_split(U" a . b . c ", U'.', false);
 		ASSERT_EQUAL(result[0], U" a ");
 		ASSERT_EQUAL(result[1], U" b ");
 		ASSERT_EQUAL(result[2], U" c ");
-		ASSERT_EQUAL(string_getBufferUseCount(result[0]), 3);
-		ASSERT_EQUAL(string_getBufferUseCount(result[1]), 3);
-		ASSERT_EQUAL(string_getBufferUseCount(result[2]), 3);
+		ASSERT_EQUAL(string_getBufferUseCount(result[0]), 0);
+		ASSERT_EQUAL(string_getBufferUseCount(result[1]), 0);
+		ASSERT_EQUAL(string_getBufferUseCount(result[2]), 0);
 	}
 	{ // Callback splitting
 		String numbers = U"1, 3, 5, 7, 9";

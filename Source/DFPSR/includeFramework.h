@@ -12,6 +12,7 @@
 
 	// 2D API
 	#include "api/imageAPI.h" // Creating images and modifying pixels
+	#include "api/textureAPI.h" // Creating textures and sampling pixels
 	#include "api/drawAPI.h" // Efficient drawing on images
 	#include "api/filterAPI.h" // Efficient image generation, resizing and filtering
 	// 3D API

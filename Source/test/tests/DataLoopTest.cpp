@@ -1,5 +1,6 @@
 ﻿
 #include "../testTools.h"
+#include "../../DFPSR/base/simd.h"
 
 #define INITIALIZE \
 	for (int i = 0; i < elements; i++) { \

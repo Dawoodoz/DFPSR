@@ -25,53 +25,63 @@
 #define DFPSR_MATH_SCALAR
 
 #include <cmath>
+#include "../base/DsrTraits.h"
 
 namespace dsr {
 
 // A minimum function that can take more than two arguments.
 // Post-condition: Returns the smallest of all given values, which must be comparable using the < operator and have the same type.
-template <typename T>
+template <typename T, DSR_ENABLE_IF(DSR_CHECK_PROPERTY(DsrTrait_Scalar, T))>
 inline T min(const T &a, const T &b) {
 	return (a < b) ? a : b;
 }
-template <typename T, typename... TAIL>
+template <typename T, typename... TAIL, DSR_ENABLE_IF(DSR_CHECK_PROPERTY(DsrTrait_Scalar, T))>
 inline T min(const T &a, const T &b, TAIL... tail) {
 	return min(min(a, b), tail...);
 }
 
 // A maximum function that can take more than two arguments.
 // Post-condition: Returns the largest of all given values, which must be comparable using the > operator and have the same type.
-template <typename T>
+template <typename T, DSR_ENABLE_IF(DSR_CHECK_PROPERTY(DsrTrait_Scalar, T))>
 inline T max(const T &a, const T &b) {
 	return (a > b) ? a : b;
 }
-template <typename T, typename... TAIL>
+template <typename T, typename... TAIL, DSR_ENABLE_IF(DSR_CHECK_PROPERTY(DsrTrait_Scalar, T))>
 inline T max(const T &a, const T &b, TAIL... tail) {
 	return max(max(a, b), tail...);
 }
 
-// Returns a modulo b where 0 <= a < b
-inline int signedModulo(int a, int b) {
-	int result = 0;
-	if (b > 0) {
-		if (a >= 0) {
-			result = a % b; // Simple modulo
-		} else {
-			result = (b - (-a % b)) % b; // Negative modulo
-		}
-	}
-	return result;
+// Pre-condition: minValue <= maxValue
+// Post-condition: Returns value clamped from minValue to maxValue.
+template <typename T, DSR_ENABLE_IF(DSR_CHECK_PROPERTY(DsrTrait_Scalar, T))>
+T clamp(const T &minValue, T value, const T &maxValue) {
+	if (value > maxValue) value = maxValue;
+	if (value < minValue) value = minValue;
+	return value;
 }
 
-inline int roundUp(int size, int alignment) {
+// Returns a modulo b where 0 <= a < b
+template <typename I, typename U, DSR_ENABLE_IF(DSR_CHECK_PROPERTY(DsrTrait_Scalar_SignedInteger, I) && DSR_CHECK_PROPERTY(DsrTrait_Scalar_Integer, U))>
+inline int32_t signedModulo(I a, U b) {
+	if (a >= 0) {
+		return a % b; // Simple modulo
+	} else {
+		return (b - (-a % b)) % b; // Negative modulo
+	}
+}
+
+template <typename I, typename U, DSR_ENABLE_IF(DSR_CHECK_PROPERTY(DsrTrait_Scalar_SignedInteger, I) && DSR_CHECK_PROPERTY(DsrTrait_Scalar_Integer, U))>
+inline I roundUp(I size, U alignment) {
 	return size + (alignment - 1) - signedModulo(size - 1, alignment);
 }
 
-inline int roundDown(int size, int alignment) {
+template <typename I, typename U, DSR_ENABLE_IF(DSR_CHECK_PROPERTY(DsrTrait_Scalar_SignedInteger, I) && DSR_CHECK_PROPERTY(DsrTrait_Scalar_Integer, U))>
+inline I roundDown(I size, U alignment) {
 	return size - signedModulo(size, alignment);
 }
 
-inline float absDiff(float a, float b) {
+template <typename T, DSR_ENABLE_IF(DSR_CHECK_PROPERTY(DsrTrait_Scalar_Floating, T))>
+inline T absDiff(T a, T b) {
 	float result = a - b;
 	if (result < 0.0f) {
 		result = -result;
@@ -80,7 +90,7 @@ inline float absDiff(float a, float b) {
 }
 
 inline uint8_t absDiff(uint8_t a, uint8_t b) {
-	int result = (int)a - (int)b;
+	int32_t result = (int32_t)a - (int32_t)b;
 	if (result < 0) {
 		result = -result;
 	}
@@ -88,15 +98,14 @@ inline uint8_t absDiff(uint8_t a, uint8_t b) {
 }
 
 inline uint16_t absDiff(uint16_t a, uint16_t b) {
-	int result = (int)a - (int)b;
+	int32_t result = (int32_t)a - (int32_t)b;
 	if (result < 0) {
 		result = -result;
 	}
 	return (uint16_t)result;
 }
 
-// Allowing compilation on older C++ versions
-// Only use for trivial types if you want to avoid cloning and destruction
+// Only use this for trivial types, use std::swap for objects with non-trivial construction.
 template <typename T>
 inline void swap(T &a, T &b) {
 	T temp = a;
@@ -105,7 +114,7 @@ inline void swap(T &a, T &b) {
 }
 
 // More compact than min(a, b) when reading from the target
-template <typename T>
+template <typename T, DSR_ENABLE_IF(DSR_CHECK_PROPERTY(DsrTrait_Scalar, T))>
 inline void replaceWithSmaller(T &target, const T &source) {
 	if (source < target) {
 		target = source;
@@ -113,7 +122,7 @@ inline void replaceWithSmaller(T &target, const T &source) {
 }
 
 // More compact than max(a, b) when reading from the target
-template <typename T>
+template <typename T, DSR_ENABLE_IF(DSR_CHECK_PROPERTY(DsrTrait_Scalar, T))>
 inline void replaceWithLarger(T &target, const T &source) {
 	if (source > target) {
 		target = source;
@@ -123,4 +132,3 @@ inline void replaceWithLarger(T &target, const T &source) {
 }
 
 #endif
-

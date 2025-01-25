@@ -2,31 +2,31 @@
 
 Title: Troubleshooting
 
-When using a specific framework, the common mistakes and solutions are usually very similar.
-This guide explains both the steps for finding your bugs, and reducing the risk of them comming back.
----
-Title2: To use or not use an IDE with a built-in debugger
-
 *
-If your low-level code is crashing often from advanced optimizations,
-you might need an IDE with a built-in debugger to quickly show where the crash happened.
-The IDE integration can then directly point to the code instead of showing line numbers from a separate debugger.
+If your program crashes with segmentation faults, start by replacing pointers with SafePointer and building the program in debug mode.
 
-*
-If your high-level code only crashes rarely but the amount of pixel data is too much for a debugger,
-create a debug window showing internal images or debug overlays with coordinates on top of the program's existing graphics.
+In the Builder build system, debug mode is activated by writing 'Debug' in the *.DsrProj project file, which declares the Debug variable and assigns it to one.
 
----
-Title2: Finding the cause of bugs takes too long.
-
-*
-Unless you are profiling, test in debug mode using the -DDEBUG compiler flag.
-This catches bugs earlier with more information about the crash.
+For other build systems, give -DDEBUG to the compiler to define the DEBUG macro.
 Make sure that the release flag -DNDEBUG is not also active.
 
+Then memory.h will enable the SAFE_POINTER_CHECKS macro from detecting debug mode.
+Then SafePointer.h will store the permitted region in each SafePointer and perform bound checks when data is accessed using SafePointer.
+
+---
+Title2: Getting random memory crashes.
+
 *
-If using raw pointers, you might want to replace them with the SafePointer class to get tighter bound checks in debug mode.
-Debuggers will wait until your bugs write outside of the whole allocation before throwing an error.
+If your program is getting random memory corruption despite using SafePointer and debug mode, continue by enabling the EXTRA_SAFE_POINTER_CHECKS macro.
+
+In the Builder build system, extra safe memory checks can be enabled for debug mode by writing 'CompilerFlag "-DEXTRA_SAFE_POINTER_CHECKS"' in the *.DsrProj project file.
+EXTRA_SAFE_POINTER_CHECKS can also be defined as a macro in settings.h or by giving -DEXTRA_SAFE_POINTER_CHECKS to a different build system.
+
+Then SafePointer will check that the allocation has not been replaced by another allocation in heap.cpp.
+SafePointer will also check that no thread is trying to access virtual stack memory allocated by another thread.
+
+*
+If your program does not crash but your image filters do not work as expected, create a debug window showing internal images or debug overlays with coordinates on top of the program's existing graphics.
 
 *
 Make sure that all your multi-threading can be turned off easily when finding the root cause.
@@ -36,11 +36,16 @@ Create a basic reference implementation without dangerous optimizations for ever
 Both for finding the cause of instability and being able to remove a feature without sending emergency patches in panic with more bugs.
 Image filters are first written using lambdas returning the color of a pixel based on the pixel coordinate and exception-free pixel sampling.
 Then one can make an optimized version using SafePointer and SIMD vectors.
+
 ---
 Title2: Getting memory leaks.
 
+In debug mode, terminating the program should print "All heap memory was freed without leaks.".
+If it does not, you might have a memory leak for memory allocated by the framework in heap.cpp.
+Due to the non-deterministic release order for global variables in C++, it is not possible to print a warning when there is a memory leak without redefining the _start function.
+
 *
-Avoid using manual memory management (malloc, free, new, delete...), because it is a waste of time unless you are writing a new abstraction layer.
+Avoid using manual memory management (malloc, free, new, delete...), use dsr::Handle for object handles.
 
 *
 Make sure that no reference counted object can create a cycle of reference counted pointers back to itself, because then none of them would be unused according to reference counting.
@@ -49,40 +54,19 @@ Make sure that no reference counted object can create a cycle of reference count
 Use the dsr::Buffer object instead of C allocation calls, to let it automatically free your memory when nobody keeps the reference counted handle.
 You can then work on its memory using SafePointer, which provides bound checks in debug mode, but must be kept close to the buffer's reference counted handle to keep the data it points to alive.
 <- Buffers.html | Read about the Buffer API
----
-Title2: Getting random memory crashes.
-
-*
-Check that you are not using raw C pointers by searching for any use of &, *, [] in the code and replacing them with SafePointer to get bound checks.
-
-*
-Make sure that you are using debug mode, so that outside access with SafePointer is caught with error messages.
-
-*
-Make sure that no SafePointer outlives the parent Buffer, because SafePointer is not reference counting on its own.
-If SafePointer would be reference counting, it would not be a zero overhead substitution for raw C pointers in release mode, and nobody would use it for optimizations.
 
 *
 Remember that a reference in C++ is a pointer under the C++ syntax, which can also cause crashes if taken from a location in memory that may be freed during the call.
-If you passed "const ReadableString &text" from "List<String>" to a function that can reallocate the list that the string is stored in, this can cause a crash by referring to a memory location that got replaced by the list.
-If you instead pass "ReadableString text" from "List<String>", no additional heap allocations will be made, but activating reference counting makes sure that the string can be passed around independently from where it came from without causing any crashes.
+If you passed "const SomeClass &object" from "List<SomeClass>" to a function that can reallocate the list that the object is stored in, this can cause a crash by referring to a memory location that got replaced by the list.
+If you instead pass "SomeClass object" from "List<SomeClass>", the object will be copied in the call instead of referring to freed memory.
 Returning a reference to a stack allocated variable, can also cause crashes with references.
 
-*
-Assert bounds with assertions in debug mode for fixed size and variable length (VLA) arrays, which have no bound checks in C/C++ but are much faster than heap memory for many small allocations.
-Getters and setters can make the bound checks reusable if you only have a few types with fixed size arrays.
 ---
 Title2: The application crashes, but the debugger does not detect it.
 
 Use a debugger directly on the application with debug symbols enabled when compiling.
 Connecting Valgrind to the script used to run your application will catch memory leaks, but not invalid memory access.
 Without debug symbols, you can see which method crashed, but not the line.
-
----
-Title2: Getting crashes after linking to an external library.
-
-Try disabling the library's memory recycling, by either removing the ReuseMemory flag in your DsrProj build script (cleanest way) or adding the -DDISABLE_ALLOCATOR compiler flag to define the DISABLE_ALLOCATOR macro (works with other build systems).
-This will disable the library's memory recycling at DFPSR/base/allocator.cpp in case that another library already has a memory recycler.
 ---
 
 Title2: Getting linker errors when creating a new project without a window.

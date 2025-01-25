@@ -703,7 +703,7 @@ struct DsrProcessImpl {
 };
 
 DsrProcessStatus process_getStatus(const DsrProcess &process) {
-	if (process.get() == nullptr) {
+	if (process.isNull()) {
 		return DsrProcessStatus::NotStarted;
 	} else {
 		if (!process->terminated) {
@@ -765,7 +765,7 @@ DsrProcess process_execute(const ReadableString& programPath, List<String> argum
 		memset(&processInfo, 0, sizeof(PROCESS_INFORMATION));
 		startInfo.cb = sizeof(STARTUPINFO);
 		if (CreateProcessW(nullptr, (LPWSTR)nativeArgs, nullptr, nullptr, true, 0, nullptr, nullptr, &startInfo, &processInfo)) {
-			return std::make_shared<DsrProcessImpl>(processInfo); // Success
+			return handle_create<DsrProcessImpl>(processInfo).setName("DSR Process"); // Success
 		} else {
 			return DsrProcess(); // Failure
 		}
@@ -790,7 +790,7 @@ DsrProcess process_execute(const ReadableString& programPath, List<String> argum
 		argv[currentArg] = nullptr;
 		pid_t pid = 0;
 		if (posix_spawn(&pid, nativePath, nullptr, nullptr, (char**)argv.getUnsafe(), environ) == 0) {
-			return std::make_shared<DsrProcessImpl>(pid); // Success
+			return handle_create<DsrProcessImpl>(pid).setName("DSR Process"); // Success
 		} else {
 			return DsrProcess(); // Failure
 		}

@@ -31,6 +31,8 @@
 #ifndef DFPSR_SIMD_3D
 #define DFPSR_SIMD_3D
 
+namespace dsr {
+
 // These are the infix operations for 2D SIMD vectors F32x4x2, F32x8x2...
 #define SIMD_VECTOR_INFIX_OPERATORS_2D(VECTOR_TYPE, SIMD_TYPE, ELEMENT_TYPE) \
 inline VECTOR_TYPE operator+(const VECTOR_TYPE &left, const VECTOR_TYPE &right) { \
@@ -272,6 +274,11 @@ SIMD_VECTOR_INFIX_OPERATORS_3D(F32x8x3, F32x8, float)
 	using F32xFx3 = F32x8x3;
 	using F32xFx2 = F32x8x2;
 #endif
+
+#undef SIMD_VECTOR_MEMBER_OPERATORS_2D
+#undef SIMD_VECTOR_MEMBER_OPERATORS_3D
+
+}
 
 #endif
 

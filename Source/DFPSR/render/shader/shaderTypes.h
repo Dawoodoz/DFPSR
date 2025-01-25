@@ -25,51 +25,60 @@
 #define DFPSR_RENDER_SHADER_TYPES
 
 #include <cstdint>
-#include <cstdio>
 #include "../../base/simd.h"
 #include "../../image/PackOrder.h"
 
 namespace dsr {
 
+template<typename U, typename F>
 struct Rgba_F32 {
-	F32x4 red;
-	F32x4 green;
-	F32x4 blue;
-	F32x4 alpha;
-	explicit Rgba_F32(const U32x4 &color) :
-	  red(  floatFromU32(getRed(  color))),
-	  green(floatFromU32(getGreen(color))),
-	  blue( floatFromU32(getBlue( color))),
-	  alpha(floatFromU32(getAlpha(color))) {}
-	Rgba_F32(const U32x4 &color, const PackOrder &order) :
-	  red(  floatFromU32(getRed(  color, order))),
-	  green(floatFromU32(getGreen(color, order))),
-	  blue( floatFromU32(getBlue( color, order))),
-	  alpha(floatFromU32(getAlpha(color, order))) {}
-	Rgba_F32(const F32x4 &red, const F32x4 &green, const F32x4 &blue, const F32x4 &alpha) : red(red), green(green), blue(blue), alpha(alpha) {}
-	// TODO: Use a template argument for deciding the packing order for external image formats
-	U32x4 toSaturatedByte() const {
-		return floatToSaturatedByte(this->red, this->green, this->blue, this->alpha);
+	F red;
+	F green;
+	F blue;
+	F alpha;
+	explicit Rgba_F32(const U &color) :
+	  red(  floatFromU32(packOrder_getRed(  color))),
+	  green(floatFromU32(packOrder_getGreen(color))),
+	  blue( floatFromU32(packOrder_getBlue( color))),
+	  alpha(floatFromU32(packOrder_getAlpha(color))) {}
+	Rgba_F32(const U &color, const PackOrder &order) :
+	  red(  floatFromU32(packOrder_getRed(  color, order))),
+	  green(floatFromU32(packOrder_getGreen(color, order))),
+	  blue( floatFromU32(packOrder_getBlue( color, order))),
+	  alpha(floatFromU32(packOrder_getAlpha(color, order))) {}
+	Rgba_F32(const F &red, const F &green, const F &blue, const F &alpha) : red(red), green(green), blue(blue), alpha(alpha) {}
+	U toSaturatedByte() const {
+		return packOrder_floatToSaturatedByte<U, F>(this->red, this->green, this->blue, this->alpha);
 	}
-	U32x4 toSaturatedByte(const PackOrder &order) const {
-		return floatToSaturatedByte(this->red, this->green, this->blue, this->alpha, order);
+	U toSaturatedByte(const PackOrder &order) const {
+		return packOrder_floatToSaturatedByte<U, F>(this->red, this->green, this->blue, this->alpha, order);
 	}
 };
-inline Rgba_F32 operator+(const Rgba_F32 &left, const Rgba_F32 &right) {
-	return Rgba_F32(left.red + right.red, left.green + right.green, left.blue + right.blue, left.alpha + right.alpha);
+
+template<typename U, typename F>
+inline Rgba_F32<U, F> operator+(const Rgba_F32<U, F> &left, const Rgba_F32<U, F> &right) {
+	return Rgba_F32<U, F>(left.red + right.red, left.green + right.green, left.blue + right.blue, left.alpha + right.alpha);
 }
-inline Rgba_F32 operator-(const Rgba_F32 &left, const Rgba_F32 &right) {
-	return Rgba_F32(left.red - right.red, left.green - right.green, left.blue - right.blue, left.alpha - right.alpha);
+
+template<typename U, typename F>
+inline Rgba_F32<U, F> operator-(const Rgba_F32<U, F> &left, const Rgba_F32<U, F> &right) {
+	return Rgba_F32<U, F>(left.red - right.red, left.green - right.green, left.blue - right.blue, left.alpha - right.alpha);
 }
-inline Rgba_F32 operator*(const Rgba_F32 &left, const Rgba_F32 &right) {
-	return Rgba_F32(left.red * right.red, left.green * right.green, left.blue * right.blue, left.alpha * right.alpha);
+
+template<typename U, typename F>
+inline Rgba_F32<U, F> operator*(const Rgba_F32<U, F> &left, const Rgba_F32<U, F> &right) {
+	return Rgba_F32<U, F>(left.red * right.red, left.green * right.green, left.blue * right.blue, left.alpha * right.alpha);
 }
-inline Rgba_F32 operator*(const Rgba_F32 &left, const F32x4 &right) {
-	return Rgba_F32(left.red * right, left.green * right, left.blue * right, left.alpha * right);
+
+template<typename U, typename F>
+inline Rgba_F32<U, F> operator*(const Rgba_F32<U, F> &left, const F &right) {
+	return Rgba_F32<U, F>(left.red * right, left.green * right, left.blue * right, left.alpha * right);
 }
+
+using Rgba_F32x4 = Rgba_F32<U32x4, F32x4>;
+using Rgba_F32x8 = Rgba_F32<U32x8, F32x8>;
+using Rgba_F32xX = Rgba_F32<U32xX, F32xX>;
 
 }
 
 #endif
-
-

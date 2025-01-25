@@ -23,7 +23,6 @@
 
 #include "mediaFilters.h"
 #include "../base/simd.h"
-#include "../api/imageAPI.h"
 #include "../api/drawAPI.h"
 
 using namespace dsr;
@@ -145,10 +144,10 @@ void dsr::media_filter_sub(AlignedImageU8& targetImage, AlignedImageU8 imageA, A
 		SafePointer<uint8_t> sourcePixelA = sourceRowA;
 		SafePointer<uint8_t> sourcePixelB = sourceRowB;
 		for (int32_t x = 0; x < image_getWidth(targetImage); x += 16) {
-			U8x16 colorA = U8x16::readAligned(sourcePixelA, "media_filter_add (sourcePixelA)");
-			U8x16 colorB = U8x16::readAligned(sourcePixelB, "media_filter_add (sourcePixelB)");
+			U8x16 colorA = U8x16::readAligned(sourcePixelA, "media_filter_sub (sourcePixelA)");
+			U8x16 colorB = U8x16::readAligned(sourcePixelB, "media_filter_sub (sourcePixelB)");
 			U8x16 result = saturatedSubtraction(colorA, colorB);
-			result.writeAligned(targetPixel, "media_filter_add (targetPixel)");
+			result.writeAligned(targetPixel, "media_filter_sub (targetPixel)");
 			targetPixel += 16;
 			sourcePixelA += 16;
 			sourcePixelB += 16;
@@ -174,9 +173,9 @@ void dsr::media_filter_sub(AlignedImageU8& targetImage, AlignedImageU8 image, in
 		SafePointer<uint8_t> targetPixel = targetRow;
 		SafePointer<uint8_t> sourcePixel = sourceRowA;
 		for (int32_t x = 0; x < image_getWidth(targetImage); x += 16) {
-			U8x16 colorA = U8x16::readAligned(sourcePixel, "media_filter_add (sourcePixel)");
+			U8x16 colorA = U8x16::readAligned(sourcePixel, "media_filter_sub (sourcePixel)");
 			U8x16 result = saturatedSubtraction(colorA, repeatedLuma);
-			result.writeAligned(targetPixel, "media_filter_add (targetPixel)");
+			result.writeAligned(targetPixel, "media_filter_sub (targetPixel)");
 			targetPixel += 16;
 			sourcePixel += 16;
 		}
@@ -200,9 +199,9 @@ void dsr::media_filter_sub(AlignedImageU8& targetImage, int32_t luma, AlignedIma
 		SafePointer<uint8_t> targetPixel = targetRow;
 		SafePointer<uint8_t> sourcePixel = sourceRowA;
 		for (int32_t x = 0; x < image_getWidth(targetImage); x += 16) {
-			U8x16 colorA = U8x16::readAligned(sourcePixel, "media_filter_add (sourcePixel)");
+			U8x16 colorA = U8x16::readAligned(sourcePixel, "media_filter_sub (sourcePixel)");
 			U8x16 result = saturatedSubtraction(repeatedLuma, colorA);
-			result.writeAligned(targetPixel, "media_filter_add (targetPixel)");
+			result.writeAligned(targetPixel, "media_filter_sub (targetPixel)");
 			targetPixel += 16;
 			sourcePixel += 16;
 		}

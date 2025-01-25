@@ -23,9 +23,7 @@
 
 #include <cassert>
 #include "renderCore.h"
-#include "../image/internal/imageInternal.h"
 #include "../base/virtualStack.h"
-#include "shader/Shader.h"
 #include "shader/RgbaMultiply.h"
 #include "constants.h"
 
@@ -173,7 +171,7 @@ public:
 Visibility dsr::getTriangleVisibility(const ITriangle2D &triangle, const Camera &camera, bool clipFrustum) {
 	static const int cornerCount = 3;
 	int planeCount = camera.getFrustumPlaneCount(clipFrustum);
-	VirtualStackAllocation<bool> outside(cornerCount * planeCount);
+	VirtualStackAllocation<bool> outside(cornerCount * planeCount, "Corner outside buffer in getTriangleVIsibility");
 	// Check which corners are outside of the different planes
 	int offset = 0;
 	for (int c = 0; c < cornerCount; c++) {
@@ -207,7 +205,7 @@ void dsr::executeTriangleDrawing(const TriangleDrawCommand &command, const IRect
 	if (rowCount > 0) {
 		int startRow;
 		// TODO: Use SafePointer in shape functions.
-		VirtualStackAllocation<RowInterval> rows(rowCount);
+		VirtualStackAllocation<RowInterval> rows(rowCount, "Row intervals in executeTriangleDrawing");
 		command.triangle.getShape(startRow, rows.getUnsafe(), finalClipBound, alignX, alignY);
 		Projection projection = command.triangle.getProjection(command.subB, command.subC, command.perspective);
 		command.processTriangle(command.triangleInput, command.targetImage, command.depthBuffer, command.triangle, projection, RowShape(startRow, rowCount, rows.getUnsafe()), command.filter);
@@ -259,7 +257,7 @@ static void drawClippedTriangle(CommandQueue *commandQueue, const TriangleDrawDa
 }
 
 // Clipping is applied automatically if needed
-void dsr::renderTriangleWithShader(CommandQueue *commandQueue, const TriangleDrawData &triangleDrawData, const Camera &camera, const ITriangle2D &triangle, const IRect &clipBound) {
+static void renderTriangleWithShader(CommandQueue *commandQueue, const TriangleDrawData &triangleDrawData, const Camera &camera, const ITriangle2D &triangle, const IRect &clipBound) {
 	// Allow small triangles to be a bit outside of the view frustum without being clipped by increasing the width and height slopes in a second test
 	// This reduces redundant clipping to improve both speed and quality
 	Visibility paddedVisibility = getTriangleVisibility(triangle, camera, true);
@@ -283,15 +281,15 @@ void dsr::renderTriangleWithShader(CommandQueue *commandQueue, const TriangleDra
 
 // TODO: Move shader selection to Shader_RgbaMultiply and let models default to its shader factory function pointer as shader selection
 void dsr::renderTriangleFromData(
-  CommandQueue *commandQueue, ImageRgbaU8Impl *targetImage, ImageF32Impl *depthBuffer,
+  CommandQueue *commandQueue, ImageRgbaU8 *targetImage, ImageF32 *depthBuffer,
   const Camera &camera, const ProjectedPoint &posA, const ProjectedPoint &posB, const ProjectedPoint &posC,
-  Filter filter, const ImageRgbaU8Impl *diffuse, const ImageRgbaU8Impl *light,
+  Filter filter, const TextureRgbaU8 *diffuse, const TextureRgbaU8 *light,
   TriangleTexCoords texCoords, TriangleColors colors) {
 	// Get dimensions from both buffers
-	int colorWidth = imageInternal::getWidth(targetImage);
-	int colorHeight = imageInternal::getHeight(targetImage);
-	int depthWidth = imageInternal::getWidth(depthBuffer);
-	int depthHeight = imageInternal::getHeight(depthBuffer);
+	int colorWidth = targetImage != nullptr ? image_getWidth(*targetImage) : 0;
+	int colorHeight = targetImage != nullptr ? image_getHeight(*targetImage) : 0;
+	int depthWidth = depthBuffer != nullptr ? image_getWidth(*depthBuffer) : 0;
+	int depthHeight = depthBuffer != nullptr ? image_getHeight(*depthBuffer) : 0;
 	// Combine dimensions
 	int targetWidth, targetHeight;
 	if (targetImage != nullptr) {
@@ -324,17 +322,17 @@ void dsr::renderTriangleFromData(
 }
 
 template<bool AFFINE>
-static void executeTriangleDrawingDepth(ImageF32Impl *depthBuffer, const ITriangle2D& triangle, const IRect &clipBound) {
+static void executeTriangleDrawingDepth(ImageF32 *depthBuffer, const ITriangle2D& triangle, const IRect &clipBound) {
 	int32_t rowCount = triangle.getBufferSize(clipBound, 1, 1);
 	if (rowCount > 0) {
 		int startRow;
-		VirtualStackAllocation<RowInterval> rows(rowCount);
+		VirtualStackAllocation<RowInterval> rows(rowCount, "Row intervals in executeTriangleDrawingDepth");
 		triangle.getShape(startRow, rows.getUnsafe(), clipBound, 1, 1);
 		Projection projection = triangle.getProjection(FVector3D(), FVector3D(), !AFFINE); // TODO: Create a weight using only depth to save time
 		RowShape shape = RowShape(startRow, rowCount, rows.getUnsafe());
 		// Draw the triangle
-		const int depthBufferStride = imageInternal::getStride(depthBuffer);
-		SafePointer<float> depthDataRow = imageInternal::getSafeData<float>(depthBuffer, shape.startRow);
+		const int depthBufferStride = image_getStride(*depthBuffer);
+		SafePointer<float> depthDataRow = image_getSafePointer<float>(*depthBuffer, shape.startRow);
 		for (int32_t y = shape.startRow; y < shape.startRow + shape.rowCount; y++) {
 			RowInterval row = shape.rows[y - shape.startRow];
 			SafePointer<float> depthData = depthDataRow + row.left;
@@ -369,7 +367,7 @@ static void executeTriangleDrawingDepth(ImageF32Impl *depthBuffer, const ITriang
 	}
 }
 
-static void drawTriangleDepth(ImageF32Impl *depthBuffer, const Camera &camera, const IRect &clipBound, const ITriangle2D& triangle) {
+static void drawTriangleDepth(ImageF32 *depthBuffer, const Camera &camera, const IRect &clipBound, const ITriangle2D& triangle) {
 	// Rounding sub-triangles to integer locations may reverse the direction of zero area triangles
 	if (triangle.isFrontfacing()) {
 		if (camera.perspective) {
@@ -380,18 +378,18 @@ static void drawTriangleDepth(ImageF32Impl *depthBuffer, const Camera &camera, c
 	}
 }
 
-static void drawSubTriangleDepth(ImageF32Impl *depthBuffer, const Camera &camera, const IRect &clipBound, const SubVertex &vertexA, const SubVertex &vertexB, const SubVertex &vertexC) {
+static void drawSubTriangleDepth(ImageF32 *depthBuffer, const Camera &camera, const IRect &clipBound, const SubVertex &vertexA, const SubVertex &vertexB, const SubVertex &vertexC) {
 	ProjectedPoint posA = camera.cameraToScreen(vertexA.cs);
 	ProjectedPoint posB = camera.cameraToScreen(vertexB.cs);
 	ProjectedPoint posC = camera.cameraToScreen(vertexC.cs);
 	drawTriangleDepth(depthBuffer, camera, clipBound, ITriangle2D(posA, posB, posC));
 }
 
-void dsr::renderTriangleFromDataDepth(ImageF32Impl *depthBuffer, const Camera &camera, const ProjectedPoint &posA, const ProjectedPoint &posB, const ProjectedPoint &posC) {
+void dsr::renderTriangleFromDataDepth(ImageF32 *depthBuffer, const Camera &camera, const ProjectedPoint &posA, const ProjectedPoint &posB, const ProjectedPoint &posC) {
 	// Skip rendering if there's no target buffer
 	if (depthBuffer == nullptr) { return; }
 	// Select a bound
-	IRect clipBound = IRect::FromSize(imageInternal::getWidth(depthBuffer), imageInternal::getHeight(depthBuffer));
+	IRect clipBound = IRect::FromSize(image_getWidth(*depthBuffer), image_getHeight(*depthBuffer));
 	// Create a triangle
 	ITriangle2D triangle(posA, posB, posC);
 	// Only draw visible triangles
@@ -438,7 +436,7 @@ void CommandQueue::execute(const IRect &clipBound, int jobCount) const {
 			}
 		}
 	} else {
-		VirtualStackAllocation<std::function<void()>> jobs(jobCount);
+		VirtualStackAllocation<std::function<void()>> jobs(jobCount, "Triangle draw jobs in CommandQueue::execute");
 		int y1 = clipBound.top();
 		for (int j = 0; j < jobCount; j++) {
 			int y2 = clipBound.top() + ((clipBound.bottom() * (j + 1)) / jobCount);

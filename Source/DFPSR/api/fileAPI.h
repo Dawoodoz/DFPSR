@@ -26,6 +26,7 @@
 
 #include "stringAPI.h"
 #include "bufferAPI.h"
+#include "../base/Handle.h"
 #if defined(WIN32) || defined(_WIN32)
 	#define USE_MICROSOFT_WINDOWS
 #endif
@@ -290,7 +291,7 @@ namespace dsr {
 
 	// A reference counted handle to a process, so that multiple callers can read the status at any time.
 	class DsrProcessImpl;
-	using DsrProcess = std::shared_ptr<DsrProcessImpl>;
+	using DsrProcess = Handle<DsrProcessImpl>;
 
 	// Post-condition: Returns the status of process.
 	DsrProcessStatus process_getStatus(const DsrProcess &process);

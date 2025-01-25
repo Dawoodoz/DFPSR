@@ -25,16 +25,14 @@
 #define DFPSR_RENDER_FILLER_TEMPLATES
 
 #include <cstdint>
-#include "../../image/PackOrder.h"
-#include "../../image/ImageRgbaU8.h"
-#include "../../image/ImageF32.h"
+#include "../../api/imageAPI.h"
 #include "../ITriangle2D.h"
 #include "shaderTypes.h"
 
 namespace dsr {
 
 // Function for filling pixels
-using PixelShadingCallback = std::function<Rgba_F32(void *data, const F32x4x3 &vertexWeights)>;
+using PixelShadingCallback = std::function<Rgba_F32<U32x4, F32x4>(void *data, const F32x4x3 &vertexWeights)>;
 
 inline bool almostZero(float value) {
 	return value > -0.001f && value < 0.001f;
@@ -108,7 +106,7 @@ inline void clipPixels(int x, const RowInterval &upperRow, const RowInterval &lo
 }
 
 template<bool CLIP_SIDES, bool DEPTH_READ, bool AFFINE>
-inline void getVisibility(int x, const RowInterval &upperRow, const RowInterval &lowerRow, const FVector4D &depth, const SafePointer<float> depthDataUpper, const SafePointer<float> depthDataLower, bool &vis0, bool &vis1, bool &vis2, bool &vis3) {
+inline void getVisibility(int x, const RowInterval &upperRow, const RowInterval &lowerRow, const FVector4D &depth, SafePointer<const float> depthDataUpper, SafePointer<const float> depthDataLower, bool &vis0, bool &vis1, bool &vis2, bool &vis3) {
 	// Clip pixels
 	bool clip0, clip1, clip2, clip3;
 	clipPixels<CLIP_SIDES>(x, upperRow, lowerRow, clip0, clip1, clip2, clip3);
@@ -164,7 +162,7 @@ inline void fillQuadSuper(void *data, PixelShadingCallback pixelShaderFunction, 
 			// Get the color
 			U32x4 packedColor(0u); // Allow uninitialized memory?
 			// Execute the shader
-			Rgba_F32 planarSourceColor = pixelShaderFunction(data, weights);
+			Rgba_F32<U32x4, F32x4> planarSourceColor = pixelShaderFunction(data, weights);
 			// Apply alpha filtering
 			if (FILTER == Filter::Alpha) {
 				// Get opacity from the source color
@@ -172,7 +170,7 @@ inline void fillQuadSuper(void *data, PixelShadingCallback pixelShaderFunction, 
 				// Read the packed colors for alpha blending
 				U32x4 packedTargetColor = clippedRead<CLIP_SIDES>(pixelDataUpper, pixelDataLower, vis0, vis1, vis2, vis3);
 				// Unpack the target color into planar RGBA format so that it can be mixed with the source color
-				Rgba_F32 planarTargetColor(packedTargetColor, targetPackingOrder);
+				Rgba_F32<U32x4, F32x4> planarTargetColor(packedTargetColor, targetPackingOrder);
 				// Blend linearly using floats
 				planarSourceColor = (planarSourceColor * opacity) + (planarTargetColor * (1.0f - opacity));
 			}
@@ -246,43 +244,32 @@ inline void fillRowSuper(void *data, PixelShadingCallback pixelShaderFunction, S
 }
 
 template<bool COLOR_WRITE, bool DEPTH_READ, bool DEPTH_WRITE, Filter FILTER, bool AFFINE>
-inline void fillShapeSuper(void *data, PixelShadingCallback pixelShaderFunction, ImageRgbaU8Impl *colorBuffer, ImageF32Impl *depthBuffer, const ITriangle2D &triangle, const Projection &projection, const RowShape &shape) {
+inline void fillShapeSuper(void *data, PixelShadingCallback pixelShaderFunction, ImageRgbaU8 *colorBuffer, ImageF32 *depthBuffer, const ITriangle2D &triangle, const Projection &projection, const RowShape &shape) {
 	// Prepare constants
-	const int targetStride = imageInternal::getStride(colorBuffer);
-	const int depthBufferStride = imageInternal::getStride(depthBuffer);
+	const int targetStride = colorBuffer ? image_getStride(*colorBuffer) : 0;
+	const int depthBufferStride = depthBuffer ? image_getStride(*depthBuffer) : 0;
 	const FVector3D doublePWeightDx = projection.pWeightDx * 2.0f;
-	const int colorRowSize = imageInternal::getRowSize(colorBuffer);
-	const int depthRowSize = imageInternal::getRowSize(depthBuffer);
-	const PackOrder& targetPackingOrder = imageInternal::getPackOrder(colorBuffer);
-	const int colorHeight = imageInternal::getHeight(colorBuffer);
-	const int depthHeight = imageInternal::getHeight(depthBuffer);
+	const int colorRowSize = colorBuffer ? image_getWidth(*colorBuffer) * sizeof(uint32_t) : 0;
+	const int depthRowSize = depthBuffer ? image_getWidth(*depthBuffer) * sizeof(float) : 0;
+	const PackOrder& targetPackingOrder = colorBuffer ? image_getPackOrder(*colorBuffer) : PackOrder::getPackOrder(PackOrderIndex::RGBA);
+	const int colorHeight = colorBuffer ? image_getHeight(*colorBuffer) : 0;
+	const int depthHeight = depthBuffer ? image_getHeight(*depthBuffer) : 0;
 	const int maxHeight = colorHeight > depthHeight ? colorHeight : depthHeight;
 
 	// Initialize row pointers for color buffer
 	SafePointer<uint32_t> pixelDataUpper, pixelDataLower, pixelDataUpperRow, pixelDataLowerRow;
 	if (COLOR_WRITE) {
-		SafePointer<uint32_t> targetData = imageInternal::getSafeData<uint32_t>(colorBuffer);
-		pixelDataUpperRow = targetData;
-		pixelDataUpperRow.increaseBytes(shape.startRow * targetStride);
-		pixelDataLowerRow = targetData;
-		pixelDataLowerRow.increaseBytes((shape.startRow + 1) * targetStride);
-	} else {
-		pixelDataUpperRow = SafePointer<uint32_t>();
-		pixelDataLowerRow = SafePointer<uint32_t>();
+		pixelDataUpperRow = image_getSafePointer<uint32_t>(*colorBuffer, shape.startRow);
+		pixelDataLowerRow = pixelDataUpperRow; pixelDataLowerRow.increaseBytes(targetStride);
 	}
 
 	// Initialize row pointers for depth buffer
 	SafePointer<float> depthDataUpper, depthDataLower, depthDataUpperRow, depthDataLowerRow;
 	if (DEPTH_READ || DEPTH_WRITE) {
-		SafePointer<float> depthBufferData = imageInternal::getSafeData<float>(depthBuffer);
-		depthDataUpperRow = depthBufferData;
-		depthDataUpperRow.increaseBytes(shape.startRow * depthBufferStride);
-		depthDataLowerRow = depthBufferData;
-		depthDataLowerRow.increaseBytes((shape.startRow + 1) * depthBufferStride);
-	} else {
-		depthDataUpperRow = SafePointer<float>();
-		depthDataLowerRow = SafePointer<float>();
+		depthDataUpperRow = image_getSafePointer<float>(*depthBuffer, shape.startRow);
+		depthDataLowerRow = depthDataUpperRow; depthDataLowerRow.increaseBytes(depthBufferStride);
 	}
+
 	for (int32_t y1 = shape.startRow; y1 < shape.startRow + shape.rowCount; y1 += 2) {
 		int y2 = y1 + 1;
 		RowInterval upperRow = shape.rows[y1 - shape.startRow];
@@ -337,9 +324,6 @@ inline void fillShapeSuper(void *data, PixelShadingCallback pixelShaderFunction,
 				}
 				depthDataUpper += outerBlockStart;
 				depthDataLower += outerBlockStart;
-			} else {
-				depthDataUpper = SafePointer<float>();
-				depthDataLower = SafePointer<float>();
 			}
 			// Initialize projection
 			FVector3D pWeightUpperRow;
@@ -400,7 +384,7 @@ inline void fillShapeSuper(void *data, PixelShadingCallback pixelShaderFunction,
 	}
 }
 
-inline void fillShape(void *data, PixelShadingCallback pixelShaderFunction, ImageRgbaU8Impl *colorBuffer, ImageF32Impl *depthBuffer, const ITriangle2D &triangle, const Projection &projection, const RowShape &shape, Filter filter) {
+inline void fillShape(void *data, PixelShadingCallback pixelShaderFunction, ImageRgbaU8 *colorBuffer, ImageF32 *depthBuffer, const ITriangle2D &triangle, const Projection &projection, const RowShape &shape, Filter filter) {
 	bool hasColorBuffer = colorBuffer != nullptr;
 	bool hasDepthBuffer = depthBuffer != nullptr;
 	if (projection.affine) {
@@ -415,7 +399,6 @@ inline void fillShape(void *data, PixelShadingCallback pixelShaderFunction, Imag
 				}
 			} else {
 				// Solid depth
-				// TODO: Use for orthogonal depth based shadows
 				fillShapeSuper<false, true, true, Filter::Solid, true>(data, pixelShaderFunction, nullptr, depthBuffer, triangle, projection, shape);
 			}
 		} else {
@@ -441,7 +424,6 @@ inline void fillShape(void *data, PixelShadingCallback pixelShaderFunction, Imag
 				}
 			} else {
 				// Solid depth
-				// TODO: Use for depth based shadows with perspective projection
 				fillShapeSuper<false, true, true, Filter::Solid, false>(data, pixelShaderFunction, nullptr, depthBuffer, triangle, projection, shape);
 			}
 		} else {

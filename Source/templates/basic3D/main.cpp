@@ -30,7 +30,7 @@ AlignedImageU8 darkEdge = image_fromAscii(
 	"<x--------------x>"
 	"<xxxxxxxxxxxxxxxx>"
 );
-OrderedImageRgbaU8 myTexture = image_pack(darkEdge, darkEdge, 0, 255);
+TextureRgbaU8 myTexture = texture_create_RgbaU8(image_pack(darkEdge, darkEdge, 0, 255), 1);
 
 int createCubePart(Model model, const FVector3D &min, const FVector3D &max) {
 	// Add positions
@@ -89,7 +89,7 @@ void dsrMain(List<String> args) {
 	});
 
 	// Genrate mip-maps for the texture
-	image_generatePyramid(myTexture);
+	texture_generatePyramid(myTexture);
 	// Create a cube model
 	Model cubeModel = createCubeModel(FVector3D(-0.5f), FVector3D(0.5f));
 	// Assign the texture to part 0

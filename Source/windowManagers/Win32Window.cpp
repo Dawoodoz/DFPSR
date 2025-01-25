@@ -155,7 +155,7 @@ void Win32Window::saveToClipboard(const dsr::ReadableString &text, double timeou
 
 void Win32Window::updateTitle_locked() {
 	windowLock.lock();
-		if (!SetWindowTextA(this->hwnd, this->title.toStdString().c_str())) {
+		if (!SetWindowTextA(this->hwnd, dsr::FixedAscii<512>(this->title))) {
 			dsr::printText("Warning! Could not assign the window title ", dsr::string_mangleQuote(this->title), ".\n");
 		}
 	windowLock.unlock();
@@ -728,7 +728,6 @@ void Win32Window::showCanvas() {
 	this->redraw(this->hwnd, true, true);
 }
 
-std::shared_ptr<dsr::BackendWindow> createBackendWindow(const dsr::String& title, int width, int height) {
-	auto backend = std::make_shared<Win32Window>(title, width, height);
-	return std::dynamic_pointer_cast<dsr::BackendWindow>(backend);
+dsr::Handle<dsr::BackendWindow> createBackendWindow(const dsr::String& title, int width, int height) {
+	return dsr::handle_create<Win32Window>(title, width, height);
 }

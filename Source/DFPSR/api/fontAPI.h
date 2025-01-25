@@ -24,10 +24,14 @@
 #ifndef DFPSR_API_FONT
 #define DFPSR_API_FONT
 
-#include "types.h"
-#include "../api/stringAPI.h"
+#include "../image/Image.h"
+#include "stringAPI.h"
 
 namespace dsr {
+	// A handle to a raster font
+	class RasterFontImpl;
+	using RasterFont = Handle<RasterFontImpl>;
+
 	// Get a handle to the default font
 	RasterFont font_getDefault();
 	// Create a new font mapped to the Latin-1 character sub-set using a fixed size grid of 16 x 16 sub-images
@@ -42,7 +46,7 @@ namespace dsr {
 	//     image_getHeight(atlas) >= 16
 	RasterFont font_createLatinOne(const String& name, const ImageU8& atlas);
 	// Post-condition: Returns true iff font exists
-	bool font_exists(const RasterFont font);
+	inline bool font_exists(const RasterFont font) { return font.isNotNull(); }
 	// Pre-condition: font must exist
 	// Post-condition: Returns font's name, as given on construction
 	String font_getName(const RasterFont font);

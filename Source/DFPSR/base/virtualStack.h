@@ -30,24 +30,24 @@ namespace dsr {
 	// Allocate memory in the virtual stack owned by the current thread.
 	//   paddedSize is the number of bytes to allocate including all elements and internal padding.
 	//     paddedSize must be at least 1, but has no rounding requirements.
-	//   alignmentMask should only contain zeroes at the bits to round away for alignment.
-	//     alignmentMask should be the bitwise negation of the alignment minus one, where the alignment is a power of two.
+	//   The start of the allocation is aligned according to alignmentAndMask.
+	//     alignmentAndMask should only contain zeroes at the bits to round away for alignment.
+	//     alignmentAndMask should be the bitwise negation of the alignment minus one, where the alignment is a power of two.
 	//     ~(alignment - 1)
-	UnsafeAllocation virtualStack_push(uint64_t paddedSize, uintptr_t alignmentAndMask);
+	UnsafeAllocation virtualStack_push(uint64_t paddedSize, uintptr_t alignmentAndMask, const char *name = "Nameless virtual stack allocation");
 
 	// A simpler way to get the correct alignment is to allocate a number of elements with a specific type.
-	// TODO: Create another function for manual alignment exceeding the type's alignment using another template argument.
-	// TODO: Let the address offset be negated and start with the allocation size going down to zero,
-	//       so that rounding up addresses can be done by simply masking the least significant bits.
+	// Pre-condition:
+	//   sizeof(T) % alignof(T) == 0
 	template <typename T>
-	SafePointer<T> virtualStack_push(uint64_t elementCount, const char *name) {
+	SafePointer<T> virtualStack_push(uint64_t elementCount, const char *name = "Nameless virtual stack allocation") {
 		// Calculate element size and multiply by element count to get the total size.
-		uint64_t paddedSize = memory_getPaddedSize<T>() * elementCount;
+		uint64_t paddedSize = sizeof(T) * elementCount;
 		// Allocate the data with the amount of alignment requested by the element type T.
-		UnsafeAllocation result = virtualStack_push(paddedSize, memory_createAlignmentAndMask((uintptr_t)alignof(T)));
+		UnsafeAllocation result = virtualStack_push(paddedSize, memory_createAlignmentAndMask((uintptr_t)alignof(T)), name);
 		// Return a safe pointer to the allocated data.
 		#ifdef SAFE_POINTER_CHECKS
-			return SafePointer<T>(name, (T*)(result.data), (intptr_t)paddedSize, result.header);
+			return SafePointer<T>(result.header, result.header->allocationIdentity, name, (T*)(result.data), (intptr_t)paddedSize);
 		#else
 			return SafePointer<T>(name, (T*)(result.data), (intptr_t)paddedSize);
 		#endif
@@ -58,12 +58,12 @@ namespace dsr {
 	void virtualStack_pop();
 
 	// Allocate this array on the stack to automatically free the memory when the scope ends.
-	//   Replaces VLA or alloca.
+	//   Replaces Variable Length Arrays (VLA) or alloca.
 	template <typename T>
 	class VirtualStackAllocation : public SafePointer<T> {
 	public:
-		VirtualStackAllocation(uint64_t elementCount)
-		: SafePointer<T>(virtualStack_push<T>(elementCount, "virtual stack allocation")) {}
+		VirtualStackAllocation(uint64_t elementCount, const char *name = "Nameless virtual stack allocation")
+		: SafePointer<T>(virtualStack_push<T>(elementCount, name)) {}
 		~VirtualStackAllocation() {
 			virtualStack_pop();
 		}

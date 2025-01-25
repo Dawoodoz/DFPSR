@@ -1,6 +1,6 @@
 ﻿// zlib open source license
 //
-// Copyright (c) 2017 to 2019 David Forsgren Piuva
+// Copyright (c) 2017 to 2025 David Forsgren Piuva
 // 
 // This software is provided 'as-is', without any express or implied
 // warranty. In no event will the authors be held liable for any damages
@@ -21,13 +21,12 @@
 //    3. This notice may not be removed or altered from any source
 //    distribution.
 
-#define DFPSR_INTERNAL_ACCESS
+#define DSR_INTERNAL_ACCESS
 
 #include "Model.h"
 #include "../constants.h"
 #include "../../api/imageAPI.h"
-#include "../../image/ImageRgbaU8.h"
-#include "../../image/ImageF32.h"
+#include "../../api/textureAPI.h"
 #include "../../base/virtualStack.h"
 
 using namespace dsr;
@@ -117,7 +116,7 @@ int Polygon::getVertexCount() const {
 }
 
 Part::Part(String name) : name(name) {}
-Part::Part(const ImageRgbaU8 &diffuseMap, const ImageRgbaU8 &lightMap, const List<Polygon> &polygonBuffer, const String &name) :
+Part::Part(const TextureRgbaU8 &diffuseMap, const TextureRgbaU8 &lightMap, const List<Polygon> &polygonBuffer, const String &name) :
   diffuseMap(diffuseMap), lightMap(lightMap), polygonBuffer(polygonBuffer), name(name) {}
 Part Part::clone() const { return Part(this->diffuseMap, this->lightMap, this->polygonBuffer, this->name); }
 int Part::getPolygonCount() const {
@@ -133,7 +132,7 @@ int Part::getPolygonVertexCount(int polygonIndex) const {
 //         Only decreasing the length of the point buffer, changing a position index or adding new polygons should set it to false
 //         Only running validation before rendering should set it from false to true
 //   point indices may not go outside of projected's array range
-static void renderTriangleFromPolygon(CommandQueue *commandQueue, ImageRgbaU8Impl *targetImage, ImageF32Impl *depthBuffer, const Camera &camera, const Polygon &polygon, int triangleIndex, const ProjectedPoint *projected, Filter filter, const ImageRgbaU8Impl *diffuse, const ImageRgbaU8Impl *light) {
+static void renderTriangleFromPolygon(CommandQueue *commandQueue, ImageRgbaU8 *targetImage, ImageF32 *depthBuffer, const Camera &camera, const Polygon &polygon, int triangleIndex, const ProjectedPoint *projected, Filter filter, const TextureRgbaU8 *diffuse, const TextureRgbaU8 *light) {
 	// Triangle fan starting from the first vertex of the polygon
 	int indexA = 0;
 	int indexB = 1 + triangleIndex;
@@ -148,24 +147,24 @@ static void renderTriangleFromPolygon(CommandQueue *commandQueue, ImageRgbaU8Imp
 	renderTriangleFromData(commandQueue, targetImage, depthBuffer, camera, posA, posB, posC, filter, diffuse, light, texCoords, colors);
 }
 
-void Part::render(CommandQueue *commandQueue, ImageRgbaU8& targetImage, ImageF32& depthBuffer, const Transform3D &modelToWorldTransform, const Camera &camera, Filter filter, const ProjectedPoint* projected) const {
+void Part::render(CommandQueue *commandQueue, ImageRgbaU8* targetImage, ImageF32* depthBuffer, const Transform3D &modelToWorldTransform, const Camera &camera, Filter filter, const ProjectedPoint* projected) const {
 	// Get textures
-	const ImageRgbaU8Impl *diffuse = this->diffuseMap.get();
-	const ImageRgbaU8Impl *light = this->lightMap.get();
+	const TextureRgbaU8 *diffuse = &(this->diffuseMap);
+	const TextureRgbaU8 *light = &(this->lightMap);
 	for (int p = 0; p < this->polygonBuffer.length(); p++) {
 		Polygon polygon = this->polygonBuffer[p];
 		if (polygon.pointIndices[3] == -1) {
 			// Render triangle
-			renderTriangleFromPolygon(commandQueue, targetImage.get(), depthBuffer.get(), camera, polygon, 0, projected, filter, diffuse, light);
+			renderTriangleFromPolygon(commandQueue, targetImage, depthBuffer, camera, polygon, 0, projected, filter, diffuse, light);
 		} else {
 			// Render quad
-			renderTriangleFromPolygon(commandQueue, targetImage.get(), depthBuffer.get(), camera, polygon, 0, projected, filter, diffuse, light);
-			renderTriangleFromPolygon(commandQueue, targetImage.get(), depthBuffer.get(), camera, polygon, 1, projected, filter, diffuse, light);
+			renderTriangleFromPolygon(commandQueue, targetImage, depthBuffer, camera, polygon, 0, projected, filter, diffuse, light);
+			renderTriangleFromPolygon(commandQueue, targetImage, depthBuffer, camera, polygon, 1, projected, filter, diffuse, light);
 		}
 	}
 }
 
-void Part::renderDepth(ImageF32& depthBuffer, const Transform3D &modelToWorldTransform, const Camera &camera, const ProjectedPoint* projected) const {
+void Part::renderDepth(ImageF32* depthBuffer, const Transform3D &modelToWorldTransform, const Camera &camera, const ProjectedPoint* projected) const {
 	for (int p = 0; p < this->polygonBuffer.length(); p++) {
 		Polygon polygon = this->polygonBuffer[p];
 		if (polygon.pointIndices[3] == -1) {
@@ -173,24 +172,24 @@ void Part::renderDepth(ImageF32& depthBuffer, const Transform3D &modelToWorldTra
 			ProjectedPoint posA = projected[polygon.pointIndices[0]];
 			ProjectedPoint posB = projected[polygon.pointIndices[1]];
 			ProjectedPoint posC = projected[polygon.pointIndices[2]];
-			renderTriangleFromDataDepth(depthBuffer.get(), camera, posA, posB, posC);
+			renderTriangleFromDataDepth(depthBuffer, camera, posA, posB, posC);
 		} else {
 			// Render quad
 			ProjectedPoint posA = projected[polygon.pointIndices[0]];
 			ProjectedPoint posB = projected[polygon.pointIndices[1]];
 			ProjectedPoint posC = projected[polygon.pointIndices[2]];
 			ProjectedPoint posD = projected[polygon.pointIndices[3]];
-			renderTriangleFromDataDepth(depthBuffer.get(), camera, posA, posB, posC);
-			renderTriangleFromDataDepth(depthBuffer.get(), camera, posA, posC, posD);
+			renderTriangleFromDataDepth(depthBuffer, camera, posA, posB, posC);
+			renderTriangleFromDataDepth(depthBuffer, camera, posA, posC, posD);
 		}
 	}
 }
 
-void ModelImpl::render(CommandQueue *commandQueue, ImageRgbaU8& targetImage, ImageF32& depthBuffer, const Transform3D &modelToWorldTransform, const Camera &camera) const {
+void ModelImpl::render(CommandQueue *commandQueue, ImageRgbaU8* targetImage, ImageF32* depthBuffer, const Transform3D &modelToWorldTransform, const Camera &camera) const {
 	if (camera.isBoxSeen(this->minBound, this->maxBound, modelToWorldTransform)) {
 		// Transform and project all vertices
 		int positionCount = positionBuffer.length();
-		VirtualStackAllocation<ProjectedPoint> projected(positionCount);
+		VirtualStackAllocation<ProjectedPoint> projected(positionCount, "Projected points in ModelImpl::render");
 		for (int vert = 0; vert < positionCount; vert++) {
 			projected[vert] = camera.worldToScreen(modelToWorldTransform.transformPoint(positionBuffer[vert]));
 		}
@@ -200,11 +199,11 @@ void ModelImpl::render(CommandQueue *commandQueue, ImageRgbaU8& targetImage, Ima
 	}
 }
 
-void ModelImpl::renderDepth(ImageF32& depthBuffer, const Transform3D &modelToWorldTransform, const Camera &camera) const {
+void ModelImpl::renderDepth(ImageF32* depthBuffer, const Transform3D &modelToWorldTransform, const Camera &camera) const {
 	if (camera.isBoxSeen(this->minBound, this->maxBound, modelToWorldTransform)) {
 		// Transform and project all vertices
 		int positionCount = positionBuffer.length();
-		VirtualStackAllocation<ProjectedPoint> projected(positionCount);
+		VirtualStackAllocation<ProjectedPoint> projected(positionCount, "Projected points in ModelImpl::renderDepth");
 		for (int vert = 0; vert < positionCount; vert++) {
 			projected[vert] = camera.worldToScreen(modelToWorldTransform.transformPoint(positionBuffer[vert]));
 		}
@@ -237,41 +236,33 @@ String ModelImpl::getPartName(int partIndex) const {
 	CHECK_PART_INDEX(partIndex, return "");
 	return this->partBuffer[partIndex].name;
 }
-ImageRgbaU8 ModelImpl::getDiffuseMap(int partIndex) const {
-	CHECK_PART_INDEX(partIndex, return ImageRgbaU8());
+TextureRgbaU8 ModelImpl::getDiffuseMap(int partIndex) const {
+	CHECK_PART_INDEX(partIndex, return TextureRgbaU8());
 	return this->partBuffer[partIndex].diffuseMap;
 }
-void ModelImpl::setDiffuseMap(const ImageRgbaU8 &diffuseMap, int partIndex) {
+void ModelImpl::setDiffuseMap(const TextureRgbaU8 &diffuseMap, int partIndex) {
 	CHECK_PART_INDEX(partIndex, return);
-	if (image_exists(diffuseMap) && !image_isTexture(diffuseMap)) {
-		printText("Cannot assign a non-texture image as a diffuse map!\n");
-	} else {
-		this->partBuffer[partIndex].diffuseMap = diffuseMap;
-	}
+	this->partBuffer[partIndex].diffuseMap = diffuseMap;
 }
 void ModelImpl::setDiffuseMapByName(ResourcePool &pool, const String &filename, int partIndex) {
 	CHECK_PART_INDEX(partIndex, return);
-	const ImageRgbaU8 texture = pool.fetchImageRgba(filename);
-	if (image_exists(texture)) {
+	const TextureRgbaU8 texture = pool.fetchTextureRgba(filename, 5);
+	if (texture_exists(texture)) {
 		this->setDiffuseMap(texture, partIndex);
 	}
 }
-ImageRgbaU8 ModelImpl::getLightMap(int partIndex) const {
-	CHECK_PART_INDEX(partIndex, return ImageRgbaU8());
+TextureRgbaU8 ModelImpl::getLightMap(int partIndex) const {
+	CHECK_PART_INDEX(partIndex, return TextureRgbaU8());
 	return this->partBuffer[partIndex].lightMap;
 }
-void ModelImpl::setLightMap(const ImageRgbaU8 &lightMap, int partIndex) {
+void ModelImpl::setLightMap(const TextureRgbaU8 &lightMap, int partIndex) {
 	CHECK_PART_INDEX(partIndex, return);
-	if (image_exists(lightMap) && !image_isTexture(lightMap)) {
-		printText("Cannot assign a non-texture image as a light map!\n");
-	} else {
-		this->partBuffer[partIndex].lightMap = lightMap;
-	}
+	this->partBuffer[partIndex].lightMap = lightMap;
 }
 void ModelImpl::setLightMapByName(ResourcePool &pool, const String &filename, int partIndex) {
 	CHECK_PART_INDEX(partIndex, return);
-	const ImageRgbaU8 texture = pool.fetchImageRgba(filename);
-	if (image_exists(texture)) {
+	const TextureRgbaU8 texture = pool.fetchTextureRgba(filename, 1); // TODO: Allow configuring the number of mip levels and selecting a sampler somehow.
+	if (texture_exists(texture)) {
 		this->setLightMap(texture, partIndex);
 	}
 }

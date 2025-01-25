@@ -1,6 +1,6 @@
 ﻿// zlib open source license
 //
-// Copyright (c) 2018 to 2019 David Forsgren Piuva
+// Copyright (c) 2018 to 2025 David Forsgren Piuva
 // 
 // This software is provided 'as-is', without any express or implied
 // warranty. In no event will the authors be held liable for any damages
@@ -24,15 +24,25 @@
 #ifndef DFPSR_API_MODEL
 #define DFPSR_API_MODEL
 
-#include "types.h"
 #include "../math/FVector.h"
-
-// TODO: How should these be exposed to the caller?
+#include "../image/Texture.h"
 #include "../render/Camera.h"
 #include "../render/ResourcePool.h"
+
+// TODO: Create a folder with types.
+namespace dsr {
+	// A handle to a model.
+	class ModelImpl;
+	using Model = Handle<ModelImpl>;
+}
+
 #include "../render/model/format/dmf1.h"
 
 namespace dsr {
+	// A handle to a multi-threaded rendering context.
+	class RendererImpl;
+	using Renderer = Handle<RendererImpl>;
+
 	// Normalized texture coordinates:
 	//   (0.0f, 0.0f) is the texture coordinate for the upper left corner of the upper left pixel in the 2D texture.
 	//   (1.0f, 0.0f) is the texture coordinate for the upper right corner of the upper right pixel in the 2D texture.
@@ -200,7 +210,7 @@ namespace dsr {
 	// Post-condition:
 	//   Returns an image handle to the diffuse texture in the part at partIndex in model.
 	//   If the part has no diffuse image then an empth handle is returned.
-	ImageRgbaU8 model_getDiffuseMap(const Model& model, int partIndex);
+	TextureRgbaU8 model_getDiffuseMap(const Model& model, int partIndex);
 	// Set the part's diffuse texture.
 	//   A texture is just an image fulfilling the criterias of image_isTexture to allow fast texture sampling and pyramid generation.
 	// Pre-condition:
@@ -209,7 +219,7 @@ namespace dsr {
 	// Side-effect:
 	//   Sets the diffuse texture in the part at partIndex in model to diffuseMap.
 	//   If diffuseMap is an empty image handle, then the diffuse texture will be replaced by the default solid white color.
-	void model_setDiffuseMap(Model& model, int partIndex, const ImageRgbaU8 &diffuseMap);
+	void model_setDiffuseMap(Model& model, int partIndex, const TextureRgbaU8 &diffuseMap);
 	// Automatically find the diffuse texture by name in the resource pool and assign it.
 	// Pre-condition:
 	//   model must refer to an existing model.
@@ -229,7 +239,7 @@ namespace dsr {
 	// Post-condition:
 	//   Returns an image handle to the light texture in the part at partIndex in model.
 	//   If the part has no light image then an empth handle is returned.
-	ImageRgbaU8 model_getLightMap(Model& model, int partIndex);
+	TextureRgbaU8 model_getLightMap(Model& model, int partIndex);
 	// Set the part's light texture.
 	//   A texture is just an image fulfilling the criterias of image_isTexture to allow fast texture sampling.
 	//   Even though no texture-pyramid is used for light-maps, it still has to look up
@@ -240,7 +250,7 @@ namespace dsr {
 	// Side-effect:
 	//   Sets the diffuse texture in the part at partIndex in model to diffuseMap.
 	//   If diffuseMap is an empty image handle, then the diffuse texture will be replaced by the default solid white color.
-	void model_setLightMap(Model& model, int partIndex, const ImageRgbaU8 &lightMap);
+	void model_setLightMap(Model& model, int partIndex, const TextureRgbaU8 &lightMap);
 	// Automatically find the light texture by name in the resource pool and assign it.
 	// Pre-condition:
 	//   model must refer to an existing model.
@@ -357,7 +367,7 @@ namespace dsr {
 	  const ProjectedPoint &posA, const ProjectedPoint &posB, const ProjectedPoint &posC,
 	  const FVector4D &colorA, const FVector4D &colorB, const FVector4D &colorC,
 	  const FVector4D &texCoordA, const FVector4D &texCoordB, const FVector4D &texCoordC,
-	  const ImageRgbaU8& diffuseMap, const ImageRgbaU8& lightMap,
+	  const TextureRgbaU8& diffuseMap, const TextureRgbaU8& lightMap,
 	  Filter filter, const Camera &camera);
 	// Use already given triangles as occluders.
 	//   Used after calls to renderer_giveTask have filled the buffer with triangles, but before they are drawn using renderer_end.

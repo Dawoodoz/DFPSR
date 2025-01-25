@@ -73,7 +73,7 @@ bool Label::pointIsInside(const IVector2D& pixelPosition) {
 }
 
 void Label::completeAssets() {
-	if (this->font.get() == nullptr) {
+	if (this->font.isNull()) {
 		this->font = font_getDefault();
 	}
 }

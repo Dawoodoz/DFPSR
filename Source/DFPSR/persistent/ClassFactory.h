@@ -34,31 +34,31 @@ namespace dsr {
 class Persistent;
 
 // Reference method for creating a persistent class
-inline std::shared_ptr<Persistent> classConstructor() {
-	return std::shared_ptr<Persistent>(); // Null
+inline dsr::Handle<Persistent> classConstructor() {
+	return dsr::Handle<Persistent>(); // Null
 }
 
 // Must be used in each class inheriting from Persistent (both directly and indirectly)
 #define PERSISTENT_DECLARATION(CLASS) \
-	std::shared_ptr<dsr::StructureDefinition> getStructure() const override; \
+	dsr::Handle<dsr::StructureDefinition> getStructure() const override; \
 	decltype(&dsr::classConstructor) getConstructor() const override; \
 	explicit CLASS(const dsr::ReadableString &content, const dsr::ReadableString &fromPath);
 
 // Must be used in the implementation of each class inheriting from Persistent
 #define PERSISTENT_DEFINITION(CLASS) \
-	std::shared_ptr<dsr::StructureDefinition> CLASS##Type; \
-	std::shared_ptr<dsr::StructureDefinition> CLASS::getStructure() const { \
-		if (CLASS##Type.get() == nullptr) { \
-			CLASS##Type = std::make_shared<dsr::StructureDefinition>(U ## #CLASS); \
-			this->declareAttributes(*(CLASS##Type)); \
+	dsr::Handle<dsr::StructureDefinition> CLASS##Type; \
+	dsr::Handle<dsr::StructureDefinition> CLASS::getStructure() const { \
+		if (CLASS##Type.isNull()) { \
+			CLASS##Type = dsr::handle_create<dsr::StructureDefinition>(U ## #CLASS).setName("Persistent " #CLASS " StructureDefinition"); \
+			this->declareAttributes((CLASS##Type).getReference()); \
 		} \
 		return CLASS##Type; \
 	} \
 	CLASS::CLASS(const dsr::ReadableString &content, const dsr::ReadableString &fromPath) { \
 		this->assignValue(content, fromPath); \
 	} \
-	std::shared_ptr<dsr::Persistent> CLASS##Constructor() { \
-		return std::dynamic_pointer_cast<dsr::Persistent>(std::make_shared<CLASS>()); \
+	dsr::Handle<dsr::Persistent> CLASS##Constructor() { \
+		return dsr::handle_dynamicCast<dsr::Persistent>(dsr::handle_create<CLASS>().setName("Persistent " #CLASS)); \
 	} \
 	decltype(&dsr::classConstructor) CLASS::getConstructor() const { \
 		return &CLASS##Constructor; \
@@ -94,7 +94,7 @@ class Persistent : public Printable {
 public:
 	// Persistent attributes may not be write protected
 	virtual Persistent* findAttribute(const ReadableString &name);
-	virtual std::shared_ptr<StructureDefinition> getStructure() const;
+	virtual Handle<StructureDefinition> getStructure() const;
 	virtual decltype(&classConstructor) getConstructor() const = 0;
 	// Call from the start of main, to allow constructing the class by name
 	void registerPersistentClass();
@@ -108,9 +108,9 @@ public:
 	// Attempt to add another persistent object
 	//   Return false if the child object was rejected
 	//   Make sure that connections that would create an infinite loop are rejected
-	virtual bool addChild(std::shared_ptr<Persistent> child);
+	virtual bool addChild(Handle<Persistent> child);
 	virtual int getChildCount() const;
-	virtual std::shared_ptr<Persistent> getChild(int index) const;
+	virtual Handle<Persistent> getChild(int index) const;
 public:
 	// Override for new compound types
 
@@ -128,10 +128,6 @@ public:
 	// Save to a stream using any indentation
 	virtual String& toStreamIndented(String& out, const ReadableString& indentation) const override;
 };
-// Save to a stream without indentation
-inline std::ostream& operator<< (std::ostream& out, const Persistent& p) {
-	return p.toStream(out);
-}
 
 // Macro to be placed at the start of the global main function
 //   The dsr namespace must be used to access registerPersistentClass
@@ -139,10 +135,10 @@ inline std::ostream& operator<< (std::ostream& out, const Persistent& p) {
 (CLASS().registerPersistentClass());
 
 // Create a single class instance without any content
-std::shared_ptr<Persistent> createPersistentClass(const String &type, bool mustExist = true);
+Handle<Persistent> createPersistentClass(const String &type, bool mustExist = true);
 
 // Create a class instance from text
-std::shared_ptr<Persistent> createPersistentClassFromText(const ReadableString &text, const ReadableString &fromPath);
+Handle<Persistent> createPersistentClassFromText(const ReadableString &text, const ReadableString &fromPath);
 
 }
 

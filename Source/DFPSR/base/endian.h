@@ -40,13 +40,18 @@
 #ifndef DFPSR_ENDIAN
 #define DFPSR_ENDIAN
 	#include <cstdint>
+	#include "noSimd.h"
 	#ifdef DSR_BIG_ENDIAN
 		// TODO: Not yet tested on a big-endian machine!
+		#define ENDIAN_POS_ADDR_IMM(VALUE,OFFSET) (bitShiftRightImmediate<OFFSET>(VALUE))
+		#define ENDIAN_NEG_ADDR_IMM(VALUE,OFFSET) (bitShiftLeftImmediate<OFFSET>(VALUE))
 		#define ENDIAN_POS_ADDR(VALUE,OFFSET) ((VALUE) >> (OFFSET))
 		#define ENDIAN_NEG_ADDR(VALUE,OFFSET) ((VALUE) << (OFFSET))
 		#define ENDIAN32_BYTE_0 0xFF000000u
 		static_assert(false, "Big-endian mode has not been officially tested!");
 	#else
+		#define ENDIAN_POS_ADDR_IMM(VALUE,OFFSET) (bitShiftLeftImmediate<OFFSET>(VALUE))
+		#define ENDIAN_NEG_ADDR_IMM(VALUE,OFFSET) (bitShiftRightImmediate<OFFSET>(VALUE))
 		#define ENDIAN_POS_ADDR(VALUE,OFFSET) ((VALUE) << (OFFSET))
 		#define ENDIAN_NEG_ADDR(VALUE,OFFSET) ((VALUE) >> (OFFSET))
 		#define ENDIAN32_BYTE_0 0x000000FFu

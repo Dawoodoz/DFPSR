@@ -23,7 +23,6 @@
 
 #include <cstdint>
 #include "VisualComponent.h"
-#include "../image/internal/imageInternal.h"
 
 using namespace dsr;
 
@@ -75,12 +74,12 @@ Persistent* VisualComponent::findAttribute(const ReadableString &name) {
 
 // Pre-condition: component != nullptr
 // Post-condition: Returns the root of component
-static VisualComponent *getRoot(VisualComponent *component) {
+static Handle<VisualComponent> getRoot(VisualComponent *component) {
 	assert(component != nullptr);
 	while (component->parent != nullptr) {
 		component = component->parent;
 	}
-	return component;
+	return component->getHandle();
 }
 
 IVector2D VisualComponent::getDesiredDimensions() {
@@ -198,7 +197,7 @@ static void drawOverlays(ImageRgbaU8& targetImage, VisualComponent &component, c
 		}
 		// Draw overlays in each child component on top.
 		for (int i = 0; i < component.getChildCount(); i++) {
-			drawOverlays(targetImage, *(component.children[i]), offset + component.children[i]->location.upperLeft());
+			drawOverlays(targetImage, component.children[i].getReference(), offset + component.children[i]->location.upperLeft());
 		}
 	}
 }
@@ -246,10 +245,10 @@ void VisualComponent::drawSelf(ImageRgbaU8& targetImage, const IRect &relativeLo
 void VisualComponent::drawOverlay(ImageRgbaU8& targetImage, const IVector2D &absoluteOffset) {}
 
 // Manual use with the correct type
-void VisualComponent::addChildComponent(std::shared_ptr<VisualComponent> child) {
+void VisualComponent::addChildComponent(Handle<VisualComponent> child) {
 	if (!this->isContainer()) {
 		sendWarning(U"Cannot attach a child to a non-container parent component!\n");
-	} else if (child.get() == this) {
+	} else if (child.getUnsafe() == this) {
 		sendWarning(U"Cannot attach a component to itself!\n");
 	} else if (child->hasChild(this)) {
 		sendWarning(U"Cannot attach to its own parent as a child component!\n");
@@ -267,10 +266,10 @@ void VisualComponent::addChildComponent(std::shared_ptr<VisualComponent> child) 
 }
 
 // Automatic insertion from loading
-bool VisualComponent::addChild(std::shared_ptr<Persistent> child) {
+bool VisualComponent::addChild(Handle<Persistent> child) {
 	// Try to cast from base class Persistent to derived class VisualComponent
-	std::shared_ptr<VisualComponent> visualComponent = std::dynamic_pointer_cast<VisualComponent>(child);
-	if (visualComponent.get() == nullptr) {
+	Handle<VisualComponent> visualComponent = handle_dynamicCast<VisualComponent>(child);
+	if (visualComponent.isNull()) {
 		return false; // Wrong type!
 	} else {
 		this->addChildComponent(visualComponent);
@@ -282,16 +281,16 @@ int VisualComponent::getChildCount() const {
 	return this->children.length();
 }
 
-std::shared_ptr<Persistent> VisualComponent::getChild(int index) const {
+Handle<Persistent> VisualComponent::getChild(int index) const {
 	if (index >= 0 && index < this->children.length()) {
 		return this->children[index];
 	} else {
-		return std::shared_ptr<Persistent>(); // Null handle for out of bound.
+		return Handle<Persistent>(); // Null handle for out of bound.
 	}
 }
 
-static void detachFromWindow(std::shared_ptr<VisualComponent> component) {
-	component->window = std::shared_ptr<BackendWindow>();
+static void detachFromWindow(Handle<VisualComponent> component) {
+	component->window = Handle<BackendWindow>();
 	for (int c = 0; c < component->children.length(); c++) {
 		detachFromWindow(component->children[c]);
 	}
@@ -304,8 +303,8 @@ void VisualComponent::detachFromParent() {
 		parent->childChanged = true;
 		// Find the component to detach among the child components.
 		for (int i = 0; i < parent->getChildCount(); i++) {
-			std::shared_ptr<VisualComponent> current = parent->children[i];
-			if (current.get() == this) {
+			Handle<VisualComponent> current = parent->children[i];
+			if (current.getUnsafe() == this) {
 				// Disconnect child from backend window.
 				detachFromWindow(parent->children[i]);
 				// Disconnect parent from child.
@@ -324,8 +323,8 @@ void VisualComponent::detachFromParent() {
 
 bool VisualComponent::hasChild(VisualComponent *child) const {
 	for (int i = 0; i < this->getChildCount(); i++) {
-		std::shared_ptr<VisualComponent> current = this->children[i];
-		if (current.get() == child) {
+		Handle<VisualComponent> current = this->children[i];
+		if (current.getUnsafe() == child) {
 			return true; // Found the component
 		} else {
 			if (current->hasChild(child)) {
@@ -336,38 +335,38 @@ bool VisualComponent::hasChild(VisualComponent *child) const {
 	return false; // Could not find the component
 }
 
-bool VisualComponent::hasChild(std::shared_ptr<VisualComponent> child) const {
-	return this->hasChild(child.get());
+bool VisualComponent::hasChild(Handle<VisualComponent> child) const {
+	return this->hasChild(child.getUnsafe());
 }
 
-std::shared_ptr<VisualComponent> VisualComponent::findChildByName(ReadableString name) const {
+Handle<VisualComponent> VisualComponent::findChildByName(ReadableString name) const {
 	for (int i = 0; i < this->getChildCount(); i++) {
-		std::shared_ptr<VisualComponent> current = this->children[i];
+		Handle<VisualComponent> current = this->children[i];
 		if (string_match(current->getName(), name)) {
 			return current; // Found the component
 		} else {
-			std::shared_ptr<VisualComponent> searchResult = current->findChildByName(name);
-			if (searchResult.get() != nullptr) {
+			Handle<VisualComponent> searchResult = current->findChildByName(name);
+			if (searchResult.isNotNull()) {
 				return searchResult; // Found the component recursively
 			}
 		}
 	}
-	return std::shared_ptr<VisualComponent>(); // Could not find the component
+	return Handle<VisualComponent>(); // Could not find the component
 }
 
-std::shared_ptr<VisualComponent> VisualComponent::findChildByNameAndIndex(ReadableString name, int index) const {
+Handle<VisualComponent> VisualComponent::findChildByNameAndIndex(ReadableString name, int index) const {
 	for (int i = 0; i < this->getChildCount(); i++) {
-		std::shared_ptr<VisualComponent> current = this->children[i];
+		Handle<VisualComponent> current = this->children[i];
 		if (string_match(current->getName(), name) && current->getIndex() == index) {
 			return current; // Found the component
 		} else {
-			std::shared_ptr<VisualComponent> searchResult = current->findChildByNameAndIndex(name, index);
-			if (searchResult.get() != nullptr) {
+			Handle<VisualComponent> searchResult = current->findChildByNameAndIndex(name, index);
+			if (searchResult.isNotNull()) {
 				return searchResult; // Found the component recursively
 			}
 		}
 	}
-	return std::shared_ptr<VisualComponent>(); // Could not find the component
+	return Handle<VisualComponent>(); // Could not find the component
 }
 
 bool VisualComponent::pointIsInside(const IVector2D& pixelPosition) {
@@ -384,34 +383,26 @@ bool VisualComponent::pointIsInsideOfHover(const IVector2D& pixelPosition) {
 }
 
 // Non-recursive top-down search
-std::shared_ptr<VisualComponent> VisualComponent::getDirectChild(const IVector2D& pixelPosition) {
+Handle<VisualComponent> VisualComponent::getDirectChild(const IVector2D& pixelPosition) {
 	// Iterate child components in reverse drawing order
 	for (int i = this->getChildCount() - 1; i >= 0; i--) {
-		std::shared_ptr<VisualComponent> currentChild = this->children[i];
+		Handle<VisualComponent> currentChild = this->children[i];
 		// Check if the point is inside the child component
 		if (currentChild->getVisible() && currentChild->pointIsInside(pixelPosition)) {
 			return currentChild;
 		}
 	}
 	// Return nothing if the point missed all child components
-	return std::shared_ptr<VisualComponent>();
+	return Handle<VisualComponent>();
 }
 
-// TODO: Store a pointer to the window in each visual component, so that one can get the shared pointer to the root and get access to clipboard functionality.
-std::shared_ptr<VisualComponent> VisualComponent::getShared() {
-	VisualComponent *parent = this->parent;
-	if (parent == nullptr) {
-		// Not working for the root component, because that would require access to the window.
-		return std::shared_ptr<VisualComponent>();
-	} else {
-		for (int c = 0; c < parent->children.length(); c++) {
-			if (parent->children[c].get() == this) {
-				return parent->children[c];
-			}
-		}
-		// Not found in its own parent if the component tree is broken.
-		return std::shared_ptr<VisualComponent>();
-	}
+// Create a Handle to the component.
+Handle<VisualComponent> VisualComponent::getHandle() {
+	#ifdef SAFE_POINTER_CHECKS
+		return Handle<VisualComponent>(this, heap_getHeader(this)->allocationIdentity);
+	#else
+		return Handle<VisualComponent>(this);
+	#endif
 }
 
 void VisualComponent::updateStateEvent(ComponentState oldState, ComponentState newState) {}
@@ -433,7 +424,7 @@ void VisualComponent::sendNotifications() {
 	//   Run the loop backwards, so that no components are missed when once is detached.
 	for (int i = this->getChildCount() - 1; i >= 0; i--) {
 		// Use a reference counted pointer to the child, so that it can be removed safely outside of custom events.
-		std::shared_ptr<VisualComponent> child = this->children[i];
+		Handle<VisualComponent> child = this->children[i];
 		if (child->detach) {
 			child->detach = false;
 			child->detachFromParent();
@@ -455,7 +446,7 @@ static VisualComponent *getTopmostOverlay(VisualComponent *component, const IVec
 	if (component->getVisible()) {
 		// Go through child components in reverse draw order to stop when reaching the one that is visible.
 		for (int i = component->getChildCount() - 1; i >= 0; i--) {
-			VisualComponent *result = getTopmostOverlay(component->children[i].get(), point - component->children[i]->location.upperLeft());
+			VisualComponent *result = getTopmostOverlay(component->children[i].getUnsafe(), point - component->children[i]->location.upperLeft());
 			if (result != nullptr) return result;
 		}
 		// Check itself behind child overlays.
@@ -488,7 +479,7 @@ void VisualComponent::defocusChildren() {
 }
 
 void VisualComponent::addStateBits(ComponentState directStates, bool unique) {
-	VisualComponent *root = getRoot(this);
+	Handle<VisualComponent> root = getRoot(this);
 	// Remove all focus in the window if unique.
 	if (unique) root->applyStateAndMask(~directStates);
 	// Apply state directly to itself and indirectly to parents.
@@ -498,7 +489,7 @@ void VisualComponent::addStateBits(ComponentState directStates, bool unique) {
 }
 
 void VisualComponent::removeStateBits(ComponentState directStates) {
-	VisualComponent *root = getRoot(this);
+	Handle<VisualComponent> root = getRoot(this);
 	// Remove state directly from itself and indirectly from parents.
 	this->currentState &= ~directStates;
 	// Update indirect states, so that parent components know what happens to their child components.
@@ -550,7 +541,7 @@ void VisualComponent::sendMouseEvent(const MouseEvent& event, bool recursive) {
 	//   Grabbing with the dragComponent pointer makes sure that move and up events can be given even if the cursor moves outside of the component.
 	VisualComponent *childComponent = nullptr;
 	// Find the component to interact with.
-	if (event.mouseEventType == MouseEventType::MouseDown || this->dragComponent.get() == nullptr) {
+	if (event.mouseEventType == MouseEventType::MouseDown || this->dragComponent.isNull()) {
 		// Check the overlays first when getting mouse events to the root component.
 		if (this->parent == nullptr) {
 			childComponent = getTopmostOverlay(this, event.position);
@@ -559,19 +550,19 @@ void VisualComponent::sendMouseEvent(const MouseEvent& event, bool recursive) {
 		//   The sendMouseEvent method can be called recursively from a member of an overlay, so we can't know
 		//   which component is at the top without asking the components that manage interaction with their children.
 		if (childComponent == nullptr && !this->managesChildren()) {
-			std::shared_ptr<VisualComponent> nextContainer = this->getDirectChild(event.position);
-			if (nextContainer.get() != nullptr) {
-				childComponent = nextContainer.get();
+			Handle<VisualComponent> nextContainer = this->getDirectChild(event.position);
+			if (nextContainer.isNotNull()) {
+				childComponent = nextContainer.getUnsafe();
 			}
 		}
-	} else if (dragComponent.get() != nullptr) {
+	} else if (dragComponent.isNotNull()) {
 		// If we're grabbing a component, keep sending events to it.
-		childComponent = this->dragComponent.get();
+		childComponent = this->dragComponent.getUnsafe();
 	}
 	// Grab any detected component on mouse down events.
 	if (event.mouseEventType == MouseEventType::MouseDown && childComponent != nullptr) {
 		childComponent->makeFocused();
-		this->dragComponent = childComponent->getShared();
+		this->dragComponent = childComponent->getHandle();
 		this->holdCount++;
 	}
 	// Send the signal to a child component or itself.
@@ -598,7 +589,7 @@ void VisualComponent::sendMouseEvent(const MouseEvent& event, bool recursive) {
 	if (event.mouseEventType == MouseEventType::MouseUp) {
 		this->holdCount--;
 		if (this->holdCount <= 0) {
-			this->dragComponent = std::shared_ptr<VisualComponent>(); // Abort drag.
+			this->dragComponent = Handle<VisualComponent>(); // Abort drag.
 			// Reset when we had more up than down events, in case that the root panel was created with a button already pressed.
 			this->holdCount = 0;
 		}

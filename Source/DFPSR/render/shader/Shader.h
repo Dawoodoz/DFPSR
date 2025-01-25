@@ -26,8 +26,8 @@
 
 #include <cstdint>
 #include "../../image/PackOrder.h"
-#include "../../image/ImageRgbaU8.h"
-#include "../../image/ImageF32.h"
+#include "../../image/Image.h"
+#include "../../image/Texture.h"
 #include "../ITriangle2D.h"
 #include "shaderMethods.h"
 #include "shaderTypes.h"
@@ -56,16 +56,16 @@ struct TriangleColors {
 };
 
 struct TriangleInput {
-	const ImageRgbaU8Impl *diffuseImage;
-	const ImageRgbaU8Impl *lightImage;
+	const TextureRgbaU8 *diffuseMap;
+	const TextureRgbaU8 *lightMap;
 	const TriangleTexCoords texCoords;
 	const TriangleColors colors;
-	TriangleInput(const ImageRgbaU8Impl *diffuseImage, const ImageRgbaU8Impl *lightImage, const TriangleTexCoords &texCoords, const TriangleColors &colors)
-	: diffuseImage(diffuseImage), lightImage(lightImage), texCoords(texCoords), colors(colors) {}
+	TriangleInput(const TextureRgbaU8 *diffuseMap, const TextureRgbaU8 *lightMap, const TriangleTexCoords &texCoords, const TriangleColors &colors)
+	: diffuseMap(diffuseMap), lightMap(lightMap), texCoords(texCoords), colors(colors) {}
 };
 
 // The template for function pointers doing the work
-inline void drawCallbackTemplate(const TriangleInput &triangleInput, ImageRgbaU8Impl *colorBuffer, ImageF32Impl *depthBuffer, const ITriangle2D &triangle, const Projection &projection, const RowShape &shape, Filter filter) {}
+inline void drawCallbackTemplate(const TriangleInput &triangleInput, ImageRgbaU8 *colorBuffer, ImageF32 *depthBuffer, const ITriangle2D &triangle, const Projection &projection, const RowShape &shape, Filter filter) {}
 using DRAW_CALLBACK_TYPE = decltype(&drawCallbackTemplate);
 
 }

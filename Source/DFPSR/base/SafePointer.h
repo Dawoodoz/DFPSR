@@ -1,6 +1,6 @@
 ﻿// zlib open source license
 //
-// Copyright (c) 2017 to 2024 David Forsgren Piuva
+// Copyright (c) 2017 to 2025 David Forsgren Piuva
 // 
 // This software is provided 'as-is', without any express or implied
 // warranty. In no event will the authors be held liable for any damages
@@ -21,22 +21,12 @@
 //    3. This notice may not be removed or altered from any source
 //    distribution.
 
-// If you get segmentation faults despite using SafePointer, then check the following.
-// * Are you compiling all of your code in debug mode?
-//   The release mode does not perform SafePointer checks, because it is supposed to be zero overhead by letting the compiler inline the pointers.
-// * Did you create a SafePointer from a memory region that you do not have access to, expired stack memory, or a region larger than the allocation?
-//   SafePointer can not know which memory is safe to call if you do not give it correct information.
-//   If the pointer was created without an allocation, make sure that regionStart is nullptr and claimedSize is zero.
-// * Did you deallocate the memory before using the SafePointer?
-//   SafePointer can not keep the allocation alive, because that would require counting references in both debug and release.
+// If you get segmentation faults despite using SafePointer, make sure to compile a debug version of the program to activate safety checks.
+//   In debug mode, bound checks make sure that memory access do not go a single bit outside of the allowed region.
 
-// To stay safe when using SafePointer:
-// * Compile in debug mode by habit, until it is time for profiling or relase.
-//   The operating system can not detect out of bound access in stack memory or arena allocations, so it may silently corrupt the memory without being caught if safety is disabled.
-// * Let the Buffer create the safe pointer for you to prevent accidentally giving the wrong size, or use the default constructor for expressing null.
-//   If you only need a part of the buffer's memory, use the slice function to get a subset of the memory with bound checks on construction.
-// * Either create a SafePointer when needed within the buffer's scope, or store both in the same structure.
-//   This makes sure that the allocation is not freed while the pointer still exists.
+// If SafePointer is constructed with a pointer to the allocation head and its allocation identity (when the memory is allocated by the framework), more safety checks are done in debug mode.
+//   The allocation identity is a 64-bit nonce stored in both the allocation's head and SafePointer, making sure that the memory accessed has not been freed or reused for something else.
+//   The 64-bit thread hash prevent access of another thread's private memory, for consistent access rights when the virtual stack may allocate in either thread local or heap memory.
 
 #ifndef DFPSR_SAFE_POINTER
 #define DFPSR_SAFE_POINTER
@@ -45,94 +35,85 @@
 #include <cassert>
 #include <cstdint>
 #include "memory.h"
+#include "DsrTraits.h"
 
 namespace dsr {
 
 #ifdef SAFE_POINTER_CHECKS
-	void assertInsideSafePointer(const char* method, const char* name, const uint8_t* pointer, const uint8_t* data, const uint8_t* regionStart, const uint8_t* regionEnd, const AllocationHeader *header, uint64_t allocationIdentity, intptr_t claimedSize, intptr_t elementSize);
-	void assertNonNegativeSize(intptr_t size);
+	void impl_assertInsideSafePointer(const char* methodName, const char* pointerName, const uint8_t* claimedStart, const uint8_t* claimedEnd, intptr_t elementSize, const uint8_t* permittedStart, const uint8_t* permittedEnd, const AllocationHeader *header, uint64_t allocationIdentity);
+	void impl_assertNonNegativeSize(intptr_t size);
 #endif
 
 template<typename T>
 class SafePointer {
 private:
-	// A pointer from regionStart to regionEnd
+	// A pointer from permittedStart to permittedEnd
 	//   Mutable because only the data being pointed to is write protected in a const SafePointer
-	mutable T *data;
+	T *data;
+public:
 	#ifdef SAFE_POINTER_CHECKS
 		// Points to the first accessible byte, which should have the same alignment as the data pointer.
-		mutable T *regionStart;
+		T *permittedStart;
 		// Marks the end of the allowed region, pointing to the first byte that is not accessible.
-		mutable T *regionEnd;
+		T *permittedEnd;
 		// Pointer to an ascii literal containing the name for improving error messages for crashes in debug mode.
-		mutable const char *name;
+		const char *name;
 		// Optional pointer to an allocation header to know if it still exists and which threads are allowed to access it.
-		mutable AllocationHeader *header = nullptr;
+		AllocationHeader *header = nullptr;
 		// The identity that should match the allocation header's identity.
-		mutable uint64_t allocationIdentity = 0;
+		uint64_t allocationIdentity = 0;
 	#endif
 public:
 	#ifdef SAFE_POINTER_CHECKS
-	SafePointer() : data(nullptr), regionStart(nullptr), regionEnd(nullptr), name("Unnamed null pointer") {}
-	explicit SafePointer(const char* name) : data(nullptr), regionStart(nullptr), regionEnd(nullptr), name(name) {}
-	SafePointer(const char* name, T* regionStart, intptr_t regionByteSize = sizeof(T), AllocationHeader *header = nullptr)
-	: data(regionStart), regionStart(regionStart), regionEnd((T*)(((uint8_t*)regionStart) + (intptr_t)regionByteSize)), name(name), header(header) {
-		assertNonNegativeSize(regionByteSize);
-		// If the pointer has a header, then store the allocation's identity in the pointer.
-		if (header != nullptr) {
-			this->allocationIdentity = header->allocationIdentity;
+		// Create a null pointer.
+		SafePointer() : data(nullptr), permittedStart(nullptr), permittedEnd(nullptr), name("Unnamed null pointer") {}
+		explicit SafePointer(const char* name) : data(nullptr), permittedStart(nullptr), permittedEnd(nullptr), name(name) {}
+		SafePointer(const char* name, T* permittedStart, intptr_t permittedByteSize = sizeof(T))
+		: data(permittedStart), permittedStart(permittedStart), permittedEnd((T*)(((uint8_t*)permittedStart) + (intptr_t)permittedByteSize)), name(name) {
+			impl_assertNonNegativeSize(permittedByteSize);
 		}
-	}
-	SafePointer(const char* name, T* regionStart, intptr_t regionByteSize, T* data, AllocationHeader *header = nullptr)
-	: data(data), regionStart(regionStart), regionEnd((T*)(((uint8_t*)regionStart) + (intptr_t)regionByteSize)), name(name), header(header) {
-		assertNonNegativeSize(regionByteSize);
-		// If the pointer has a header, then store the allocation's identity in the pointer.
-		if (header != nullptr) {
-			this->allocationIdentity = header->allocationIdentity;
+		SafePointer(const char* name, T* permittedStart, intptr_t permittedByteSize, T* data)
+		: data(data), permittedStart(permittedStart), permittedEnd((T*)(((uint8_t*)permittedStart) + (intptr_t)permittedByteSize)), name(name) {
+			impl_assertNonNegativeSize(permittedByteSize);
 		}
-	}
+		SafePointer(AllocationHeader *header, uint64_t allocationIdentity, const char* name, T* permittedStart, intptr_t permittedByteSize = sizeof(T))
+		: data(permittedStart), permittedStart(permittedStart), permittedEnd((T*)(((uint8_t*)permittedStart) + (intptr_t)permittedByteSize)), name(name), header(header), allocationIdentity(allocationIdentity) {
+			impl_assertNonNegativeSize(permittedByteSize);
+		}
+		SafePointer(AllocationHeader *header, uint64_t allocationIdentity, const char* name, T* permittedStart, intptr_t permittedByteSize, T* data)
+		: data(data), permittedStart(permittedStart), permittedEnd((T*)(((uint8_t*)permittedStart) + (intptr_t)permittedByteSize)), name(name), header(header), allocationIdentity(allocationIdentity) {
+			impl_assertNonNegativeSize(permittedByteSize);
+		}
 	#else
-	SafePointer() : data(nullptr) {}
-	explicit SafePointer(const char* name) : data(nullptr) {}
-	SafePointer(const char* name, T* regionStart, intptr_t regionByteSize = sizeof(T), AllocationHeader *header = nullptr) : data(regionStart) {}
-	SafePointer(const char* name, T* regionStart, intptr_t regionByteSize, T* data, AllocationHeader *header = nullptr) : data(data) {}
+		SafePointer() : data(nullptr) {}
+		explicit SafePointer(const char* name) : data(nullptr) {}
+		SafePointer(const char* name, T* permittedStart, intptr_t permittedByteSize = sizeof(T)) : data(permittedStart) {}
+		SafePointer(const char* name, T* permittedStart, intptr_t permittedByteSize, T* data) : data(data) {}
+		SafePointer(AllocationHeader *header, uint64_t allocationIdentity, const char* name, T* permittedStart, intptr_t permittedByteSize = sizeof(T)) : data(permittedStart) {}
+		SafePointer(AllocationHeader *header, uint64_t allocationIdentity, const char* name, T* permittedStart, intptr_t permittedByteSize, T* data) : data(data) {}
 	#endif
 public:
 	#ifdef SAFE_POINTER_CHECKS
-	inline void assertInside(const char* method, const T* pointer, intptr_t size = (intptr_t)sizeof(T)) const {
-		assertInsideSafePointer(method, this->name, (const uint8_t*)pointer, (const uint8_t*)this->data, (const uint8_t*)this->regionStart, (const uint8_t*)this->regionEnd, this->header, this->allocationIdentity, size, sizeof(T));
+	inline void assertInside(const char* methodName, const T* claimedStart, intptr_t size = (intptr_t)sizeof(T)) const {
+		impl_assertInsideSafePointer(methodName, this->name, (const uint8_t*)claimedStart, ((const uint8_t*)claimedStart) + size, sizeof(T), (const uint8_t*)this->permittedStart, (const uint8_t*)this->permittedEnd, this->header, this->allocationIdentity);
 	}
-	inline void assertInside(const char* method) const {
-		this->assertInside(method, this->data);
+	inline void assertInside(const char* methodName) const {
+		this->assertInside(methodName, this->data);
 	}
 	#endif
 public:
 	// Back to unsafe pointer with a clearly visible method name as a warning
 	// The same can be done by mistake using the & operator on a reference
 	// p.getUnsafe() = &(*p) = &(p[0])
-	inline T* getUnsafe() {
-		#ifdef SAFE_POINTER_CHECKS
-		this->assertInside("getUnsafe");
-		#endif
-		return this->data;
-	}
-	inline const T* getUnsafe() const {
+	inline T* getUnsafe() const {
 		#ifdef SAFE_POINTER_CHECKS
 		this->assertInside("getUnsafe");
 		#endif
 		return this->data;
 	}
 	// Get unsafe pointer without bound checks for implementing your own safety
-	inline T* getUnchecked() {
+	inline T* getUnchecked() const {
 		return this->data;
-	}
-	inline const T* getUnchecked() const {
-		return this->data;
-	}
-	// Returns the pointer in modulo byteAlignment
-	// Returns 0 if the pointer is aligned with byteAlignment
-	inline int32_t getAlignmentOffset(int32_t byteAlignment) const {
-		return ((uintptr_t)this->data) % byteAlignment;
 	}
 	inline bool isNull() const {
 		return this->data == nullptr;
@@ -147,72 +128,41 @@ public:
 		T *newStart = (T*)(((uint8_t*)(this->data)) + byteOffset);
 		#ifdef SAFE_POINTER_CHECKS
 		assertInside("getSlice", newStart, size);
-		return SafePointer<T>(name, newStart, size, this->header);
-		#else
-		return SafePointer<T>(name, newStart);
-		#endif
-	}
-	inline const SafePointer<T> slice(const char* name, intptr_t byteOffset, intptr_t size) const {
-		T *newStart = (T*)(((uint8_t*)(this->data)) + byteOffset);
-		#ifdef SAFE_POINTER_CHECKS
-		assertInside("getSlice", newStart, size);
-		return SafePointer<T>(name, newStart, size, this->header);
+		return SafePointer<T>(this->header, this->allocationIdentity, name, newStart, size);
 		#else
 		return SafePointer<T>(name, newStart);
 		#endif
 	}
 	// Dereference
 	template <typename S = T>
-	inline S& get() {
+	inline S& get() const {
 		#ifdef SAFE_POINTER_CHECKS
 		assertInside("get", this->data, sizeof(S));
 		#endif
 		return *((S*)this->data);
 	}
-	template <typename S = T>
-	inline const S& get() const {
-		#ifdef SAFE_POINTER_CHECKS
-		assertInside("get", this->data, sizeof(S));
-		#endif
-		return *((const S*)this->data);
-	}
-	inline T& operator*() {
+	inline T& operator*() const {
 		#ifdef SAFE_POINTER_CHECKS
 		assertInside("operator*");
 		#endif
 		return *(this->data);
 	}
-	inline const T& operator*() const {
-		#ifdef SAFE_POINTER_CHECKS
-		assertInside("operator*");
-		#endif
-		return *(this->data);
-	}
-	inline T& operator[] (intptr_t index) {
+	inline T& operator[] (intptr_t index) const {
 		T* address = this->data + index;
 		#ifdef SAFE_POINTER_CHECKS
 		assertInside("operator[]", address);
 		#endif
 		return *address;
 	}
-	inline const T& operator[] (intptr_t index) const {
-		T* address = this->data + index;
-		#ifdef SAFE_POINTER_CHECKS
-		assertInside("operator[]", address);
-		#endif
-		return *address;
-	}
-	inline void increaseBytes(intptr_t byteOffset) const {
+	inline SafePointer<T> &increaseBytes(intptr_t byteOffset) {
 		this->data = (T*)(((uint8_t*)(this->data)) + byteOffset);
+		return *this;
 	}
-	inline void increaseElements(intptr_t elementOffset) const {
-		this->data += elementOffset;
-	}
-	inline SafePointer<T>& operator+=(intptr_t elementOffset) {
+	inline SafePointer<T> &increaseElements(intptr_t elementOffset) {
 		this->data += elementOffset;
 		return *this;
 	}
-	inline const SafePointer<T>& operator+=(intptr_t elementOffset) const {
+	inline SafePointer<T>& operator+=(intptr_t elementOffset) {
 		this->data += elementOffset;
 		return *this;
 	}
@@ -220,66 +170,96 @@ public:
 		this->data -= elementOffset;
 		return *this;
 	}
-	inline const SafePointer<T>& operator-=(intptr_t elementOffset) const {
-		this->data -= elementOffset;
+	inline SafePointer<T> operator+(intptr_t elementOffset) const {
+		SafePointer<T> result = *this;
+		result += elementOffset;
+		return result;
+	}
+	inline SafePointer<T> operator-(intptr_t elementOffset) const {
+		SafePointer<T> result = *this;
+		result -= elementOffset;
+		return result;
+	}
+	// Copy constructor.
+	SafePointer(const SafePointer<T> &other) noexcept
+	: data(other.getUnchecked()) {
+		#ifdef SAFE_POINTER_CHECKS
+			this->header = other.header;
+			this->allocationIdentity = other.allocationIdentity;
+			this->permittedStart = other.permittedStart;
+			this->permittedEnd = other.permittedEnd;
+			this->name = other.name;
+		#endif
+	}
+	// Copy constructor from non-const to const.
+	template <typename U, DSR_ENABLE_IF(DSR_CHECK_RELATION(DsrTrait_SameType, T, const U))>
+    SafePointer(const SafePointer<U> &other) noexcept
+	: data(other.getUnchecked()) {
+		#ifdef SAFE_POINTER_CHECKS
+			this->header = other.header;
+			this->allocationIdentity = other.allocationIdentity;
+			this->permittedStart = other.permittedStart;
+			this->permittedEnd = other.permittedEnd;
+			this->name = other.name;
+		#endif
+	}
+	// Assignment.
+	SafePointer<T>& operator = (const SafePointer<T> &other) noexcept {
+		this->data = other.getUnchecked();
+		#ifdef SAFE_POINTER_CHECKS
+			this->header = other.header;
+			this->allocationIdentity = other.allocationIdentity;
+			this->permittedStart = other.permittedStart;
+			this->permittedEnd = other.permittedEnd;
+			this->name = other.name;
+		#endif
 		return *this;
 	}
-	inline SafePointer<T> operator+(intptr_t elementOffset) {
-		SafePointer<T> result = *this;
-		result += elementOffset;
-		return result;
-	}
-	inline const SafePointer<T> operator+(intptr_t elementOffset) const {
-		SafePointer<T> result = *this;
-		result += elementOffset;
-		return result;
-	}
-	inline SafePointer<T> operator-(intptr_t elementOffset) {
-		SafePointer<T> result = *this;
-		result -= elementOffset;
-		return result;
-	}
-	inline const SafePointer<T> operator-(intptr_t elementOffset) const {
-		SafePointer<T> result = *this;
-		result -= elementOffset;
-		return result;
-	}
-	inline const SafePointer<T>& operator=(const SafePointer<T>& source) const {
-		this->data = source.data;
+	// Assignment from non-const to const.
+	template <typename U, DSR_ENABLE_IF(DSR_CHECK_RELATION(DsrTrait_SameType, T, const U))>
+	SafePointer<T>& operator = (const SafePointer<U> &other) noexcept {
+		this->data = other.getUnchecked();
 		#ifdef SAFE_POINTER_CHECKS
-			this->header = source.header;
-			this->allocationIdentity = source.allocationIdentity;
-			this->regionStart = source.regionStart;
-			this->regionEnd = source.regionEnd;
-			this->name = source.name;
+			this->header = other.header;
+			this->allocationIdentity = other.allocationIdentity;
+			this->permittedStart = other.permittedStart;
+			this->permittedEnd = other.permittedEnd;
+			this->name = other.name;
 		#endif
 		return *this;
 	}
 };
 
 template <typename T, typename S>
-inline void safeMemoryCopy(SafePointer<T> target, const SafePointer<S>& source, intptr_t byteSize) {
+inline void safeMemoryCopy(SafePointer<T> target, SafePointer<S> source, intptr_t byteSize) {
+	T *targetPointer = target.getUnchecked();
+	const T *sourcePointer = source.getUnchecked();
 	#ifdef SAFE_POINTER_CHECKS
 		// Both target and source must be in valid memory
-		target.assertInside("memoryCopy (target)", target.getUnchecked(), (size_t)byteSize);
-		source.assertInside("memoryCopy (source)", source.getUnchecked(), (size_t)byteSize);
+		target.assertInside("memoryCopy (target)", targetPointer, (size_t)byteSize);
+		source.assertInside("memoryCopy (source)", sourcePointer, (size_t)byteSize);
 		// memcpy doesn't allow pointer aliasing
 		// TODO: Make a general assertion with the same style as out of bound exceptions
 		assert(((const uint8_t*)target.getUnchecked()) + byteSize <= (uint8_t*)source.getUnchecked() || ((const uint8_t*)source.getUnchecked()) + byteSize <= (uint8_t*)target.getUnchecked());
+		assert(targetPointer != nullptr);
+		assert(sourcePointer != nullptr);
+		assert(byteSize > 0);
 	#endif
-	std::memcpy(target.getUnchecked(), source.getUnchecked(), (size_t)byteSize);
+	std::memcpy(targetPointer, sourcePointer, (size_t)byteSize);
 }
 
 template <typename T>
-inline void safeMemorySet(SafePointer<T>& target, uint8_t value, intptr_t byteSize) {
+inline void safeMemorySet(SafePointer<T> target, uint8_t value, intptr_t byteSize) {
+	T *targetPointer = target.getUnchecked();
 	#ifdef SAFE_POINTER_CHECKS
 		// Target must be in valid memory
-		target.assertInside("memoryCopy (target)", target.getUnchecked(), byteSize);
+		target.assertInside("memoryCopy (target)", targetPointer, byteSize);
+		assert(targetPointer != nullptr);
+		assert(byteSize > 0);
 	#endif
-	std::memset((char*)(target.getUnchecked()), value, (size_t)byteSize);
+	std::memset(targetPointer, value, (size_t)byteSize);
 }
 
 }
 
 #endif
-

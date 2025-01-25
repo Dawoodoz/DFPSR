@@ -1,6 +1,6 @@
 ﻿// zlib open source license
 //
-// Copyright (c) 2017 to 2020 David Forsgren Piuva
+// Copyright (c) 2017 to 2025 David Forsgren Piuva
 // 
 // This software is provided 'as-is', without any express or implied
 // warranty. In no event will the authors be held liable for any damages
@@ -25,15 +25,13 @@
 #define DFPSR_API_STRING
 
 #include <cstdint>
-#include <iostream>
-#include <sstream>
-#include <string>
 #include <functional>
 #include "bufferAPI.h"
+#include "../base/SafePointer.h"
 #include "../collection/List.h"
 
-// Define DFPSR_INTERNAL_ACCESS before any include to get internal access to exposed types
-#ifdef DFPSR_INTERNAL_ACCESS
+// Define DSR_INTERNAL_ACCESS before any include to get internal access to exposed types
+#ifdef DSR_INTERNAL_ACCESS
 	#define IMPL_ACCESS public
 #else
 	#define IMPL_ACCESS protected
@@ -61,32 +59,90 @@ enum class LineEncoding {
 
 class String;
 
-// Replacing String with a ReadableString reference for input arguments can make passing of U"" literals faster.
-//   Unlike String, it cannot be constructed from a "" literal,
-//   because it's not allowed to create a new allocation for the UTF-32 conversion.
+// Helper type for strings.
+struct Impl_CharacterView {
+	DsrChar *data = nullptr;
+	intptr_t length = 0;
+	Impl_CharacterView() {}
+	Impl_CharacterView(Handle<DsrChar> characters)
+	: data(characters.getUnsafe()), length(characters.getElementCount()) {}
+	Impl_CharacterView(const DsrChar *data, intptr_t length)
+	: data(const_cast<DsrChar *>(data)), length(length) {
+		if (data == nullptr) this->length = 0;
+	}
+	inline DsrChar *getUnchecked() const {
+		return const_cast<DsrChar*>(this->data);
+	}
+	inline DsrChar operator [] (intptr_t index) const {
+		if (index < 0 || index >= this->length) {
+			return U'\0';
+		} else {
+			return this->data[index];
+		}
+	}
+	inline void writeCharacter(intptr_t index, DsrChar character) {
+		if (index < 0 || index >= this->length) {
+			// TODO: Throw an error without causing bottomless recursion.
+		} else {
+			this->data[index] = character;
+		}
+	}
+	inline SafePointer<DsrChar> getSafe(const char *name) const {
+		return SafePointer<DsrChar>(name, this->getUnchecked(), this->length * sizeof(DsrChar));
+	}
+};
+
+// Replacing String with a ReadableString reference for input arguments can make passing of U"" literals faster,
+//   because String is not allowed to assume anything about how long the literal will be available.
+// Unlike String, it cannot be constructed from a "" literal, because it is not allowed to heap allocate new memory
+//   for the conversion, only hold existing buffers alive with reference counting when casted from String.
 class ReadableString {
 IMPL_ACCESS:
 	// A reference counted pointer to the buffer to allow passing strings around without having to clone the buffer each time
 	// ReadableString only uses it for reference counting but String use it for reallocating
-	Buffer buffer;
-	const char32_t* readSection = nullptr;
-	int64_t length = 0;
+	Handle<DsrChar> characters;
+	// Pointing to a subset of the buffer or memory that is not shared.
+	Impl_CharacterView view;
+	// TODO: Merge the pointer and length into a new View type for unified bound checks. Then remove the writer pointer.
+	//SafePointer<const DsrChar> reader;
+	//intptr_t length = 0;
 public:
+	// TODO: Inline the [] operator for faster reading of characters.
+	//       Use the padded read internally, because the old version was hard-coded for buffers padded to default alignment.
 	// Returning the character by value prevents writing to memory that might be a constant literal or shared with other strings
-	DsrChar operator[] (int64_t index) const;
+	inline DsrChar operator[] (intptr_t index) const {
+		return this->view[index];
+	}
 public:
 	// Empty string U""
-	ReadableString();
+	ReadableString() {}
 	// Implicit casting from U"text"
 	ReadableString(const DsrChar *content);
+	ReadableString(Handle<DsrChar> characters, Impl_CharacterView view)
+	: characters(characters), view(view) {}
 	// Create from String by sharing the buffer
 	ReadableString(const String& source);
 	// Destructor
-	virtual ~ReadableString();
+	~ReadableString() {} // Do not override the non-virtual destructor.
+};
+
+// A safe and simple string type
+//   Can be constructed from ascii literals "", but U"" will preserve unicode characters.
+//   Can be used without ReadableString, but ReadableString can be wrapped over U"" literals without allocation
+//   UTF-32
+//     Endianness is native
+//     No combined characters allowed, use precomposed instead, so that the strings can guarantee a fixed character size
+class String : public ReadableString {
+//IMPL_ACCESS:
+	// TODO: Have a single pointer to the data in ReadableString and let the API be responsible for type safety.
+	//SafePointer<DsrChar> writer;
 public:
-	// Converting to unknown character encoding using only the ascii character subset
-	virtual std::ostream& toStream(std::ostream& out) const;
-	virtual std::string toStdString() const;
+	// Constructors
+	String();
+	String(const char* source);
+	String(const DsrChar* source);
+	String(const ReadableString& source);
+	String(const String& source);
 };
 
 // Used as format tags around numbers passed to string_append or string_combine
@@ -98,71 +154,52 @@ public:
 	String& toStream(String& target) const;
 	String toStringIndented(const ReadableString& indentation) const;
 	String toString() const;
-	std::ostream& toStreamIndented(std::ostream& out, const ReadableString& indentation) const;
-	std::ostream& toStream(std::ostream& out) const;
-	std::string toStdString() const;
 	virtual ~Printable();
 };
 
-// A safe and simple string type
-//   Can be constructed from ascii literals "", but U"" will preserve unicode characters.
-//   Can be used without ReadableString, but ReadableString can be wrapped over U"" literals without allocation
-//   UTF-32
-//     Endianness is native
-//     No combined characters allowed, use precomposed instead, so that the strings can guarantee a fixed character size
-class String : public ReadableString {
-IMPL_ACCESS:
-	// Same as readSection, but with write access for appending more text
-	char32_t* writeSection = nullptr;
-public:
-	// Constructors
-	String();
-	String(const char* source);
-	String(const char32_t* source);
-	String(const std::string& source);
-	String(const ReadableString& source);
-	String(const String& source);
-};
-
-// Define this overload for non-virtual source types that cannot inherit from Printable
-String& string_toStreamIndented(String& target, const Printable& source, const ReadableString& indentation);
-String& string_toStreamIndented(String& target, const char* value, const ReadableString& indentation);
-String& string_toStreamIndented(String& target, const ReadableString& value, const ReadableString& indentation);
-String& string_toStreamIndented(String& target, const char32_t* value, const ReadableString& indentation);
-String& string_toStreamIndented(String& target, const float& value, const ReadableString& indentation);
-String& string_toStreamIndented(String& target, const double& value, const ReadableString& indentation);
-String& string_toStreamIndented(String& target, const int64_t& value, const ReadableString& indentation);
-String& string_toStreamIndented(String& target, const uint64_t& value, const ReadableString& indentation);
-String& string_toStreamIndented(String& target, const int32_t& value, const ReadableString& indentation);
-String& string_toStreamIndented(String& target, const uint32_t& value, const ReadableString& indentation);
-String& string_toStreamIndented(String& target, const int16_t& value, const ReadableString& indentation);
-String& string_toStreamIndented(String& target, const uint16_t& value, const ReadableString& indentation);
-String& string_toStreamIndented(String& target, const int8_t& value, const ReadableString& indentation);
-String& string_toStreamIndented(String& target, const uint8_t& value, const ReadableString& indentation);
-
-// Templates reused for all types
-// The source must inherit from Printable or have its own string_toStreamIndented overload
-template<typename T>
-String& string_toStream(String& target, const T& source) {
-	return string_toStreamIndented(target, source, U"");
+String& string_toStreamIndented(String& target, const char *value, const ReadableString& indentation);
+String& string_toStreamIndented(String& target, const DsrChar *value, const ReadableString& indentation);
+String& string_toStreamIndented(String& target, const ReadableString &value, const ReadableString& indentation);
+String& string_toStreamIndented(String& target, const double &value, const ReadableString& indentation);
+String& string_toStreamIndented(String& target, const int64_t &value, const ReadableString& indentation);
+String& string_toStreamIndented(String& target, const uint64_t &value, const ReadableString& indentation);
+inline String& string_toStreamIndented(String& target, const float &value, const ReadableString& indentation) {
+	return string_toStreamIndented(target, (double)value, indentation);
 }
+inline String& string_toStreamIndented(String& target, const int32_t &value, const ReadableString& indentation) {
+	return string_toStreamIndented(target, (int64_t)value, indentation);
+}
+inline String& string_toStreamIndented(String& target, const int16_t &value, const ReadableString& indentation) {
+	return string_toStreamIndented(target, (int64_t)value, indentation);
+}
+inline String& string_toStreamIndented(String& target, const int8_t &value, const ReadableString& indentation) {
+	return string_toStreamIndented(target, (int64_t)value, indentation);
+}
+inline String& string_toStreamIndented(String& target, const uint32_t &value, const ReadableString& indentation) {
+	return string_toStreamIndented(target, (uint64_t)value, indentation);
+}
+inline String& string_toStreamIndented(String& target, const uint16_t &value, const ReadableString& indentation) {
+	return string_toStreamIndented(target, (uint64_t)value, indentation);
+}
+inline String& string_toStreamIndented(String& target, const uint8_t &value, const ReadableString& indentation) {
+	return string_toStreamIndented(target, (uint64_t)value, indentation);
+}
+inline String& string_toStreamIndented(String& target, const Printable& value, const ReadableString& indentation) {
+	return value.toStreamIndented(target, indentation);
+}
+
 template<typename T>
 String string_toStringIndented(const T& source, const ReadableString& indentation) {
 	String result;
 	string_toStreamIndented(result, source, indentation);
 	return result;
 }
+
 template<typename T>
 String string_toString(const T& source) {
-	return string_toStringIndented(source, U"");
-}
-template<typename T>
-std::ostream& string_toStreamIndented(std::ostream& target, const T& source, const ReadableString& indentation) {
-	return target << string_toStringIndented(source, indentation);
-}
-template<typename T>
-std::ostream& string_toStream(std::ostream& target, const T& source) {
-	return target << string_toString(source);
+	String result;
+	string_toStreamIndented(result, source, U"");
+	return result;
 }
 
 
@@ -175,37 +212,37 @@ std::ostream& string_toStream(std::ostream& target, const T& source) {
 void string_clear(String& target);
 // Post-condition: Returns the length of source.
 //   Example: string_length(U"ABC") == 3
-int64_t string_length(const ReadableString& source);
+intptr_t string_length(const ReadableString& source);
 // Post-condition: Returns the base-zero index of source's first occurence of toFind, starting from startIndex. Returns -1 if not found.
 //   Example: string_findFirst(U"ABCABCABC", U'A') == 0
 //   Example: string_findFirst(U"ABCABCABC", U'B') == 1
 //   Example: string_findFirst(U"ABCABCABC", U'C') == 2
 //   Example: string_findFirst(U"ABCABCABC", U'D') == -1
-int64_t string_findFirst(const ReadableString& source, DsrChar toFind, int64_t startIndex = 0);
+intptr_t string_findFirst(const ReadableString& source, DsrChar toFind, intptr_t startIndex = 0);
 // Post-condition: Returns the base-zero index of source's last occurence of toFind.  Returns -1 if not found.
 //   Example: string_findLast(U"ABCABCABC", U'A') == 6
 //   Example: string_findLast(U"ABCABCABC", U'B') == 7
 //   Example: string_findLast(U"ABCABCABC", U'C') == 8
 //   Example: string_findLast(U"ABCABCABC", U'D') == -1
-int64_t string_findLast(const ReadableString& source, DsrChar toFind);
+intptr_t string_findLast(const ReadableString& source, DsrChar toFind);
 // Post-condition: Returns a sub-string of source from before the character at inclusiveStart to before the character at exclusiveEnd
 //   Example: string_exclusiveRange(U"0123456789", 2, 4) == U"23"
-ReadableString string_exclusiveRange(const ReadableString& source, int64_t inclusiveStart, int64_t exclusiveEnd);
+ReadableString string_exclusiveRange(const ReadableString& source, intptr_t inclusiveStart, intptr_t exclusiveEnd);
 // Post-condition: Returns a sub-string of source from before the character at inclusiveStart to after the character at inclusiveEnd
 //   Example: string_inclusiveRange(U"0123456789", 2, 4) == U"234"
-ReadableString string_inclusiveRange(const ReadableString& source, int64_t inclusiveStart, int64_t inclusiveEnd);
+ReadableString string_inclusiveRange(const ReadableString& source, intptr_t inclusiveStart, intptr_t inclusiveEnd);
 // Post-condition: Returns a sub-string of source from the start to before the character at exclusiveEnd
 //   Example: string_before(U"0123456789", 5) == U"01234"
-ReadableString string_before(const ReadableString& source, int64_t exclusiveEnd);
+ReadableString string_before(const ReadableString& source, intptr_t exclusiveEnd);
 // Post-condition: Returns a sub-string of source from the start to after the character at inclusiveEnd
 //   Example: string_until(U"0123456789", 5) == U"012345"
-ReadableString string_until(const ReadableString& source, int64_t inclusiveEnd);
+ReadableString string_until(const ReadableString& source, intptr_t inclusiveEnd);
 // Post-condition: Returns a sub-string of source from before the character at inclusiveStart to the end
 //   Example: string_from(U"0123456789", 5) == U"56789"
-ReadableString string_from(const ReadableString& source, int64_t inclusiveStart);
+ReadableString string_from(const ReadableString& source, intptr_t inclusiveStart);
 // Post-condition: Returns a sub-string of source from after the character at exclusiveStart to the end
 //   Example: string_after(U"0123456789", 5) == U"6789"
-ReadableString string_after(const ReadableString& source, int64_t exclusiveStart);
+ReadableString string_after(const ReadableString& source, intptr_t exclusiveStart);
 
 // Split source into a list of strings.
 // Post-condition:
@@ -226,7 +263,7 @@ inline void string_split_callback(const ReadableString& source, DsrChar separato
 }
 // Split source using separator, only to return the number of splits.
 // Useful for pre-allocation.
-int64_t string_splitCount(const ReadableString& source, DsrChar separator);
+intptr_t string_splitCount(const ReadableString& source, DsrChar separator);
 
 // Post-condition: Returns true iff c is a digit.
 //   Digit <- '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9'
@@ -259,10 +296,27 @@ bool string_isDouble(const ReadableString& source, bool allowWhiteSpace = true);
 // The result is signed, because the input might unexpectedly have a negation sign.
 // The result is large, so that one can easily check the range before assigning to a smaller integer type.
 int64_t string_toInteger(const ReadableString& source);
+// Side-effect: Appends value as a base ten integer at the end of target.
+void string_fromUnsigned(String& target, uint64_t value);
+// Post-condition: Returns value written as a base ten integer.
+inline String string_fromUnsigned(int64_t value) {
+	String result; string_fromUnsigned(result, value); return result;
+}
+// Side-effect: Appends value as a base ten integer at the end of target.
+void string_fromSigned(String& target, int64_t value, DsrChar negationCharacter = U'-');
+// Post-condition: Returns value written as a base ten integer.
+inline String string_fromSigned(int64_t value, DsrChar negationCharacter = U'-') {
+	String result; string_fromSigned(result, value, negationCharacter); return result;
+}
 // Pre-condition: source must be a valid double according to string_isDouble. Otherwise unexpected characters are simply ignored.
 // Post-condition: Returns the double precision floating-point representation of source.
 double string_toDouble(const ReadableString& source);
-
+// Side-effect: Appends value as a base ten decimal number at the end of target.
+void string_fromDouble(String& target, double value, int decimalCount = 6, bool removeTrailingZeroes = true, DsrChar decimalCharacter = U'.', DsrChar negationCharacter = U'-');
+// Post-condition: Returns value written as a base ten decimal number.
+inline String string_fromDouble(double value, int decimalCount = 6, bool removeTrailingZeroes = true, DsrChar decimalCharacter = U'.', DsrChar negationCharacter = U'-') {
+	String result; string_fromDouble(result, value, decimalCount, removeTrailingZeroes, decimalCharacter, negationCharacter); return result;
+}
 // Loading will try to find a byte order mark and can handle UTF-8 and UTF-16.
 //   Failure to find a byte order mark will assume that the file's content is raw Latin-1,
 //   because automatic detection would cause random behaviour.
@@ -330,10 +384,10 @@ String string_mangleQuote(const ReadableString &rawText);
 String string_unmangleQuote(const ReadableString& mangledText);
 
 // Post-condition: Returns the number of strings using the same buffer, including itself.
-int64_t string_getBufferUseCount(const ReadableString& text);
+uintptr_t string_getBufferUseCount(const ReadableString& text);
 
 // Ensures safely that at least minimumLength characters can he held in the buffer
-void string_reserve(String& target, int64_t minimumLength);
+void string_reserve(String& target, intptr_t minimumLength);
 
 // Append/push one character (to avoid integer to string conversion)
 void string_appendChar(String& target, DsrChar value);
@@ -341,12 +395,12 @@ void string_appendChar(String& target, DsrChar value);
 // Append one element
 template<typename TYPE>
 inline void string_append(String& target, const TYPE &value) {
-	string_toStream(target, value);
+	string_toStreamIndented(target, value, U"");
 }
 // Append multiple elements
 template<typename HEAD, typename... TAIL>
 inline void string_append(String& target, HEAD head, TAIL&&... tail) {
-	string_append(target, head);
+	string_toStreamIndented(target, head, U"");
 	string_append(target, tail...);
 }
 // Combine a number of strings, characters and numbers
@@ -364,11 +418,11 @@ inline String string_combine(ARGS&&... args) {
 
 // Operations
 inline String operator+ (const ReadableString& a, const ReadableString& b) { return string_combine(a, b); }
-inline String operator+ (const char32_t* a, const ReadableString& b) { return string_combine(a, b); }
-inline String operator+ (const ReadableString& a, const char32_t* b) { return string_combine(a, b); }
+inline String operator+ (const DsrChar* a, const ReadableString& b) { return string_combine(a, b); }
+inline String operator+ (const ReadableString& a, const DsrChar* b) { return string_combine(a, b); }
 inline String operator+ (const String& a, const String& b) { return string_combine(a, b); }
-inline String operator+ (const char32_t* a, const String& b) { return string_combine(a, b); }
-inline String operator+ (const String& a, const char32_t* b) { return string_combine(a, b); }
+inline String operator+ (const DsrChar* a, const String& b) { return string_combine(a, b); }
+inline String operator+ (const String& a, const DsrChar* b) { return string_combine(a, b); }
 inline String operator+ (const String& a, const ReadableString& b) { return string_combine(a, b); }
 inline String operator+ (const ReadableString& a, const String& b) { return string_combine(a, b); }
 
@@ -382,6 +436,11 @@ enum class MessageType {
 	StandardPrinting, // Print text to the terminal.
 	DebugPrinting // Print debug information to the terminal, if debug mode is active.
 };
+
+// Get a reference to the thread-local buffer used for printing messages.
+//   Can be combined with string_clear, string_append and string_sendMessage to send long messages in a thread-safe way.
+//   Clear, fill and send.
+String &string_getPrintBuffer();
 
 // Send a message
 void string_sendMessage(const ReadableString &message, MessageType type);
@@ -403,22 +462,28 @@ void string_unassignMessageHandler();
 // Throw an error, which must terminate the application or throw an error
 template<typename... ARGS>
 void throwError(ARGS... args) {
-	String result = string_combine(args...);
-	string_sendMessage(result, MessageType::Error);
+	String *target = &(string_getPrintBuffer());
+	string_clear(*target);
+	string_append(*target, args...);
+	string_sendMessage(*target, MessageType::Error);
 }
 
 // Send a warning, which might throw an exception, terminate the application or anything else that the application requests using string_handleMessages
 template<typename... ARGS>
 void sendWarning(ARGS... args) {
-	String result = string_combine(args...);
-	string_sendMessage(result, MessageType::Warning);
+	String *target = &(string_getPrintBuffer());
+	string_clear(*target);
+	string_append(*target, args...);
+	string_sendMessage(*target, MessageType::Warning);
 }
 
 // Print information to the terminal or something else listening for messages using string_handleMessages
 template<typename... ARGS>
 void printText(ARGS... args) {
-	String result = string_combine(args...);
-	string_sendMessage(result, MessageType::StandardPrinting);
+	String *target = &(string_getPrintBuffer());
+	string_clear(*target);
+	string_append(*target, args...);
+	string_sendMessage(*target, MessageType::StandardPrinting);
 }
 
 // Debug messages are automatically disabled in release mode, so that you don't have to worry about accidentally releasing a program with poor performance from constantly printing to the terminal
@@ -432,10 +497,58 @@ void printText(ARGS... args) {
 	// Print debugText in debug mode
 	template<typename... ARGS>
 	void debugText(ARGS... args) {
-		String result = string_combine(args...);
-		string_sendMessage(result, MessageType::DebugPrinting);
+	String *target = &(string_getPrintBuffer());
+		string_clear(*target);
+		string_append(*target, args...);
+		string_sendMessage(*target, MessageType::DebugPrinting);
 	}
 #endif
+
+// Used to generate fixed size ascii strings, which is useful when heap allocations are not possible
+//   or you need a safe format until you know which encoding a system call needs to support Unicode.
+template <intptr_t SIZE>
+struct FixedAscii {
+	char characters[SIZE];
+	// Create a fixed size ascii string from a null terminated ascii string.
+	// Crops if text is too long.
+	FixedAscii(const char *text) {
+		bool terminated = false;
+		for (intptr_t i = 0; i < SIZE - 1; i++) {
+			char c = text[i];
+			if (c == '\0') {
+				terminated = true;
+			}
+			if (terminated) {
+				this->characters[i] = '\0';
+			} else if (c > 127) {
+				this->characters[i] = '?';
+			} else {
+				this->characters[i] = c;
+			}
+		}
+		this->characters[SIZE - 1] = '\0';
+	}
+	FixedAscii(const ReadableString &text) {
+		bool terminated = false;
+		for (intptr_t i = 0; i < SIZE - 1; i++) {
+			char c = text[i];
+			if (c == '\0') {
+				terminated = true;
+			}
+			if (terminated) {
+				this->characters[i] = '\0';
+			} else if (c > 127) {
+				this->characters[i] = '?';
+			} else {
+				this->characters[i] = c;
+			}
+		}
+		this->characters[SIZE - 1] = '\0';
+	}
+	operator const char *() const {
+		return characters;
+	}
+};
 
 }
 

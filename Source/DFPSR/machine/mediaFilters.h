@@ -24,7 +24,8 @@
 #ifndef DFPSR_MEDIA_FILTERS
 #define DFPSR_MEDIA_FILTERS
 
-#include "../../DFPSR/includeFramework.h" // TODO: Replace with specific modules
+#include "../api/imageAPI.h"
+#include "../math/FixedPoint.h"
 
 namespace dsr {
 

@@ -14,15 +14,6 @@ START_TEST(SafePointer)
 		SafePointer<int32_t> bufferA("bufferA", (int32_t*)(allocation[0] + offset), dataSize);
 		SafePointer<int32_t> bufferB("bufferB", (int32_t*)(allocation[1] + offset), dataSize);
 		SafePointer<int32_t> bufferC("bufferC", (int32_t*)(allocation[2] + offset), dataSize);
-		// Make sure that array bounds are tested if they are turned on using the debug mode
-		#ifdef SAFE_POINTER_CHECKS
-			ASSERT_CRASH(bufferA[-245654]);
-			ASSERT_CRASH(bufferB[-65]);
-			ASSERT_CRASH(bufferC[-1]);
-			ASSERT_CRASH(bufferA[elements]);
-			ASSERT_CRASH(bufferB[elements + 23]);
-			ASSERT_CRASH(bufferC[elements + 673578]);
-		#endif
 		// Initialize
 		for (int i = 0; i < elements; i++) {
 			bufferA[i] = i % 13;
@@ -30,8 +21,8 @@ START_TEST(SafePointer)
 			bufferC[i] = 0;
 		}
 		// Calculate
-		const SafePointer<int32_t> readerA = bufferA;
-		const SafePointer<int32_t> readerB = bufferB;
+		SafePointer<const int32_t> readerA = bufferA;
+		SafePointer<const int32_t> readerB = bufferB;
 		for (int i = 0; i < elements; i++) {
 			bufferC[i] = (*readerA * *readerB) + 5;
 			readerA += 1; readerB += 1;
@@ -44,6 +35,16 @@ START_TEST(SafePointer)
 			}
 		}
 		ASSERT(errors == 0);
+		// Make sure that array bounds are tested if they are turned on using the debug mode
+		#ifdef SAFE_POINTER_CHECKS
+			ASSERT_CRASH(bufferC[-1], U"SafePointer out of bound exception!");
+			ASSERT_CRASH(bufferB[-65], U"SafePointer out of bound exception!");
+			ASSERT_CRASH(bufferA[-245654], U"SafePointer out of bound exception!");
+			ASSERT_CRASH(bufferA[elements], U"SafePointer out of bound exception!");
+			ASSERT_CRASH(bufferA[elements + 1], U"SafePointer out of bound exception!");
+			ASSERT_CRASH(bufferB[elements + 23], U"SafePointer out of bound exception!");
+			ASSERT_CRASH(bufferC[elements + 673578], U"SafePointer out of bound exception!");
+		#endif
 	}
 	#ifndef SAFE_POINTER_CHECKS
 		printf("WARNING! SafePointer test ran without bound checks enabled.\n");

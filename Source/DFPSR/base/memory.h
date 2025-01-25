@@ -36,6 +36,10 @@ namespace dsr {
 	struct AllocationHeader {
 		uintptr_t totalSize; // Size of both header and payload.
 		#ifdef SAFE_POINTER_CHECKS
+			// TODO: Replace the name with a function pointer serializing the buffer's data into a human readable format.
+			//       Because it is only for the debug version, lambdas with capture may be used to store additional information.
+			//       If string_toStreamIndented has been defined for the type, it should try to use it if no serialization function was provided manually.
+			const char *name = nullptr; // Debug name of the allocation.
 			uint64_t threadHash; // Hash of the owning thread identity for thread local memory, 0 for shared memory.
 			uint64_t allocationIdentity; // Rotating identity of the allocation, to know if the memory has been freed and reused within a memory allocator.
 		#endif
@@ -43,32 +47,38 @@ namespace dsr {
 		AllocationHeader();
 		// Header for allocated memory.
 		// threadLocal should be true iff the memory may not be accessed from other threads, such as virtual stack memory.
-		AllocationHeader(uintptr_t totalSize, bool threadLocal);
+		AllocationHeader(uintptr_t totalSize, bool threadLocal, const char *name);
+		// Give a new identity to a reused allocation header.
+		void reuse(bool threadLocal, const char *name);
 	};
 
 	// A structure used to allocate memory before placing the content in SafePointer.
 	struct UnsafeAllocation {
 		uint8_t *data;
-		#ifdef SAFE_POINTER_CHECKS
-			AllocationHeader *header;
-			UnsafeAllocation(uint8_t *data, AllocationHeader *header)
-			: data(data), header(header) {}
-		#else
-			UnsafeAllocation(uint8_t *data, AllocationHeader *header)
-			: data(data) {}
-		#endif
+		AllocationHeader *header;
+		UnsafeAllocation(uint8_t *data, AllocationHeader *header)
+		: data(data), header(header) {}
 	};
 
+	// Post-condition: Returns size rounded up by (~alignmentAndMask) + 1.
+	constexpr inline uintptr_t memory_getPaddedSize_usingAndMask(uintptr_t size, uintptr_t alignmentAndMask) {
+		// The bitwise negation of alignmentAndMask equals the alignment minus one, which is just what we need to add before truncating down using the and mask.
+		return (size + ~alignmentAndMask) & alignmentAndMask;
+	}
+
+	// Pre-condition: The alignment argument must be a power of two (1, 2, 4, 8, 16, 32, 64...).
 	// Post-condition: Returns size rounded up by alignment.
-	constexpr uint64_t memory_getPaddedSize(uint64_t size, uint64_t alignment) {
-		// Round up with unsigned integers.
-		return size + (alignment - 1) - ((size - 1) % alignment);
+	constexpr inline uintptr_t memory_getPaddedSize(uintptr_t size, uintptr_t alignment) {
+		// For integers, you can round up to multiples of alignment, by adding alignment - 1 and rounding down.
+		// When rounding down for a power of two, you can bit mask away the least significant bits.
+		uintptr_t roundedBits = alignment - 1;
+		return (size + roundedBits) & ~roundedBits;
 	}
 
 	// Post-condition: Returns the size of T rounded up by T's own alignment, which becomes the stride between elements in a memory aligned array.
 	template <typename T>
-	constexpr uint64_t memory_getPaddedSize() {
-		return memory_getPaddedSize((uint64_t)sizeof(T), (uint64_t)alignof(T));
+	constexpr inline uintptr_t memory_getPaddedSize() {
+		return memory_getPaddedSize((uintptr_t)sizeof(T), (uintptr_t)alignof(T));
 	}
 
 	// Create a mask for aligning memory in descending address space.
@@ -79,7 +89,7 @@ namespace dsr {
 	//   alignment is a power of two (1, 2, 4, 8, 16, 32, 64...)
 	// Post-condition:
 	//   Returns a bit mask for rounding an integer down to the closest multiple of alignment.
-	constexpr uintptr_t memory_createAlignmentAndMask(uintptr_t alignment) {
+	constexpr inline uintptr_t memory_createAlignmentAndMask(uintptr_t alignment) {
 		// alignment = ...00001000...
 		// Subtracting one from a power of two gives a mask with ones for the remainder bits.
 		// remainder = ...00000111...

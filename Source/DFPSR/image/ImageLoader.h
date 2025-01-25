@@ -24,7 +24,7 @@
 #ifndef DFPSR_IMAGE_LOADER
 #define DFPSR_IMAGE_LOADER
 
-#include "ImageRgbaU8.h"
+#include "Image.h"
 #include "../base/text.h"
 #include <cstdio>
 
@@ -36,10 +36,10 @@ namespace dsr {
 class ImageLoader {
 public:
 	// Load an image from a file. PNG support is a minimum requirement.
-	virtual ImageRgbaU8Impl loadAsRgba(const String& filename) const = 0;
+	virtual ImageRgbaU8 loadAsRgba(const String& filename) const = 0;
 	// Save an image in the PNG format with the given filename.
 	// Returns true on success and false on failure.
-	virtual bool saveAsPng(const ImageRgbaU8Impl &image, const String& filename) const {
+	virtual bool saveAsPng(const ImageRgbaU8 &image, const String& filename) const {
 		printText("saveAsPng is not yet implemented in the image loader!");
 		return false;
 	}

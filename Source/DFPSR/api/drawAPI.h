@@ -1,7 +1,7 @@
 ﻿
 // zlib open source license
 //
-// Copyright (c) 2017 to 2020 David Forsgren Piuva
+// Copyright (c) 2017 to 2025 David Forsgren Piuva
 // 
 // This software is provided 'as-is', without any express or implied
 // warranty. In no event will the authors be held liable for any damages
@@ -25,18 +25,62 @@
 #ifndef DFPSR_API_DRAW
 #define DFPSR_API_DRAW
 
-#include "types.h"
+#include "../image/Image.h"
 
 namespace dsr {
 
-// Drawing shapes
-	void draw_rectangle(ImageU8& image, const IRect& bound, int color);
-	void draw_rectangle(ImageF32& image, const IRect& bound, float color);
-	void draw_rectangle(ImageRgbaU8& image, const IRect& bound, const ColorRgbaI32& color);
+// Instead of having lots of arguments for source and target regions, this library uses a system of sub-images to that any drawing method can be cropped.
+//   To limit drawing to a rectangular target region:
+//     * Create a sub-image using image_getSubImage.
+//         0-----------------------------------X
+//         | Parent-image                      |
+//         |                                   |
+//         |       -------------------         |
+//         |      | IRect             |        |
+//         |      |                   |        |
+//         |      |                   |        |
+//         |      |                   |        |
+//         |       -------------------         |
+//         |                                   |
+//         Y-----------------------------------*
+//     * Translate coordinates by subtracting the region's upper left corner.
+//         0-----------------------------------X
+//         | Parent-image                      |
+//         |                                   |
+//         |      0-------------------X        |
+//         |      | Sub-image         |        |
+//         |      |                   |        |
+//         |      |                   |        |
+//         |      |                   |        |
+//         |      Y-------------------*        |
+//         |                                   |
+//         Y-----------------------------------*
+//     * Draw to the new sub-image in the new local coordinate system.
+//         0-------------------X
+//         | Sub-image   /  |  |
+//         |            /|  |__|
+//         |   ________/ |  |  |
+//         |          /  |     |
+//         Y-------------------*
 
-	void draw_line(ImageU8& image, int32_t x1, int32_t y1, int32_t x2, int32_t y2, int color);
-	void draw_line(ImageF32& image, int32_t x1, int32_t y1, int32_t x2, int32_t y2, float color);
-	void draw_line(ImageRgbaU8& image, int32_t x1, int32_t y1, int32_t x2, int32_t y2, const ColorRgbaI32& color);
+// Drawing shapes
+	// TODO: Create wrappers taking left, top, width, height to reduce clutter from the IRect constructor.
+	void draw_rectangle(const ImageU8& image, const IRect& bound, int color);
+	void draw_rectangle(const ImageU16& image, const IRect& bound, int color);
+	void draw_rectangle(const ImageF32& image, const IRect& bound, float color);
+	void draw_rectangle(const ImageRgbaU8& image, const IRect& bound, const ColorRgbaI32& color);
+	// Draw using a color that has been packed in advance with the same pack order using the image_saturateAndPack function.
+	//   This saves time on saturation and packing when drawing many rectangles of the same color.
+	void draw_rectangle(const ImageRgbaU8& image, const IRect& bound, uint32_t packedColor);
+
+	// TODO: Also take two IVector2D as inlined wrapper functions.
+	void draw_line(const ImageU8& image, int32_t x1, int32_t y1, int32_t x2, int32_t y2, int color);
+	void draw_line(const ImageU16& image, int32_t x1, int32_t y1, int32_t x2, int32_t y2, int color);
+	void draw_line(const ImageF32& image, int32_t x1, int32_t y1, int32_t x2, int32_t y2, float color);
+	void draw_line(const ImageRgbaU8& image, int32_t x1, int32_t y1, int32_t x2, int32_t y2, const ColorRgbaI32& color);
+	// Draw using a color that has been packed in advance with the same pack order using the image_saturateAndPack function.
+	//   This saves time on saturation and packing when drawing many lines of the same color.
+	void draw_line(const ImageRgbaU8& image, int32_t x1, int32_t y1, int32_t x2, int32_t y2, uint32_t packedColor);
 
 // Drawing images
 	// Draw an image to another image
@@ -44,28 +88,28 @@ namespace dsr {
 	//   All image types can draw to RgbaU8
 	//   All monochrome types can draw to each other
 	//   The source and target images can be sub-images from the same atlas but only if the sub-regions are not overlapping
-	void draw_copy(ImageRgbaU8& target, const ImageRgbaU8& source, int32_t left = 0, int32_t top = 0);
-	void draw_copy(ImageU8& target, const ImageU8& source, int32_t left = 0, int32_t top = 0);
-	void draw_copy(ImageU16& target, const ImageU16& source, int32_t left = 0, int32_t top = 0);
-	void draw_copy(ImageF32& target, const ImageF32& source, int32_t left = 0, int32_t top = 0);
-	void draw_copy(ImageRgbaU8& target, const ImageU8& source, int32_t left = 0, int32_t top = 0);
-	void draw_copy(ImageRgbaU8& target, const ImageU16& source, int32_t left = 0, int32_t top = 0);
-	void draw_copy(ImageRgbaU8& target, const ImageF32& source, int32_t left = 0, int32_t top = 0);
-	void draw_copy(ImageU8& target, const ImageF32& source, int32_t left = 0, int32_t top = 0);
-	void draw_copy(ImageU8& target, const ImageU16& source, int32_t left = 0, int32_t top = 0);
-	void draw_copy(ImageU16& target, const ImageU8& source, int32_t left = 0, int32_t top = 0);
-	void draw_copy(ImageU16& target, const ImageF32& source, int32_t left = 0, int32_t top = 0);
-	void draw_copy(ImageF32& target, const ImageU8& source, int32_t left = 0, int32_t top = 0);
-	void draw_copy(ImageF32& target, const ImageU16& source, int32_t left = 0, int32_t top = 0);
+	void draw_copy(const ImageRgbaU8& target, const ImageRgbaU8& source, int32_t left = 0, int32_t top = 0);
+	void draw_copy(const ImageU8& target, const ImageU8& source, int32_t left = 0, int32_t top = 0);
+	void draw_copy(const ImageU16& target, const ImageU16& source, int32_t left = 0, int32_t top = 0);
+	void draw_copy(const ImageF32& target, const ImageF32& source, int32_t left = 0, int32_t top = 0);
+	void draw_copy(const ImageRgbaU8& target, const ImageU8& source, int32_t left = 0, int32_t top = 0);
+	void draw_copy(const ImageRgbaU8& target, const ImageU16& source, int32_t left = 0, int32_t top = 0);
+	void draw_copy(const ImageRgbaU8& target, const ImageF32& source, int32_t left = 0, int32_t top = 0);
+	void draw_copy(const ImageU8& target, const ImageF32& source, int32_t left = 0, int32_t top = 0);
+	void draw_copy(const ImageU8& target, const ImageU16& source, int32_t left = 0, int32_t top = 0);
+	void draw_copy(const ImageU16& target, const ImageU8& source, int32_t left = 0, int32_t top = 0);
+	void draw_copy(const ImageU16& target, const ImageF32& source, int32_t left = 0, int32_t top = 0);
+	void draw_copy(const ImageF32& target, const ImageU8& source, int32_t left = 0, int32_t top = 0);
+	void draw_copy(const ImageF32& target, const ImageU16& source, int32_t left = 0, int32_t top = 0);
 	// Draw one RGBA image to another using alpha filtering
 	//   Target alpha does no affect RGB blending, in case that it contains padding for opaque targets
 	//   If you really want to draw to a transparent layer, this method should not be used
-	void draw_alphaFilter(ImageRgbaU8& target, const ImageRgbaU8& source, int32_t left = 0, int32_t top = 0);
+	void draw_alphaFilter(const ImageRgbaU8& target, const ImageRgbaU8& source, int32_t left = 0, int32_t top = 0);
 	// Draw one RGBA image to another using the alpha channel as height
 	//   sourceAlphaOffset is added to non-zero heights from source alpha
 	//   Writes each source pixel who's alpha value is greater than the target's
 	//   Zero alpha can be used as a mask, because no source value can be below zero in unsigned color formats
-	void draw_maxAlpha(ImageRgbaU8& target, const ImageRgbaU8& source, int32_t left = 0, int32_t top = 0, int32_t sourceAlphaOffset = 0);
+	void draw_maxAlpha(const ImageRgbaU8& target, const ImageRgbaU8& source, int32_t left = 0, int32_t top = 0, int32_t sourceAlphaOffset = 0);
 
 	// Draw between multiple images using a height buffer
 	//   Each source pixel is drawn where the source height's pixel exceeds the target height's pixel
@@ -81,11 +125,11 @@ namespace dsr {
 		ImageU16& targetHeight, const ImageU16& sourceHeight,
 		int32_t left = 0, int32_t top = 0, int32_t sourceHeightOffset = 0
 	);
-	void draw_higher(ImageU16& targetHeight, const ImageU16& sourceHeight,
+	void draw_higher(const ImageU16& targetHeight, const ImageU16& sourceHeight,
 		ImageRgbaU8& targetA, const ImageRgbaU8& sourceA,
 		int32_t left = 0, int32_t top = 0, int32_t sourceHeightOffset = 0
 	);
-	void draw_higher(ImageU16& targetHeight, const ImageU16& sourceHeight,
+	void draw_higher(const ImageU16& targetHeight, const ImageU16& sourceHeight,
 		ImageRgbaU8& targetA, const ImageRgbaU8& sourceA,
 		ImageRgbaU8& targetB, const ImageRgbaU8& sourceB,
 		int32_t left = 0, int32_t top = 0, int32_t sourceHeightOffset = 0
@@ -99,21 +143,22 @@ namespace dsr {
 		ImageF32& targetHeight, const ImageF32& sourceHeight,
 		int32_t left = 0, int32_t top = 0, float sourceHeightOffset = 0
 	);
-	void draw_higher(ImageF32& targetHeight, const ImageF32& sourceHeight,
+	void draw_higher(const ImageF32& targetHeight, const ImageF32& sourceHeight,
 		ImageRgbaU8& targetA, const ImageRgbaU8& sourceA,
 		int32_t left = 0, int32_t top = 0, float sourceHeightOffset = 0
 	);
-	void draw_higher(ImageF32& targetHeight, const ImageF32& sourceHeight,
+	void draw_higher(const ImageF32& targetHeight, const ImageF32& sourceHeight,
 		ImageRgbaU8& targetA, const ImageRgbaU8& sourceA,
 		ImageRgbaU8& targetB, const ImageRgbaU8& sourceB,
 		int32_t left = 0, int32_t top = 0, float sourceHeightOffset = 0
 	);
 
+	// TODO: Inlined wrappers using IVector2D.
 	// Draw one RGBA image to another using alpha clipping
 	//   Source is solid where alpha is greater than threshold, which can be used for animations
-	void draw_alphaClip(ImageRgbaU8& target, const ImageRgbaU8& source, int32_t left = 0, int32_t top = 0, int32_t threshold = 127);
+	void draw_alphaClip(const ImageRgbaU8& target, const ImageRgbaU8& source, int32_t left = 0, int32_t top = 0, int32_t threshold = 127);
 	// Draw a uniform color using a grayscale silhouette as the alpha channel
-	void draw_silhouette(ImageRgbaU8& target, const ImageU8& silhouette, const ColorRgbaI32& color, int32_t left = 0, int32_t top = 0);
+	void draw_silhouette(const ImageRgbaU8& target, const ImageU8& silhouette, const ColorRgbaI32& color, int32_t left = 0, int32_t top = 0);
 
 }
 

@@ -35,8 +35,8 @@ public:
 };
 static List<ConstructorInfo> persistentClasses;
 
-std::shared_ptr<StructureDefinition> Persistent::getStructure() const {
-	return std::shared_ptr<StructureDefinition>();
+Handle<StructureDefinition> Persistent::getStructure() const {
+	return Handle<StructureDefinition>();
 }
 
 static int findPersistentClass(const String &type) {
@@ -61,7 +61,7 @@ void Persistent::registerPersistentClass() {
 	}
 }
 
-bool Persistent::addChild(std::shared_ptr<Persistent> child) {
+bool Persistent::addChild(Handle<Persistent> child) {
 	return false;
 }
 
@@ -69,8 +69,8 @@ int Persistent::getChildCount() const {
 	return 0;
 }
 
-std::shared_ptr<Persistent> Persistent::getChild(int index) const {
-	return std::shared_ptr<Persistent>();
+Handle<Persistent> Persistent::getChild(int index) const {
+	return Handle<Persistent>();
 }
 
 void Persistent::setProperty(const ReadableString &key, const ReadableString &value, const ReadableString &fromPath) {
@@ -96,8 +96,8 @@ bool Persistent::assignValue(const ReadableString &content, const ReadableString
 }
 
 String& Persistent::toStreamIndented(String& out, const ReadableString& indentation) const {
-	std::shared_ptr<StructureDefinition> structure = this->getStructure();
-	if (structure.get() == nullptr) {
+	Handle<StructureDefinition> structure = this->getStructure();
+	if (structure.isNull()) {
 		throwError(U"Failed to get the structure of a class being serialized.\n");
 	}
 	string_append(out, indentation, U"Begin : ", structure->name, U"\n");
@@ -122,7 +122,7 @@ String& Persistent::toStreamIndented(String& out, const ReadableString& indentat
 	return out;
 }
 
-std::shared_ptr<Persistent> dsr::createPersistentClass(const String &type, bool mustExist) {
+Handle<Persistent> dsr::createPersistentClass(const String &type, bool mustExist) {
 	// Look for the component
 	int existingIndex = findPersistentClass(type);
 	if (existingIndex > -1) {
@@ -132,12 +132,12 @@ std::shared_ptr<Persistent> dsr::createPersistentClass(const String &type, bool 
 		throwError(U"Failed to default create a class named ", type, U". Call registerPersistentClass on a temporary instance of the class to register the name.\n");
 	}
 	// Failed to load by name
-	return std::shared_ptr<Persistent>(); // Null
+	return Handle<Persistent>(); // Null
 }
 
-std::shared_ptr<Persistent> dsr::createPersistentClassFromText(const ReadableString &text, const ReadableString &fromPath) {
-	std::shared_ptr<Persistent> rootObject, newObject;
-	List<std::shared_ptr<Persistent>> stack;
+Handle<Persistent> dsr::createPersistentClassFromText(const ReadableString &text, const ReadableString &fromPath) {
+	Handle<Persistent> rootObject, newObject;
+	List<Handle<Persistent>> stack;
 	string_split_callback([&rootObject, &newObject, &stack, &fromPath](ReadableString line) {
 		int equalityIndex = string_findFirst(line, '=');
 		if (equalityIndex > -1) {
@@ -153,7 +153,7 @@ std::shared_ptr<Persistent> dsr::createPersistentClassFromText(const ReadableStr
 				if (string_caseInsensitiveMatch(keyword, U"Begin")) {
 					String type = string_removeOuterWhiteSpace(string_after(line, colonIndex));
 					newObject = createPersistentClass(type);
-					if (rootObject.get() == nullptr) {
+					if (rootObject.isNull()) {
 						rootObject = newObject;
 					} else {
 						if (!(stack.last()->addChild(newObject))) {

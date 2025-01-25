@@ -1,28 +1,23 @@
-﻿// zlib open source license
-//
-// Copyright (c) 2024 David Forsgren Piuva
-// 
-// This software is provided 'as-is', without any express or implied
-// warranty. In no event will the authors be held liable for any damages
-// arising from the use of this software.
-// 
-// Permission is granted to anyone to use this software for any purpose,
-// including commercial applications, and to alter it and redistribute it
-// freely, subject to the following restrictions:
-// 
-//    1. The origin of this software must not be misrepresented; you must not
-//    claim that you wrote the original software. If you use this software
-//    in a product, an acknowledgment in the product documentation would be
-//    appreciated but is not required.
-// 
-//    2. Altered source versions must be plainly marked as such, and must not be
-//    misrepresented as being the original software.
-// 
-//    3. This notice may not be removed or altered from any source
-//    distribution.
+﻿
+// This header collects hardcoded settings for the entire framework in one place.
+//   Either modify this header for all your projects, or define macros using compiler flags for a specific project.
 
 #ifndef DFPSR_SETTINGS
 #define DFPSR_SETTINGS
+	// If you are not using try-catch, you can let the default error handler call heap_hardExitCleaning and std::exit instead of throwing std::exception.
+	//   This may reduce some runtime overhead from stack unwinding.
+	#ifndef __EXCEPTIONS
+		// If compiling with -fno-exceptions, hard exit must be enabled.
+		#define DSR_HARD_EXIT_ON_ERROR
+	#endif
+
+	// If EXTRA_SAFE_POINTER_CHECKS is defined, debug mode will let SafePointer perform thread and allocation identity checks.
+	//     Makes sure that the accessed memory has not been freed, recycled or shared with the wrong thread.
+	//     This will make memory access super slow but catch more memory errors when basic bound checks are not enough.
+	// If EXTRA_SAFE_POINTER_CHECKS is not defined, debug mode will 
+	// Has no effect in release mode, because it is only active when SAFE_POINTER_CHECKS is also defined.
+	//#define EXTRA_SAFE_POINTER_CHECKS
+
 	// Determine which SIMD extensions to use in base/simd.h.
 	// Use the standard compiler flags for enabling SIMD extensions.
 	//   If your compiler uses a different macro name to indicate the presence of a SIMD extension, you can add them here to enable the USE_* macros.
@@ -47,6 +42,7 @@
 		#endif
 	#elif defined(__ARM_NEON)
 		#define USE_NEON // Comment out this line to test without NEON
+		// TODO: Check if SVE is enabled once implemented in simd.h.
 	#endif
 
 	// Enable the EMULATE_X_256BIT_SIMD macro to force use of 256-bit vectors even when there is no hardware instructions supporting it.
@@ -86,10 +82,11 @@
 		#define DSR_LARGEST_VECTOR_SIZE 16
 	#endif
 
-	// Endianness
-	//   Compile with C++ 2020 or later to detect endianness automatically.
-	//   Or define the DSR_BIG_ENDIAN macro externally when building for big-endian targets.
+	// If using C++ 2020 or later.
 	#if (__cplusplus >= 202002L)
+		// Endianness
+		//   Compile with C++ 2020 or later to detect endianness automatically.
+		//   Or define the DSR_BIG_ENDIAN macro externally when building for big-endian targets.
 		#include <bit>
 		#if (std::endian::native == std::endian::big)
 			// We detected a big endian target.
@@ -108,9 +105,12 @@
 	//   Must be a power of two, and no less than the largest cache line among all CPU cores that might run the program.
 	//   Can be assigned using the DSR_THREAD_SAFE_ALIGNMENT macro externally or changed here.
 	#ifndef DSR_THREAD_SAFE_ALIGNMENT
+		// 64 bytes is generally a good choice, because it is large enough to align with cache lines on most computers and large enough to store an allocation header.
+		// Note that Apple M1 has a cache line of 128 bytes, which exceeds this default value.
 		#define DSR_THREAD_SAFE_ALIGNMENT 64
 	#endif
 
+	// TODO: Allow having a dynamic largest vector size to support SVE vectors of 1024 or 2048 bits in the future.
 	// When allocating memory for being reused many times for different purposes, we need to know the maximum alignment that will be required ahead of time.
 	//   Here we define it as the maximum of the largest SIMD vector and the thread safe alignment.
 	#if (DSR_LARGEST_VECTOR_SIZE > DSR_THREAD_SAFE_ALIGNMENT)
