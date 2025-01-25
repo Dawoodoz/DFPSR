@@ -24,8 +24,11 @@
 #ifndef DFPSR_GUI_FONT
 #define DFPSR_GUI_FONT
 
-#include "../api/types.h"
-#include "../collection/List.h"
+#include "../base/Handle.h"
+#include "../api/stringAPI.h"
+#include "../api/imageAPI.h"
+#include "../math/IRect.h"
+#include "../math/IVector.h"
 
 namespace dsr {
 
@@ -67,7 +70,7 @@ public:
 public:
 	// Constructor
 	RasterFontImpl(const String& name, int32_t size, int32_t spacing, int32_t spaceWidth);
-	static std::shared_ptr<RasterFontImpl> createLatinOne(const String& name, const ImageU8& atlas);
+	static Handle<RasterFontImpl> createLatinOne(const String& name, const ImageU8& atlas);
 	// Destructor
 	~RasterFontImpl();
 public:

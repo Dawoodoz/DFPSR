@@ -43,6 +43,12 @@ namespace dsr {
 
 // TODO: Move to the API folder once complete.
 
+// A handle to a GUI theme.
+//   Themes describes the visual appearance of an interface.
+//   By having more than one theme for your interface, you can let the user select one.
+class VisualThemeImpl;
+using VisualTheme = Handle<VisualThemeImpl>;
+
 // Create a theme using a virtual machine with functions to call, style settings telling which functions to call with what arguments, and a path to load any non-embedded images from.
 VisualTheme theme_createFromText(const MediaMachine &machine, const ReadableString &styleSettings, const ReadableString &fromPath);
 // Create a theme using a virtual machine with functions to call, and a path to the style settings to load.

@@ -176,7 +176,7 @@ bool X11Window::setCursorVisibility(bool visible) {
 
 void X11Window::updateTitle_locked() {
 	windowLock.lock();
-		XSetStandardProperties(this->display, this->window, this->title.toStdString().c_str(), "Icon", None, NULL, 0, NULL);
+		XSetStandardProperties(this->display, this->window, dsr::FixedAscii<512>(this->title), "Icon", None, NULL, 0, NULL);
 	windowLock.unlock();
 }
 
@@ -722,10 +722,15 @@ void X11Window::prefetchEvents() {
 	}
 }
 
-int destroyImage(XImage *image) {
-	dsr::heap_free((uint8_t*)image->data);
-	image->data = nullptr;
-	return 1;
+static int destroyXImage(XImage *image) {
+	if (image != nullptr) {
+		if (image->data) {
+			dsr::heap_decreaseUseCount(image->data);
+		}
+		image->data = nullptr;
+		return XDestroyImage(image);
+	}
+	return 0;
 }
 
 // Locked because it overrides
@@ -752,10 +757,14 @@ void X11Window::resizeCanvas(int width, int height) {
 				);
 				// When the canvas image buffer is garbage collected, the destructor will call XLib to free the memory
 				XImage *image = this->canvasX[b];
-				// Tell the buffer to deallocate the XImage instead of just freeing the allocation, because X11 might still use the data.
-				dsr::image_dangerous_replaceDestructor(this->canvas[b], [image](uint8_t *data) { XDestroyImage(image); });
-				// And when X11 frees the image, we say how to delete the memory allocation from our heap allocator.
-				image->f.destroy_image = destroyImage;
+				// Tell the pixel buffer to also deallocate the XImage when the pixel data is about to be freed by the memory allocator.
+				dsr::image_dangerous_replaceDestructor(this->canvas[b], dsr::HeapDestructor([](void *pixels, void *image) {
+					XDestroyImage((XImage*)image);
+				}, image));
+				// Increase use count manually for the reference counted pixel buffer in XImage.
+				dsr::heap_increaseUseCount(image->data);
+				// And when closing the window externally, to trigger XDestroyImage, we should decrease reference count for the canvas.
+				image->f.destroy_image = destroyXImage;
 			}
 		}
 	windowLock.unlock();
@@ -821,13 +830,11 @@ void X11Window::showCanvas() {
 	}
 }
 
-std::shared_ptr<dsr::BackendWindow> createBackendWindow(const dsr::String& title, int width, int height) {
-	// Check if a display is available for creating a window
+dsr::Handle<dsr::BackendWindow> createBackendWindow(const dsr::String& title, int width, int height) {
 	if (XOpenDisplay(nullptr) != nullptr) {
-		auto backend = std::make_shared<X11Window>(title, width, height);
-		return std::dynamic_pointer_cast<dsr::BackendWindow>(backend);
+		return dsr::handle_create<X11Window>(title, width, height);
 	} else {
-		dsr::sendWarning("No display detected. Aborting X11 window creation.\n");
-		return std::shared_ptr<dsr::BackendWindow>();
+		dsr::sendWarning("Failed to create an X11 window.\n");
+		return dsr::Handle<dsr::BackendWindow>();
 	}
 }

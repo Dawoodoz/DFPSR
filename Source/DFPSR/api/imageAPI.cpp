@@ -1,7 +1,7 @@
 ﻿
 // zlib open source license
 //
-// Copyright (c) 2017 to 2022 David Forsgren Piuva
+// Copyright (c) 2017 to 2025 David Forsgren Piuva
 // 
 // This software is provided 'as-is', without any express or implied
 // warranty. In no event will the authors be held liable for any damages
@@ -22,40 +22,68 @@
 //    3. This notice may not be removed or altered from any source
 //    distribution.
 
-#define DFPSR_INTERNAL_ACCESS
+#define DSR_INTERNAL_ACCESS
 
 #include <limits>
 #include <cassert>
 #include "imageAPI.h"
 #include "drawAPI.h"
 #include "fileAPI.h"
-#include "../image/draw.h"
-#include "../image/internal/imageInternal.h"
 #include "../image/stbImage/stbImageWrapper.h"
 #include "../math/scalar.h"
-#include "../base/simd.h"
+#include "../settings.h"
 
-using namespace dsr;
+namespace dsr {
 
-// Constructors
-AlignedImageU8 dsr::image_create_U8(int32_t width, int32_t height) {
-	return AlignedImageU8(std::make_shared<ImageU8Impl>(width, height));
+static const int32_t maximumImageWidth = 65536;
+static const int32_t maximumImageHeight = 65536;
+
+template <typename IMAGE_TYPE>
+IMAGE_TYPE image_create_template(const char * name, int32_t width, int32_t height, PackOrderIndex packOrderIndex) {
+	if (width < 1 || width > maximumImageWidth || height < 1 || height > maximumImageHeight) {
+		sendWarning(U"");
+		// Return an empty image on failure.
+		return IMAGE_TYPE();
+	} else {
+		static const int32_t pixelSize = image_getPixelSize<IMAGE_TYPE>();
+		// Calculate the stride.
+		uintptr_t byteStride = memory_getPaddedSize(width * pixelSize, DSR_MAXIMUM_ALIGNMENT);
+		uint32_t pixelStride = byteStride / pixelSize;
+		// Create the image.
+		return IMAGE_TYPE(buffer_create(byteStride * height).setName(name), 0, width, height, pixelStride, packOrderIndex);
+	}
 }
-AlignedImageU16 dsr::image_create_U16(int32_t width, int32_t height) {
-	return AlignedImageU16(std::make_shared<ImageU16Impl>(width, height));
+
+// Take the dimensions as signed integers to avoid getting extreme dimensions on underflow.
+AlignedImageU8 image_create_U8(int32_t width, int32_t height) {
+	return image_create_template<AlignedImageU8>("U8 pixel buffer", width, height, PackOrderIndex::RGBA);
 }
-AlignedImageF32 dsr::image_create_F32(int32_t width, int32_t height) {
-	return AlignedImageF32(std::make_shared<ImageF32Impl>(width, height));
+
+AlignedImageU16 image_create_U16(int32_t width, int32_t height) {
+	return image_create_template<AlignedImageU16>("U16 pixel buffer", width, height, PackOrderIndex::RGBA);
 }
-OrderedImageRgbaU8 dsr::image_create_RgbaU8(int32_t width, int32_t height) {
-	return OrderedImageRgbaU8(std::make_shared<ImageRgbaU8Impl>(width, height));
+
+AlignedImageF32 image_create_F32(int32_t width, int32_t height) {
+	return image_create_template<AlignedImageF32>("F32 pixel buffer", width, height, PackOrderIndex::RGBA);
 }
-AlignedImageRgbaU8 dsr::image_create_RgbaU8_native(int32_t width, int32_t height, PackOrderIndex packOrderIndex) {
-	return AlignedImageRgbaU8(std::make_shared<ImageRgbaU8Impl>(width, height, packOrderIndex));
+
+OrderedImageRgbaU8 image_create_RgbaU8(int32_t width, int32_t height) {
+	return image_create_template<OrderedImageRgbaU8>("RgbaU8 pixel buffer", width, height, PackOrderIndex::RGBA);
+}
+
+AlignedImageRgbaU8 image_create_RgbaU8_native(int32_t width, int32_t height, PackOrderIndex packOrderIndex) {
+	return image_create_template<OrderedImageRgbaU8>("Native pixel buffer", width, height, packOrderIndex);
+}
+
+// Pre-condition: image exists.
+// Post-condition: Returns true if the stride is larger than the image's width.
+template <typename IMAGE_TYPE>
+inline bool imageIsPadded(const IMAGE_TYPE &image) {
+	return image_getWidth(image) * image_getPixelSize(image) < image_getStride(image);
 }
 
 // Loading from data pointer
-OrderedImageRgbaU8 dsr::image_decode_RgbaU8(const SafePointer<uint8_t> data, int size) {
+OrderedImageRgbaU8 image_decode_RgbaU8(SafePointer<const uint8_t> data, int size) {
 	if (data.isNotNull()) {
 		return image_stb_decode_RgbaU8(data, size);
 	} else {
@@ -63,11 +91,11 @@ OrderedImageRgbaU8 dsr::image_decode_RgbaU8(const SafePointer<uint8_t> data, int
 	}
 }
 // Loading from buffer
-OrderedImageRgbaU8 dsr::image_decode_RgbaU8(const Buffer& fileContent) {
+OrderedImageRgbaU8 image_decode_RgbaU8(const Buffer& fileContent) {
 	return image_decode_RgbaU8(buffer_getSafeData<uint8_t>(fileContent, "image file buffer"), buffer_getSize(fileContent));
 }
 // Loading from file
-OrderedImageRgbaU8 dsr::image_load_RgbaU8(const String& filename, bool mustExist) {
+OrderedImageRgbaU8 image_load_RgbaU8(const String& filename, bool mustExist) {
 	OrderedImageRgbaU8 result;
 	Buffer fileContent = file_loadBuffer(filename, mustExist);
 	if (buffer_exists(fileContent)) {
@@ -79,13 +107,7 @@ OrderedImageRgbaU8 dsr::image_load_RgbaU8(const String& filename, bool mustExist
 	return result;
 }
 
-// Pre-condition: image exists.
-// Post-condition: Returns true if the stride is larger than the image's width.
-static bool imageIsPadded(const ImageRgbaU8 &image) {
-	return image_getWidth(image) * 4 < image_getStride(image);
-}
-
-Buffer dsr::image_encode(const ImageRgbaU8 &image, ImageFileFormat format, int quality) {
+Buffer image_encode(const ImageRgbaU8 &image, ImageFileFormat format, int quality) {
 	if (image_exists(image)) {
 		ImageRgbaU8 orderedImage;
 		if (image_getPackOrderIndex(image) != PackOrderIndex::RGBA) {
@@ -125,7 +147,7 @@ static ImageFileFormat detectImageFileExtension(const String& filename) {
 	return result;
 }
 
-bool dsr::image_save(const ImageRgbaU8 &image, const String& filename, bool mustWork, int quality) {
+bool image_save(const ImageRgbaU8 &image, const String& filename, bool mustWork, int quality) {
 	ImageFileFormat extension = detectImageFileExtension(filename);
 	Buffer buffer;
 	if (extension == ImageFileFormat::Unknown) {
@@ -142,323 +164,140 @@ bool dsr::image_save(const ImageRgbaU8 &image, const String& filename, bool must
 	}
 }
 
-#define GET_OPTIONAL(SOURCE,DEFAULT) \
-	if (image) { \
-		return SOURCE; \
-	} else { \
-		return DEFAULT; \
-	}
-
-// Properties
-int32_t dsr::image_getWidth(const ImageU8& image)     { GET_OPTIONAL(image->width, 0); }
-int32_t dsr::image_getWidth(const ImageU16& image)    { GET_OPTIONAL(image->width, 0); }
-int32_t dsr::image_getWidth(const ImageF32& image)    { GET_OPTIONAL(image->width, 0); }
-int32_t dsr::image_getWidth(const ImageRgbaU8& image) { GET_OPTIONAL(image->width, 0); }
-
-int32_t dsr::image_getHeight(const ImageU8& image)     { GET_OPTIONAL(image->height, 0); }
-int32_t dsr::image_getHeight(const ImageU16& image)    { GET_OPTIONAL(image->height, 0); }
-int32_t dsr::image_getHeight(const ImageF32& image)    { GET_OPTIONAL(image->height, 0); }
-int32_t dsr::image_getHeight(const ImageRgbaU8& image) { GET_OPTIONAL(image->height, 0); }
-
-int32_t dsr::image_getStride(const ImageU8& image)     { GET_OPTIONAL(image->stride, 0); }
-int32_t dsr::image_getStride(const ImageU16& image)    { GET_OPTIONAL(image->stride, 0); }
-int32_t dsr::image_getStride(const ImageF32& image)    { GET_OPTIONAL(image->stride, 0); }
-int32_t dsr::image_getStride(const ImageRgbaU8& image) { GET_OPTIONAL(image->stride, 0); }
-
-IRect dsr::image_getBound(const ImageU8& image)     { GET_OPTIONAL(IRect(0, 0, image->width, image->height), IRect()); }
-IRect dsr::image_getBound(const ImageU16& image)    { GET_OPTIONAL(IRect(0, 0, image->width, image->height), IRect()); }
-IRect dsr::image_getBound(const ImageF32& image)    { GET_OPTIONAL(IRect(0, 0, image->width, image->height), IRect()); }
-IRect dsr::image_getBound(const ImageRgbaU8& image) { GET_OPTIONAL(IRect(0, 0, image->width, image->height), IRect()); }
-
-bool dsr::image_exists(const ImageU8& image)     { GET_OPTIONAL(true, false); }
-bool dsr::image_exists(const ImageU16& image)    { GET_OPTIONAL(true, false); }
-bool dsr::image_exists(const ImageF32& image)    { GET_OPTIONAL(true, false); }
-bool dsr::image_exists(const ImageRgbaU8& image) { GET_OPTIONAL(true, false); }
-
-int dsr::image_useCount(const ImageU8& image)     { return image.use_count(); }
-int dsr::image_useCount(const ImageU16& image)    { return image.use_count(); }
-int dsr::image_useCount(const ImageF32& image)    { return image.use_count(); }
-int dsr::image_useCount(const ImageRgbaU8& image) { return image.use_count(); }
-
-PackOrderIndex dsr::image_getPackOrderIndex(const ImageRgbaU8& image) {
-	GET_OPTIONAL(image->packOrder.packOrderIndex, PackOrderIndex::RGBA);
-}
-
-// Texture
-void dsr::image_makeIntoTexture(ImageRgbaU8& image) {
-	if (image) {
-		image->makeIntoTexture();
+void image_fill(const ImageU8& image, int32_t color) {
+	if (image_exists(image)) {
+		draw_rectangle(image, image_getBound(image), color);
 	}
 }
-void dsr::image_generatePyramid(ImageRgbaU8& image) {
-	if (image) {
-		image->generatePyramid();
+void image_fill(const ImageU16& image, int32_t color) {
+	if (image_exists(image)) {
+		draw_rectangle(image, image_getBound(image), color);
 	}
 }
-void dsr::image_removePyramid(ImageRgbaU8& image) {
-	if (image) {
-		image->removePyramid();
+void image_fill(const ImageF32& image, float color) {
+	if (image_exists(image)) {
+		draw_rectangle(image, image_getBound(image), color);
 	}
 }
-bool dsr::image_hasPyramid(const ImageRgbaU8& image) {
-	GET_OPTIONAL(image->texture.hasMipBuffer(), false);
-}
-bool dsr::image_isTexture(const ImageRgbaU8& image) {
-	GET_OPTIONAL(image->isTexture(), false);
-}
-
-// Pixel access
-#define INSIDE_XY (x >= 0 && x < image->width && y >= 0 && y < image->height)
-#define CLAMP_XY \
-	if (x < 0) { x = 0; } \
-	if (y < 0) { y = 0; } \
-	if (x >= image->width) { x = image->width - 1; } \
-	if (y >= image->height) { y = image->height - 1; }
-#define TILE_XY \
-	x = signedModulo(x, image->width); \
-	y = signedModulo(y, image->height);
-void dsr::image_writePixel(ImageU8& image, int32_t x, int32_t y, int32_t color) {
-	if (image) {
-		if (INSIDE_XY) {
-			if (color < 0) { color = 0; }
-			if (color > 255) { color = 255; }
-			ImageU8Impl::writePixel_unsafe(*image, x, y, color);
-		}
-	}
-}
-void dsr::image_writePixel(ImageU16& image, int32_t x, int32_t y, int32_t color) {
-	if (image) {
-		if (INSIDE_XY) {
-			if (color < 0) { color = 0; }
-			if (color > 65535) { color = 65535; }
-			ImageU16Impl::writePixel_unsafe(*image, x, y, color);
-		}
-	}
-}
-void dsr::image_writePixel(ImageF32& image, int32_t x, int32_t y, float color) {
-	if (image) {
-		if (INSIDE_XY) {
-			ImageF32Impl::writePixel_unsafe(*image, x, y, color);
-		}
-	}
-}
-void dsr::image_writePixel(ImageRgbaU8& image, int32_t x, int32_t y, const ColorRgbaI32& color) {
-	if (image) {
-		if (INSIDE_XY) {
-			ImageRgbaU8Impl::writePixel_unsafe(*image, x, y, image->packRgba(color.saturate()));
-		}
-	}
-}
-int32_t dsr::image_readPixel_border(const ImageU8& image, int32_t x, int32_t y, int32_t border) {
-	if (image) {
-		if (INSIDE_XY) {
-			return ImageU8Impl::readPixel_unsafe(*image, x, y);
-		} else {
-			return border;
-		}
-	} else {
-		return 0;
-	}
-}
-int32_t dsr::image_readPixel_border(const ImageU16& image, int32_t x, int32_t y, int32_t border) {
-	if (image) {
-		if (INSIDE_XY) {
-			return ImageU16Impl::readPixel_unsafe(*image, x, y);
-		} else {
-			return border;
-		}
-	} else {
-		return 0;
-	}
-}
-float dsr::image_readPixel_border(const ImageF32& image, int32_t x, int32_t y, float border) {
-	if (image) {
-		if (INSIDE_XY) {
-			return ImageF32Impl::readPixel_unsafe(*image, x, y);
-		} else {
-			return border;
-		}
-	} else {
-		return 0.0f;
-	}
-}
-ColorRgbaI32 dsr::image_readPixel_border(const ImageRgbaU8& image, int32_t x, int32_t y, const ColorRgbaI32& border) {
-	if (image) {
-		if (INSIDE_XY) {
-			return image->unpackRgba(ImageRgbaU8Impl::readPixel_unsafe(*image, x, y));
-		} else {
-			return border; // Can return unsaturated colors as error codes
-		}
-	} else {
-		return ColorRgbaI32();
-	}
-}
-uint8_t dsr::image_readPixel_clamp(const ImageU8& image, int32_t x, int32_t y) {
-	if (image) {
-		CLAMP_XY;
-		return ImageU8Impl::readPixel_unsafe(*image, x, y);
-	} else {
-		return 0;
-	}
-}
-uint16_t dsr::image_readPixel_clamp(const ImageU16& image, int32_t x, int32_t y) {
-	if (image) {
-		CLAMP_XY;
-		return ImageU16Impl::readPixel_unsafe(*image, x, y);
-	} else {
-		return 0;
-	}
-}
-float dsr::image_readPixel_clamp(const ImageF32& image, int32_t x, int32_t y) {
-	if (image) {
-		CLAMP_XY;
-		return ImageF32Impl::readPixel_unsafe(*image, x, y);
-	} else {
-		return 0.0f;
-	}
-}
-ColorRgbaI32 dsr::image_readPixel_clamp(const ImageRgbaU8& image, int32_t x, int32_t y) {
-	if (image) {
-		CLAMP_XY;
-		return image->unpackRgba(ImageRgbaU8Impl::readPixel_unsafe(*image, x, y));
-	} else {
-		return ColorRgbaI32();
-	}
-}
-uint8_t dsr::image_readPixel_tile(const ImageU8& image, int32_t x, int32_t y) {
-	if (image) {
-		TILE_XY;
-		return ImageU8Impl::readPixel_unsafe(*image, x, y);
-	} else {
-		return 0;
-	}
-}
-uint16_t dsr::image_readPixel_tile(const ImageU16& image, int32_t x, int32_t y) {
-	if (image) {
-		TILE_XY;
-		return ImageU16Impl::readPixel_unsafe(*image, x, y);
-	} else {
-		return 0;
-	}
-}
-float dsr::image_readPixel_tile(const ImageF32& image, int32_t x, int32_t y) {
-	if (image) {
-		TILE_XY;
-		return ImageF32Impl::readPixel_unsafe(*image, x, y);
-	} else {
-		return 0.0f;
-	}
-}
-ColorRgbaI32 dsr::image_readPixel_tile(const ImageRgbaU8& image, int32_t x, int32_t y) {
-	if (image) {
-		TILE_XY;
-		return image->unpackRgba(ImageRgbaU8Impl::readPixel_unsafe(*image, x, y));
-	} else {
-		return ColorRgbaI32();
+void image_fill(const ImageRgbaU8& image, const ColorRgbaI32& color) {
+	if (image_exists(image)) {
+		draw_rectangle(image, image_getBound(image), color);
 	}
 }
 
-void dsr::image_fill(ImageU8& image, int32_t color) {
-	if (image) {
-		imageImpl_draw_solidRectangle(*image, imageInternal::getBound(*image), color);
-	}
-}
-void dsr::image_fill(ImageU16& image, int32_t color) {
-	if (image) {
-		imageImpl_draw_solidRectangle(*image, imageInternal::getBound(*image), color);
-	}
-}
-void dsr::image_fill(ImageF32& image, float color) {
-	if (image) {
-		imageImpl_draw_solidRectangle(*image, imageInternal::getBound(*image), color);
-	}
-}
-void dsr::image_fill(ImageRgbaU8& image, const ColorRgbaI32& color) {
-	if (image) {
-		imageImpl_draw_solidRectangle(*image, imageInternal::getBound(*image), color);
-	}
-}
-
-AlignedImageU8 dsr::image_clone(const ImageU8& image) {
-	if (image) {
-		AlignedImageU8 result = image_create_U8(image->width, image->height);
+AlignedImageU8 image_clone(const ImageU8& image) {
+	if (image_exists(image)) {
+		AlignedImageU8 result = image_create_U8(image_getWidth(image), image_getHeight(image));
 		draw_copy(result, image);
 		return result;
 	} else {
 		return AlignedImageU8(); // Null gives null
 	}
 }
-AlignedImageU16 dsr::image_clone(const ImageU16& image) {
-	if (image) {
-		AlignedImageU16 result = image_create_U16(image->width, image->height);
+AlignedImageU16 image_clone(const ImageU16& image) {
+	if (image_exists(image)) {
+		AlignedImageU16 result = image_create_U16(image_getWidth(image), image_getHeight(image));
 		draw_copy(result, image);
 		return result;
 	} else {
 		return AlignedImageU16(); // Null gives null
 	}
 }
-AlignedImageF32 dsr::image_clone(const ImageF32& image) {
-	if (image) {
-		AlignedImageF32 result = image_create_F32(image->width, image->height);
+AlignedImageF32 image_clone(const ImageF32& image) {
+	if (image_exists(image)) {
+		AlignedImageF32 result = image_create_F32(image_getWidth(image), image_getHeight(image));
 		draw_copy(result, image);
 		return result;
 	} else {
 		return AlignedImageF32(); // Null gives null
 	}
 }
-OrderedImageRgbaU8 dsr::image_clone(const ImageRgbaU8& image) {
-	if (image) {
-		OrderedImageRgbaU8 result = image_create_RgbaU8(image->width, image->height);
+OrderedImageRgbaU8 image_clone(const ImageRgbaU8& image) {
+	if (image_exists(image)) {
+		OrderedImageRgbaU8 result = image_create_RgbaU8(image_getWidth(image), image_getHeight(image));
 		draw_copy(result, image);
 		return result;
 	} else {
 		return OrderedImageRgbaU8(); // Null gives null
 	}
 }
-ImageRgbaU8 dsr::image_removePadding(const ImageRgbaU8& image) {
-	if (image) {
-		// TODO: Copy the implementation of getWithoutPadding, to create ImageRgbaU8 directly
-		return ImageRgbaU8(image->getWithoutPadding());
-	} else {
+
+ImageRgbaU8 image_removePadding(const ImageRgbaU8& image) {
+	if (!image_exists(image)) {
 		return ImageRgbaU8(); // Null gives null
+	} else if (imageIsPadded(image)) {
+		return image;
+	} else {
+		uint32_t targetStride = image_getWidth(image) * image_getPixelSize(image);
+		int32_t sourceStride = image_getStride(image);
+		Buffer newBuffer = buffer_create(targetStride * image_getHeight(image));
+		SafePointer<const uint8_t> sourceRow = image_getSafePointer<uint8_t>(image);
+		SafePointer<uint8_t> targetRow = buffer_getSafeData<uint8_t>(newBuffer, "RgbaU8 padding removal target");
+		for (int32_t y = 0; y < image_getHeight(image); y++) {
+			safeMemoryCopy(targetRow, sourceRow, targetStride);
+			sourceRow.increaseBytes(sourceStride);
+			targetRow.increaseBytes(targetStride);
+		}
+		return ImageRgbaU8(newBuffer, 0, image_getWidth(image), image_getHeight(image), targetStride * image_getPixelSize<ImageRgbaU8>(), image_getPackOrderIndex(image));
 	}
 }
 
-AlignedImageU8 dsr::image_get_red(const ImageRgbaU8& image) {
-	if (image) {
-		// TODO: Copy the implementation of getChannel, to create ImageU8 directly
-		return AlignedImageU8(image->getChannel(image->packOrder.redIndex));
+static void extractChannel(SafePointer<uint8_t> targetData, int targetStride, SafePointer<const uint8_t> sourceData, int sourceStride, int sourceChannels, int channelIndex, int width, int height) {
+	SafePointer<const uint8_t> sourceRow = sourceData + channelIndex;
+	SafePointer<uint8_t> targetRow = targetData;
+	for (int y = 0; y < height; y++) {
+		SafePointer<const uint8_t> sourceElement = sourceRow;
+		SafePointer<uint8_t> targetElement = targetRow;
+		for (int x = 0; x < width; x++) {
+			*targetElement = *sourceElement; // Copy one channel from the soruce
+			sourceElement += sourceChannels; // Jump to the same channel in the next source pixel
+			targetElement += 1; // Jump to the next monochrome target pixel
+		}
+		sourceRow.increaseBytes(sourceStride);
+		targetRow.increaseBytes(targetStride);
+	}
+}
+
+static AlignedImageU8 getChannel(const ImageRgbaU8 image, int32_t channelIndex) {
+	// Warning for debug mode
+	static int channelCount = 4;
+	assert(0 <= channelIndex && channelIndex < channelCount);
+	AlignedImageU8 result = image_create_U8(image_getWidth(image), image_getHeight(image));
+	extractChannel(image_getSafePointer<uint8_t>(result), image_getStride(result), image_getSafePointer<uint8_t>(image), image_getStride(image), channelCount, channelIndex, image_getWidth(image), image_getHeight(image));
+	return result;
+}
+
+AlignedImageU8 image_get_red(const ImageRgbaU8& image) {
+	if (image_exists(image)) {
+		return getChannel(image, image_getPackOrder(image).redIndex);
+	} else {
+		return AlignedImageU8();
+	}
+}
+AlignedImageU8 image_get_green(const ImageRgbaU8& image) {
+	if (image_exists(image)) {
+		return getChannel(image, image_getPackOrder(image).greenIndex);
 	} else {
 		return AlignedImageU8(); // Null gives null
 	}
 }
-AlignedImageU8 dsr::image_get_green(const ImageRgbaU8& image) {
-	if (image) {
-		// TODO: Copy the implementation of getChannel, to create ImageU8 directly
-		return AlignedImageU8(image->getChannel(image->packOrder.greenIndex));
+AlignedImageU8 image_get_blue(const ImageRgbaU8& image) {
+	if (image_exists(image)) {
+		return getChannel(image, image_getPackOrder(image).blueIndex);
 	} else {
 		return AlignedImageU8(); // Null gives null
 	}
 }
-AlignedImageU8 dsr::image_get_blue(const ImageRgbaU8& image) {
-	if (image) {
-		// TODO: Copy the implementation of getChannel, to create ImageU8 directly
-		return AlignedImageU8(image->getChannel(image->packOrder.blueIndex));
-	} else {
-		return AlignedImageU8(); // Null gives null
-	}
-}
-AlignedImageU8 dsr::image_get_alpha(const ImageRgbaU8& image) {
-	if (image) {
-		// TODO: Copy the implementation of getChannel, to create ImageU8 directly
-		return AlignedImageU8(image->getChannel(image->packOrder.alphaIndex));
+AlignedImageU8 image_get_alpha(const ImageRgbaU8& image) {
+	if (image_exists(image)) {
+		return getChannel(image, image_getPackOrder(image).alphaIndex);
 	} else {
 		return AlignedImageU8(); // Null gives null
 	}
 }
 
 static inline int32_t readColor(const ImageU8& channel, int x, int y) {
-	return ImageU8Impl::readPixel_unsafe(*channel, x, y);
+	return image_accessPixel(channel, x, y);
 }
 static inline int32_t readColor(int32_t color, int x, int y) {
 	return color;
@@ -476,60 +315,59 @@ static OrderedImageRgbaU8 pack_template(int32_t width, int32_t height, R red, G 
 }
 
 #define PACK1(FIRST) \
-if (FIRST) { \
-	return pack_template(FIRST->width, FIRST->height, red, green, blue, alpha); \
+if (image_exists(FIRST)) { \
+	return pack_template(image_getWidth(FIRST), image_getHeight(FIRST), red, green, blue, alpha); \
 } else { \
 	return OrderedImageRgbaU8(); \
 }
-OrderedImageRgbaU8 dsr::image_pack(const ImageU8& red, int32_t green, int32_t blue, int32_t alpha) { PACK1(red); }
-OrderedImageRgbaU8 dsr::image_pack(int32_t red, const ImageU8& green, int32_t blue, int32_t alpha) { PACK1(green); }
-OrderedImageRgbaU8 dsr::image_pack(int32_t red, int32_t green, const ImageU8& blue, int32_t alpha) { PACK1(blue); }
-OrderedImageRgbaU8 dsr::image_pack(int32_t red, int32_t green, int32_t blue, const ImageU8& alpha) { PACK1(alpha); }
+OrderedImageRgbaU8 image_pack(const ImageU8& red, int32_t green, int32_t blue, int32_t alpha) { PACK1(red); }
+OrderedImageRgbaU8 image_pack(int32_t red, const ImageU8& green, int32_t blue, int32_t alpha) { PACK1(green); }
+OrderedImageRgbaU8 image_pack(int32_t red, int32_t green, const ImageU8& blue, int32_t alpha) { PACK1(blue); }
+OrderedImageRgbaU8 image_pack(int32_t red, int32_t green, int32_t blue, const ImageU8& alpha) { PACK1(alpha); }
 
 #define PACK2(FIRST,SECOND) \
-if (FIRST && SECOND) { \
-	if (FIRST->width != SECOND->width || FIRST->height != SECOND->height) { \
+if (image_exists(FIRST) && image_exists(SECOND)) { \
+	if (image_getWidth(FIRST) != image_getWidth(SECOND) || image_getHeight(FIRST) != image_getHeight(SECOND)) { \
 		throwError("Cannot pack two channels of different size!\n"); \
 	} \
-	return pack_template(FIRST->width, FIRST->height, red, green, blue, alpha); \
+	return pack_template(image_getWidth(FIRST), image_getHeight(FIRST), red, green, blue, alpha); \
 } else { \
 	return OrderedImageRgbaU8(); \
 }
-OrderedImageRgbaU8 dsr::image_pack(const ImageU8& red, const ImageU8& green, int32_t blue, int32_t alpha) { PACK2(red,green) }
-OrderedImageRgbaU8 dsr::image_pack(const ImageU8& red, int32_t green, const ImageU8& blue, int32_t alpha) { PACK2(red,blue) }
-OrderedImageRgbaU8 dsr::image_pack(const ImageU8& red, int32_t green, int32_t blue, const ImageU8& alpha) { PACK2(red,alpha) }
-OrderedImageRgbaU8 dsr::image_pack(int32_t red, const ImageU8& green, const ImageU8& blue, int32_t alpha) { PACK2(green,blue) }
-OrderedImageRgbaU8 dsr::image_pack(int32_t red, const ImageU8& green, int32_t blue, const ImageU8& alpha) { PACK2(green,alpha) }
-OrderedImageRgbaU8 dsr::image_pack(int32_t red, int32_t green, const ImageU8& blue, const ImageU8& alpha) { PACK2(blue,alpha) }
+OrderedImageRgbaU8 image_pack(const ImageU8& red, const ImageU8& green, int32_t blue, int32_t alpha) { PACK2(red,green) }
+OrderedImageRgbaU8 image_pack(const ImageU8& red, int32_t green, const ImageU8& blue, int32_t alpha) { PACK2(red,blue) }
+OrderedImageRgbaU8 image_pack(const ImageU8& red, int32_t green, int32_t blue, const ImageU8& alpha) { PACK2(red,alpha) }
+OrderedImageRgbaU8 image_pack(int32_t red, const ImageU8& green, const ImageU8& blue, int32_t alpha) { PACK2(green,blue) }
+OrderedImageRgbaU8 image_pack(int32_t red, const ImageU8& green, int32_t blue, const ImageU8& alpha) { PACK2(green,alpha) }
+OrderedImageRgbaU8 image_pack(int32_t red, int32_t green, const ImageU8& blue, const ImageU8& alpha) { PACK2(blue,alpha) }
 
 #define PACK3(FIRST,SECOND,THIRD) \
-if (FIRST && SECOND && THIRD) { \
-	if (FIRST->width != SECOND->width || FIRST->height != SECOND->height \
-	 || FIRST->width != THIRD->width || FIRST->height != THIRD->height) { \
+if (image_exists(FIRST) && image_exists(SECOND) && image_exists(THIRD)) { \
+	if (image_getWidth(FIRST) != image_getWidth(SECOND) || image_getHeight(FIRST) != image_getHeight(SECOND) \
+	 || image_getWidth(FIRST) != image_getWidth(THIRD) || image_getHeight(FIRST) != image_getHeight(THIRD)) { \
 		throwError("Cannot pack three channels of different size!\n"); \
 	} \
-	return pack_template(FIRST->width, FIRST->height, red, green, blue, alpha); \
+	return pack_template(image_getWidth(FIRST), image_getHeight(FIRST), red, green, blue, alpha); \
 } else { \
 	return OrderedImageRgbaU8(); \
 }
-OrderedImageRgbaU8 dsr::image_pack(int32_t red, const ImageU8& green, const ImageU8& blue, const ImageU8& alpha) { PACK3(green, blue, alpha) }
-OrderedImageRgbaU8 dsr::image_pack(const ImageU8& red, int32_t green, const ImageU8& blue, const ImageU8& alpha) { PACK3(red, blue, alpha) }
-OrderedImageRgbaU8 dsr::image_pack(const ImageU8& red, const ImageU8& green, int32_t blue, const ImageU8& alpha) { PACK3(red, green, alpha) }
-OrderedImageRgbaU8 dsr::image_pack(const ImageU8& red, const ImageU8& green, const ImageU8& blue, int32_t alpha) { PACK3(red, green, blue) }
+OrderedImageRgbaU8 image_pack(int32_t red, const ImageU8& green, const ImageU8& blue, const ImageU8& alpha) { PACK3(green, blue, alpha) }
+OrderedImageRgbaU8 image_pack(const ImageU8& red, int32_t green, const ImageU8& blue, const ImageU8& alpha) { PACK3(red, blue, alpha) }
+OrderedImageRgbaU8 image_pack(const ImageU8& red, const ImageU8& green, int32_t blue, const ImageU8& alpha) { PACK3(red, green, alpha) }
+OrderedImageRgbaU8 image_pack(const ImageU8& red, const ImageU8& green, const ImageU8& blue, int32_t alpha) { PACK3(red, green, blue) }
 
-// TODO: Optimize using zip instructions
 #define PACK4(FIRST,SECOND,THIRD,FOURTH) \
-if (FIRST && SECOND && THIRD && FOURTH) { \
-	if (FIRST->width != SECOND->width || FIRST->height != SECOND->height \
-	 || FIRST->width != THIRD->width || FIRST->height != THIRD->height \
- 	 || FIRST->width != FOURTH->width || FIRST->height != FOURTH->height) { \
+if (image_exists(FIRST) && image_exists(SECOND) && image_exists(THIRD) && image_exists(FOURTH)) { \
+	if (image_getWidth(FIRST) != image_getWidth(SECOND) || image_getHeight(FIRST) != image_getHeight(SECOND) \
+	 || image_getWidth(FIRST) != image_getWidth(THIRD) || image_getHeight(FIRST) != image_getHeight(THIRD) \
+ 	 || image_getWidth(FIRST) != image_getWidth(FOURTH) || image_getHeight(FIRST) != image_getHeight(FOURTH)) { \
 		throwError("Cannot pack four channels of different size!\n"); \
 	} \
-	return pack_template(FIRST->width, FIRST->height, red, green, blue, alpha); \
+	return pack_template(image_getWidth(FIRST), image_getHeight(FIRST), red, green, blue, alpha); \
 } else { \
 	return OrderedImageRgbaU8(); \
 }
-OrderedImageRgbaU8 dsr::image_pack(const ImageU8& red, const ImageU8& green, const ImageU8& blue, const ImageU8& alpha) { PACK4(red, green, blue, alpha) }
+OrderedImageRgbaU8 image_pack(const ImageU8& red, const ImageU8& green, const ImageU8& blue, const ImageU8& alpha) { PACK4(red, green, blue, alpha) }
 
 // Convert a grayscale image into an ascii image using the given alphabet.
 //   Since all 256 characters cannot be in the alphabet, the encoding is lossy.
@@ -540,7 +378,7 @@ OrderedImageRgbaU8 dsr::image_pack(const ImageU8& red, const ImageU8& green, con
 //   width <= stride
 //   size of monochromeImage = height * stride
 // Example alphabet: " .,-_':;!+~=^?*abcdefghijklmnopqrstuvwxyz()[]{}|&@#0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-String dsr::image_toAscii(const ImageU8& image, const String& alphabet) {
+String image_toAscii(const ImageU8& image, const String& alphabet) {
 	if (!image_exists(image)) {
 		return U"null";
 	}
@@ -574,13 +412,13 @@ String dsr::image_toAscii(const ImageU8& image, const String& alphabet) {
 	return result;
 }
 
-String dsr::image_toAscii(const ImageU8& image) {
+String image_toAscii(const ImageU8& image) {
 	return image_toAscii(image, U" .,-_':;!+~=^?*abcdefghijklmnopqrstuvwxyz()[]{}|&@#0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ");
 }
 
 // Create a monochrome image from the ascii image in content.
 // String is used instead of ReadableString, so that the content can be decompressed from 8-bit strings in the binary.
-AlignedImageU8 dsr::image_fromAscii(const String& content) {
+AlignedImageU8 image_fromAscii(const String& content) {
 	char alphabet[128];
 	uint8_t alphabetMap[128];
 	char current;
@@ -671,59 +509,20 @@ AlignedImageU8 dsr::image_fromAscii(const String& content) {
 	return result;
 }
 
-// TODO: Try to recycle the memory to reduce overhead from heap allocating heads pointing to existing buffers
-template <typename IMAGE_TYPE, typename VALUE_TYPE>
-static inline IMAGE_TYPE subImage_template(const IMAGE_TYPE& image, const IRect& region) {
-	if (image) {
-		IRect cut = IRect::cut(imageInternal::getBound(*image), region);
-		if (cut.hasArea()) {
-			intptr_t newOffset = image->startOffset + (cut.left() * image->pixelSize) + (cut.top() * image->stride);
-			return IMAGE_TYPE(std::make_shared<VALUE_TYPE>(cut.width(), cut.height(), image->stride, image->buffer, newOffset));
-		}
-	}
-	return IMAGE_TYPE(); // Null if where are no overlapping pixels
-}
-
-template <typename IMAGE_TYPE, typename VALUE_TYPE>
-static inline IMAGE_TYPE subImage_template_withPackOrder(const IMAGE_TYPE& image, const IRect& region) {
-	if (image) {
-		IRect cut = IRect::cut(imageInternal::getBound(*image), region);
-		if (cut.hasArea()) {
-			intptr_t newOffset = image->startOffset + (cut.left() * image->pixelSize) + (cut.top() * image->stride);
-			return IMAGE_TYPE(std::make_shared<VALUE_TYPE>(cut.width(), cut.height(), image->stride, image->buffer, newOffset, image->packOrder));
-		}
-	}
-	return IMAGE_TYPE(); // Null if where are no overlapping pixels
-}
-
-ImageU8 dsr::image_getSubImage(const ImageU8& image, const IRect& region) {
-	return subImage_template<ImageU8, ImageU8Impl>(image, region);
-}
-
-ImageU16 dsr::image_getSubImage(const ImageU16& image, const IRect& region) {
-	return subImage_template<ImageU16, ImageU16Impl>(image, region);
-}
-
-ImageF32 dsr::image_getSubImage(const ImageF32& image, const IRect& region) {
-	return subImage_template<ImageF32, ImageF32Impl>(image, region);
-}
-
-ImageRgbaU8 dsr::image_getSubImage(const ImageRgbaU8& image, const IRect& region) {
-	return subImage_template_withPackOrder<ImageRgbaU8, ImageRgbaU8Impl>(image, region);
-}
-
 template <typename IMAGE_TYPE, int CHANNELS, typename ELEMENT_TYPE>
 ELEMENT_TYPE maxDifference_template(const IMAGE_TYPE& imageA, const IMAGE_TYPE& imageB) {
-	if (imageA.width != imageB.width || imageA.height != imageB.height) {
+	if (image_getWidth(imageA) != image_getWidth(imageB) || image_getHeight(imageA) != image_getHeight(imageB)) {
 		return std::numeric_limits<ELEMENT_TYPE>::max();
 	} else {
+		intptr_t strideA = image_getStride(imageA);
+		intptr_t strideB = image_getStride(imageB);
 		ELEMENT_TYPE maxDifference = 0;
-		const SafePointer<ELEMENT_TYPE> rowDataA = imageInternal::getSafeData<ELEMENT_TYPE>(imageA);
-		const SafePointer<ELEMENT_TYPE> rowDataB = imageInternal::getSafeData<ELEMENT_TYPE>(imageB);
-		for (int y = 0; y < imageA.height; y++) {
-			const SafePointer<ELEMENT_TYPE> pixelDataA = rowDataA;
-			const SafePointer<ELEMENT_TYPE> pixelDataB = rowDataB;
-			for (int x = 0; x < imageA.width; x++) {
+		SafePointer<const ELEMENT_TYPE> rowDataA = image_getSafePointer<ELEMENT_TYPE>(imageA);
+		SafePointer<const ELEMENT_TYPE> rowDataB = image_getSafePointer<ELEMENT_TYPE>(imageB);
+		for (int y = 0; y < image_getHeight(imageA); y++) {
+			SafePointer<const ELEMENT_TYPE> pixelDataA = rowDataA;
+			SafePointer<const ELEMENT_TYPE> pixelDataB = rowDataB;
+			for (int x = 0; x < image_getWidth(imageA); x++) {
 				for (int c = 0; c < CHANNELS; c++) {
 					ELEMENT_TYPE difference = absDiff(*pixelDataA, *pixelDataB);
 					if (difference > maxDifference) {
@@ -733,115 +532,39 @@ ELEMENT_TYPE maxDifference_template(const IMAGE_TYPE& imageA, const IMAGE_TYPE& 
 					pixelDataB += 1;
 				}
 			}
-			rowDataA.increaseBytes(imageA.stride);
-			rowDataB.increaseBytes(imageB.stride);
+			rowDataA.increaseBytes(strideA);
+			rowDataB.increaseBytes(strideB);
 		}
 		return maxDifference;
 	}
 }
-uint8_t dsr::image_maxDifference(const ImageU8& imageA, const ImageU8& imageB) {
-	if (imageA && imageB) {
-		return maxDifference_template<ImageU8Impl, 1, uint8_t>(*imageA, *imageB);
+uint8_t image_maxDifference(const ImageU8& imageA, const ImageU8& imageB) {
+	if (image_exists(imageA) && image_exists(imageB)) {
+		return maxDifference_template<ImageU8, 1, uint8_t>(imageA, imageB);
 	} else {
 		return std::numeric_limits<uint8_t>::infinity();
 	}
 }
-uint16_t dsr::image_maxDifference(const ImageU16& imageA, const ImageU16& imageB) {
-	if (imageA && imageB) {
-		return maxDifference_template<ImageU16Impl, 1, uint16_t>(*imageA, *imageB);
+uint16_t image_maxDifference(const ImageU16& imageA, const ImageU16& imageB) {
+	if (image_exists(imageA) && image_exists(imageB)) {
+		return maxDifference_template<ImageU16, 1, uint16_t>(imageA, imageB);
 	} else {
 		return std::numeric_limits<uint16_t>::infinity();
 	}
 }
-float dsr::image_maxDifference(const ImageF32& imageA, const ImageF32& imageB) {
-	if (imageA && imageB) {
-		return maxDifference_template<ImageF32Impl, 1, float>(*imageA, *imageB);
+float image_maxDifference(const ImageF32& imageA, const ImageF32& imageB) {
+	if (image_exists(imageA) && image_exists(imageB)) {
+		return maxDifference_template<ImageF32, 1, float>(imageA, imageB);
 	} else {
 		return std::numeric_limits<float>::infinity();
 	}
 }
-uint8_t dsr::image_maxDifference(const ImageRgbaU8& imageA, const ImageRgbaU8& imageB) {
-	if (imageA && imageB) {
-		return maxDifference_template<ImageRgbaU8Impl, 4, uint8_t>(*imageA, *imageB);
+uint8_t image_maxDifference(const ImageRgbaU8& imageA, const ImageRgbaU8& imageB) {
+	if (image_exists(imageA) && image_exists(imageB)) {
+		return maxDifference_template<ImageRgbaU8, 4, uint8_t>(imageA, imageB);
 	} else {
 		return std::numeric_limits<uint8_t>::infinity();
 	}
 }
 
-SafePointer<uint8_t> dsr::image_getSafePointer(const ImageU8& image, int rowIndex) {
-	if (image) {
-		return imageInternal::getSafeData<uint8_t>(image.get(), rowIndex);
-	} else {
-		return SafePointer<uint8_t>();
-	}
-}
-SafePointer<uint16_t> dsr::image_getSafePointer(const ImageU16& image, int rowIndex) {
-	if (image) {
-		return imageInternal::getSafeData<uint16_t>(image.get(), rowIndex);
-	} else {
-		return SafePointer<uint16_t>();
-	}
-}
-SafePointer<float> dsr::image_getSafePointer(const ImageF32& image, int rowIndex) {
-	if (image) {
-		return imageInternal::getSafeData<float>(image.get(), rowIndex);
-	} else {
-		return SafePointer<float>();
-	}
-}
-SafePointer<uint32_t> dsr::image_getSafePointer(const ImageRgbaU8& image, int rowIndex) {
-	if (image) {
-		return imageInternal::getSafeData<uint32_t>(image.get(), rowIndex);
-	} else {
-		return SafePointer<uint32_t>();
-	}
-}
-SafePointer<uint8_t> dsr::image_getSafePointer_channels(const ImageRgbaU8& image, int rowIndex) {
-	if (image) {
-		return imageInternal::getSafeData<uint8_t>(image.get(), rowIndex);
-	} else {
-		return SafePointer<uint8_t>();
-	}
-}
-
-void dsr::image_dangerous_replaceDestructor(ImageU8& image, const std::function<void(uint8_t *)>& newDestructor) {
-	if (image) { return buffer_replaceDestructor(image->buffer, newDestructor); }
-}
-void dsr::image_dangerous_replaceDestructor(ImageU16& image, const std::function<void(uint8_t *)>& newDestructor) {
-	if (image) { return buffer_replaceDestructor(image->buffer, newDestructor); }
-}
-void dsr::image_dangerous_replaceDestructor(ImageF32& image, const std::function<void(uint8_t *)>& newDestructor) {
-	if (image) { return buffer_replaceDestructor(image->buffer, newDestructor); }
-}
-void dsr::image_dangerous_replaceDestructor(ImageRgbaU8& image, const std::function<void(uint8_t *)>& newDestructor) {
-	if (image) { return buffer_replaceDestructor(image->buffer, newDestructor); }
-}
-
-uint8_t* dsr::image_dangerous_getData(const ImageU8& image) {
-	if (image) {
-		return imageInternal::getSafeData<uint8_t>(*image).getUnsafe();
-	} else {
-		return nullptr;
-	}
-}
-uint8_t* dsr::image_dangerous_getData(const ImageU16& image) {
-	if (image) {
-		return imageInternal::getSafeData<uint8_t>(*image).getUnsafe();
-	} else {
-		return nullptr;
-	}
-}
-uint8_t* dsr::image_dangerous_getData(const ImageF32& image) {
-	if (image) {
-		return imageInternal::getSafeData<uint8_t>(*image).getUnsafe();
-	} else {
-		return nullptr;
-	}
-}
-uint8_t* dsr::image_dangerous_getData(const ImageRgbaU8& image) {
-	if (image) {
-		return imageInternal::getSafeData<uint8_t>(*image).getUnsafe();
-	} else {
-		return nullptr;
-	}
 }

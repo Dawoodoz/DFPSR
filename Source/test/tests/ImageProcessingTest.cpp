@@ -1,5 +1,6 @@
 ﻿
 #include "../testTools.h"
+#include "../../DFPSR/base/simd.h"
 
 AlignedImageU8 addImages_generate(ImageU8 imageA, ImageU8 imageB) {
 	int width = image_getWidth(imageA);
@@ -107,7 +108,7 @@ void addImages_simd(AlignedImageU8 targetImage, AlignedImageU8 imageA, AlignedIm
 }
 
 // Making sure that all code examples from the image processing guide actually works
-START_TEST(Image)
+START_TEST(ImageProcessing)
 	{
 		AlignedImageU8 imageA = image_fromAscii(
 			"< .x>"

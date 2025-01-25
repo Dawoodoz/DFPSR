@@ -59,7 +59,7 @@ void dsr::gui_initialize() {
 	}
 }
 
-DsrWindow::DsrWindow(std::shared_ptr<BackendWindow> backend)
+DsrWindow::DsrWindow(Handle<BackendWindow> backend)
  : backend(backend), innerWidth(backend->getWidth()), innerHeight(backend->getHeight()) {
 	// Initialize the GUI system if needed
 	gui_initialize();
@@ -75,7 +75,7 @@ DsrWindow::DsrWindow(std::shared_ptr<BackendWindow> backend)
 	};
 	// Receiving notifications about resizing should be done in the main panel
 	this->backend->resizeEvent() = [this](int width, int height) {
-		BackendWindow *backend = this->backend.get();
+		BackendWindow *backend = this->backend.getUnsafe();
 		ImageRgbaU8 canvas = backend->getCanvas();
 		this->innerWidth = width;
 		this->innerHeight = height;
@@ -90,7 +90,7 @@ DsrWindow::DsrWindow(std::shared_ptr<BackendWindow> backend)
 	this->resetInterface();
 }
 
-static void setBackendWindowHandle(std::shared_ptr<VisualComponent> component, std::shared_ptr<BackendWindow> windowHandle) {
+static void setBackendWindowHandle(Handle<VisualComponent> component, Handle<BackendWindow> windowHandle) {
 	component->window = windowHandle;
 	for (int c = 0; c < component->children.length(); c++) {
 		setBackendWindowHandle(component->children[c], windowHandle);
@@ -99,14 +99,14 @@ static void setBackendWindowHandle(std::shared_ptr<VisualComponent> component, s
 
 DsrWindow::~DsrWindow() {
 	// Disconnect the backend window from all components, so that handles to components without a DsrWindow will not prevent the BackendWindow from being freed.
-	setBackendWindowHandle(this->mainPanel, std::shared_ptr<BackendWindow>());
+	setBackendWindowHandle(this->mainPanel, Handle<BackendWindow>());
 }
 
 void DsrWindow::applyLayout() {
 	this->mainPanel->applyLayout(IRect(0, 0, this->getCanvasWidth(), this->getCanvasHeight()));
 }
 
-std::shared_ptr<VisualComponent> DsrWindow::findComponentByName(ReadableString name) const {
+Handle<VisualComponent> DsrWindow::findComponentByName(ReadableString name) const {
 	if (string_match(this->mainPanel->getName(), name)) {
 		return this->mainPanel;
 	} else {
@@ -114,7 +114,7 @@ std::shared_ptr<VisualComponent> DsrWindow::findComponentByName(ReadableString n
 	}
 }
 
-std::shared_ptr<VisualComponent> DsrWindow::findComponentByNameAndIndex(ReadableString name, int index) const {
+Handle<VisualComponent> DsrWindow::findComponentByNameAndIndex(ReadableString name, int index) const {
 	if (string_match(this->mainPanel->getName(), name) && this->mainPanel->getIndex() == index) {
 		return this->mainPanel;
 	} else {
@@ -122,14 +122,14 @@ std::shared_ptr<VisualComponent> DsrWindow::findComponentByNameAndIndex(Readable
 	}
 }
 
-std::shared_ptr<VisualComponent> DsrWindow::getRootComponent() const {
+Handle<VisualComponent> DsrWindow::getRootComponent() const {
 	return this->mainPanel;
 }
 
 void DsrWindow::resetInterface() {
 	// Create an empty main panel
-	this->mainPanel = std::dynamic_pointer_cast<VisualComponent>(createPersistentClass("Panel"));
-	if (this->mainPanel.get() == nullptr) {
+	this->mainPanel = handle_dynamicCast<VisualComponent>(createPersistentClass("Panel"));
+	if (this->mainPanel.isNull()) {
 		throwError(U"DsrWindow::resetInterface: The window's Panel could not be created!");
 	}
 	this->mainPanel->setName("mainPanel");
@@ -140,10 +140,10 @@ void DsrWindow::resetInterface() {
 
 void DsrWindow::loadInterfaceFromString(String layout, const ReadableString &fromPath) {
 	// Load a tree structure of visual components from text
-	this->mainPanel = std::dynamic_pointer_cast<VisualComponent>(createPersistentClassFromText(layout, fromPath));
+	this->mainPanel = handle_dynamicCast<VisualComponent>(createPersistentClassFromText(layout, fromPath));
 	// Re-assign the backend window handle
 	setBackendWindowHandle(this->mainPanel, this->backend);
-	if (this->mainPanel.get() == nullptr) {
+	if (this->mainPanel.isNull()) {
 		throwError(U"DsrWindow::loadInterfaceFromString: The window's root component could not be created!\n\nLayout:\n", layout, "\n");
 	}
 	this->applyLayout();

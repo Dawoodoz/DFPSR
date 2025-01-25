@@ -1,6 +1,6 @@
 ﻿// zlib open source license
 //
-// Copyright (c) 2017 to 2019 David Forsgren Piuva
+// Copyright (c) 2017 to 2025 David Forsgren Piuva
 // 
 // This software is provided 'as-is', without any express or implied
 // warranty. In no event will the authors be held liable for any damages
@@ -25,15 +25,13 @@
 #define DFPSR_RENDER_MODEL_POLYGONMODEL
 
 #include <cstdint>
-#include "../../api/types.h"
-#include "../../collection/List.h"
 #include "../../api/stringAPI.h"
+#include "../../image/Texture.h"
 #include "../shader/Shader.h"
 #include "../Camera.h"
 #include "../ResourcePool.h"
 #include "../renderCore.h"
 #include "../../math/FVector.h"
-#include "../../collection/List.h"
 
 namespace dsr {
 
@@ -66,14 +64,14 @@ struct Polygon {
 };
 
 struct Part {
-	ImageRgbaU8 diffuseMap, lightMap;
+	TextureRgbaU8 diffuseMap, lightMap;
 	List<Polygon> polygonBuffer;
 	String name;
 	explicit Part(String name);
-	Part(const ImageRgbaU8 &diffuseMap, const ImageRgbaU8 &lightMap, const List<Polygon> &polygonBuffer, const String &name);
+	Part(const TextureRgbaU8 &diffuseMap, const TextureRgbaU8 &lightMap, const List<Polygon> &polygonBuffer, const String &name);
 	Part clone() const;
-	void render(CommandQueue *commandQueue, ImageRgbaU8& targetImage, ImageF32& depthBuffer, const Transform3D &modelToWorldTransform, const Camera &camera, Filter filter, const ProjectedPoint* projected) const;
-	void renderDepth(ImageF32& depthBuffer, const Transform3D &modelToWorldTransform, const Camera &camera, const ProjectedPoint* projected) const;
+	void render(CommandQueue *commandQueue, ImageRgbaU8* targetImage, ImageF32* depthBuffer, const Transform3D &modelToWorldTransform, const Camera &camera, Filter filter, const ProjectedPoint* projected) const;
+	void renderDepth(ImageF32* depthBuffer, const Transform3D &modelToWorldTransform, const Camera &camera, const ProjectedPoint* projected) const;
 	int getPolygonCount() const;
 	int getPolygonVertexCount(int polygonIndex) const;
 };
@@ -102,12 +100,12 @@ public:
 	String getPartName(int partIndex) const;
 
 	// TODO: Make an array of texture slots using a class enum for index
-	ImageRgbaU8 getDiffuseMap(int partIndex) const;
-	void setDiffuseMap(const ImageRgbaU8 &diffuseMap, int partIndex);
+	TextureRgbaU8 getDiffuseMap(int partIndex) const;
+	void setDiffuseMap(const TextureRgbaU8 &diffuseMap, int partIndex);
 	void setDiffuseMapByName(ResourcePool &pool, const String &filename, int partIndex);
 
-	ImageRgbaU8 getLightMap(int partIndex) const;
-	void setLightMap(const ImageRgbaU8 &lightMap, int partIndex);
+	TextureRgbaU8 getLightMap(int partIndex) const;
+	void setLightMap(const TextureRgbaU8 &lightMap, int partIndex);
 	void setLightMapByName(ResourcePool &pool, const String &filename, int partIndex);
 
 	// Polygon interface
@@ -130,8 +128,8 @@ public:
 	FVector4D getTexCoord(int partIndex, int polygonIndex, int vertexIndex) const;
 	void setTexCoord(int partIndex, int polygonIndex, int vertexIndex, const FVector4D& texCoord);
 	// Rendering
-	void render(CommandQueue *commandQueue, ImageRgbaU8& targetImage, ImageF32& depthBuffer, const Transform3D &modelToWorldTransform, const Camera &camera) const;
-	void renderDepth(ImageF32& depthBuffer, const Transform3D &modelToWorldTransform, const Camera &camera) const;
+	void render(CommandQueue *commandQueue, ImageRgbaU8* targetImage, ImageF32* depthBuffer, const Transform3D &modelToWorldTransform, const Camera &camera) const;
+	void renderDepth(ImageF32* depthBuffer, const Transform3D &modelToWorldTransform, const Camera &camera) const;
 };
 
 }

@@ -61,11 +61,11 @@ public:
 	MyCollection() {}
 	MyCollection(int a, const String &b) : MyClass(a, b) {}
 public:
-	List<std::shared_ptr<MyClass>> children;
-	bool addChild(std::shared_ptr<Persistent> child) override {
+	List<Handle<MyClass>> children;
+	bool addChild(Handle<Persistent> child) override {
 		// Try to cast from base class Persistent to derived class MyClass
-		std::shared_ptr<MyClass> myClass = std::dynamic_pointer_cast<MyClass>(child);
-		if (myClass.get() == nullptr) {
+		Handle<MyClass> myClass = handle_dynamicCast<MyClass>(child);
+		if (myClass.isNull()) {
 			return false; // Wrong type!
 		} else {
 			this->children.push(myClass);
@@ -75,7 +75,7 @@ public:
 	int getChildCount() const override {
 		return this->children.length();
 	}
-	std::shared_ptr<Persistent> getChild(int index) const override {
+	Handle<Persistent> getChild(int index) const override {
 		return this->children[index];
 	}
 };
@@ -134,7 +134,7 @@ START_TEST(Persistent)
 	ASSERT_EQUAL(myText, exampleOne);
 
 	// MyClass from text
-	std::shared_ptr<Persistent> myObjectCopy = createPersistentClassFromText(myText, U"");
+	Handle<Persistent> myObjectCopy = createPersistentClassFromText(myText, U"");
 	ASSERT_EQUAL(myObjectCopy->toString(), myText);
 
 	// MySubClass to text
@@ -143,20 +143,27 @@ START_TEST(Persistent)
 	ASSERT_EQUAL(MySubText, exampleTwo);
 
 	// MySubClass from text
-	std::shared_ptr<Persistent> mySubObjectCopy = createPersistentClassFromText(MySubText, U"");
+	Handle<Persistent> mySubObjectCopy = createPersistentClassFromText(MySubText, U"");
 	ASSERT_EQUAL(mySubObjectCopy->toString(), MySubText);
 
 	// Tree structure to text
 	MyCollection tree(1, U"first");
-	std::shared_ptr<MyCollection> second = std::make_shared<MyCollection>(2, U"second");
-	tree.addChild(std::make_shared<MyClass>(12, U"test"));
+	ASSERT_EQUAL(tree.getChildCount(), 0);
+	Handle<MyCollection> second = handle_create<MyCollection>(2, U"second");
+	tree.addChild(handle_create<MyClass>(12, U"test"));
+	ASSERT_EQUAL(tree.getChildCount(), 1);
 	tree.addChild(second);
-	tree.addChild(std::make_shared<MySubClass>(34, U"foo", 56, 78));
-	second->addChild(std::make_shared<MyClass>(3, U"third"));
+	ASSERT_EQUAL(tree.getChildCount(), 2);
+	tree.addChild(handle_create<MySubClass>(34, U"foo", 56, 78));
+	ASSERT_EQUAL(tree.getChildCount(), 3);
+	ASSERT_EQUAL(second->getChildCount(), 0);
+	second->addChild(handle_create<MyClass>(3, U"third"));
+	ASSERT_EQUAL(second->getChildCount(), 1);
+	ASSERT_EQUAL(tree.getChildCount(), 3);
 	ASSERT_EQUAL(tree.toString(), exampleThree);
 
 	// Tree structure from text
-	std::shared_ptr<Persistent> treeCopy = createPersistentClassFromText(exampleThree, U"");
+	Handle<Persistent> treeCopy = createPersistentClassFromText(exampleThree, U"");
 	ASSERT_EQUAL(treeCopy->toString(), exampleThree);
 
 	// Persistent string lists

@@ -42,20 +42,21 @@ class VisualComponent : public Persistent {
 PERSISTENT_DECLARATION(VisualComponent)
 public: // Relations
 	// Handle to the backend window.
-	std::shared_ptr<BackendWindow> window;
+	Handle<BackendWindow> window;
+	// TODO: Should a weak handle be implemented to safely avoid cycles, or is this safe enough?
 	// Parent component
 	VisualComponent *parent = nullptr;
 	IRect givenSpace; // Remembering the local region that was reserved inside of the parent component.
 	bool regionAccessed = false; // If someone requested access to the region, remember to update layout in case of new settings.
 	// Child components
-	List<std::shared_ptr<VisualComponent>> children;
+	List<Handle<VisualComponent>> children;
 	// Remember the component used for a drag event.
 	//   Ensures that mouse down events are followed by mouse up events on the same component.
 	int holdCount = 0;
 	// Marked for removal from the parent when set to true.
 	bool detach = false;
 	// Remember the pressed component for sending mouse move events outside of its region.
-	std::shared_ptr<VisualComponent> dragComponent;
+	Handle<VisualComponent> dragComponent;
 private: // States
 	// Use methods to set the current state, then have it copied to previousState after calling updateStateEvent in sendNotifications.
 	ComponentState currentState = 0;
@@ -156,10 +157,10 @@ public: // Callbacks that the application use by assigning lambdas to specific c
 public:
 	// Returning a shader pointer to the topmost direct visible child that contains pixelPosition.
 	//   The pixelPosition is relative to the called component's upper left corner.
-	std::shared_ptr<VisualComponent> getDirectChild(const IVector2D& pixelPosition);
+	Handle<VisualComponent> getDirectChild(const IVector2D& pixelPosition);
 	// Returning a shared pointer to itself.
 	//   Currently not working for the root component because of limitations in C++.
-	std::shared_ptr<VisualComponent> getShared();
+	Handle<VisualComponent> getHandle();
 public:
 	// Draw the component
 	//   The component is responsible for drawing the component at this->location + offset.
@@ -195,22 +196,22 @@ public:
 	//   Preconditions:
 	//     The parent's component type is a container.
 	//     The child does not already have a parent.
-	void addChildComponent(std::shared_ptr<VisualComponent> child);
+	void addChildComponent(Handle<VisualComponent> child);
 	// Called with any persistent type when constructing child components from text
-	bool addChild(std::shared_ptr<Persistent> child) override;
+	bool addChild(Handle<Persistent> child) override;
 	// Called when saving to text
 	int getChildCount() const override;
-	std::shared_ptr<Persistent> getChild(int index) const override;
+	Handle<Persistent> getChild(int index) const override;
 
 	// Returns true iff child is a member of the component
 	//   Searches recursively
 	bool hasChild(VisualComponent *child) const;
-	bool hasChild(std::shared_ptr<VisualComponent> child) const;
+	bool hasChild(Handle<VisualComponent> child) const;
 
 	// Find the first child component with the requested name using a case sensitive match.
 	//   Returns: A shared pointer to the child or null if not found.
-	std::shared_ptr<VisualComponent> findChildByName(ReadableString name) const;
-	std::shared_ptr<VisualComponent> findChildByNameAndIndex(ReadableString name, int index) const;
+	Handle<VisualComponent> findChildByName(ReadableString name) const;
+	Handle<VisualComponent> findChildByNameAndIndex(ReadableString name, int index) const;
 	// Detach the component from any parent
 	void detachFromParent();
 

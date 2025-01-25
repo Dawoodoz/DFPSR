@@ -2,8 +2,23 @@
 #define TEST_TOOLS
 
 #include "../DFPSR/includeFramework.h"
+#include <csignal>
 
 using namespace dsr;
+
+static bool beginsWith(const ReadableString &message, const ReadableString &prefix) {
+	// Reading a character out of bound safely returns \0 by value, so we can rely
+	// on the null character to exit early if message is storter than prefix.
+	for (int c = 0; c < string_length(prefix); c++) {
+		if (message[c] != prefix[c]) {
+			return false;
+		}
+	}
+	return true;
+}
+
+static thread_local String ExpectedErrorPrefix;
+static thread_local bool failed = false;
 
 static const int PASSED = 0;
 static const int FAILED = 1;
@@ -21,8 +36,34 @@ inline bool nearValue(const FVector4D& a, const FVector4D& b) {
 	return nearValue(a.x, b.x) && nearValue(a.y, b.y) && nearValue(a.z, b.z) && nearValue(a.w, b.w);
 }
 
-#define START_TEST(NAME) int main() { printText("Running test \"", #NAME, "\": ");
-#define END_TEST printText(" (done)\n"); return PASSED; }
+static void messageHandler(const ReadableString &message, MessageType type) {
+	if (type == MessageType::Error) {
+		if (string_length(ExpectedErrorPrefix) == 0) {
+			// Unexpected error!
+			string_sendMessage_default(message, MessageType::Error);
+			failed = true;
+		} else {
+			// Expected error.
+			if (!beginsWith(message, ExpectedErrorPrefix)) {
+				string_sendMessage_default(string_combine(U"Unexpected message in error!\n\nMessage:\n", message, U"\n\nExpected prefix:\n", ExpectedErrorPrefix, U"\n\n"), MessageType::Error);
+				failed = true;
+			} else {
+				string_sendMessage_default(U"*", MessageType::StandardPrinting);
+			}
+		}
+	} else {
+		// Forward everything to the default message handler.
+		string_sendMessage_default(message, type);
+	}
+}
+
+#define START_TEST(NAME) \
+int main() { \
+	std::signal(SIGSEGV, [](int signal) { throwError(U"Segmentation fault!"); }); \
+	string_assignMessageHandler(&messageHandler); \
+	printText(U"Running test \"", #NAME, "\": ");
+
+#define END_TEST printText(U" (done)\n"); return PASSED; }
 
 #define OP_EQUALS(A, B) ((A) == (B))
 #define OP_NOT_EQUALS(A, B) ((A) != (B))
@@ -31,56 +72,66 @@ inline bool nearValue(const FVector4D& a, const FVector4D& b) {
 #define OP_GREATER(A, B) ((A) > (B))
 #define OP_GREATER_OR_EQUAL(A, B) ((A) >= (B))
 
+// These can be used instead of ASSERT_CRASH to handle multiple template arguments that are not enclosed within ().
+#define BEGIN_CRASH(PREFIX) \
+	ExpectedErrorPrefix = PREFIX;
+#define END_CRASH \
+	ExpectedErrorPrefix = ""; \
+	if (failed) return FAILED;
+
+// Prefix is the expected start of the error message.
+//   Just enough to know that we triggered the right error message.
+#define ASSERT_CRASH(A, PREFIX) \
+	BEGIN_CRASH(PREFIX); \
+	(void)(A); \
+	END_CRASH
+
 #define ASSERT(CONDITION) \
 	if (CONDITION) { \
-		printText("*"); \
+		printText(U"*"); \
 	} else { \
-		printText("\n\n"); \
-		printText("_______________________________ FAIL _______________________________\n"); \
-		printText("\n"); \
-		printText("Failed assertion!\nCondition: ", #CONDITION, "\n"); \
-		printText("____________________________________________________________________\n"); \
+		printText(U"\n\n"); \
+		printText(U"_______________________________ FAIL _______________________________\n"); \
+		printText(U"\n"); \
+		printText(U"Failed assertion!\nCondition: ", #CONDITION, U"\n"); \
+		printText(U"____________________________________________________________________\n"); \
 		return FAILED; \
-	}
+	} \
+	if (failed) return FAILED;
 #define ASSERT_COMP(A, B, OP, OP_NAME) \
 	if (OP(A, B)) { \
-		printText("*"); \
+		printText(U"*"); \
 	} else { \
-		printText("\n\n"); \
-		printText("_______________________________ FAIL _______________________________\n"); \
-		printText("\n"); \
-		printText("Condition: ", #A, " ", OP_NAME, " ", #B, "\n"); \
-		printText((A), " ", OP_NAME, " ", (B), " is false.\n"); \
-		printText("____________________________________________________________________\n"); \
-		printText("\n\n"); \
+		printText(U"\n\n"); \
+		printText(U"_______________________________ FAIL _______________________________\n"); \
+		printText(U"\n"); \
+		printText(U"Condition: ", #A, " ", OP_NAME, U" ", #B, U"\n"); \
+		printText((A), " ", OP_NAME, " ", (B), U" is false.\n"); \
+		printText(U"____________________________________________________________________\n"); \
+		printText(U"\n\n"); \
 		return FAILED; \
-	}
+	} \
+	if (failed) return FAILED;
 #define ASSERT_EQUAL(A, B) ASSERT_COMP(A, B, OP_EQUALS, "==")
 #define ASSERT_NOT_EQUAL(A, B) ASSERT_COMP(A, B, OP_NOT_EQUALS, "!=")
 #define ASSERT_LESSER(A, B) ASSERT_COMP(A, B, OP_LESSER, "<")
 #define ASSERT_LESSER_OR_EQUAL(A, B) ASSERT_COMP(A, B, OP_LESSER_OR_EQUAL, "<=")
 #define ASSERT_GREATER(A, B) ASSERT_COMP(A, B, OP_GREATER, ">")
 #define ASSERT_GREATER_OR_EQUAL(A, B) ASSERT_COMP(A, B, OP_GREATER_OR_EQUAL, ">=")
-#define ASSERT_CRASH(A) \
-try { \
-	(void)(A); \
-	return FAILED; \
-} catch(...) { \
-	printText("*"); \
-}
 #define ASSERT_NEAR(A, B) \
 	if (nearValue(A, B)) { \
-		printText("*"); \
+		printText(U"*"); \
 	} else { \
-		printText("\n\n"); \
-		printText("_______________________________ FAIL _______________________________\n"); \
-		printText("\n"); \
-		printText("Condition: ", #A, " ≈ ", #B, "\n"); \
-		printText((A), " is not close enough to ", (B), "\n"); \
-		printText("____________________________________________________________________\n"); \
-		printText("\n\n"); \
+		printText(U"\n\n"); \
+		printText(U"_______________________________ FAIL _______________________________\n"); \
+		printText(U"\n"); \
+		printText(U"Condition: ", #A, U" = ", #B, U"\n"); \
+		printText((A), " is not close enough to ", (B), U"\n"); \
+		printText(U"____________________________________________________________________\n"); \
+		printText(U"\n\n"); \
 		return FAILED; \
-	}
+	} \
+	if (failed) return FAILED;
 
 const dsr::String inputPath = dsr::string_combine(U"test", file_separator(), U"input", file_separator());
 const dsr::String expectedPath = dsr::string_combine(U"test", file_separator(), U"expected", file_separator());

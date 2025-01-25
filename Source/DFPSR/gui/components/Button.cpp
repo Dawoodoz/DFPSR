@@ -133,7 +133,7 @@ void Button::completeAssets() {
 	if (this->button.methodIndex == -1) {
 		this->loadTheme(theme_getDefault());
 	}
-	if (this->font.get() == nullptr) {
+	if (this->font.isNull()) {
 		this->font = font_getDefault();
 	}
 }

@@ -22,7 +22,7 @@
 //    3. This notice may not be removed or altered from any source
 //    distribution.
 
-#define DFPSR_INTERNAL_ACCESS
+#define DSR_INTERNAL_ACCESS
 
 #include "guiAPI.h"
 #include "timeAPI.h"
@@ -32,31 +32,31 @@
 using namespace dsr;
 
 // To be implemented outside of the core framework
-std::shared_ptr<dsr::BackendWindow> createBackendWindow(const dsr::String& title, int width, int height);
+Handle<dsr::BackendWindow> createBackendWindow(const dsr::String& title, int width, int height);
 
-#define MUST_EXIST(OBJECT, METHOD) if (OBJECT.get() == nullptr) { throwError("The " #OBJECT " handle was null in " #METHOD "\n"); }
+#define MUST_EXIST(OBJECT, METHOD) if (OBJECT.isNull()) { throwError("The " #OBJECT " handle was null in " #METHOD "\n"); }
 
 Window dsr::window_create(const String& title, int32_t width, int32_t height) {
 	if (width < 1) { width = 1; }
 	if (height < 1) { height = 1; }
-	std::shared_ptr<dsr::BackendWindow> backend = createBackendWindow(title, width, height);
-	if (backend.get() != nullptr) {
-		return std::make_shared<DsrWindow>(backend);
+	Handle<dsr::BackendWindow> backend = createBackendWindow(title, width, height);
+	if (backend.isNotNull()) {
+		return handle_create<DsrWindow>(backend).setName("DSR Window");
 	} else {
-		return std::shared_ptr<DsrWindow>();
+		return Handle<DsrWindow>();
 	}
 }
 
 Window dsr::window_create_fullscreen(const String& title) {
-	return std::make_shared<DsrWindow>(createBackendWindow(title, 0, 0));
+	return handle_create<DsrWindow>(createBackendWindow(title, 0, 0)).setName("DSR Window");
 }
 
 bool dsr::window_exists(const Window& window) {
-	return window.get() != nullptr;
+	return window.isNotNull();
 }
 
 bool dsr::component_exists(const Component& component) {
-	return component.get() != nullptr;
+	return component.isNotNull();
 }
 
 void dsr::window_loadInterfaceFromString(const Window& window, const String& content, const ReadableString &fromPath) {
@@ -86,8 +86,8 @@ Component dsr::window_getRoot(const Window& window) {
 
 Component dsr::component_createWithInterfaceFromString(Component& parent, const String& content, const ReadableString &fromPath) {
 	MUST_EXIST(parent, component_createWithInterfaceFromString);
-	Component result = std::dynamic_pointer_cast<VisualComponent>(createPersistentClassFromText(content, fromPath));
-	if (result.get() == nullptr) {
+	Component result = handle_dynamicCast<VisualComponent>(createPersistentClassFromText(content, fromPath));
+	if (result.isNull()) {
 		throwError(U"component_createWithInterfaceFromString: The component could not be created!\n\nLayout:\n", content, "\n");
 	}
 	parent->addChildComponent(result);
@@ -115,7 +115,7 @@ Component dsr::component_findChildByNameAndIndex(const Component& parent, const 
 Component dsr::window_findComponentByName(const Window& window, const ReadableString& name, bool mustExist) {
 	MUST_EXIST(window, window_findComponentByName);
 	Component result = window->findComponentByName(name);
-	if (mustExist && result.get() == nullptr) {
+	if (mustExist && result.isNull()) {
 		throwError(U"window_findComponentByName: No child component named ", name, " found!");
 	}
 	return result;
@@ -124,14 +124,14 @@ Component dsr::window_findComponentByName(const Window& window, const ReadableSt
 Component dsr::window_findComponentByNameAndIndex(const Window& window, const ReadableString& name, int index, bool mustExist) {
 	MUST_EXIST(window, window_findComponentByNameAndIndex);
 	Component result = window->findComponentByNameAndIndex(name, index);
-	if (mustExist && result.get() == nullptr) {
+	if (mustExist && result.isNull()) {
 		throwError(U"window_findComponentByName: No child component named ", name, " with index ", index, " found!");
 	}
 	return result;
 }
 
 int dsr::component_getChildCount(const Component& parent) {
-	if (parent.get()) {
+	if (parent.getUnsafe()) {
 		return parent->getChildCount();
 	} else {
 		return -1;
@@ -139,10 +139,10 @@ int dsr::component_getChildCount(const Component& parent) {
 }
 
 Component dsr::component_getChild(const Component& parent, int childIndex) {
-	if (parent.get()) {
-		return std::dynamic_pointer_cast<VisualComponent>(parent->getChild(childIndex));
+	if (parent.getUnsafe()) {
+		return handle_dynamicCast<VisualComponent>(parent->getChild(childIndex));
 	} else {
-		return std::shared_ptr<VisualComponent>(); // Null handle
+		return Handle<VisualComponent>(); // Null handle
 	}
 }
 
@@ -481,12 +481,12 @@ Component dsr::component_create(const Component& parent, const ReadableString& c
 	// Making sure that the default components exist before trying to create a component manually.
 	gui_initialize();
 	// Creating a component from the name
-	Component child = std::dynamic_pointer_cast<VisualComponent>(createPersistentClass(className));
-	if (child) {
+	Component child = handle_dynamicCast<VisualComponent>(createPersistentClass(className));
+	if (child.isNotNull()) {
 		child->setName(identifierName);
 		child->setIndex(index);
 		// Attaching to a parent is optional, but convenient to do in the same call.
-		if (parent) {
+		if (parent.isNotNull()) {
 			parent->addChildComponent(child);
 		}
 	}

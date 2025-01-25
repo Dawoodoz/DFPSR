@@ -27,8 +27,6 @@
 #include <cstdint>
 #include "Camera.h"
 #include "shader/Shader.h"
-#include "../image/ImageRgbaU8.h"
-#include "../image/ImageF32.h"
 #include "../base/threading.h"
 #include "../collection/List.h"
 
@@ -36,9 +34,9 @@ namespace dsr {
 
 struct TriangleDrawData {
 	// Color target
-	ImageRgbaU8Impl *targetImage;
+	ImageRgbaU8 *targetImage;
 	// Depth target
-	ImageF32Impl *depthBuffer;
+	ImageF32 *depthBuffer;
 	// When perspective is used, the depth buffer stores 1 / depth instead of linear depth.
 	bool perspective;
 	// The target blending method
@@ -47,7 +45,7 @@ struct TriangleDrawData {
 	TriangleInput triangleInput;
 	// Function pointer to the method that will process the command
 	DRAW_CALLBACK_TYPE processTriangle;
-	TriangleDrawData(ImageRgbaU8Impl *targetImage, ImageF32Impl *depthBuffer, bool perspective, Filter filter, const TriangleInput &triangleInput, DRAW_CALLBACK_TYPE processTriangle)
+	TriangleDrawData(ImageRgbaU8 *targetImage, ImageF32 *depthBuffer, bool perspective, Filter filter, const TriangleInput &triangleInput, DRAW_CALLBACK_TYPE processTriangle)
 	: targetImage(targetImage), depthBuffer(depthBuffer), perspective(perspective), filter(filter), triangleInput(triangleInput), processTriangle(processTriangle) {}
 };
 
@@ -97,25 +95,19 @@ public:
 //   * triangle should have passed the triangle visibility test for the actual image bound.
 //     Only construct the shader and make this call if "getTriangleVisibility(triangle, camera, false) != Visibility::Hidden" passed.
 //     Otherwise, it will waste a lot of time on rasterizing triangles that are not even visible.
-//   * targetImage must be a render target because it needs some padding for reading out of bound while rendering.
-//     ImageRgbaU8Impl::createRenderTarget will automatically padd any odd dimensions given.
-void renderTriangleWithShader(CommandQueue *commandQueue, const TriangleDrawData &triangleDrawData, const Camera &camera, const ITriangle2D &triangle, const IRect &clipBound);
 
 // Given a set of triangle data, this method can automatically draw it using the fastest default shader.
 // Triangle culling is handled automatically but you might want to apply culling per model or something before drawing many triangles.
 // commandQueue can be null to render directly using a single thread.
 // targetImage can be null to avoid using the pixel shader.
 // depthBuffer can be null to render without depth buffering.
-// Preconditions:
-//   * targetImage must be a render target because it needs some padding for reading out of bound while rendering.
-//     ImageRgbaU8Impl::createRenderTarget will automatically padd any odd dimensions given.
 void renderTriangleFromData(
-  CommandQueue *commandQueue, ImageRgbaU8Impl *targetImage, ImageF32Impl *depthBuffer,
+  CommandQueue *commandQueue, ImageRgbaU8 *targetImage, ImageF32 *depthBuffer,
   const Camera &camera, const ProjectedPoint &posA, const ProjectedPoint &posB, const ProjectedPoint &posC,
-  Filter filter, const ImageRgbaU8Impl *diffuse, const ImageRgbaU8Impl *light,
+  Filter filter, const TextureRgbaU8 *diffuse, const TextureRgbaU8 *light,
   TriangleTexCoords texCoords, TriangleColors colors
 );
-void renderTriangleFromDataDepth(ImageF32Impl *depthBuffer, const Camera &camera, const ProjectedPoint &posA, const ProjectedPoint &posB, const ProjectedPoint &posC);
+void renderTriangleFromDataDepth(ImageF32 *depthBuffer, const Camera &camera, const ProjectedPoint &posA, const ProjectedPoint &posB, const ProjectedPoint &posC);
 
 }
 

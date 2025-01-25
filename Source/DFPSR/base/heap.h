@@ -1,6 +1,6 @@
 // zlib open source license
 //
-// Copyright (c) 2024 David Forsgren Piuva
+// Copyright (c) 2024 to 2025 David Forsgren Piuva
 // 
 // This software is provided 'as-is', without any express or implied
 // warranty. In no event will the authors be held liable for any damages
@@ -21,36 +21,130 @@
 //    3. This notice may not be removed or altered from any source
 //    distribution.
 
+// An arena memory allocator with recycling bins to provide heap memory.
+//   All allocations are reference counted, because the memory allocator itself may increase the reference count as needed.
+//     * An allocation with use count 0 will remain until the use count changes and reaches zero again.
+//   All allocations are aligned to DSR_MAXIMUM_ALIGNMENT to prevent false sharing of cache lines between threads.
+//   The space in front of each allocation contains a HeapHeader including:
+//     * The total size of the allocation including padding and the header.
+//     * How many of the allocated bytes that are actually used.
+//     * A reference counter.
+//     * A destructor to allow freeing the memory no matter where the reference counter decreases to zero.
+//     * A bin index for fast recycling of memory.
+//     * Bit flags for keeping track of the allocation's state.
+//   In debug mode, the header also contains:
+//     * A thread hash to keep track of data ownership.
+//       All heap allocations are currently shared among all threads unlike virtual stack memory.
+//     * An allocation identity that is unique for each new allocation.
+//       When freed, the header's allocation identity is set to zero to prevent accidental use of freed memory.
+//       When recycled as a new allocation, the same address gets a new identity, which invalidates any old SafePointer to the same address.
+//     * An ascii name to make memory debugging easier.
+
+// Dimensions
+//   used size <= padded size <= allocation size
+// * Size defines the used bytes that represent something, which affects destruction of elements.
+//   Size can change from 0 to allocation size without having to move the data.
+// * The padded size defines the region where memory access is allowed for SafePointer.
+//   Padded size is computed by rounding up to whole blocks of DSR_MAXIMUM_ALIGNMENT.
+// * Allocation size is the available space to work with.
+//   To change the allocation's size, one must move to another memory location.
+
 #ifndef DFPSR_HEAP
 #define DFPSR_HEAP
 
 #include "SafePointer.h"
+#include <functional>
 
 namespace dsr {
+	// TODO: Replace with a lambda printing the name from capture and optional serialized content, because memory efficiency is not required in debug mode.
+	#ifdef SAFE_POINTER_CHECKS
+		// Assign a debug name to the allocation.
+		//   Does nothing if allocation is nullptr.
+		//   Only assign constant ascii string literals.
+		void heap_setAllocationName(void * const allocation, const char *name);
+		// Get the ascii name of allocation, or "none" if allocation is nullptr.
+		const char * heap_getAllocationName(void * const allocation);
+		// Gets the size padded out to whole blocks of DSR_MAXIMUM_ALIGNMENT, for constructing a SafePointer.
+		uintptr_t heap_getPaddedSize(void const * const allocation);
+	#endif
+
+	// TODO: Allow allocating fixed size allocations using a typename and pre-calculate the bin index in compile time.
+	//       This requires the bin sizes to be independent of DSR_MAXIMUM_ALIGNMENT, possibly by leaving a few bins
+	//       unused in the beginning and start counting with the header size as the smallest allocation size.
 	// Allocate memory in the heap.
 	//   The minimumSize argument is the minimum number of bytes to allocate, but the result may give you more than you asked for.
+	//   To allow representing empty files using buffers, it is allowed to create an allocation of zero bytes.
 	//   When zeroed is true, the new memory will be zeroed. Otherwise it may contain uninitialized data.
 	// Post-condition: Returns pointers to the payload and header.
-	UnsafeAllocation heap_allocate(uint64_t minimumSize, bool zeroed = true);
+	UnsafeAllocation heap_allocate(uintptr_t minimumSize, bool zeroed = true);
+
+	// Increase the use count of an allocation.
+	//   Does nothing if the allocation is nullptr.
+	void heap_increaseUseCount(void const * const allocation);
+
+	// Decrease the use count of an allocation and recycle it when reaching zero.
+	//   Does nothing if the allocation is nullptr.
+	void heap_decreaseUseCount(void const * const allocation);
+
+	// Pre-condition:
+	//   allocation points to memory allocated as heap_allocate(...).data because this feature is specific to this allocator.
+	// Post-condition:
+	//   Returns the number of bytes in the allocation that are actually used, which is used for tight bound checks and knowing how large a buffer is.
+	//   Returns 0 if allocation is nullptr.
+	uintptr_t heap_getUsedSize(void const * const allocation);
+
+	// Side-effect:
+	//   Assigns a new used size to allocation.
+	//   Has no effect if allocation is nullptr.
+	// Pre-condition:
+	//   You may not reserve more memory than what is available in total.
+	//   size <= heap_getAllocationSize(allocation)
+	//   If exceeded, size will be limited by the allocation's size.
+	// Post-condition:
+	//   Returns the assigned size, which is the given size, an exceeded allocation size, or zero for an allocation that does not exist.
+	uintptr_t heap_setUsedSize(void * const allocation, uintptr_t size);
+
+	// A function pointer for destructors.
+	using HeapDestructorPointer = void(*)(void *toDestroy, void *externalResource);
+	struct HeapDestructor {
+		// A function pointer to a method taking toDestroy and externalResource as arguments.
+		HeapDestructorPointer destructor = nullptr;
+		// A pointer for freeing external resources owning the allocation.
+		void *externalResource = nullptr;
+		// Constructor.
+		HeapDestructor(HeapDestructorPointer destructor = nullptr, void *externalResource = nullptr)
+		: destructor(destructor), externalResource(externalResource) {}
+	};
+
+	// Register a destructor function pointer to be called automatically when the allocation is freed.
+	//   externalResource is the second argument that will be given to destructor together with the freed memory to destruct.
+	void heap_setAllocationDestructor(void * const allocation, const HeapDestructor &destructor);
+
+	// Get the use count outside of transactions without locking.
+	uintptr_t heap_getUseCount(void const * const allocation);
 
 	// Pre-condition: The allocation pointer must point to the start of a payload allocated using heap_allocate, no offsets nor other allocators allowed.
 	// Post-condition: Returns the number of available bytes in the allocation.
 	//                 You may not read a single byte outside of it, because it might include padding that ends at uneven addresses.
 	//                 To use more memory than requested, you must round it down to whole elements.
 	//                 If the element's size is a power of two, you can pre-compute a bit mask using memory_createAlignmentAndMask for rounding down.
-	uint64_t heap_getAllocationSize(uint8_t const * const allocation);
+	uintptr_t heap_getAllocationSize(void const * const allocation);
 
 	// Pre-condition: The allocation pointer must point to the start of a payload allocated using heap_allocate, no offsets nor other allocators allowed.
 	// Post-condition: Returns a pointer to the heap allocation's header, which is used to construct safe pointers.
-	AllocationHeader *heap_getHeader(uint8_t const * const allocation);
+	AllocationHeader *heap_getHeader(void * const allocation);
 
-	// Only a pointer is needed, so that it can be sent as a function pointer to X11.
-	// TODO: Use the allocation head's alignment as the minimum alignment by combining the masks in compile time.
-	//       Then it is possible to place the padded allocation header for heap memory at a fixed offset from the allocation start, so that the head can be accessed.
-	//       No extra offsets are allowed on the pointer used to free the memory.
-	// TODO: Have a global variable containing the default memory pool.
-	//       When it is destructed, all allocations that are empty will be freed and a termination flag will be enabled so that any more allocations being freed after it will free the memory themselves.
-	void heap_free(uint8_t * const allocation);
+	// Call back for each used heap allocation.
+	//   Recycled allocations are not included.
+	void heap_forAllHeapAllocations(std::function<void(AllocationHeader * header, void * allocation)> callback);
+
+	// If terminating the program using std::exit, you can call this first to free all heap memory in the allocator, leaked or not.
+	void heap_hardExitCleaning();
+
+	// Helper methods to prevent cyclic dependencies between strings and buffers when handles must be inlined for performance. Do not call these yourself.
+	void impl_throwAllocationFailure();
+	void impl_throwNullException();
+	void impl_throwIdentityMismatch(uint64_t allocationIdentity, uint64_t pointerIdentity);
 }
 
 #endif

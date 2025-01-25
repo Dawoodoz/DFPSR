@@ -1,6 +1,6 @@
 ﻿// zlib open source license
 //
-// Copyright (c) 2019 to 2024 David Forsgren Piuva
+// Copyright (c) 2019 to 2025 David Forsgren Piuva
 // 
 // This software is provided 'as-is', without any express or implied
 // warranty. In no event will the authors be held liable for any damages
@@ -25,147 +25,75 @@
 #include "bufferAPI.h"
 #include "stringAPI.h"
 #include "../math/scalar.h"
+#include "../base/SafePointer.h"
 
 namespace dsr {
 
-// Hidden type
-
-class BufferImpl {
-public:
-	// A Buffer cannot have a name, because each String contains a buffer
-	const int64_t size; // The actually used data
-	const int64_t bufferSize; // The accessible data
-	uint8_t *data;
-	std::function<void(uint8_t *)> destructor;
-public:
-	// Create head without data.
-	BufferImpl();
-	// Create head with newly allocated data.
-	explicit BufferImpl(int64_t newSize);
-	// Create head with inherited data.
-	BufferImpl(int64_t newSize, uint8_t *newData);
-	~BufferImpl();
-public:
-	// No implicit copies, only pass using the Buffer handle
-	BufferImpl(const BufferImpl&) = delete;
-	BufferImpl& operator=(const BufferImpl&) = delete;
-};
-
-// Internal methods
-
-static uint8_t* buffer_allocate(int64_t newSize, std::function<void(uint8_t *)>& targetDestructor) {
-	uint8_t* allocation = heap_allocate(newSize).data;
-	targetDestructor = [](uint8_t *data) { heap_free(data); };
-	return allocation;
+Buffer buffer_create(intptr_t newSize) {
+	if (newSize < 0) newSize = 0;
+	// Allocate head and data.
+	return handle_createArray<uint8_t>(AllocationInitialization::Zeroed, (uintptr_t)newSize);
 }
 
-BufferImpl::BufferImpl() : size(0), bufferSize(0), data(nullptr) {}
-
-BufferImpl::BufferImpl(int64_t newSize) :
-  size(newSize),
-  bufferSize(roundUp(newSize, DSR_MAXIMUM_ALIGNMENT)) {
-	this->data = buffer_allocate(this->bufferSize, this->destructor);
-	if (this->data == nullptr) {
-		throwError(U"Failed to allocate buffer of ", newSize, " bytes!\n");
-	}
-	memset(this->data, 0, this->bufferSize);
-}
-
-BufferImpl::BufferImpl(int64_t newSize, uint8_t *newData)
-: size(newSize), bufferSize(newSize), data(newData), destructor([](uint8_t *data) { heap_free(data); }) {}
-
-BufferImpl::~BufferImpl() {
-	if (this->data) {
-		this->destructor(this->data);
+Buffer buffer_create(intptr_t newSize, int paddToAlignment) {
+	if (newSize < 0) newSize = 0;
+	if (paddToAlignment > DSR_MAXIMUM_ALIGNMENT) {
+		throwError(U"Maximum alignment exceeded when creating a buffer!\n");
+		return Handle<uint8_t>();
+	} else {
+		return handle_createArray<uint8_t>(AllocationInitialization::Zeroed, memory_getPaddedSize((uintptr_t)newSize, paddToAlignment));
 	}
 }
 
-// API
+void buffer_replaceDestructor(Buffer &buffer, const HeapDestructor& newDestructor) {
+	if (!buffer_exists(buffer)) {
+		throwError(U"buffer_replaceDestructor: Cannot replace destructor for a buffer that don't exist.\n");
+	} else {
+		heap_setAllocationDestructor(buffer.getUnsafe(), newDestructor);
+	}
+}
 
+// TODO: Create clone and reallocation methods in heap.h to handle object lifetime in a reusable way.
 Buffer buffer_clone(const Buffer &buffer) {
 	if (!buffer_exists(buffer)) {
-		// If the original buffer does not exist, just return another null handle.
-		return Buffer();
+		return Handle<uint8_t>();
 	} else {
-		if (buffer->size <= 0) {
-			// No need to clone when there is no shared data.
+		uintptr_t size = buffer.getUsedSize();
+		if (size == 0) {
+			// Buffers of zero elements are reused with reference counting.
 			return buffer;
 		} else {
-			// Clone the data so that content of the allocations can be modified individually without affecting each other.
-			Buffer newBuffer = std::make_shared<BufferImpl>(buffer->size);
-			memcpy(newBuffer->data, buffer->data, buffer->size);
-			return newBuffer;
+			// Allocate new memory without setting it to zero, before cloning data into it.
+			Buffer result = handle_createArray<uint8_t>(AllocationInitialization::Uninitialized, size);
+			SafePointer<const uint8_t> source = buffer_getSafeData<const uint8_t>(buffer, "Buffer cloning source");
+			SafePointer<uint8_t> target = buffer_getSafeData<uint8_t>(result, "Buffer cloning target");
+			safeMemoryCopy(target, source, size);
+			return result;
 		}
 	}
 }
 
-Buffer buffer_create(int64_t newSize) {
-	if (newSize < 0) newSize = 0;
-	if (newSize == 0) {
-		// Allocate empty head to indicate that an empty buffer exists.
-		return std::make_shared<BufferImpl>();
-	} else {
-		// Allocate head and data.
-		return std::make_shared<BufferImpl>(newSize);
-	}
+intptr_t buffer_getSize(const Buffer &buffer) {
+	return buffer.getUsedSize();
 }
 
-Buffer buffer_create(int64_t newSize, int minimumAlignment) {
-	if (newSize < 0) newSize = 0;
-	if (newSize == 0) {
-		// Allocate empty head to indicate that an empty buffer exists.
-		return std::make_shared<BufferImpl>();
-	} else if (minimumAlignment > DSR_MAXIMUM_ALIGNMENT) {
-		throwError(U"Maximum alignment exceeded when creating a buffer!\n");
-		return Buffer();
-	} else {
-		// Allocate head and data.
-		return std::make_shared<BufferImpl>(newSize);
-	}
-}
-
-Buffer buffer_create(int64_t newSize, uint8_t *newData) {
-	if (newSize < 0) newSize = 0;
-	return std::make_shared<BufferImpl>(newSize, newData);
-}
-
-void buffer_replaceDestructor(const Buffer &buffer, const std::function<void(uint8_t *)>& newDestructor) {
-	if (!buffer_exists(buffer)) {
-		throwError(U"buffer_replaceDestructor: Cannot replace destructor for a buffer that don't exist.\n");
-	} else if (buffer->bufferSize > 0) {
-		buffer->destructor = newDestructor;
-	}
-}
-
-int64_t buffer_getSize(const Buffer &buffer) {
-	if (!buffer_exists(buffer)) {
-		return 0;
-	} else {
-		return buffer->size;
-	}
-}
-
-int64_t buffer_getUseCount(const Buffer &buffer) {
-	if (!buffer_exists(buffer)) {
-		return 0;
-	} else {
-		return buffer.use_count();
-	}
+intptr_t buffer_getUseCount(const Buffer &buffer) {
+	return buffer.getUseCount();
 }
 
 uint8_t* buffer_dangerous_getUnsafeData(const Buffer &buffer) {
-	if (!buffer_exists(buffer)) {
-		return nullptr;
-	} else {
-		return buffer->data;
-	}
+	return buffer.getUnsafe();
 }
 
 void buffer_setBytes(const Buffer &buffer, uint8_t value) {
-	if (!buffer_exists(buffer)) {
-		throwError(U"buffer_setBytes: Cannot set bytes for a buffer that don't exist.\n");
-	} else if (buffer->bufferSize > 0) {
-		memset(buffer->data, value, buffer->bufferSize);
+	if (buffer.isNull()) {
+		throwError(U"buffer_setBytes: Can not set bytes for a buffer that does not exist.\n");
+	} else {
+		uintptr_t size = buffer.getUsedSize();
+		if (size > 0) {
+			SafePointer<uint8_t> target = buffer_getSafeData<uint8_t>(buffer, "Buffer set target");
+			safeMemorySet(target, value, size);
+		}
 	}
 }
 

@@ -65,7 +65,7 @@ START_TEST(VirtualStack)
 				y[2] =  65;
 				#ifdef SAFE_POINTER_CHECKS
 					// This should crash because -1 is outside of the 0..2 range.
-					ASSERT_CRASH(y[-1]);
+					ASSERT_CRASH(y[-1], U"SafePointer out of bound exception!");
 				#endif
 				// Reading within bounds and checking that the data was stored correctly.
 				ASSERT_EQUAL(y[0],  2147483000);
@@ -73,16 +73,16 @@ START_TEST(VirtualStack)
 				ASSERT_EQUAL(y[2],  65);
 				#ifdef SAFE_POINTER_CHECKS
 					// This should crash because 3 is outside of the 0..2 range.
-					ASSERT_CRASH(y[3]);
+					ASSERT_CRASH(y[3], U"SafePointer out of bound exception!");
 				#endif
 			}
 			#ifdef SAFE_POINTER_CHECKS
 				// This should crash because pointerY points to memory that was freed when y's scope ended.
-				ASSERT_CRASH(pointerY[0]);
+				ASSERT_CRASH(pointerY[0], U"SafePointer identity exception!");
 			#endif
 		}
 		#ifdef SAFE_POINTER_CHECKS
-			ASSERT_CRASH(x[-1]);
+			ASSERT_CRASH(x[-1], U"SafePointer out of bound exception!");
 		#endif
 		ASSERT_EQUAL(x[0], 01);
 		ASSERT_EQUAL(x[1], 12);
@@ -94,7 +94,7 @@ START_TEST(VirtualStack)
 		ASSERT_EQUAL(x[7], 78);
 		ASSERT_EQUAL(x[8], 89);
 		#ifdef SAFE_POINTER_CHECKS
-			ASSERT_CRASH(x[9]);
+			ASSERT_CRASH(x[9], U"SafePointer out of bound exception!");
 		#endif
 		// TODO: Try to access memory from another thread and assert that it triggers an exception.
 	}

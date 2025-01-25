@@ -197,7 +197,7 @@ void Menu::completeAssets() {
 	if (this->headImageMethod.methodIndex == -1) {
 		this->loadTheme(theme_getDefault());
 	}
-	if (this->font.get() == nullptr) {
+	if (this->font.isNull()) {
 		this->font = font_getDefault();
 	}
 }
@@ -290,7 +290,7 @@ void Menu::receiveMouseEvent(const MouseEvent& event) {
 	bool inHead = this->pointIsInside(event.position);
 	if (event.mouseEventType == MouseEventType::MouseUp) {
 		// Pass on mouse up events to dragged components, even if not inside of them.
-		if (this->dragComponent.get() != nullptr) {
+		if (this->dragComponent.isNotNull()) {
 			MouseEvent childEvent = localEvent;
 			childEvent.position -= this->dragComponent->location.upperLeft();
 			this->dragComponent->sendMouseEvent(childEvent, true);
@@ -366,7 +366,7 @@ void Menu::receiveMouseEvent(const MouseEvent& event) {
 	}
 	// Releasing anywhere should stop pressing.
 	if (event.mouseEventType == MouseEventType::MouseUp) {
-		this->dragComponent = std::shared_ptr<VisualComponent>();
+		this->dragComponent = Handle<VisualComponent>();
 		if (this->pressed) {
 			// No longer pressed.
 			this->pressed = false;

@@ -417,7 +417,7 @@ void TextBox::receiveKeyboardEvent(const KeyboardEvent& event) {
 				this->placeBeamAtCharacter(getLineEnd(this->text.value, this->beamLocation), removeSelection);
 			} else if (event.dsrKey == DsrKey_X) {
 				// Cut selection using Ctrl + X
-				if (this->window.get()) {
+				if (this->window.getUnsafe()) {
 					this->window->saveToClipboard(this->getSelectedText());
 					this->replaceSelection(U"");
 				} else {
@@ -425,14 +425,14 @@ void TextBox::receiveKeyboardEvent(const KeyboardEvent& event) {
 				}
 			} else if (event.dsrKey == DsrKey_C) {
 				// Copy selection using Ctrl + C
-				if (this->window.get()) {
+				if (this->window.getUnsafe()) {
 					this->window->saveToClipboard(this->getSelectedText());
 				} else {
 					sendWarning(U"No window handle found in TextBox when trying to copy text!");
 				}
 			} else if (event.dsrKey == DsrKey_V) {
 				// Paste selection using Ctrl + V
-				if (this->window.get()) {
+				if (this->window.getUnsafe()) {
 					this->replaceSelection(this->window->loadFromClipboard());
 				} else {
 					sendWarning(U"No window handle found in TextBox when trying to paste text!");

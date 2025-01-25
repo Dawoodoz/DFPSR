@@ -1349,16 +1349,16 @@ void sprite_generateFromModel(ImageRgbaU8& targetAtlas, String& targetConfigText
 
 		// Calculate initial image size
 		float worstCaseDiameter = (std::max(maxBound.x, -minBound.x) + std::max(maxBound.y, -minBound.y) + std::max(maxBound.z, -minBound.z)) * 2;
-		int maxRes = roundUp(worstCaseDiameter * ortho.pixelsPerTile, 2) + 4; // Round up to even pixels and add 4 padding pixels
+		int32_t maxRes = roundUp(int32_t(worstCaseDiameter) * ortho.pixelsPerTile, 2) + 4; // Round up to even pixels and add 4 padding pixels
 
 		// Allocate square images from the pessimistic size estimation
-		int width = maxRes;
-		int height = maxRes;
+		int32_t width = maxRes;
+		int32_t height = maxRes;
 		ImageF32 depthBuffer = image_create_F32(width, height);
 		ImageRgbaU8 colorImage[cameraAngles];
 		ImageRgbaU8 heightImage[cameraAngles];
 		ImageRgbaU8 normalImage[cameraAngles];
-		for (int a = 0; a < cameraAngles; a++) {
+		for (int32_t a = 0; a < cameraAngles; a++) {
 			colorImage[a] = image_create_RgbaU8(width, height);
 			heightImage[a] = image_create_RgbaU8(width, height);
 			normalImage[a] = image_create_RgbaU8(width, height);

@@ -25,7 +25,7 @@ A:active { color: #FFFFFF; background: #444444; }
 <A href="Manual.html">Back to main page</A>
 </P><P>
 </P><H1> Buffers</H1><P>Every file that is saved or loaded in the framework will pass through a Buffer.
-Buffers can not refer to each other in cycles and are automatically reference counted and deleted, so that you don't have to worry about memory leaks from them unless you explicitly call buffer_replaceDestructor.
+Buffers can not refer to each other in cycles and are automatically reference counted and deleted, so that you don't have to worry about memory leaks unless something holding a buffer creates a cycle of handles.
 They store a fixed size allocation of memory padded and aligned with DSR_MAXIMUM_ALIGNMENT bytes to work well with the largest SIMD vectors without false sharing of cache lines between threads.
 
 </P><P>
@@ -41,13 +41,13 @@ The memory always start initialized to zero, which prevents random bugs.
 
 </P><P>
 If you create a buffer of size zero, it will allocate the head but not the data.
-Trying to clone an empty buffer head will just return the same handle without cloning, because empty buffers are immutable.
+Trying to clone an empty buffer will just return the same handle without cloning, because empty buffers are immutable.
 </P><IMG SRC="Images/Border.png"><P>
 </P><H2> Read and write data access</H2><P>
 </P><P>
 Trying to get the pointer of a non-existing or zero length Buffer will safely return a null pointer, no matter if you use buffer_getSafeData<type>(buffer, "Buffer name") or buffer_dangerous_getUnsafeData(buffer).
 You access the data by getting a SafePointer, which can later be sliced into smaller parts.
-Sometimes you can't use the SafePointer because an operating system wants a regular C pointer.
+Sometimes you can't use the SafePointer because an operating system wants a regular pointer.
 </P><IMG SRC="Images/Border.png"><P>
 </P>
 </BODY> </HTML>

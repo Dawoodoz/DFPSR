@@ -264,7 +264,7 @@ struct VirtualMachine {
 	// Methods
 	List<Method> methods;
 	// Memory
-	std::shared_ptr<PlanarMemory> memory;
+	Handle<PlanarMemory> memory;
 	// Instruction types
 	const InsSig* machineInstructions; int32_t machineInstructionCount;
 	const InsSig* getMachineInstructionFromFunction(MachineOperation functionPointer) {
@@ -296,7 +296,7 @@ struct VirtualMachine {
 		return nullptr;
 	}
 	// Constructor
-	VirtualMachine(const ReadableString& code, const std::shared_ptr<PlanarMemory>& memory,
+	VirtualMachine(const ReadableString& code, const Handle<PlanarMemory>& memory,
 	  const InsSig* machineInstructions, int32_t machineInstructionCount,
 	  const VMTypeDef* machineTypes, int32_t machineTypeCount);
 
@@ -357,7 +357,7 @@ struct VirtualMachine {
 					fullContent = false;
 				#endif
 				if (typeDefinition) {
-					typeDefinition->debugPrinter(*(this->memory.get()), *variable, globalIndex, framePointer, fullContent);
+					typeDefinition->debugPrinter(*(this->memory.getUnsafe()), *variable, globalIndex, framePointer, fullContent);
 					if (globalIndex < 0) {
 						printText(U" @gi(", globalIndex, U")");
 					} else {
@@ -375,7 +375,7 @@ struct VirtualMachine {
 				printText(indentation, U"* ", getName(variable->access), U" ");
 				const VMTypeDef* typeDefinition = getMachineType(variable->typeDescription->dataType);
 				if (typeDefinition) {
-					typeDefinition->debugPrinter(*(this->memory.get()), *variable, variable->getGlobalIndex(), framePointer, false);
+					typeDefinition->debugPrinter(*(this->memory.getUnsafe()), *variable, variable->getGlobalIndex(), framePointer, false);
 				} else {
 					printText(U"?");
 				}

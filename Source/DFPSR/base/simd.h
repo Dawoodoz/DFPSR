@@ -1,6 +1,6 @@
 ﻿// zlib open source license
 //
-// Copyright (c) 2017 to 2023 David Forsgren Piuva
+// Copyright (c) 2017 to 2025 David Forsgren Piuva
 // 
 // This software is provided 'as-is', without any express or implied
 // warranty. In no event will the authors be held liable for any damages
@@ -87,14 +87,19 @@
 	#include "../math/FVector.h"
 	#include "../math/IVector.h"
 	#include "../math/UVector.h"
-
-	// Get settings from here.
+	#include "DsrTraits.h"
 	#include "../settings.h"
+	#include "../base/noSimd.h"
 
 	// Alignment in bytes
 	#define ALIGN_BYTES(SIZE)  __attribute__((aligned(SIZE)))
 	#define ALIGN16 ALIGN_BYTES(16) // 128-bit alignment
 	#define ALIGN32 ALIGN_BYTES(32) // 256-bit alignment
+	#define ALIGN64 ALIGN_BYTES(64) // 512-bit alignment
+	#define ALIGN128 ALIGN_BYTES(128) // 1024-bit alignment
+	#define ALIGN256 ALIGN_BYTES(256) // 2048-bit alignment
+
+	namespace dsr {
 
 	// Everything declared in here handles things specific for SSE.
 	// Direct use of the macros will not provide portability to all hardware.
@@ -507,7 +512,7 @@
 			}
 		#endif
 		// Bound and alignment checked reading
-		static inline F32x4 readAligned(const dsr::SafePointer<float> data, const char* methodName) {
+		static inline F32x4 readAligned(dsr::SafePointer<const float> data, const char* methodName) {
 			const float* pointer = data.getUnsafe();
 			assert(((uintptr_t)pointer & 15) == 0);
 			#if defined SAFE_POINTER_CHECKS
@@ -727,7 +732,7 @@
 			}
 		#endif
 		// Bound and alignment checked reading
-		static inline I32x4 readAligned(const dsr::SafePointer<int32_t> data, const char* methodName) {
+		static inline I32x4 readAligned(dsr::SafePointer<const int32_t> data, const char* methodName) {
 			const int32_t* pointer = data.getUnsafe();
 			assert(((uintptr_t)pointer & 15) == 0);
 			#if defined SAFE_POINTER_CHECKS
@@ -824,7 +829,7 @@
 			}
 		#endif
 		// Bound and alignment checked reading
-		static inline U32x4 readAligned(const dsr::SafePointer<uint32_t> data, const char* methodName) {
+		static inline U32x4 readAligned(dsr::SafePointer<const uint32_t> data, const char* methodName) {
 			const uint32_t* pointer = data.getUnsafe();
 			assert(((uintptr_t)pointer & 15) == 0);
 			#if defined SAFE_POINTER_CHECKS
@@ -975,7 +980,7 @@
 			#endif
 		}
 		// Bound and alignment checked reading
-		static inline U16x8 readAligned(const dsr::SafePointer<uint16_t> data, const char* methodName) {
+		static inline U16x8 readAligned(dsr::SafePointer<const uint16_t> data, const char* methodName) {
 			const uint16_t* pointer = data.getUnsafe();
 			assert(((uintptr_t)pointer & 15) == 0);
 			#if defined SAFE_POINTER_CHECKS
@@ -1127,7 +1132,7 @@
 			#endif
 		}
 		// Bound and alignment checked reading
-		static inline U8x16 readAligned(const dsr::SafePointer<uint8_t> data, const char* methodName) {
+		static inline U8x16 readAligned(dsr::SafePointer<const uint8_t> data, const char* methodName) {
 			const uint8_t* pointer = data.getUnsafe();
 			assert(((uintptr_t)pointer & 15) == 0);
 			#if defined SAFE_POINTER_CHECKS
@@ -1236,7 +1241,7 @@
 			#endif
 		}
 		// Bound and alignment checked reading
-		static inline F32x8 readAligned(const dsr::SafePointer<float> data, const char* methodName) {
+		static inline F32x8 readAligned(dsr::SafePointer<const float> data, const char* methodName) {
 			const float* pointer = data.getUnsafe();
 			assert(((uintptr_t)pointer & 31) == 0);
 			#if defined SAFE_POINTER_CHECKS
@@ -1488,7 +1493,7 @@
 			#endif
 		}
 		// Bound and alignment checked reading
-		static inline I32x8 readAligned(const dsr::SafePointer<int32_t> data, const char* methodName) {
+		static inline I32x8 readAligned(dsr::SafePointer<const int32_t> data, const char* methodName) {
 			const int32_t* pointer = data.getUnsafe();
 			assert(((uintptr_t)pointer & 31) == 0);
 			#if defined SAFE_POINTER_CHECKS
@@ -1597,7 +1602,7 @@
 			#endif
 		}
 		// Bound and alignment checked reading
-		static inline U32x8 readAligned(const dsr::SafePointer<uint32_t> data, const char* methodName) {
+		static inline U32x8 readAligned(dsr::SafePointer<const uint32_t> data, const char* methodName) {
 			const uint32_t* pointer = data.getUnsafe();
 			assert(((uintptr_t)pointer & 31) == 0);
 			#if defined SAFE_POINTER_CHECKS
@@ -1803,7 +1808,7 @@
 			#endif
 		}
 		// Bound and alignment checked reading
-		static inline U16x16 readAligned(const dsr::SafePointer<uint16_t> data, const char* methodName) {
+		static inline U16x16 readAligned(dsr::SafePointer<const uint16_t> data, const char* methodName) {
 			const uint16_t* pointer = data.getUnsafe();
 			assert(((uintptr_t)pointer & 31) == 0);
 			#if defined SAFE_POINTER_CHECKS
@@ -1960,7 +1965,7 @@
 			#endif
 		}
 		// Bound and alignment checked reading
-		static inline U8x32 readAligned(const dsr::SafePointer<uint8_t> data, const char* methodName) {
+		static inline U8x32 readAligned(dsr::SafePointer<const uint8_t> data, const char* methodName) {
 			const uint8_t* pointer = data.getUnsafe();
 			assert(((uintptr_t)pointer & 31) == 0);
 			#if defined SAFE_POINTER_CHECKS
@@ -2032,9 +2037,9 @@
 		FOR_ALL_VECTOR_TYPES(CREATE_METHOD_PRINT)
 	#undef CREATE_METHOD_PRINT
 
-	// Whole comparisons returning a single boolean, mainly for regression tests.
+	// Integer equality returns true iff all comparisons are identical.
 	#define CREATE_EXACT_EQUALITY(VECTOR_TYPE, ELEMENT_TYPE, LANE_COUNT) \
-		inline bool operator==(const VECTOR_TYPE& left, const VECTOR_TYPE& right) { \
+		inline bool allLanesEqual(const VECTOR_TYPE& left, const VECTOR_TYPE& right) { \
 			ALIGN_BYTES(sizeof(VECTOR_TYPE)) ELEMENT_TYPE a[LANE_COUNT]; \
 			ALIGN_BYTES(sizeof(VECTOR_TYPE)) ELEMENT_TYPE b[LANE_COUNT]; \
 			left.writeAlignedUnsafe(a); \
@@ -2043,13 +2048,24 @@
 				if (a[i] != b[i]) return false; \
 			} \
 			return true; \
+		} \
+		inline bool allLanesNotEqual(const VECTOR_TYPE& left, const VECTOR_TYPE& right) { \
+			ALIGN_BYTES(sizeof(VECTOR_TYPE)) ELEMENT_TYPE a[LANE_COUNT]; \
+			ALIGN_BYTES(sizeof(VECTOR_TYPE)) ELEMENT_TYPE b[LANE_COUNT]; \
+			left.writeAlignedUnsafe(a); \
+			right.writeAlignedUnsafe(b); \
+			for (int i = 0; i < LANE_COUNT; i++) { \
+				if (a[i] == b[i]) return false; \
+			} \
+			return true; \
 		}
 		// Integer SIMD vectors have exact equlity.
 		FOR_INTEGER_VECTOR_TYPES(CREATE_EXACT_EQUALITY)
 	#undef CREATE_EXACT_EQUALITY
 
+	// Float equality returns true iff all comparisons are near.
 	#define CREATE_TOLERANT_EQUALITY(VECTOR_TYPE, ELEMENT_TYPE, LANE_COUNT) \
-		inline bool operator==(const VECTOR_TYPE& left, const VECTOR_TYPE& right) { \
+		inline bool allLanesEqual(const VECTOR_TYPE& left, const VECTOR_TYPE& right) { \
 			ALIGN_BYTES(sizeof(VECTOR_TYPE)) ELEMENT_TYPE a[LANE_COUNT]; \
 			ALIGN_BYTES(sizeof(VECTOR_TYPE)) ELEMENT_TYPE b[LANE_COUNT]; \
 			left.writeAlignedUnsafe(a); \
@@ -2058,18 +2074,64 @@
 				if (fabs(a[i] - b[i]) >= 0.0001f) return false; \
 			} \
 			return true; \
+		} \
+		inline bool allLanesNotEqual(const VECTOR_TYPE& left, const VECTOR_TYPE& right) { \
+			ALIGN_BYTES(sizeof(VECTOR_TYPE)) ELEMENT_TYPE a[LANE_COUNT]; \
+			ALIGN_BYTES(sizeof(VECTOR_TYPE)) ELEMENT_TYPE b[LANE_COUNT]; \
+			left.writeAlignedUnsafe(a); \
+			right.writeAlignedUnsafe(b); \
+			for (int i = 0; i < LANE_COUNT; i++) { \
+				if (fabs(a[i] - b[i]) < 0.0001f) return false; \
+			} \
+			return true; \
 		}
 		// Float SIMD vectors have inexact equality.
 		FOR_FLOAT_VECTOR_TYPES(CREATE_TOLERANT_EQUALITY)
 	#undef CREATE_TOLERANT_EQUALITY
 
-	#define CREATE_INEQUALITY(VECTOR_TYPE, ELEMENT_TYPE, LANE_COUNT) \
-		inline bool operator!=(const VECTOR_TYPE& left, const VECTOR_TYPE& right) { \
-			return !(left == right); \
+	#define CREATE_COMPARISONS(VECTOR_TYPE, ELEMENT_TYPE, LANE_COUNT) \
+		inline bool allLanesGreater(const VECTOR_TYPE& left, const VECTOR_TYPE& right) { \
+			ALIGN_BYTES(sizeof(VECTOR_TYPE)) ELEMENT_TYPE a[LANE_COUNT]; \
+			ALIGN_BYTES(sizeof(VECTOR_TYPE)) ELEMENT_TYPE b[LANE_COUNT]; \
+			left.writeAlignedUnsafe(a); \
+			right.writeAlignedUnsafe(b); \
+			for (int i = 0; i < LANE_COUNT; i++) { \
+				if (a[i] <= b[i]) return false; \
+			} \
+			return true; \
+		} \
+		inline bool allLanesGreaterOrEqual(const VECTOR_TYPE& left, const VECTOR_TYPE& right) { \
+			ALIGN_BYTES(sizeof(VECTOR_TYPE)) ELEMENT_TYPE a[LANE_COUNT]; \
+			ALIGN_BYTES(sizeof(VECTOR_TYPE)) ELEMENT_TYPE b[LANE_COUNT]; \
+			left.writeAlignedUnsafe(a); \
+			right.writeAlignedUnsafe(b); \
+			for (int i = 0; i < LANE_COUNT; i++) { \
+				if (a[i] < b[i]) return false; \
+			} \
+			return true; \
+		} \
+		inline bool allLanesLesser(const VECTOR_TYPE& left, const VECTOR_TYPE& right) { \
+			ALIGN_BYTES(sizeof(VECTOR_TYPE)) ELEMENT_TYPE a[LANE_COUNT]; \
+			ALIGN_BYTES(sizeof(VECTOR_TYPE)) ELEMENT_TYPE b[LANE_COUNT]; \
+			left.writeAlignedUnsafe(a); \
+			right.writeAlignedUnsafe(b); \
+			for (int i = 0; i < LANE_COUNT; i++) { \
+				if (a[i] >= b[i]) return false; \
+			} \
+			return true; \
+		} \
+		inline bool allLanesLesserOrEqual(const VECTOR_TYPE& left, const VECTOR_TYPE& right) { \
+			ALIGN_BYTES(sizeof(VECTOR_TYPE)) ELEMENT_TYPE a[LANE_COUNT]; \
+			ALIGN_BYTES(sizeof(VECTOR_TYPE)) ELEMENT_TYPE b[LANE_COUNT]; \
+			left.writeAlignedUnsafe(a); \
+			right.writeAlignedUnsafe(b); \
+			for (int i = 0; i < LANE_COUNT; i++) { \
+				if (a[i] > b[i]) return false; \
+			} \
+			return true; \
 		}
-		// All SIMD vectors have inequality.
-		FOR_ALL_VECTOR_TYPES(CREATE_INEQUALITY)
-	#undef CREATE_INEQUALITY
+		FOR_ALL_VECTOR_TYPES(CREATE_COMPARISONS)
+	#undef CREATE_COMPARISONS
 
 	inline F32x4 operator+(const F32x4& left, const F32x4& right) {
 		#if defined USE_BASIC_SIMD
@@ -2149,7 +2211,7 @@
 	inline I32x4 operator*(const I32x4& left, const I32x4& right) {
 		#if defined USE_BASIC_SIMD
 			#if defined USE_SSE2
-				// Emulate a NEON instruction
+				// TODO: Use AVX2 for 32-bit integer multiplication when available.
 				return I32x4(left.scalars[0] * right.scalars[0], left.scalars[1] * right.scalars[1], left.scalars[2] * right.scalars[2], left.scalars[3] * right.scalars[3]);
 			#elif defined USE_NEON
 				return I32x4(MUL_I32_NEON(left.v, right.v));
@@ -2158,6 +2220,7 @@
 			return I32x4(left.scalars[0] * right.scalars[0], left.scalars[1] * right.scalars[1], left.scalars[2] * right.scalars[2], left.scalars[3] * right.scalars[3]);
 		#endif
 	}
+	// TODO: Specify the behavior of truncated unsigned integer overflow and add it to the tests.
 	inline U32x4 operator+(const U32x4& left, const U32x4& right) {
 		#if defined USE_BASIC_SIMD
 			return U32x4(ADD_U32_SIMD(left.v, right.v));
@@ -2184,6 +2247,7 @@
 			return U32x4(left.scalars[0] * right.scalars[0], left.scalars[1] * right.scalars[1], left.scalars[2] * right.scalars[2], left.scalars[3] * right.scalars[3]);
 		#endif
 	}
+	// Bitwise and
 	inline U32x4 operator&(const U32x4& left, const U32x4& right) {
 		#if defined USE_BASIC_SIMD
 			return U32x4(BITWISE_AND_U32_SIMD(left.v, right.v));
@@ -2191,6 +2255,7 @@
 			return U32x4(left.scalars[0] & right.scalars[0], left.scalars[1] & right.scalars[1], left.scalars[2] & right.scalars[2], left.scalars[3] & right.scalars[3]);
 		#endif
 	}
+	// Bitwise or
 	inline U32x4 operator|(const U32x4& left, const U32x4& right) {
 		#if defined USE_BASIC_SIMD
 			return U32x4(BITWISE_OR_U32_SIMD(left.v, right.v));
@@ -2198,6 +2263,7 @@
 			return U32x4(left.scalars[0] | right.scalars[0], left.scalars[1] | right.scalars[1], left.scalars[2] | right.scalars[2], left.scalars[3] | right.scalars[3]);
 		#endif
 	}
+	// Bitwise xor
 	inline U32x4 operator^(const U32x4& left, const U32x4& right) {
 		#if defined USE_BASIC_SIMD
 			return U32x4(BITWISE_XOR_U32_SIMD(left.v, right.v));
@@ -2205,7 +2271,47 @@
 			return U32x4(left.scalars[0] ^ right.scalars[0], left.scalars[1] ^ right.scalars[1], left.scalars[2] ^ right.scalars[2], left.scalars[3] ^ right.scalars[3]);
 		#endif
 	}
-	inline U32x4 operator<<(const U32x4& left, uint32_t bitOffset) {
+	// Bitwise negation
+	inline U32x4 operator~(const U32x4& value) {
+		#if defined USE_NEON
+			return U32x4(vmvnq_u32(value.v));
+		#elif defined USE_BASIC_SIMD
+			// Fall back on xor against all ones.
+			return value ^ U32x4(~uint32_t(0));
+		#else
+			return U32x4(~value.scalars[0], ~value.scalars[1], ~value.scalars[2], ~value.scalars[3]);
+		#endif
+	}
+	inline U32x4 operator<<(const U32x4& left, const U32x4 &bitOffsets) {
+		assert(allLanesLesser(bitOffsets, U32x4(32u)));
+		#if defined USE_NEON
+			return U32x4(vshlq_u32(left.v, vreinterpretq_s32_u32(bitOffsets.v)));
+		#else
+			return U32x4(
+			  left.scalars[0] << bitOffsets.scalars[0],
+			  left.scalars[1] << bitOffsets.scalars[1],
+			  left.scalars[2] << bitOffsets.scalars[2],
+			  left.scalars[3] << bitOffsets.scalars[3]
+			);
+		#endif
+	}
+	inline U32x4 operator>>(const U32x4& left, const U32x4 &bitOffsets) {
+		assert(allLanesLesser(bitOffsets, U32x4(32u)));
+		#if defined USE_NEON
+			return U32x4(vshrq_u32(left.v, vreinterpretq_s32_u32(bitOffsets.v)));
+		#else
+			return U32x4(
+			  left.scalars[0] >> bitOffsets.scalars[0],
+			  left.scalars[1] >> bitOffsets.scalars[1],
+			  left.scalars[2] >> bitOffsets.scalars[2],
+			  left.scalars[3] >> bitOffsets.scalars[3]
+			);
+		#endif
+	}
+	// bitOffset must be an immediate constant, so a template argument is used.
+	template <uint32_t bitOffset>
+	inline U32x4 bitShiftLeftImmediate(const U32x4& left) {
+		static_assert(bitOffset < 32u);
 		#if defined USE_SSE2
 			return U32x4(_mm_slli_epi32(left.v, bitOffset));
 		#else
@@ -2216,17 +2322,211 @@
 			#endif
 		#endif
 	}
-	inline U32x4 operator>>(const U32x4& left, uint32_t bitOffset) {
+	// bitOffset must be an immediate constant.
+	template <uint32_t bitOffset>
+	inline U32x4 bitShiftRightImmediate(const U32x4& left) {
+		static_assert(bitOffset < 32u);
 		#if defined USE_SSE2
 			return U32x4(_mm_srli_epi32(left.v, bitOffset));
 		#else
 			#if defined USE_NEON
-				return U32x4(vshlq_u32(left.v, LOAD_SCALAR_I32_SIMD(-bitOffset)));
+				return U32x4(vshrq_u32(left.v, LOAD_SCALAR_I32_SIMD(bitOffset)));
 			#else
 				return U32x4(left.scalars[0] >> bitOffset, left.scalars[1] >> bitOffset, left.scalars[2] >> bitOffset, left.scalars[3] >> bitOffset);
 			#endif
 		#endif
 	}
+	
+	inline U16x8 operator<<(const U16x8& left, const U16x8 &bitOffsets) {
+		assert(allLanesLesser(bitOffsets, U16x8(16u)));
+		#if defined USE_NEON
+			return U16x8(vshlq_u16(left.v, vreinterpretq_s16_u16(bitOffsets.v)));
+		#else
+			return U16x8(
+			  left.scalars[0] << bitOffsets.scalars[0],
+			  left.scalars[1] << bitOffsets.scalars[1],
+			  left.scalars[2] << bitOffsets.scalars[2],
+			  left.scalars[3] << bitOffsets.scalars[3],
+			  left.scalars[4] << bitOffsets.scalars[4],
+			  left.scalars[5] << bitOffsets.scalars[5],
+			  left.scalars[6] << bitOffsets.scalars[6],
+			  left.scalars[7] << bitOffsets.scalars[7]
+			);
+		#endif
+	}
+	inline U16x8 operator>>(const U16x8& left, const U16x8 &bitOffsets) {
+		assert(allLanesLesser(bitOffsets, U16x8(16u)));
+		#if defined USE_NEON
+			return U16x8(vshrq_u16(left.v, vreinterpretq_s16_u16(bitOffsets.v)));
+		#else
+			return U16x8(
+			  left.scalars[0] >> bitOffsets.scalars[0],
+			  left.scalars[1] >> bitOffsets.scalars[1],
+			  left.scalars[2] >> bitOffsets.scalars[2],
+			  left.scalars[3] >> bitOffsets.scalars[3],
+			  left.scalars[4] >> bitOffsets.scalars[4],
+			  left.scalars[5] >> bitOffsets.scalars[5],
+			  left.scalars[6] >> bitOffsets.scalars[6],
+			  left.scalars[7] >> bitOffsets.scalars[7]
+			);
+		#endif
+	}
+	// bitOffset must be an immediate constant, so a template argument is used.
+	template <uint32_t bitOffset>
+	inline U16x8 bitShiftLeftImmediate(const U16x8& left) {
+		static_assert(bitOffset < 16u);
+		#if defined USE_SSE2
+			return U16x8(_mm_slli_epi16(left.v, bitOffset));
+		#else
+			#if defined USE_NEON
+				return U16x8(vshlq_u32(left.v, vdupq_n_s16(int16_t(bitOffset))));
+			#else
+				return U16x8(
+				  left.scalars[0] << bitOffset,
+				  left.scalars[1] << bitOffset,
+				  left.scalars[2] << bitOffset,
+				  left.scalars[3] << bitOffset,
+				  left.scalars[4] << bitOffset,
+				  left.scalars[5] << bitOffset,
+				  left.scalars[6] << bitOffset,
+				  left.scalars[7] << bitOffset
+				);
+			#endif
+		#endif
+	}
+	// bitOffset must be an immediate constant.
+	template <uint32_t bitOffset>
+	inline U16x8 bitShiftRightImmediate(const U16x8& left) {
+		static_assert(bitOffset < 16u);
+		#if defined USE_SSE2
+			return U16x8(_mm_srli_epi16(left.v, bitOffset));
+		#else
+			#if defined USE_NEON
+				return U16x8(vshrq_u32(left.v, vdupq_n_s16(int16_t(bitOffset))));
+			#else
+				return U16x8(
+				  left.scalars[0] >> bitOffset,
+				  left.scalars[1] >> bitOffset,
+				  left.scalars[2] >> bitOffset,
+				  left.scalars[3] >> bitOffset,
+				  left.scalars[4] >> bitOffset,
+				  left.scalars[5] >> bitOffset,
+				  left.scalars[6] >> bitOffset,
+				  left.scalars[7] >> bitOffset
+				);
+			#endif
+		#endif
+	}
+
+	inline U8x16 operator<<(const U8x16& left, const U8x16 &bitOffsets) {
+		assert(allLanesLesser(bitOffsets, U8x16(8u)));
+		#if defined USE_NEON
+			return U8x16(vshlq_u16(left.v, vreinterpretq_s8_u8(bitOffsets.v)));
+		#else
+			return U8x16(
+			  left.scalars[ 0] << bitOffsets.scalars[ 0],
+			  left.scalars[ 1] << bitOffsets.scalars[ 1],
+			  left.scalars[ 2] << bitOffsets.scalars[ 2],
+			  left.scalars[ 3] << bitOffsets.scalars[ 3],
+			  left.scalars[ 4] << bitOffsets.scalars[ 4],
+			  left.scalars[ 5] << bitOffsets.scalars[ 5],
+			  left.scalars[ 6] << bitOffsets.scalars[ 6],
+			  left.scalars[ 7] << bitOffsets.scalars[ 7],
+			  left.scalars[ 8] << bitOffsets.scalars[ 8],
+			  left.scalars[ 9] << bitOffsets.scalars[ 9],
+			  left.scalars[10] << bitOffsets.scalars[10],
+			  left.scalars[11] << bitOffsets.scalars[11],
+			  left.scalars[12] << bitOffsets.scalars[12],
+			  left.scalars[13] << bitOffsets.scalars[13],
+			  left.scalars[14] << bitOffsets.scalars[14],
+			  left.scalars[15] << bitOffsets.scalars[15]
+			);
+		#endif
+	}
+	inline U8x16 operator>>(const U8x16& left, const U8x16 &bitOffsets) {
+		assert(allLanesLesser(bitOffsets, U8x16(8u)));
+		#if defined USE_NEON
+			return U8x16(vshrq_u16(left.v, vreinterpretq_s8_u8(bitOffsets.v)));
+		#else
+			return U8x16(
+			  left.scalars[ 0] >> bitOffsets.scalars[ 0],
+			  left.scalars[ 1] >> bitOffsets.scalars[ 1],
+			  left.scalars[ 2] >> bitOffsets.scalars[ 2],
+			  left.scalars[ 3] >> bitOffsets.scalars[ 3],
+			  left.scalars[ 4] >> bitOffsets.scalars[ 4],
+			  left.scalars[ 5] >> bitOffsets.scalars[ 5],
+			  left.scalars[ 6] >> bitOffsets.scalars[ 6],
+			  left.scalars[ 7] >> bitOffsets.scalars[ 7],
+			  left.scalars[ 8] >> bitOffsets.scalars[ 8],
+			  left.scalars[ 9] >> bitOffsets.scalars[ 9],
+			  left.scalars[10] >> bitOffsets.scalars[10],
+			  left.scalars[11] >> bitOffsets.scalars[11],
+			  left.scalars[12] >> bitOffsets.scalars[12],
+			  left.scalars[13] >> bitOffsets.scalars[13],
+			  left.scalars[14] >> bitOffsets.scalars[14],
+			  left.scalars[15] >> bitOffsets.scalars[15]
+			);
+		#endif
+	}
+	// bitOffset must be an immediate constant, so a template argument is used.
+	template <uint32_t bitOffset>
+	inline U8x16 bitShiftLeftImmediate(const U8x16& left) {
+		static_assert(bitOffset < 8u);
+		#if defined USE_SSE2
+			return U8x16(_mm_slli_epi16(left.v, bitOffset));
+		#elif defined USE_NEON
+			return U8x16(vshlq_u32(left.v, vdupq_n_s8(int8_t(bitOffset))));
+		#else
+			return U8x16(
+			  left.scalars[ 0] << bitOffset,
+			  left.scalars[ 1] << bitOffset,
+			  left.scalars[ 2] << bitOffset,
+			  left.scalars[ 3] << bitOffset,
+			  left.scalars[ 4] << bitOffset,
+			  left.scalars[ 5] << bitOffset,
+			  left.scalars[ 6] << bitOffset,
+			  left.scalars[ 7] << bitOffset,
+			  left.scalars[ 8] << bitOffset,
+			  left.scalars[ 9] << bitOffset,
+			  left.scalars[10] << bitOffset,
+			  left.scalars[11] << bitOffset,
+			  left.scalars[12] << bitOffset,
+			  left.scalars[13] << bitOffset,
+			  left.scalars[14] << bitOffset,
+			  left.scalars[15] << bitOffset
+			);
+		#endif
+	}
+	// bitOffset must be an immediate constant.
+	template <uint32_t bitOffset>
+	inline U8x16 bitShiftRightImmediate(const U8x16& left) {
+		static_assert(bitOffset < 8u);
+		#if defined USE_SSE2
+			return U8x16(_mm_srli_epi16(left.v, bitOffset));
+		#elif defined USE_NEON
+			return U8x16(vshrq_u32(left.v, vdupq_n_s8(int8_t(bitOffset))));
+		#else
+			return U8x16(
+			  left.scalars[ 0] >> bitOffset,
+			  left.scalars[ 1] >> bitOffset,
+			  left.scalars[ 2] >> bitOffset,
+			  left.scalars[ 3] >> bitOffset,
+			  left.scalars[ 4] >> bitOffset,
+			  left.scalars[ 5] >> bitOffset,
+			  left.scalars[ 6] >> bitOffset,
+			  left.scalars[ 7] >> bitOffset,
+			  left.scalars[ 8] >> bitOffset,
+			  left.scalars[ 9] >> bitOffset,
+			  left.scalars[10] >> bitOffset,
+			  left.scalars[11] >> bitOffset,
+			  left.scalars[12] >> bitOffset,
+			  left.scalars[13] >> bitOffset,
+			  left.scalars[14] >> bitOffset,
+			  left.scalars[15] >> bitOffset
+			);
+		#endif
+	}
+
 	inline U16x8 operator+(const U16x8& left, const U16x8& right) {
 		#if defined USE_BASIC_SIMD
 			return U16x8(ADD_U16_SIMD(left.v, right.v));
@@ -2414,6 +2714,26 @@
 			return U32x4(source[0], source[1], source[2], source[3]);
 		#endif
 	}
+	// Warning! Behavior depends on endianness.
+	inline U16x8 reinterpret_U16FromU32(const U32x4& vector) {
+		#if defined USE_BASIC_SIMD
+			return U16x8(REINTERPRET_U32_TO_U16_SIMD(vector.v));
+		#else
+			const uint16_t *source = (const uint16_t*)vector.scalars;
+			return U16x8(
+			  source[0], source[1], source[2], source[3], source[4], source[5], source[6], source[7]
+			);
+		#endif
+	}
+	// Warning! Behavior depends on endianness.
+	inline U32x4 reinterpret_U32FromU16(const U16x8& vector) {
+		#if defined USE_BASIC_SIMD
+			return U32x4(REINTERPRET_U16_TO_U32_SIMD(vector.v));
+		#else
+			const uint32_t *source = (const uint32_t*)vector.scalars;
+			return U32x4(source[0], source[1], source[2], source[3]);
+		#endif
+	}
 
 	// Unpacking to larger integers
 	inline U32x4 lowerToU32(const U16x8& vector) {
@@ -2592,7 +2912,7 @@
 		#define GATHER_U32x4_AVX2(SOURCE, FOUR_OFFSETS, SCALE) _mm_i32gather_epi32((const int32_t*)(SOURCE), FOUR_OFFSETS, SCALE)
 		#define GATHER_F32x4_AVX2(SOURCE, FOUR_OFFSETS, SCALE) _mm_i32gather_ps((const float*)(SOURCE), FOUR_OFFSETS, SCALE)
 	#endif
-	static inline U32x4 gather(const dsr::SafePointer<uint32_t> data, const U32x4 &elementOffset) {
+	static inline U32x4 gather_U32(dsr::SafePointer<const uint32_t> data, const U32x4 &elementOffset) {
 		#if defined USE_AVX2
 			// TODO: Implement safety checks for debug mode.
 			return U32x4(GATHER_U32x4_AVX2(data.getUnsafe(), elementOffset.v, 4));
@@ -2607,7 +2927,7 @@
 			);
 		#endif
 	}
-	static inline I32x4 gather(const dsr::SafePointer<int32_t> data, const U32x4 &elementOffset) {
+	static inline I32x4 gather_I32(dsr::SafePointer<const int32_t> data, const U32x4 &elementOffset) {
 		#if defined USE_AVX2
 			// TODO: Implement safety checks for debug mode.
 			return I32x4(GATHER_U32x4_AVX2(data.getUnsafe(), elementOffset.v, 4));
@@ -2622,7 +2942,7 @@
 			);
 		#endif
 	}
-	static inline F32x4 gather(const dsr::SafePointer<float> data, const U32x4 &elementOffset) {
+	static inline F32x4 gather_F32(dsr::SafePointer<const float> data, const U32x4 &elementOffset) {
 		#if defined USE_AVX2
 			// TODO: Implement safety checks for debug mode.
 			return F32x4(GATHER_F32x4_AVX2(data.getUnsafe(), elementOffset.v, 4));
@@ -2826,7 +3146,7 @@
 		#endif
 	}
 	inline U32x8 operator*(const U32x8& left, const U32x8& right) {
-		#if defined USE_AVX2
+		#if defined USE_256BIT_X_SIMD
 			return U32x8(MUL_U32_SIMD256(left.v, right.v));
 		#else
 			return U32x8(
@@ -2889,7 +3209,54 @@
 			);
 		#endif
 	}
-	inline U32x8 operator<<(const U32x8& left, uint32_t bitOffset) {
+	inline U32x8 operator~(const U32x8& value) {
+		#if defined USE_BASIC_SIMD
+			return value ^ U32x8(~uint32_t(0));
+		#else
+			return U32x8(
+			  ~value.scalars[0],
+			  ~value.scalars[1],
+			  ~value.scalars[2],
+			  ~value.scalars[3],
+			  ~value.scalars[4],
+			  ~value.scalars[5],
+			  ~value.scalars[6],
+			  ~value.scalars[7]
+			);
+		#endif
+	}
+
+	// ARM NEON does not support 256-bit vectors and Intel's AVX2 does not support variable shifting.
+	inline U32x8 operator<<(const U32x8& left, const U32x8 &bitOffsets) {
+		assert(allLanesLesser(bitOffsets, U32x8(32u)));
+		return U32x8(
+		  left.scalars[0] << bitOffsets.scalars[0],
+		  left.scalars[1] << bitOffsets.scalars[1],
+		  left.scalars[2] << bitOffsets.scalars[2],
+		  left.scalars[3] << bitOffsets.scalars[3],
+		  left.scalars[4] << bitOffsets.scalars[4],
+		  left.scalars[5] << bitOffsets.scalars[5],
+		  left.scalars[6] << bitOffsets.scalars[6],
+		  left.scalars[7] << bitOffsets.scalars[7]
+		);
+	}
+	inline U32x8 operator>>(const U32x8& left, const U32x8 &bitOffsets) {
+		assert(allLanesLesser(bitOffsets, U32x8(32u)));
+		return U32x8(
+		  left.scalars[0] >> bitOffsets.scalars[0],
+		  left.scalars[1] >> bitOffsets.scalars[1],
+		  left.scalars[2] >> bitOffsets.scalars[2],
+		  left.scalars[3] >> bitOffsets.scalars[3],
+		  left.scalars[4] >> bitOffsets.scalars[4],
+		  left.scalars[5] >> bitOffsets.scalars[5],
+		  left.scalars[6] >> bitOffsets.scalars[6],
+		  left.scalars[7] >> bitOffsets.scalars[7]
+		);
+	}
+	// bitOffset must be an immediate constant from 0 to 31, so a template argument is used.
+	template <uint32_t bitOffset>
+	inline U32x8 bitShiftLeftImmediate(const U32x8& left) {
+		static_assert(bitOffset < 32u);
 		#if defined USE_AVX2
 			return U32x8(_mm256_slli_epi32(left.v, bitOffset));
 		#else
@@ -2905,7 +3272,10 @@
 			);
 		#endif
 	}
-	inline U32x8 operator>>(const U32x8& left, uint32_t bitOffset) {
+	// bitOffset must be an immediate constant from 0 to 31, so a template argument is used.
+	template <uint32_t bitOffset>
+	inline U32x8 bitShiftRightImmediate(const U32x8& left) {
+		static_assert(bitOffset < 32u);
 		#if defined USE_AVX2
 			return U32x8(_mm256_srli_epi32(left.v, bitOffset));
 		#else
@@ -2921,6 +3291,7 @@
 			);
 		#endif
 	}
+
 	inline U16x16 operator+(const U16x16& left, const U16x16& right) {
 		#if defined USE_256BIT_X_SIMD
 			return U16x16(ADD_U16_SIMD256(left.v, right.v));
@@ -3120,6 +3491,27 @@
 			return U32x8(source[0], source[1], source[2], source[3], source[4], source[5], source[6], source[7]);
 		#endif
 	}
+	// Warning! Behavior depends on endianness.
+	inline U16x16 reinterpret_U16FromU32(const U32x8& vector) {
+		#if defined USE_256BIT_X_SIMD
+			return U16x16(REINTERPRET_U32_TO_U16_SIMD256(vector.v));
+		#else
+			const uint16_t *source = (const uint16_t*)vector.scalars;
+			return U16x16(
+			  source[0], source[1], source[2] , source[3] , source[4] , source[5] , source[6] , source[7] ,
+			  source[8], source[9], source[10], source[11], source[12], source[13], source[14], source[15]
+			);
+		#endif
+	}
+	// Warning! Behavior depends on endianness.
+	inline U32x8 reinterpret_U32FromU16(const U16x16& vector) {
+		#if defined USE_256BIT_X_SIMD
+			return U32x4(REINTERPRET_U16_TO_U32_SIMD256(vector.v));
+		#else
+			const uint32_t *source = (const uint32_t*)vector.scalars;
+			return U32x8(source[0], source[1], source[2], source[3], source[4], source[5], source[6], source[7]);
+		#endif
+	}
 
 	// Unpacking to larger integers
 	inline U32x8 lowerToU32(const U16x16& vector) {
@@ -3255,6 +3647,8 @@
 	//   To get elements from the right side, combine the center vector with the right vector and shift one element to the left using vectorExtract_1 for the given type.
 	//   To get elements from the left side, combine the left vector with the center vector and shift one element to the right using vectorExtract_15 for 16 lanes, vectorExtract_7 for 8 lanes, or vectorExtract_3 for 4 lanes.
 
+	// TODO: Also allow using a template arguments as the element offset with a static assert for the offset, which might be useful in template programming.
+
 	U8x32 inline vectorExtract_0(const U8x32 &a, const U8x32 &b) { return a; }
 	U8x32 inline vectorExtract_1(const U8x32 &a, const U8x32 &b) { VECTOR_EXTRACT_GENERATOR_256_U8(1) }
 	U8x32 inline vectorExtract_2(const U8x32 &a, const U8x32 &b) { VECTOR_EXTRACT_GENERATOR_256_U8(2) }
@@ -3344,7 +3738,7 @@
 		#define GATHER_U32x8_AVX2(SOURCE, EIGHT_OFFSETS, SCALE) _mm256_i32gather_epi32((const int32_t*)(SOURCE), EIGHT_OFFSETS, SCALE)
 		#define GATHER_F32x8_AVX2(SOURCE, EIGHT_OFFSETS, SCALE) _mm256_i32gather_ps((const float*)(SOURCE), EIGHT_OFFSETS, SCALE)
 	#endif
-	static inline U32x8 gather(const dsr::SafePointer<uint32_t> data, const U32x8 &elementOffset) {
+	static inline U32x8 gather_U32(dsr::SafePointer<const uint32_t> data, const U32x8 &elementOffset) {
 		#if defined USE_AVX2
 			// TODO: Implement safety checks for debug mode.
 			return U32x8(GATHER_I32x8_AVX2(data.getUnsafe(), elementOffset.v, 4));
@@ -3363,7 +3757,7 @@
 			);
 		#endif
 	}
-	static inline I32x8 gather(const dsr::SafePointer<int32_t> data, const U32x8 &elementOffset) {
+	static inline I32x8 gather_I32(dsr::SafePointer<const int32_t> data, const U32x8 &elementOffset) {
 		#if defined USE_AVX2
 			// TODO: Implement safety checks for debug mode.
 			return I32x8(GATHER_U32x8_AVX2(data.getUnsafe(), elementOffset.v, 4));
@@ -3382,7 +3776,7 @@
 			);
 		#endif
 	}
-	static inline F32x8 gather(const dsr::SafePointer<float> data, const U32x8 &elementOffset) {
+	static inline F32x8 gather_F32(dsr::SafePointer<const float> data, const U32x8 &elementOffset) {
 		#if defined USE_AVX2
 			// TODO: Implement safety checks for debug mode.
 			return F32x8(GATHER_F32x8_AVX2(data.getUnsafe(), elementOffset.v, 4));
@@ -3447,6 +3841,7 @@
 	#undef FOR_SIGNED_VECTOR_TYPES
 	#undef FOR_UNSIGNED_VECTOR_TYPES
 
+	// TODO: Let SVE define completely separate types for dynamic vectors.
 	// The X vectors using the longest SIMD length that is efficient to use for both floating-point and integer types.
 	//   DSR_DEFAULT_ALIGNMENT
 	//     The number of bytes memory should be aligned with by default when creating buffers and images.
@@ -3487,6 +3882,7 @@
 	static const int laneCountX_16Bit = DSR_DEFAULT_VECTOR_SIZE / 2;
 	static const int laneCountX_8Bit = DSR_DEFAULT_VECTOR_SIZE;
 
+	// TODO: Let SVE define completely separate types for dynamic vectors.
 	// The F vector using the longest SIMD length that is efficient to use when only processing float values, even if no integer types are available in the same size.
 	//   Used when you know that your algorithm is only going to work with float types and you need the extra performance.
 	//     Some processors have AVX but not AVX2, meaning that it has 256-bit SIMD for floats, but only 128-bit SIMD for integers.
@@ -3504,4 +3900,27 @@
 	#endif
 	// Used to iterate over float pointers when using F32xF.
 	static const int laneCountF = DSR_FLOAT_VECTOR_SIZE / 4;
+
+	// Define traits.
+	DSR_APPLY_PROPERTY(DsrTrait_Any_U8 , U8x16)
+	DSR_APPLY_PROPERTY(DsrTrait_Any_U8 , U8x32)
+	DSR_APPLY_PROPERTY(DsrTrait_Any_U16, U16x8)
+	DSR_APPLY_PROPERTY(DsrTrait_Any_U16, U16x16)
+	DSR_APPLY_PROPERTY(DsrTrait_Any_U32, U32x4)
+	DSR_APPLY_PROPERTY(DsrTrait_Any_U32, U32x8)
+	DSR_APPLY_PROPERTY(DsrTrait_Any_I32, I32x4)
+	DSR_APPLY_PROPERTY(DsrTrait_Any_I32, I32x8)
+	DSR_APPLY_PROPERTY(DsrTrait_Any_F32, F32x4)
+	DSR_APPLY_PROPERTY(DsrTrait_Any_F32, F32x8)
+
+	// TODO: Use as independent types when the largest vector lengths are not known in compile time on ARM SVE.
+	//DSR_APPLY_PROPERTY(DsrTrait_Any_U8 , U8xX)
+	//DSR_APPLY_PROPERTY(DsrTrait_Any_U16, U16xX)
+	//DSR_APPLY_PROPERTY(DsrTrait_Any_U32, U32xX)
+	//DSR_APPLY_PROPERTY(DsrTrait_Any_I32, I32xX)
+	//DSR_APPLY_PROPERTY(DsrTrait_Any_F32, F32xX)
+	//DSR_APPLY_PROPERTY(DsrTrait_Any_F32, F32xF)
+
+	}
+
 #endif

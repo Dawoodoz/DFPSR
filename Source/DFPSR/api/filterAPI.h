@@ -1,7 +1,7 @@
 ﻿
 // zlib open source license
 //
-// Copyright (c) 2017 to 2020 David Forsgren Piuva
+// Copyright (c) 2017 to 2025 David Forsgren Piuva
 // 
 // This software is provided 'as-is', without any express or implied
 // warranty. In no event will the authors be held liable for any damages
@@ -25,10 +25,16 @@
 #ifndef DFPSR_API_FILTER
 #define DFPSR_API_FILTER
 
-#include "types.h"
+#include "../image/Image.h"
 #include <functional>
 
 namespace dsr {
+
+// Sampling modes
+	enum class Sampler {
+		Nearest, // Taking the nearest value to create square pixels.
+		Linear   // Taking a linear interpolation of the nearest pixels.
+	};
 
 // Image resizing
 	// Create a stretched version of the source image with the given dimensions and default RGBA pack order.
@@ -39,21 +45,21 @@ namespace dsr {
 	//   If source is too small, transparent black pixels (0, 0, 0, 0) fills the outside.
 	//   If source is too large, partial pixels will be cropped away completely and replaced by the black border.
 	//   Letting the images have the same pack order and be aligned to 16-bytes will increase speed.
-	void filter_blockMagnify(ImageRgbaU8 &target, const ImageRgbaU8 &source, int pixelWidth, int pixelHeight);
+	void filter_blockMagnify(const ImageRgbaU8 &target, const ImageRgbaU8 &source, int pixelWidth, int pixelHeight);
 
 // Image generation and filtering
-//   Create new images from Lambda expressions.
-//   Useful for pre-generating images for reference implementations, fast prototyping and texture generation.
+//   Create images from Lambda expressions when speed is not critical.
+//     Capture images within [] and sample pixels from them using image_readPixel_border, image_readPixel_clamp and image_readPixel_tile.
 	// Lambda expressions for generating integer images.
-	using ImageGenRgbaU8 = std::function<ColorRgbaI32(int, int)>;
-	using ImageGenI32 = std::function<int32_t(int, int)>; // Used for U8 and U16 images using different saturations.
-	using ImageGenF32 = std::function<float(int, int)>;
+	using ImageGenRgbaU8 = std::function<ColorRgbaI32(int x, int y)>;
+	using ImageGenI32 = std::function<int32_t(int x, int y)>; // Used for U8 and U16 images using different saturations.
+	using ImageGenF32 = std::function<float(int x, int y)>;
 	// In-place image generation to an existing image.
 	//   The pixel at the upper left corner gets (startX, startY) as x and y arguments to the function.
-	void filter_mapRgbaU8(ImageRgbaU8 target, const ImageGenRgbaU8& lambda, int startX = 0, int startY = 0);
-	void filter_mapU8(ImageU8 target, const ImageGenI32& lambda, int startX = 0, int startY = 0);
-	void filter_mapU16(ImageU16 target, const ImageGenI32& lambda, int startX = 0, int startY = 0);
-	void filter_mapF32(ImageF32 target, const ImageGenF32& lambda, int startX = 0, int startY = 0);
+	void filter_mapRgbaU8(const ImageRgbaU8 target, const ImageGenRgbaU8& lambda, int startX = 0, int startY = 0);
+	void filter_mapU8(const ImageU8 target, const ImageGenI32& lambda, int startX = 0, int startY = 0);
+	void filter_mapU16(const ImageU16 target, const ImageGenI32& lambda, int startX = 0, int startY = 0);
+	void filter_mapF32(const ImageF32 target, const ImageGenF32& lambda, int startX = 0, int startY = 0);
 	// A simpler image generation that constructs the image as a result.
 	// Example:
 	//     int width = 64;

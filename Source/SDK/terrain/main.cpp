@@ -170,7 +170,7 @@ int createGridPart(Model& targetModel, const ImageU8& heightMap) {
 	return part;
 }
 
-static Model createGrid(const ImageU8& heightMap, const ImageRgbaU8& colorMap) {
+static Model createGrid(const ImageU8& heightMap, const TextureRgbaU8& colorMap) {
 	Model model = model_create();
 	int part = createGridPart(model, heightMap);
 	model_setDiffuseMap(model, part, colorMap);
@@ -366,15 +366,16 @@ void dsrMain(List<String> args) {
 	ImageRgbaU8 diffuseMap = image_create_RgbaU8(colorMapWidth, colorMapHeight);
 	generateDiffuseMap(diffuseMap, bumpMap, heightRamp);
 
-	// Create a color map for the ground
-	ImageRgbaU8 colorMap = image_create_RgbaU8(colorMapWidth, colorMapHeight);
+	// Create a color texture with 5 resolutions.
+	TextureRgbaU8 colorTexture = texture_create_RgbaU8(colorMapWidth, colorMapHeight, 5);
+	// Get the highest texture resolution as an image for easy manipulation.
+	ImageRgbaU8 colorMap = texture_getMipLevelImage(colorTexture, 0);
+	// Update the color map and texture.
 	updateColorMap(colorMap, diffuseMap, lightMap);
-
-	// Generate pyramid
-	image_generatePyramid(colorMap);
+	texture_generatePyramid(colorTexture);
 
 	// Create a ground model
-	Model ground = createGrid(heightMap, colorMap);
+	Model ground = createGrid(heightMap, colorTexture);
 
 	// Create a renderer for multi-threading
 	Renderer worker = renderer_create();

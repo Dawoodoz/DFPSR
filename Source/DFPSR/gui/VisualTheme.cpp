@@ -337,22 +337,22 @@ public:
 
 static VisualTheme defaultTheme;
 VisualTheme theme_getDefault() {
-	if (!(defaultTheme.get())) {
+	if (!(defaultTheme.getUnsafe())) {
 		defaultTheme = theme_createFromText(machine_create(defaultMediaMachineCode), defaultStyleSettings, file_getCurrentPath());
 	}
 	return defaultTheme;
 }
 
 VisualTheme theme_createFromText(const MediaMachine &machine, const ReadableString &styleSettings, const ReadableString &fromPath) {
-	return std::make_shared<VisualThemeImpl>(machine, styleSettings, fromPath);
+	return handle_create<VisualThemeImpl>(machine, styleSettings, fromPath).setName("Visual Theme");
 }
 
 VisualTheme theme_createFromFile(const MediaMachine &machine, const ReadableString &styleFilename) {
-	return theme_createFromText(machine, string_load(styleFilename), file_getRelativeParentFolder(styleFilename));
+	return theme_createFromText(machine, string_load(styleFilename), file_getRelativeParentFolder(styleFilename)).setName("Visual Theme");
 }
 
 bool theme_exists(const VisualTheme &theme) {
-	return theme.get() != nullptr;
+	return theme.isNotNull();
 }
 
 int theme_getClassIndex(const VisualTheme &theme, const ReadableString &className) {
@@ -375,7 +375,7 @@ String theme_selectClass(const VisualTheme &theme, const ReadableString &suggest
 }
 
 OrderedImageRgbaU8 theme_getImage(const VisualTheme &theme, const ReadableString &className, const ReadableString &settingName) {
-	if (!theme.get()) {
+	if (!theme.getUnsafe()) {
 		return OrderedImageRgbaU8();
 	}
 	int classIndex = theme->getClassIndex(className);
@@ -390,7 +390,7 @@ OrderedImageRgbaU8 theme_getImage(const VisualTheme &theme, const ReadableString
 }
 
 FixedPoint theme_getFixedPoint(const VisualTheme &theme, const ReadableString &className, const ReadableString &settingName, const FixedPoint &defaultValue) {
-	if (!theme.get()) {
+	if (!theme.getUnsafe()) {
 		return defaultValue;
 	}
 	int classIndex = theme->getClassIndex(className);
@@ -409,7 +409,7 @@ int theme_getInteger(const VisualTheme &theme, const ReadableString &className, 
 }
 
 ReadableString theme_getString(const VisualTheme &theme, const ReadableString &className, const ReadableString &settingName, const ReadableString &defaultValue) {
-	if (!theme.get()) {
+	if (!theme.getUnsafe()) {
 		return defaultValue;
 	}
 	int classIndex = theme->getClassIndex(className);
@@ -424,7 +424,7 @@ ReadableString theme_getString(const VisualTheme &theme, const ReadableString &c
 }
 
 MediaMethod theme_getScalableImage(const VisualTheme &theme, const ReadableString &className) {
-	if (!theme.get()) {
+	if (!theme.getUnsafe()) {
 		throwError(U"theme_getScalableImage: Can't get scalable image of class ", className, U" from a non-existing theme!\n");
 	}
 	int classIndex = theme->getClassIndex(className);
@@ -459,7 +459,7 @@ static bool assignMediaMachineArguments(ClassSettings settings, MediaMachine &ma
 }
 
 bool theme_assignMediaMachineArguments(const VisualTheme &theme, int contextIndex, MediaMachine &machine, int methodIndex, int inputIndex, const ReadableString &argumentName) {
-	if (!theme.get()) { return false; }
+	if (!theme.getUnsafe()) { return false; }
 	// Check in the context first, and then in the default settings.
 	return (contextIndex > 0 && assignMediaMachineArguments(theme->settings[contextIndex], machine, methodIndex, inputIndex, argumentName))
 	                         || assignMediaMachineArguments(theme->settings[0],            machine, methodIndex, inputIndex, argumentName);
