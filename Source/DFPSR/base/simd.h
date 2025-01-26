@@ -3506,7 +3506,7 @@
 	// Warning! Behavior depends on endianness.
 	inline U32x8 reinterpret_U32FromU16(const U16x16& vector) {
 		#if defined USE_256BIT_X_SIMD
-			return U32x4(REINTERPRET_U16_TO_U32_SIMD256(vector.v));
+			return U32x8(REINTERPRET_U16_TO_U32_SIMD256(vector.v));
 		#else
 			const uint32_t *source = (const uint32_t*)vector.scalars;
 			return U32x8(source[0], source[1], source[2], source[3], source[4], source[5], source[6], source[7]);
