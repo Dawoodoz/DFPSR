@@ -24,41 +24,9 @@
 #ifndef DFPSR_MATH_SCALAR
 #define DFPSR_MATH_SCALAR
 
-#include <cmath>
-#include "../base/DsrTraits.h"
+#include "../base/noSimd.h"
 
 namespace dsr {
-
-// A minimum function that can take more than two arguments.
-// Post-condition: Returns the smallest of all given values, which must be comparable using the < operator and have the same type.
-template <typename T, DSR_ENABLE_IF(DSR_CHECK_PROPERTY(DsrTrait_Scalar, T))>
-inline T min(const T &a, const T &b) {
-	return (a < b) ? a : b;
-}
-template <typename T, typename... TAIL, DSR_ENABLE_IF(DSR_CHECK_PROPERTY(DsrTrait_Scalar, T))>
-inline T min(const T &a, const T &b, TAIL... tail) {
-	return min(min(a, b), tail...);
-}
-
-// A maximum function that can take more than two arguments.
-// Post-condition: Returns the largest of all given values, which must be comparable using the > operator and have the same type.
-template <typename T, DSR_ENABLE_IF(DSR_CHECK_PROPERTY(DsrTrait_Scalar, T))>
-inline T max(const T &a, const T &b) {
-	return (a > b) ? a : b;
-}
-template <typename T, typename... TAIL, DSR_ENABLE_IF(DSR_CHECK_PROPERTY(DsrTrait_Scalar, T))>
-inline T max(const T &a, const T &b, TAIL... tail) {
-	return max(max(a, b), tail...);
-}
-
-// Pre-condition: minValue <= maxValue
-// Post-condition: Returns value clamped from minValue to maxValue.
-template <typename T, DSR_ENABLE_IF(DSR_CHECK_PROPERTY(DsrTrait_Scalar, T))>
-T clamp(const T &minValue, T value, const T &maxValue) {
-	if (value > maxValue) value = maxValue;
-	if (value < minValue) value = minValue;
-	return value;
-}
 
 // Returns a modulo b where 0 <= a < b
 template <typename I, typename U, DSR_ENABLE_IF(DSR_CHECK_PROPERTY(DsrTrait_Scalar_SignedInteger, I) && DSR_CHECK_PROPERTY(DsrTrait_Scalar_Integer, U))>

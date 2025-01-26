@@ -5,7 +5,6 @@ TEMP_ROOT=${ROOT_PATH}/../../temporary
 CPP_VERSION=-std=c++14
 MODE="-DDEBUG"
 DEBUGGER="-g"
-#MODE="-msse2 -mssse3 -mavx2"
 O_LEVEL=-O2
 
 chmod +x ${ROOT_PATH}/tools/build.sh;

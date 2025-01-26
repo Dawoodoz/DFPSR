@@ -27,7 +27,9 @@
 #define DFPSR_NO_SIMD
 
 #include <stdint.h>
+#include <cmath>
 #include "SafePointer.h"
+#include "DsrTraits.h"
 
 namespace dsr {
 	// Type conversions.
@@ -105,6 +107,56 @@ namespace dsr {
 		static_assert(bitOffset < 8u);
 		return left >> bitOffset;
 	}
+
+	// A minimum function that can take more than two arguments.
+	// Post-condition: Returns the smallest of all given values, which must be comparable using the < operator and have the same type.
+	template <typename T, DSR_ENABLE_IF(DSR_CHECK_PROPERTY(DsrTrait_Scalar, T))>
+	inline T min(const T &a, const T &b) {
+		return (a < b) ? a : b;
+	}
+	template <typename T, typename... TAIL, DSR_ENABLE_IF(DSR_CHECK_PROPERTY(DsrTrait_Scalar, T))>
+	inline T min(const T &a, const T &b, TAIL... tail) {
+		return min(min(a, b), tail...);
+	}
+
+	// A maximum function that can take more than two arguments.
+	// Post-condition: Returns the largest of all given values, which must be comparable using the > operator and have the same type.
+	template <typename T, DSR_ENABLE_IF(DSR_CHECK_PROPERTY(DsrTrait_Scalar, T))>
+	inline T max(const T &a, const T &b) {
+		return (a > b) ? a : b;
+	}
+	template <typename T, typename... TAIL, DSR_ENABLE_IF(DSR_CHECK_PROPERTY(DsrTrait_Scalar, T))>
+	inline T max(const T &a, const T &b, TAIL... tail) {
+		return max(max(a, b), tail...);
+	}
+
+	// TODO: Implement min and max for integer vectors in simd.h.
+	//       Start by implementing vectorized comparisons and blend functions as a fallback for unsupported types.
+
+	// Pre-condition: minValue <= maxValue
+	// Post-condition: Returns value clamped from minValue to maxValue.
+	template <typename T, DSR_ENABLE_IF(DSR_CHECK_PROPERTY(DsrTrait_Any, T))>
+	inline T clamp(const T &minValue, const T &value, const T &maxValue) {
+		return max(minValue, min(value, maxValue));
+	}
+
+	// Post-condition: Returns value clamped to minValue.
+	template <typename T, DSR_ENABLE_IF(DSR_CHECK_PROPERTY(DsrTrait_Any, T))>
+	inline T clampLower(const T &minValue, const T &value) {
+		return max(minValue, value);
+	}
+
+	// Post-condition: Returns value clamped to maxValue.
+	template <typename T, DSR_ENABLE_IF(DSR_CHECK_PROPERTY(DsrTrait_Any, T))>
+	inline T clampUpper(const T &value, const T &maxValue) {
+		return min(value, maxValue);
+	}
+
+	inline float reciprocal(float value) { return 1.0f / value; }
+
+	inline float reciprocalSquareRoot(float value) { return 1.0f / sqrt(value); }
+
+	inline float squareRoot(float value) { return sqrt(value); }
 
 	// TODO: Add more functions from simd.h.
 }

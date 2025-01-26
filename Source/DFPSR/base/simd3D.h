@@ -72,10 +72,10 @@ inline SIMD_TYPE squareLength(const VECTOR_TYPE &v) { \
 	return dotProduct(v, v); \
 } \
 inline SIMD_TYPE length(const VECTOR_TYPE &v) { \
-	return squareLength(v).squareRoot(); \
+	return squareRoot(squareLength(v)); \
 } \
 inline VECTOR_TYPE normalize(const VECTOR_TYPE &v) { \
-	return v * squareLength(v).reciprocalSquareRoot(); \
+	return v * reciprocalSquareRoot(squareLength(v)); \
 }
 
 // These are the infix operations for 3D SIMD vectors F32x4x3, F32x8x3...
@@ -117,10 +117,10 @@ inline SIMD_TYPE squareLength(const VECTOR_TYPE &v) { \
 	return dotProduct(v, v); \
 } \
 inline SIMD_TYPE length(const VECTOR_TYPE &v) { \
-	return squareLength(v).squareRoot(); \
+	return squareRoot(squareLength(v)); \
 } \
 inline VECTOR_TYPE normalize(const VECTOR_TYPE &v) { \
-	return v * squareLength(v).reciprocalSquareRoot(); \
+	return v * reciprocalSquareRoot(squareLength(v)); \
 }
 
 // These are the available in-plaxe operations for 2D SIMD vectors F32x4x2, F32x8x2...

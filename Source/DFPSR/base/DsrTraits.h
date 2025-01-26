@@ -90,6 +90,18 @@
 		DSR_DECLARE_PROPERTY(DsrTrait_Any_F32)
 		DSR_APPLY_PROPERTY(DsrTrait_Any_F32, float)
 
+		DSR_DECLARE_PROPERTY(DsrTrait_Any)
+		DSR_APPLY_PROPERTY(DsrTrait_Any,   int8_t)
+		DSR_APPLY_PROPERTY(DsrTrait_Any,  int16_t)
+		DSR_APPLY_PROPERTY(DsrTrait_Any,  int32_t)
+		DSR_APPLY_PROPERTY(DsrTrait_Any,  int64_t)
+		DSR_APPLY_PROPERTY(DsrTrait_Any,  uint8_t)
+		DSR_APPLY_PROPERTY(DsrTrait_Any, uint16_t)
+		DSR_APPLY_PROPERTY(DsrTrait_Any, uint32_t)
+		DSR_APPLY_PROPERTY(DsrTrait_Any, uint64_t)
+		DSR_APPLY_PROPERTY(DsrTrait_Any,    float)
+		DSR_APPLY_PROPERTY(DsrTrait_Any,   double)
+
 		DSR_DECLARE_PROPERTY(DsrTrait_Scalar_SignedInteger)
 		DSR_APPLY_PROPERTY(DsrTrait_Scalar_SignedInteger,  int8_t)
 		DSR_APPLY_PROPERTY(DsrTrait_Scalar_SignedInteger, int16_t)

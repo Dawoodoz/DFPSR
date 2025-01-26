@@ -224,7 +224,7 @@ inline void fillRowSuper(void *data, PixelShadingCallback pixelShaderFunction, S
 			FVector4D depth = vRecDepth.get();
 			// After linearly interpolating (1 / W, U / W, V / W) based on the affine weights...
 			// Divide 1 by 1 / W to get the linear depth W
-			F32x4 vLinearDepth = vRecDepth.reciprocal();
+			F32x4 vLinearDepth = reciprocal(vRecDepth);
 			// Multiply the vertex weights to the second and third edges with the depth to compensate for that we divided them by depth before interpolating.
 			F32x4 weightB = vRecU * vLinearDepth;
 			F32x4 weightC = vRecV * vLinearDepth;
