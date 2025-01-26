@@ -32,9 +32,17 @@ for file in ./test/tests/*.cpp; do
 	# Compile test case that defines main
 	echo "Compiling ${name}";
 	g++ ${CPP_VERSION} ${MODE} ${DEBUGGER} -c ${file} -o ${TEMP_DIR}/${base}_test.o;
+	if [ $? -ne 0 ]
+	then
+		exit 1
+	fi
 	# Linking with frameworks
 	echo "Linking ${name}";
 	g++ ${TEMP_DIR}/*.o ${TEMP_DIR}/*.a -lm -pthread -o ${TEMP_DIR}/application;
+	if [ $? -ne 0 ]
+	then
+		exit 1
+	fi
 	# Run the test case
 	echo "Executing ${name}";
 	./${TEMP_DIR}/application;
@@ -44,8 +52,8 @@ for file in ./test/tests/*.cpp; do
 	else
 		echo "Failed ${name}!";
 		# Re-run with a memory debugger.
-		gdb ./${TEMP_DIR}/application;
-		break;
+		#gdb ./${TEMP_DIR}/application;
+		exit 1
 	fi
 done
 
