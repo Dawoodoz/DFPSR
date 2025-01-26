@@ -1,0 +1,21 @@
+# See ci.yml.tabs for the properly indented version if you are having trouble seeing the indentation in this file.
+# This version is only for Github to parse.
+name: DFPSR tests
+on: [push]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        architecture: [x86_32, x86_64]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Run tests
+        run: |
+          cd ./Source
+          if [[ "${{ matrix.architecture }}" == "x86_32" ]]; then
+            ./test.sh
+          elif [[ "${{ matrix.architecture }}" == "x86_64" ]]; then
+            ./test.sh
+          fi
