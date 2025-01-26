@@ -107,8 +107,8 @@ bool sound_streamToSpeakers(int channels, int sampleRate, std::function<bool(Saf
 					// SIMD vectorized sound conversion with scaling and clamping to signed 16-bit integers.
 					F32x4 lowerFloats = F32x4::readAligned(floatData + t, "sound_streamToSpeakers: Reading lower floats");
 					F32x4 upperFloats = F32x4::readAligned(floatData + t + 4, "sound_streamToSpeakers: Reading upper floats");
-					I32x4 lowerInts = truncateToI32((lowerFloats * 32767.0f).clamp(-32768.0f, 32767.0f));
-					I32x4 upperInts = truncateToI32((upperFloats * 32767.0f).clamp(-32768.0f, 32767.0f));
+					I32x4 lowerInts = truncateToI32(clamp(F32x4(-32768.0f), lowerFloats * 32767.0f, F32x4(32767.0f)));
+					I32x4 upperInts = truncateToI32(clamp(F32x4(-32768.0f), upperFloats * 32767.0f, F32x4(32767.0f)));
 					// TODO: Create I16x8 SIMD vectors for processing sound as 16-bit integers?
 					//       Or just move unzip into simd.h with a fallback solution and remove simdExtra.h.
 					//       Or just implement reading and writing of 16-bit signed integers using multiple SIMD registers or smaller memory regions.

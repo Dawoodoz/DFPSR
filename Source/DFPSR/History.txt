@@ -30,18 +30,19 @@ Changes from version 0.1.0 to version 0.2.0 (Bug fixes)
 	* If you used a custom theme before the system was finished, you will now have to add the assignment "filter = 1" for components where rounded edges became black from adding the filter setting.
 		Because one can not let default values depend on which component is used when theme classes are shared freely between components.
 
-Changes from version 0.2.0 to version 0.3.0 (Performance and safety improvements)
+Changes from version 0.2.0 to version 0.3.0 (Performance, safety and template improvements)
 	* To make SafePointer fully typesafe so that one can't accidentally give write access to write protected data, the recursive constness had to be removed.
 		Replace 'const SafePointer<' with 'SafePointer<const '
 		Replace 'const dsr::SafePointer<' with 'dsr::SafePointer<const '
 	* The function given to image_dangerous_replaceDestructor no longer frees the allocation itself, only external resources associated with the data.
 		Because heap_free is called automatically after the destructor in the new memory allocator.
 	* simd.h has moved into the dsr namespace because it was getting too big for the global namespace.
-		gather has been renamed into gather_U32, gather_I32 and gather_F32.
+		* gather has been renamed into gather_U32, gather_I32 and gather_F32.
 			This avoids potential ambiguity.
-		The 'a == b' and 'a != b' operators have been replaced with 'allLanesEqual(a, b)' and '!allLanesEqual(a, b)'.
+		* The 'a == b' and 'a != b' operators have been replaced with 'allLanesEqual(a, b)' and '!allLanesEqual(a, b)'.
 			This reserves the comparison operators for future use with multiple boolean results.
-		Immediate bit shifting now use the bitShiftLeftImmediate and bitShiftRightImmediate functions with a template argument for the number of bits to shift.
+		* Immediate bit shifting now use the bitShiftLeftImmediate and bitShiftRightImmediate functions with a template argument for the number of bits to shift.
+			Because it was very easy to forget that the offset had to be constant with some SIMD instructions.
 			Replace any << or >> operator that takes a constant offset with the new functions to prevent slowing down.
 				Replace a << 3 with bitShiftLeftImmediate<3>(a).
 				Replace a >> 5 with bitShiftRightImmediate<5>(a).
@@ -49,11 +50,14 @@ Changes from version 0.2.0 to version 0.3.0 (Performance and safety improvements
 				Replace a << b with a << U32x4(b), a << U16x8(b), a << U8x16(b), a << U32x8(b), a << U16x16(b), a << U8x32(b), a << U32xX(b), a << U16xX(b) or a << U8xX(b).
 				Replace a >> b with a >> U32x4(b), a >> U16x8(b), a >> U8x16(b), a >> U32x8(b), a >> U16x16(b), a >> U8x32(b), a >> U32xX(b), a >> U16xX(b) or a >> U8xX(b).
 				The more lanes you use, the slower it becomes when not available in SIMD hardware, so try to use at least 32-bit integers for faster fallback implementations.
-			If you know that the offset is always evenly divisible by 8, you can use byteShiftLeft and byteShiftRight instead.
-				Replace a << 8 with byteShiftLeft(a, 8).
-				Replace a >> 16 with byteShiftRight(a, 16).
-			This makes sure that one does not accidentally use an immediate bit shift with a variable offset.
-				Using a template argument for the offset also allow detecting offsets outside of the deterministic range in compile time.
+		* clamp, clampLower and clampUpper are global methods instead of member methods, to work the same for scalar operations in template functions.
+			Replace myVector.clamp(min, max) with clamp(VectorType(min), myVector, VectorType(max)).
+			Replace myVector.clampLower(min) with clampLower(VectorType(min), myVector).
+			Replace myVector.clampUpper(max) with clampUpper(myVector, VectorType(max)).
+		* reciprocal, reciprocalSquareRoot and squareRoot are now global functions, to work the same for scalar operations in template functions.
+			Replace myVector.reciprocal() with reciprocal(myVector).
+			Replace myVector.reciprocalSquareRoot() with reciprocalSquareRoot(myVector).
+			Replace myVector.squareRoot() with squareRoot(myVector).
 	* Textures have been separated from images to allow using them as separate value types.
 		Because it was very difficult to re-use internal texture sampling methods for custom rendering pipelines.
 		  Now images and textures have immutable value allocated heads and all side-effects are in the pixel buffers.		  
@@ -62,7 +66,7 @@ Changes from version 0.2.0 to version 0.3.0 (Performance and safety improvements
 		Replace 'image_generatePyramid' with 'texture_generatePyramid'.
 		Create a texture from the image using texture_create_RgbaU8 with the image and the number of resolutions.
 		  Then assign the texture instead of the image.
-s	* PackOrder.h has a new packOrder_ prefix for global functions to prevent naming conflicts.
+	* PackOrder.h has a new packOrder_ prefix for global functions to prevent naming conflicts.
 		Replace 'getRed' with 'packOrder_getRed'.
 		Replace 'getGreen' with 'packOrder_getGreen'.
 		Replace 'getBlue' with 'packOrder_getBlue'.

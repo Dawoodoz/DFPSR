@@ -27,9 +27,8 @@
 #include <cstdint>
 #include "Color.h"
 #include "../base/endian.h"
-#include "../base/DsrTraits.h"
+#include "../base/noSimd.h"
 #include "../api/stringAPI.h"
-#include "../math/scalar.h"
 
 namespace dsr {
 
@@ -185,17 +184,16 @@ U packOrder_packBytes(const U &s0, const U &s1, const U &s2, const U &s3, const 
 //   From F32x4 to U32x4
 //   From F32x8 to U32x8
 //   From F32xX to U32xX
-//   From F32xF to U32xF
 template<typename U, typename F, DSR_ENABLE_IF(
 	 DSR_CHECK_PROPERTY(DsrTrait_Any_U32, U)
   && DSR_CHECK_PROPERTY(DsrTrait_Any_F32, F)
 )>
 inline U packOrder_floatToSaturatedByte(const F &s0, const F &s1, const F &s2, const F &s3) {
 	return packOrder_packBytes(
-	  truncateToU32(s0.clamp(0.1f, 255.1f)),
-	  truncateToU32(s1.clamp(0.1f, 255.1f)),
-	  truncateToU32(s2.clamp(0.1f, 255.1f)),
-	  truncateToU32(s3.clamp(0.1f, 255.1f))
+	  truncateToU32(clampUpper(s0, F(255.1f))),
+	  truncateToU32(clampUpper(s1, F(255.1f))),
+	  truncateToU32(clampUpper(s2, F(255.1f))),
+	  truncateToU32(clampUpper(s3, F(255.1f)))
 	);
 }
 // Using a specified pack order
@@ -205,10 +203,10 @@ template<typename U, typename F, DSR_ENABLE_IF(
 )>
 inline U packOrder_floatToSaturatedByte(const F &s0, const F &s1, const F &s2, const F &s3, const PackOrder &order) {
 	return packOrder_packBytes(
-	  truncateToU32(s0.clamp(0.1f, 255.1f)),
-	  truncateToU32(s1.clamp(0.1f, 255.1f)),
-	  truncateToU32(s2.clamp(0.1f, 255.1f)),
-	  truncateToU32(s3.clamp(0.1f, 255.1f)),
+	  truncateToU32(clampUpper(s0, F(255.1f))),
+	  truncateToU32(clampUpper(s1, F(255.1f))),
+	  truncateToU32(clampUpper(s2, F(255.1f))),
+	  truncateToU32(clampUpper(s3, F(255.1f))),
 	  order
 	);
 }

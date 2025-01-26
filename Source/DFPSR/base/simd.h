@@ -529,124 +529,74 @@
 			#endif
 			this->writeAlignedUnsafe(pointer);
 		}
-		// 1 / x
-		//   Useful for multiple divisions with the same denominator
-		//   Useless if the denominator is a constant
-		F32x4 reciprocal() const {
-			#if defined USE_BASIC_SIMD
-				#if defined USE_SSE2
-					// Approximate
-					SIMD_F32x4 lowQ = _mm_rcp_ps(this->v);
-					// Refine
-					return F32x4(SUB_F32_SIMD(ADD_F32_SIMD(lowQ, lowQ), MUL_F32_SIMD(this->v, MUL_F32_SIMD(lowQ, lowQ))));
-				#elif defined USE_NEON
-					// Approximate
-					SIMD_F32x4 result = vrecpeq_f32(this->v);
-					// Refine
-					result = MUL_F32_SIMD(vrecpsq_f32(this->v, result), result);
-					return F32x4(MUL_F32_SIMD(vrecpsq_f32(this->v, result), result));
-				#else
-					assert(false);
-					return F32x4(0);
-				#endif
-			#else
-				return F32x4(1.0f / this->scalars[0], 1.0f / this->scalars[1], 1.0f / this->scalars[2], 1.0f / this->scalars[3]);
-			#endif
-		}
-		// 1 / sqrt(x)
-		//   Useful for normalizing vectors
-		F32x4 reciprocalSquareRoot() const {
-			#if defined USE_BASIC_SIMD
-				#if defined USE_SSE2
-					SIMD_F32x4 reciRoot = _mm_rsqrt_ps(this->v);
-					SIMD_F32x4 mul = MUL_F32_SIMD(MUL_F32_SIMD(this->v, reciRoot), reciRoot);
-					reciRoot = MUL_F32_SIMD(MUL_F32_SIMD(LOAD_SCALAR_F32_SIMD(0.5f), reciRoot), SUB_F32_SIMD(LOAD_SCALAR_F32_SIMD(3.0f), mul));
-					return F32x4(reciRoot);
-				#elif defined USE_NEON
-					// Approximate
-					SIMD_F32x4 reciRoot = vrsqrteq_f32(this->v);
-					// Refine
-					reciRoot = MUL_F32_SIMD(vrsqrtsq_f32(MUL_F32_SIMD(this->v, reciRoot), reciRoot), reciRoot);
-					return F32x4(reciRoot);
-				#else
-					assert(false);
-					return F32x4(0);
-				#endif
-			#else
-				return F32x4(1.0f / sqrt(this->scalars[0]), 1.0f / sqrt(this->scalars[1]), 1.0f / sqrt(this->scalars[2]), 1.0f / sqrt(this->scalars[3]));
-			#endif
-		}
-		// sqrt(x)
-		//   Useful for getting lengths of vectors
-		F32x4 squareRoot() const {
-			#if defined USE_BASIC_SIMD
-				#if defined USE_SSE2
-					SIMD_F32x4 half = LOAD_SCALAR_F32_SIMD(0.5f);
-					// Approximate
-					SIMD_F32x4 root = _mm_sqrt_ps(this->v);
-					// Refine
-					root = _mm_mul_ps(_mm_add_ps(root, _mm_div_ps(this->v, root)), half);
-					return F32x4(root);
-				#elif defined USE_NEON
-					return F32x4(MUL_F32_SIMD(this->v, this->reciprocalSquareRoot().v));
-				#else
-					assert(false);
-					return F32x4(0);
-				#endif
-			#else
-				return F32x4(sqrt(this->scalars[0]), sqrt(this->scalars[1]), sqrt(this->scalars[2]), sqrt(this->scalars[3]));
-			#endif
-		}
-		F32x4 clamp(float minimum, float maximum) const {
-			#if defined USE_BASIC_SIMD
-				return F32x4(MIN_F32_SIMD(MAX_F32_SIMD(this->v, LOAD_SCALAR_F32_SIMD(minimum)), LOAD_SCALAR_F32_SIMD(maximum)));
-			#else
-				float val0 = this->scalars[0];
-				float val1 = this->scalars[1];
-				float val2 = this->scalars[2];
-				float val3 = this->scalars[3];
-				if (minimum > val0) { val0 = minimum; }
-				if (maximum < val0) { val0 = maximum; }
-				if (minimum > val1) { val1 = minimum; }
-				if (maximum < val1) { val1 = maximum; }
-				if (minimum > val2) { val2 = minimum; }
-				if (maximum < val2) { val2 = maximum; }
-				if (minimum > val3) { val3 = minimum; }
-				if (maximum < val3) { val3 = maximum; }
-				return F32x4(val0, val1, val2, val3);
-			#endif
-		}
-		F32x4 clampLower(float minimum) const {
-			#if defined USE_BASIC_SIMD
-				return F32x4(MAX_F32_SIMD(this->v, LOAD_SCALAR_F32_SIMD(minimum)));
-			#else
-				float val0 = this->scalars[0];
-				float val1 = this->scalars[1];
-				float val2 = this->scalars[2];
-				float val3 = this->scalars[3];
-				if (minimum > val0) { val0 = minimum; }
-				if (minimum > val1) { val1 = minimum; }
-				if (minimum > val2) { val2 = minimum; }
-				if (minimum > val3) { val3 = minimum; }
-				return F32x4(val0, val1, val2, val3);
-			#endif
-		}
-		F32x4 clampUpper(float maximum) const {
-			#if defined USE_BASIC_SIMD
-				return F32x4(MIN_F32_SIMD(this->v, LOAD_SCALAR_F32_SIMD(maximum)));
-			#else
-				float val0 = this->scalars[0];
-				float val1 = this->scalars[1];
-				float val2 = this->scalars[2];
-				float val3 = this->scalars[3];
-				if (maximum < val0) { val0 = maximum; }
-				if (maximum < val1) { val1 = maximum; }
-				if (maximum < val2) { val2 = maximum; }
-				if (maximum < val3) { val3 = maximum; }
-				return F32x4(val0, val1, val2, val3);
-			#endif
-		}
 	};
+
+	// 1 / value
+	inline F32x4 reciprocal(const F32x4 &value) {
+		#if defined USE_BASIC_SIMD
+			#if defined USE_SSE2
+				// Approximate
+				SIMD_F32x4 lowQ = _mm_rcp_ps(value.v);
+				// Refine
+				return F32x4(SUB_F32_SIMD(ADD_F32_SIMD(lowQ, lowQ), MUL_F32_SIMD(value.v, MUL_F32_SIMD(lowQ, lowQ))));
+			#elif defined USE_NEON
+				// Approximate
+				SIMD_F32x4 result = vrecpeq_f32(value.v);
+				// Refine
+				result = MUL_F32_SIMD(vrecpsq_f32(value.v, result), result);
+				return F32x4(MUL_F32_SIMD(vrecpsq_f32(value.v, result), result));
+			#else
+				assert(false);
+				return F32x4(0);
+			#endif
+		#else
+			return F32x4(1.0f / value.scalars[0], 1.0f / value.scalars[1], 1.0f / value.scalars[2], 1.0f / value.scalars[3]);
+		#endif
+	}
+
+	// 1 / sqrt(value)
+	inline F32x4 reciprocalSquareRoot(const F32x4 &value) {
+		#if defined USE_BASIC_SIMD
+			#if defined USE_SSE2
+				SIMD_F32x4 reciRoot = _mm_rsqrt_ps(value.v);
+				SIMD_F32x4 mul = MUL_F32_SIMD(MUL_F32_SIMD(value.v, reciRoot), reciRoot);
+				reciRoot = MUL_F32_SIMD(MUL_F32_SIMD(LOAD_SCALAR_F32_SIMD(0.5f), reciRoot), SUB_F32_SIMD(LOAD_SCALAR_F32_SIMD(3.0f), mul));
+				return F32x4(reciRoot);
+			#elif defined USE_NEON
+				// Approximate
+				SIMD_F32x4 reciRoot = vrsqrteq_f32(value.v);
+				// Refine
+				reciRoot = MUL_F32_SIMD(vrsqrtsq_f32(MUL_F32_SIMD(value.v, reciRoot), reciRoot), reciRoot);
+				return F32x4(reciRoot);
+			#else
+				assert(false);
+				return F32x4(0);
+			#endif
+		#else
+			return F32x4(1.0f / sqrt(value.scalars[0]), 1.0f / sqrt(value.scalars[1]), 1.0f / sqrt(value.scalars[2]), 1.0f / sqrt(value.scalars[3]));
+		#endif
+	}
+
+	// sqrt(value)
+	inline F32x4 squareRoot(const F32x4 &value) {
+		#if defined USE_BASIC_SIMD
+			#if defined USE_SSE2
+				SIMD_F32x4 half = LOAD_SCALAR_F32_SIMD(0.5f);
+				// Approximate
+				SIMD_F32x4 root = _mm_sqrt_ps(value.v);
+				// Refine
+				root = _mm_mul_ps(_mm_add_ps(root, _mm_div_ps(value.v, root)), half);
+				return F32x4(root);
+			#elif defined USE_NEON
+				return F32x4(MUL_F32_SIMD(value.v, value.reciprocalSquareRoot().v));
+			#else
+				assert(false);
+				return F32x4(0);
+			#endif
+		#else
+			return F32x4(sqrt(value.scalars[0]), sqrt(value.scalars[1]), sqrt(value.scalars[2]), sqrt(value.scalars[3]));
+		#endif
+	}
 
 	union I32x4 {
 		private:
@@ -1258,150 +1208,71 @@
 			#endif
 			this->writeAlignedUnsafe(pointer);
 		}
-		// 1 / x
-		//   Useful for multiple divisions with the same denominator
-		//   Useless if the denominator is a constant
-		F32x8 reciprocal() const {
-			#if defined USE_AVX2
-				// Approximate
-				SIMD_F32x8 lowQ = _mm256_rcp_ps(this->v);
-				// Refine
-				return F32x8(SUB_F32_SIMD256(ADD_F32_SIMD256(lowQ, lowQ), MUL_F32_SIMD256(this->v, MUL_F32_SIMD256(lowQ, lowQ))));
-			#else
-				return F32x8(
-				  1.0f / this->scalars[0],
-				  1.0f / this->scalars[1],
-				  1.0f / this->scalars[2],
-				  1.0f / this->scalars[3],
-				  1.0f / this->scalars[4],
-				  1.0f / this->scalars[5],
-				  1.0f / this->scalars[6],
-				  1.0f / this->scalars[7]
-				);
-			#endif
-		}
-		// 1 / sqrt(x)
-		//   Useful for normalizing vectors
-		F32x8 reciprocalSquareRoot() const {
-			#if defined USE_AVX2
-				//__m128 reciRoot = _mm256_rsqrt_ps(this->v);
-				SIMD_F32x8 reciRoot = _mm256_rsqrt_ps(this->v);
-				SIMD_F32x8 mul = MUL_F32_SIMD256(MUL_F32_SIMD256(this->v, reciRoot), reciRoot);
-				reciRoot = MUL_F32_SIMD256(MUL_F32_SIMD256(LOAD_SCALAR_F32_SIMD256(0.5f), reciRoot), SUB_F32_SIMD256(LOAD_SCALAR_F32_SIMD256(3.0f), mul));
-				return F32x8(reciRoot);
-			#else
-				return F32x8(
-				  1.0f / sqrt(this->scalars[0]),
-				  1.0f / sqrt(this->scalars[1]),
-				  1.0f / sqrt(this->scalars[2]),
-				  1.0f / sqrt(this->scalars[3]),
-				  1.0f / sqrt(this->scalars[4]),
-				  1.0f / sqrt(this->scalars[5]),
-				  1.0f / sqrt(this->scalars[6]),
-				  1.0f / sqrt(this->scalars[7])
-				);
-			#endif
-		}
-		// sqrt(x)
-		//   Useful for getting lengths of vectors
-		F32x8 squareRoot() const {
-			#if defined USE_AVX2
-				SIMD_F32x8 half = LOAD_SCALAR_F32_SIMD256(0.5f);
-				// Approximate
-				SIMD_F32x8 root = _mm256_sqrt_ps(this->v);
-				// Refine
-				root = _mm256_mul_ps(_mm256_add_ps(root, _mm256_div_ps(this->v, root)), half);
-				return F32x8(root);
-			#else
-				return F32x8(
-				  sqrt(this->scalars[0]),
-				  sqrt(this->scalars[1]),
-				  sqrt(this->scalars[2]),
-				  sqrt(this->scalars[3]),
-				  sqrt(this->scalars[4]),
-				  sqrt(this->scalars[5]),
-				  sqrt(this->scalars[6]),
-				  sqrt(this->scalars[7]));
-			#endif
-		}
-		F32x8 clamp(float minimum, float maximum) const {
-			#if defined USE_256BIT_F_SIMD
-				return F32x8(MIN_F32_SIMD256(MAX_F32_SIMD256(this->v, LOAD_SCALAR_F32_SIMD256(minimum)), LOAD_SCALAR_F32_SIMD256(maximum)));
-			#else
-				float val0 = this->scalars[0];
-				float val1 = this->scalars[1];
-				float val2 = this->scalars[2];
-				float val3 = this->scalars[3];
-				float val4 = this->scalars[4];
-				float val5 = this->scalars[5];
-				float val6 = this->scalars[6];
-				float val7 = this->scalars[7];
-				if (minimum > val0) { val0 = minimum; }
-				if (maximum < val0) { val0 = maximum; }
-				if (minimum > val1) { val1 = minimum; }
-				if (maximum < val1) { val1 = maximum; }
-				if (minimum > val2) { val2 = minimum; }
-				if (maximum < val2) { val2 = maximum; }
-				if (minimum > val3) { val3 = minimum; }
-				if (maximum < val3) { val3 = maximum; }
-				if (minimum > val4) { val4 = minimum; }
-				if (maximum < val4) { val4 = maximum; }
-				if (minimum > val5) { val5 = minimum; }
-				if (maximum < val5) { val5 = maximum; }
-				if (minimum > val6) { val6 = minimum; }
-				if (maximum < val6) { val6 = maximum; }
-				if (minimum > val7) { val7 = minimum; }
-				if (maximum < val7) { val7 = maximum; }
-				return F32x8(val0, val1, val2, val3, val4, val5, val6, val7);
-			#endif
-		}
-		F32x8 clampLower(float minimum) const {
-			#if defined USE_256BIT_F_SIMD
-				return F32x8(MAX_F32_SIMD256(this->v, LOAD_SCALAR_F32_SIMD256(minimum)));
-			#else
-				float val0 = this->scalars[0];
-				float val1 = this->scalars[1];
-				float val2 = this->scalars[2];
-				float val3 = this->scalars[3];
-				float val4 = this->scalars[4];
-				float val5 = this->scalars[5];
-				float val6 = this->scalars[6];
-				float val7 = this->scalars[7];
-				if (minimum > val0) { val0 = minimum; }
-				if (minimum > val1) { val1 = minimum; }
-				if (minimum > val2) { val2 = minimum; }
-				if (minimum > val3) { val3 = minimum; }
-				if (minimum > val4) { val4 = minimum; }
-				if (minimum > val5) { val5 = minimum; }
-				if (minimum > val6) { val6 = minimum; }
-				if (minimum > val7) { val7 = minimum; }
-				return F32x8(val0, val1, val2, val3, val4, val5, val6, val7);
-			#endif
-		}
-		F32x8 clampUpper(float maximum) const {
-			#if defined USE_256BIT_F_SIMD
-				return F32x8(MIN_F32_SIMD256(this->v, LOAD_SCALAR_F32_SIMD256(maximum)));
-			#else
-				float val0 = this->scalars[0];
-				float val1 = this->scalars[1];
-				float val2 = this->scalars[2];
-				float val3 = this->scalars[3];
-				float val4 = this->scalars[4];
-				float val5 = this->scalars[5];
-				float val6 = this->scalars[6];
-				float val7 = this->scalars[7];
-				if (maximum < val0) { val0 = maximum; }
-				if (maximum < val1) { val1 = maximum; }
-				if (maximum < val2) { val2 = maximum; }
-				if (maximum < val3) { val3 = maximum; }
-				if (maximum < val4) { val4 = maximum; }
-				if (maximum < val5) { val5 = maximum; }
-				if (maximum < val6) { val6 = maximum; }
-				if (maximum < val7) { val7 = maximum; }
-				return F32x8(val0, val1, val2, val3, val4, val5, val6, val7);
-			#endif
-		}
 	};
+
+	// 1 / value
+	inline F32x8 reciprocal(const F32x8 &value) {
+		#if defined USE_AVX2
+			// Approximate
+			SIMD_F32x8 lowQ = _mm256_rcp_ps(value.v);
+			// Refine
+			return F32x8(SUB_F32_SIMD256(ADD_F32_SIMD256(lowQ, lowQ), MUL_F32_SIMD256(value.v, MUL_F32_SIMD256(lowQ, lowQ))));
+		#else
+			return F32x8(
+			  1.0f / value.scalars[0],
+			  1.0f / value.scalars[1],
+			  1.0f / value.scalars[2],
+			  1.0f / value.scalars[3],
+			  1.0f / value.scalars[4],
+			  1.0f / value.scalars[5],
+			  1.0f / value.scalars[6],
+			  1.0f / value.scalars[7]
+			);
+		#endif
+	}
+
+	// 1 / sqrt(value)
+	inline F32x8 reciprocalSquareRoot(const F32x8 &value) {
+		#if defined USE_AVX2
+			SIMD_F32x8 reciRoot = _mm256_rsqrt_ps(value.v);
+			SIMD_F32x8 mul = MUL_F32_SIMD256(MUL_F32_SIMD256(value.v, reciRoot), reciRoot);
+			reciRoot = MUL_F32_SIMD256(MUL_F32_SIMD256(LOAD_SCALAR_F32_SIMD256(0.5f), reciRoot), SUB_F32_SIMD256(LOAD_SCALAR_F32_SIMD256(3.0f), mul));
+			return F32x8(reciRoot);
+		#else
+			return F32x8(
+			  1.0f / sqrt(value.scalars[0]),
+			  1.0f / sqrt(value.scalars[1]),
+			  1.0f / sqrt(value.scalars[2]),
+			  1.0f / sqrt(value.scalars[3]),
+			  1.0f / sqrt(value.scalars[4]),
+			  1.0f / sqrt(value.scalars[5]),
+			  1.0f / sqrt(value.scalars[6]),
+			  1.0f / sqrt(value.scalars[7])
+			);
+		#endif
+	}
+
+	// sqrt(value)
+	inline F32x8 squareRoot(const F32x8 &value) {
+		#if defined USE_AVX2
+			SIMD_F32x8 half = LOAD_SCALAR_F32_SIMD256(0.5f);
+			// Approximate
+			SIMD_F32x8 root = _mm256_sqrt_ps(value.v);
+			// Refine
+			root = _mm256_mul_ps(_mm256_add_ps(root, _mm256_div_ps(value.v, root)), half);
+			return F32x8(root);
+		#else
+			return F32x8(
+			  sqrt(value.scalars[0]),
+			  sqrt(value.scalars[1]),
+			  sqrt(value.scalars[2]),
+			  sqrt(value.scalars[3]),
+			  sqrt(value.scalars[4]),
+			  sqrt(value.scalars[5]),
+			  sqrt(value.scalars[6]),
+			  sqrt(value.scalars[7]));
+		#endif
+	}
 
 	union I32x8 {
 		private:
@@ -3912,6 +3783,16 @@
 	DSR_APPLY_PROPERTY(DsrTrait_Any_I32, I32x8)
 	DSR_APPLY_PROPERTY(DsrTrait_Any_F32, F32x4)
 	DSR_APPLY_PROPERTY(DsrTrait_Any_F32, F32x8)
+	DSR_APPLY_PROPERTY(DsrTrait_Any , U8x16)
+	DSR_APPLY_PROPERTY(DsrTrait_Any , U8x32)
+	DSR_APPLY_PROPERTY(DsrTrait_Any, U16x8)
+	DSR_APPLY_PROPERTY(DsrTrait_Any, U16x16)
+	DSR_APPLY_PROPERTY(DsrTrait_Any, U32x4)
+	DSR_APPLY_PROPERTY(DsrTrait_Any, U32x8)
+	DSR_APPLY_PROPERTY(DsrTrait_Any, I32x4)
+	DSR_APPLY_PROPERTY(DsrTrait_Any, I32x8)
+	DSR_APPLY_PROPERTY(DsrTrait_Any, F32x4)
+	DSR_APPLY_PROPERTY(DsrTrait_Any, F32x8)
 
 	// TODO: Use as independent types when the largest vector lengths are not known in compile time on ARM SVE.
 	//DSR_APPLY_PROPERTY(DsrTrait_Any_U8 , U8xX)
@@ -3920,6 +3801,12 @@
 	//DSR_APPLY_PROPERTY(DsrTrait_Any_I32, I32xX)
 	//DSR_APPLY_PROPERTY(DsrTrait_Any_F32, F32xX)
 	//DSR_APPLY_PROPERTY(DsrTrait_Any_F32, F32xF)
+	//DSR_APPLY_PROPERTY(DsrTrait_Any , U8xX)
+	//DSR_APPLY_PROPERTY(DsrTrait_Any, U16xX)
+	//DSR_APPLY_PROPERTY(DsrTrait_Any, U32xX)
+	//DSR_APPLY_PROPERTY(DsrTrait_Any, I32xX)
+	//DSR_APPLY_PROPERTY(DsrTrait_Any, F32xX)
+	//DSR_APPLY_PROPERTY(DsrTrait_Any, F32xF)
 
 	}
 

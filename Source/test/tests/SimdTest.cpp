@@ -3,6 +3,8 @@
 #include "../../DFPSR/base/simd.h"
 
 // TODO: Test: allLanesNotEqual, allLanesLesser, allLanesGreater, allLanesLesserOrEqual, allLanesGreaterOrEqual, reinterpret_U16FromU32, reinterpret_U32FromU16, operand ~
+// TODO: Test that truncateToU32 saturates to minimum and maximum values.
+// TODO: Test that truncateToI32 saturates to minimum and maximum values.
 
 START_TEST(Simd)
 	printText("\nSIMD test is compiled using:\n");
@@ -146,13 +148,13 @@ START_TEST(Simd)
 	ASSERT(allLanesEqual(U16x8(12, 0, 34, 0, 56, 0, 78, 0).get_U32(), U32x4(12, 34, 56, 78)));
 
 	// Reciprocal: 1 / x
-	ASSERT(allLanesEqual(F32x4(0.5f, 1.0f, 2.0f, 4.0f).reciprocal(), F32x4(2.0f, 1.0f, 0.5f, 0.25f)));
+	ASSERT(allLanesEqual(reciprocal(F32x4(0.5f, 1.0f, 2.0f, 4.0f)), F32x4(2.0f, 1.0f, 0.5f, 0.25f)));
 
 	// Square root: sqrt(x)
-	ASSERT(allLanesEqual(F32x4(1.0f, 4.0f, 9.0f, 100.0f).squareRoot(), F32x4(1.0f, 2.0f, 3.0f, 10.0f)));
+	ASSERT(allLanesEqual(squareRoot(F32x4(1.0f, 4.0f, 9.0f, 100.0f)), F32x4(1.0f, 2.0f, 3.0f, 10.0f)));
 
 	// Reciprocal square root: 1 / sqrt(x)
-	ASSERT(allLanesEqual(F32x4(1.0f, 4.0f, 16.0f, 100.0f).reciprocalSquareRoot(), F32x4(1.0f, 0.5f, 0.25f, 0.1f)));
+	ASSERT(allLanesEqual(reciprocalSquareRoot(F32x4(1.0f, 4.0f, 16.0f, 100.0f)), F32x4(1.0f, 0.5f, 0.25f, 0.1f)));
 
 	// Minimum
 	ASSERT(allLanesEqual(min(F32x4(1.1f, 2.2f, 3.3f, 4.4f), F32x4(5.0f, 3.0f, 1.0f, -1.0f)), F32x4(1.1f, 2.2f, 1.0f, -1.0f)));
@@ -161,7 +163,9 @@ START_TEST(Simd)
 	ASSERT(allLanesEqual(max(F32x4(1.1f, 2.2f, 3.3f, 4.4f), F32x4(5.0f, 3.0f, 1.0f, -1.0f)), F32x4(5.0f, 3.0f, 3.3f, 4.4f)));
 
 	// Clamp
-	ASSERT(allLanesEqual(F32x4(-35.1f, 1.0f, 2.0f, 45.7f).clamp(-1.5f, 1.5f), F32x4(-1.5f, 1.0f, 1.5f, 1.5f)));
+	ASSERT(allLanesEqual(clamp(F32x4(-1.5f), F32x4(-35.1f, 1.0f, 2.0f, 45.7f), F32x4(1.5f)), F32x4(-1.5f, 1.0f, 1.5f, 1.5f)));
+	ASSERT(allLanesEqual(clampUpper(F32x4(-35.1f, 1.0f, 2.0f, 45.7f), F32x4(1.5f)), F32x4(-35.1f, 1.0f, 1.5f, 1.5f)));
+	ASSERT(allLanesEqual(clampLower(F32x4(-1.5f), F32x4(-35.1f, 1.0f, 2.0f, 45.7f)), F32x4(-1.5f, 1.0f, 2.0f, 45.7f)));
 
 	// F32x4 operations
 	ASSERT(allLanesEqual(F32x4(1.1f, -2.2f, 3.3f, 4.0f) + F32x4(2.2f, -4.4f, 6.6f, 8.0f), F32x4(3.3f, -6.6f, 9.9f, 12.0f)));
@@ -428,13 +432,13 @@ START_TEST(Simd)
 	ASSERT(allLanesEqual(U16x16(12, 0, 34, 0, 56, 0, 78, 0, 11, 0, 22, 0, 33, 0, 44, 2).get_U32(), U32x8(12, 34, 56, 78, 11, 22, 33, 131116)));
 
 	// Reciprocal: 1 / x
-	ASSERT(allLanesEqual(F32x8(0.5f, 1.0f, 2.0f, 4.0f, 8.0f, 10.0f, 100.0f, 1000.0f).reciprocal(), F32x8(2.0f, 1.0f, 0.5f, 0.25f, 0.125f, 0.1f, 0.01f, 0.001f)));
+	ASSERT(allLanesEqual(reciprocal(F32x8(0.5f, 1.0f, 2.0f, 4.0f, 8.0f, 10.0f, 100.0f, 1000.0f)), F32x8(2.0f, 1.0f, 0.5f, 0.25f, 0.125f, 0.1f, 0.01f, 0.001f)));
 
 	// Square root: sqrt(x)
-	ASSERT(allLanesEqual(F32x8(1.0f, 4.0f, 9.0f, 100.0f, 64.0f, 256.0f, 1024.0f, 4096.0f).squareRoot(), F32x8(1.0f, 2.0f, 3.0f, 10.0f, 8.0f, 16.0f, 32.0f, 64.0f)));
+	ASSERT(allLanesEqual(squareRoot(F32x8(1.0f, 4.0f, 9.0f, 100.0f, 64.0f, 256.0f, 1024.0f, 4096.0f)), F32x8(1.0f, 2.0f, 3.0f, 10.0f, 8.0f, 16.0f, 32.0f, 64.0f)));
 
 	// Reciprocal square root: 1 / sqrt(x)
-	ASSERT(allLanesEqual(F32x8(1.0f, 4.0f, 16.0f, 100.0f, 400.0f, 64.0f, 25.0f, 100.0f).reciprocalSquareRoot(), F32x8(1.0f, 0.5f, 0.25f, 0.1f, 0.05f, 0.125f, 0.2f, 0.1f)));
+	ASSERT(allLanesEqual(reciprocalSquareRoot(F32x8(1.0f, 4.0f, 16.0f, 100.0f, 400.0f, 64.0f, 25.0f, 100.0f)), F32x8(1.0f, 0.5f, 0.25f, 0.1f, 0.05f, 0.125f, 0.2f, 0.1f)));
 
 	// Minimum
 	ASSERT(allLanesEqual(min(F32x8(1.1f, 2.2f, 3.3f, 4.4f, 5.5f, 6.6f, 7.7f, 8.8f), F32x8(5.0f, 3.0f, 1.0f, -1.0f, 4.0f, 5.0f, -2.5f, 10.0f)), F32x8(1.1f, 2.2f, 1.0f, -1.0f, 4.0f, 5.0f, -2.5f, 8.8f)));
@@ -443,7 +447,9 @@ START_TEST(Simd)
 	ASSERT(allLanesEqual(max(F32x8(1.1f, 2.2f, 3.3f, 4.4f, 5.5f, 6.6f, 7.7f, 8.8f), F32x8(5.0f, 3.0f, 1.0f, -1.0f, 4.0f, 5.0f, -2.5f, 10.0f)), F32x8(5.0f, 3.0f, 3.3f, 4.4f, 5.5f, 6.6f, 7.7f, 10.0f)));
 
 	// Clamp
-	ASSERT(allLanesEqual(F32x8(-35.1f, 1.0f, 2.0f, 45.7f, 0.0f, -1.0f, 2.1f, -1.9f).clamp(-1.5f, 1.5f), F32x8(-1.5f, 1.0f, 1.5f, 1.5f, 0.0f, -1.0f, 1.5f, -1.5f)));
+	ASSERT(allLanesEqual(clamp(F32x8(-1.5f), F32x8(-35.1f, 1.0f, 2.0f, 45.7f, 0.0f, -1.0f, 2.1f, -1.9f), F32x8(1.5f)), F32x8(-1.5f, 1.0f, 1.5f, 1.5f, 0.0f, -1.0f, 1.5f, -1.5f)));
+	ASSERT(allLanesEqual(clampUpper(F32x8(-35.1f, 1.0f, 2.0f, 45.7f, 0.0f, -1.0f, 2.1f, -1.9f), F32x8(1.5f)), F32x8(-35.1f, 1.0f, 1.5f, 1.5f, 0.0f, -1.0f, 1.5f, -1.9f)));
+	ASSERT(allLanesEqual(clampLower(F32x8(-1.5f), F32x8(-35.1f, 1.0f, 2.0f, 45.7f, 0.0f, -1.0f, 2.1f, -1.9f)), F32x8(-1.5f, 1.0f, 2.0f, 45.7f, 0.0f, -1.0f, 2.1f, -1.5f)));
 
 	// F32x8 operations
 	ASSERT(allLanesEqual(F32x8(1.1f, -2.2f, 3.3f, 4.0f, 1.4f, 2.3f, 3.2f, 4.1f) + F32x8(2.2f, -4.4f, 6.6f, 8.0f, 4.11f, 3.22f, 2.33f, 1.44f), F32x8(3.3f, -6.6f, 9.9f, 12.0f, 5.51f, 5.52f, 5.53f, 5.54f)));

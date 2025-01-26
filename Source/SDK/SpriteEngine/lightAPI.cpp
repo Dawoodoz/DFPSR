@@ -44,13 +44,13 @@ void directedLight(const FMatrix3x3& normalToWorldSpace, OrderedImageRgbaU8& lig
 				F32xXx3 negativeSurfaceNormal = unpackRgb_U32xX_to_F32xXx3(normalColor) - 128.0f;
 				// Calculate light intensity
 				//   Normalization and negation is already pre-multiplied into reverseLightDirection
-				F32xX intensity = dotProduct(negativeSurfaceNormal, reverseLightDirection).clampLower(0.0f);
+				F32xX intensity = clampLower(dotProduct(negativeSurfaceNormal, reverseLightDirection), F32xX(0.0f));
 				F32xX red = intensity * colorR;
 				F32xX green = intensity * colorG;
 				F32xX blue = intensity * colorB;
-				red = red.clampUpper(255.1f);
-				green = green.clampUpper(255.1f);
-				blue = blue.clampUpper(255.1f);
+				red = clampUpper(red, F32xX(255.1f));
+				green = clampUpper(green, F32xX(255.1f));
+				blue = clampUpper(blue, F32xX(255.1f));
 				// TODO: Let color packing handle arbitrary vector lengths.
 				U8xX light = reinterpret_U8FromU32(packOrder_packBytes(truncateToU32(red), truncateToU32(green), truncateToU32(blue)));
 				if (ADD_LIGHT) {
@@ -248,9 +248,9 @@ static void addPointLightSuper(const OrthoView& camera, const IVector2D& worldCe
 					F32xX red = intensity * colorR;
 					F32xX green = intensity * colorG;
 					F32xX blue = intensity * colorB;
-					red = red.clampUpper(255.1f);
-					green = green.clampUpper(255.1f);
-					blue = blue.clampUpper(255.1f);
+					red = clampUpper(red, F32xX(255.1f));
+					green = clampUpper(green, F32xX(255.1f));
+					blue = clampUpper(blue, F32xX(255.1f));
 					// Add light to the image
 					U8xX morelight = reinterpret_U8FromU32(packOrder_packBytes(truncateToU32(red), truncateToU32(green), truncateToU32(blue)));
 					addLight(lightPixel, morelight);
@@ -306,9 +306,9 @@ void blendLight(AlignedImageRgbaU8& colorBuffer, const OrderedImageRgbaU8& diffu
 				F32xX red = (floatFromU32(packOrder_getRed(diffuse)) * floatFromU32(packOrder_getRed(light))) * scale;
 				F32xX green = (floatFromU32(packOrder_getGreen(diffuse)) * floatFromU32(packOrder_getGreen(light))) * scale;
 				F32xX blue = (floatFromU32(packOrder_getBlue(diffuse)) * floatFromU32(packOrder_getBlue(light))) * scale;
-				red = red.clampUpper(255.1f);
-				green = green.clampUpper(255.1f);
-				blue = blue.clampUpper(255.1f);
+				red = clampUpper(red, F32xX(255.1f));
+				green = clampUpper(green, F32xX(255.1f));
+				blue = clampUpper(blue, F32xX(255.1f));
 				U32xX color = packOrder_packBytes(truncateToU32(red), truncateToU32(green), truncateToU32(blue), targetOrder);
 				color.writeAligned(targetPixel, "blendLight: writing color");
 				targetPixel += laneCountX_32Bit;
