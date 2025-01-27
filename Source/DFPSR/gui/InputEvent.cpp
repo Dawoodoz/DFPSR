@@ -250,7 +250,7 @@ String& dsr::string_toStreamIndented(String& target, const KeyboardEvent& source
 	string_append(target, indentation, U"KeyboardEvent(");
 	string_append(target, U"keyboardEventType = ", source.keyboardEventType);
 	string_append(target, U", dsrKey = ", source.dsrKey);
-	string_append(target, U", character = ", source.character);
+	string_append(target, U", character = ", (uint32_t)source.character);
 	string_append(target, U")");
 	return target;
 }

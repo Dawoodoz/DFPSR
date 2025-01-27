@@ -290,7 +290,7 @@ namespace dsr {
 	};
 
 	// A reference counted handle to a process, so that multiple callers can read the status at any time.
-	class DsrProcessImpl;
+	struct DsrProcessImpl;
 	using DsrProcess = Handle<DsrProcessImpl>;
 
 	// Post-condition: Returns the status of process.

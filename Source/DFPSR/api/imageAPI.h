@@ -407,19 +407,19 @@ namespace dsr {
 	// Returns the overlapping region if out of bound
 	// Returns a null image if there are no overlapping pixels to return
 	inline ImageU8 image_getSubImage(const ImageU8& image, const IRect& region) {
-		static_assert(sizeof(ImageU8) == sizeof(Image));
+		static_assert(sizeof(ImageU8) == sizeof(Image), "ImageU8 must have the same size as Image, to prevent slicing in assignments!");
 		return ImageU8(image, region);
 	}
 	inline ImageU16 image_getSubImage(const ImageU16& image, const IRect& region) {
-		static_assert(sizeof(ImageU16) == sizeof(Image));
+		static_assert(sizeof(ImageU16) == sizeof(Image), "ImageU16 must have the same size as Image, to prevent slicing in assignments!");
 		return ImageU16(image, region);
 	}
 	inline ImageF32 image_getSubImage(const ImageF32& image, const IRect& region) {
-		static_assert(sizeof(ImageF32) == sizeof(Image));
+		static_assert(sizeof(ImageF32) == sizeof(Image), "ImageF32 must have the same size as Image, to prevent slicing in assignments!");
 		return ImageF32(image, region);
 	}
 	inline ImageRgbaU8 image_getSubImage(const ImageRgbaU8& image, const IRect& region) {
-		static_assert(sizeof(ImageRgbaU8) == sizeof(Image));
+		static_assert(sizeof(ImageRgbaU8) == sizeof(Image), "ImageRgbaU8 must have the same size as Image, to prevent slicing in assignments!");
 		return ImageRgbaU8(image, region);
 	}
 	// Check dynamically if the image was created as a sub-image.

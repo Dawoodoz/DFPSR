@@ -79,32 +79,32 @@ namespace dsr {
 
 	template <uint32_t bitOffset>
 	inline uint32_t bitShiftLeftImmediate(const uint32_t& left) {
-		static_assert(bitOffset < 32u);
+		static_assert(bitOffset < 32u, "Immediate left shift of 32-bit values may not shift more than 31 bits!");
 		return left << bitOffset;
 	}
 	template <uint32_t bitOffset>
 	inline uint32_t bitShiftRightImmediate(const uint32_t& left) {
-		static_assert(bitOffset < 32u);
+		static_assert(bitOffset < 32u, "Immediate right shift of 32-bit values may not shift more than 31 bits!");
 		return left >> bitOffset;
 	}
 	template <uint16_t bitOffset>
 	inline uint16_t bitShiftLeftImmediate(const uint16_t& left) {
-		static_assert(bitOffset < 16u);
+		static_assert(bitOffset < 16u, "Immediate left shift of 16-bit values may not shift more than 15 bits!");
 		return left << bitOffset;
 	}
 	template <uint16_t bitOffset>
 	inline uint16_t bitShiftRightImmediate(const uint16_t& left) {
-		static_assert(bitOffset < 16u);
+		static_assert(bitOffset < 16u, "Immediate right shift of 16-bit values may not shift more than 15 bits!");
 		return left >> bitOffset;
 	}
 	template <uint8_t bitOffset>
 	inline uint8_t bitShiftLeftImmediate(const uint8_t& left) {
-		static_assert(bitOffset < 8u);
+		static_assert(bitOffset < 8u, "Immediate left shift of 8-bit values may not shift more than 7 bits!");
 		return left << bitOffset;
 	}
 	template <uint8_t bitOffset>
 	inline uint8_t bitShiftRightImmediate(const uint8_t& left) {
-		static_assert(bitOffset < 8u);
+		static_assert(bitOffset < 8u, "Immediate right shift of 8-bit values may not shift more than 7 bits!");
 		return left >> bitOffset;
 	}
 

@@ -40,7 +40,7 @@ namespace dsr {
 
 namespace dsr {
 	// A handle to a multi-threaded rendering context.
-	class RendererImpl;
+	struct RendererImpl;
 	using Renderer = Handle<RendererImpl>;
 
 	// Normalized texture coordinates:

@@ -28,6 +28,7 @@
 #include <functional>
 #include "bufferAPI.h"
 #include "../base/SafePointer.h"
+#include "../base/DsrTraits.h"
 #include "../collection/List.h"
 
 // Define DSR_INTERNAL_ACCESS before any include to get internal access to exposed types
@@ -157,35 +158,101 @@ public:
 	virtual ~Printable();
 };
 
-String& string_toStreamIndented(String& target, const char *value, const ReadableString& indentation);
-String& string_toStreamIndented(String& target, const DsrChar *value, const ReadableString& indentation);
-String& string_toStreamIndented(String& target, const ReadableString &value, const ReadableString& indentation);
-String& string_toStreamIndented(String& target, const double &value, const ReadableString& indentation);
-String& string_toStreamIndented(String& target, const int64_t &value, const ReadableString& indentation);
-String& string_toStreamIndented(String& target, const uint64_t &value, const ReadableString& indentation);
-inline String& string_toStreamIndented(String& target, const float &value, const ReadableString& indentation) {
-	return string_toStreamIndented(target, (double)value, indentation);
-}
-inline String& string_toStreamIndented(String& target, const int32_t &value, const ReadableString& indentation) {
-	return string_toStreamIndented(target, (int64_t)value, indentation);
-}
-inline String& string_toStreamIndented(String& target, const int16_t &value, const ReadableString& indentation) {
-	return string_toStreamIndented(target, (int64_t)value, indentation);
-}
-inline String& string_toStreamIndented(String& target, const int8_t &value, const ReadableString& indentation) {
-	return string_toStreamIndented(target, (int64_t)value, indentation);
-}
-inline String& string_toStreamIndented(String& target, const uint32_t &value, const ReadableString& indentation) {
-	return string_toStreamIndented(target, (uint64_t)value, indentation);
-}
-inline String& string_toStreamIndented(String& target, const uint16_t &value, const ReadableString& indentation) {
-	return string_toStreamIndented(target, (uint64_t)value, indentation);
-}
-inline String& string_toStreamIndented(String& target, const uint8_t &value, const ReadableString& indentation) {
-	return string_toStreamIndented(target, (uint64_t)value, indentation);
-}
-inline String& string_toStreamIndented(String& target, const Printable& value, const ReadableString& indentation) {
-	return value.toStreamIndented(target, indentation);
+// Helper functions to resolve ambiguity without constexpr if statements in C++ 14.
+String& impl_toStreamIndented_ascii(String& target, const char *value, const ReadableString& indentation);
+String& impl_toStreamIndented_utf32(String& target, const char32_t *value, const ReadableString& indentation);
+String& impl_toStreamIndented_readable(String& target, const ReadableString &value, const ReadableString& indentation);
+String& impl_toStreamIndented_double(String& target, const double &value, const ReadableString& indentation);
+String& impl_toStreamIndented_int64(String& target, const int64_t &value, const ReadableString& indentation);
+String& impl_toStreamIndented_uint64(String& target, const uint64_t &value, const ReadableString& indentation);
+
+// Resolving ambiguity without access to constexpr in if statements by disabling type safety with unsafeCast.
+template <typename T, DSR_ENABLE_IF(
+    DSR_UTF32_LITERAL(T)
+ || DSR_ASCII_LITERAL(T)
+ || DSR_INHERITS_FROM(T, Printable)
+ || DSR_SAME_TYPE(T, String)
+ || DSR_SAME_TYPE(T, ReadableString)
+ || DSR_SAME_TYPE(T, float)
+ || DSR_SAME_TYPE(T, double)
+ || DSR_SAME_TYPE(T, char)
+ || DSR_SAME_TYPE(T, char32_t)
+ || DSR_SAME_TYPE(T, bool)
+ || DSR_SAME_TYPE(T, short)
+ || DSR_SAME_TYPE(T, int)
+ || DSR_SAME_TYPE(T, long)
+ || DSR_SAME_TYPE(T, long long)
+ || DSR_SAME_TYPE(T, unsigned short)
+ || DSR_SAME_TYPE(T, unsigned int)
+ || DSR_SAME_TYPE(T, unsigned long)
+ || DSR_SAME_TYPE(T, unsigned long long)
+ || DSR_SAME_TYPE(T, uint8_t)
+ || DSR_SAME_TYPE(T, uint16_t)
+ || DSR_SAME_TYPE(T, uint32_t)
+ || DSR_SAME_TYPE(T, uint64_t)
+ || DSR_SAME_TYPE(T, int8_t)
+ || DSR_SAME_TYPE(T, int16_t)
+ || DSR_SAME_TYPE(T, int32_t)
+ || DSR_SAME_TYPE(T, int64_t))>
+inline String& string_toStreamIndented(String& target, const T &value, const ReadableString& indentation) {
+	if (DSR_UTF32_LITERAL(T)) {
+		impl_toStreamIndented_utf32(target, unsafeCast<char32_t*>(value), indentation);
+	} else if (DSR_ASCII_LITERAL(T)) {
+		impl_toStreamIndented_ascii(target, unsafeCast<char*>(value), indentation);
+	} else if (DSR_INHERITS_FROM(T, Printable)) {
+		unsafeCast<Printable>(value).toStreamIndented(target, indentation);
+	} else if (DSR_SAME_TYPE(T, String)) {
+		impl_toStreamIndented_readable(target, unsafeCast<String>(value), indentation);
+	} else if (DSR_SAME_TYPE(T, ReadableString)) {
+		impl_toStreamIndented_readable(target, unsafeCast<ReadableString>(value), indentation);
+	} else if (DSR_SAME_TYPE(T, float)) {
+		impl_toStreamIndented_double(target, (double)unsafeCast<float>(value), indentation);
+	} else if (DSR_SAME_TYPE(T, double)) {
+		impl_toStreamIndented_double(target, unsafeCast<double>(value), indentation);
+	} else if (DSR_SAME_TYPE(T, char)) {
+		impl_toStreamIndented_readable(target, indentation, U"");
+		string_appendChar(target, unsafeCast<char>(value));
+	} else if (DSR_SAME_TYPE(T, char32_t)) {
+		impl_toStreamIndented_readable(target, indentation, U"");
+		string_appendChar(target, unsafeCast<char32_t>(value));
+	} else if (DSR_SAME_TYPE(T, bool)) {
+		impl_toStreamIndented_utf32(target, unsafeCast<bool>(value) ? U"true" : U"false", indentation);
+	} else if (DSR_SAME_TYPE(T, uint8_t)) {
+		impl_toStreamIndented_uint64(target, (uint64_t)unsafeCast<uint8_t>(value), indentation);
+	} else if (DSR_SAME_TYPE(T, uint16_t)) {
+		impl_toStreamIndented_uint64(target, (uint64_t)unsafeCast<uint16_t>(value), indentation);
+	} else if (DSR_SAME_TYPE(T, uint32_t)) {
+		impl_toStreamIndented_uint64(target, (uint64_t)unsafeCast<uint32_t>(value), indentation);
+	} else if (DSR_SAME_TYPE(T, uint64_t)) {
+		impl_toStreamIndented_uint64(target, unsafeCast<uint64_t>(value), indentation);
+	} else if (DSR_SAME_TYPE(T, int8_t)) {
+		impl_toStreamIndented_int64(target, (int64_t)unsafeCast<int8_t>(value), indentation);
+	} else if (DSR_SAME_TYPE(T, int16_t)) {
+		impl_toStreamIndented_int64(target, (int64_t)unsafeCast<int16_t>(value), indentation);
+	} else if (DSR_SAME_TYPE(T, int32_t)) {
+		impl_toStreamIndented_int64(target, (int64_t)unsafeCast<int32_t>(value), indentation);
+	} else if (DSR_SAME_TYPE(T, int64_t)) {
+		impl_toStreamIndented_int64(target, unsafeCast<int64_t>(value), indentation);
+	} else if (DSR_SAME_TYPE(T, short)) {
+		impl_toStreamIndented_int64(target, (int64_t)unsafeCast<short>(value), indentation);
+	} else if (DSR_SAME_TYPE(T, int)) {
+		impl_toStreamIndented_int64(target, (int64_t)unsafeCast<int>(value), indentation);
+	} else if (DSR_SAME_TYPE(T, long)) {
+		impl_toStreamIndented_int64(target, (int64_t)unsafeCast<long>(value), indentation);
+	} else if (DSR_SAME_TYPE(T, long long)) {
+		static_assert(sizeof(long long) == 8, U"You need to implement integer printing for integers larger than 64 bits, or printing long long will be truncated!");
+		impl_toStreamIndented_int64(target, (int64_t)unsafeCast<long long>(value), indentation);
+	} else if (DSR_SAME_TYPE(T, unsigned short)) {
+		impl_toStreamIndented_int64(target, (int64_t)unsafeCast<short>(value), indentation);
+	} else if (DSR_SAME_TYPE(T, unsigned int)) {
+		impl_toStreamIndented_int64(target, (int64_t)unsafeCast<int>(value), indentation);
+	} else if (DSR_SAME_TYPE(T, unsigned long)) {
+		impl_toStreamIndented_int64(target, (int64_t)unsafeCast<long>(value), indentation);
+	} else if (DSR_SAME_TYPE(T, unsigned long long)) {
+		static_assert(sizeof(unsigned long long) == 8, U"You need to implement integer printing for integers larger than 64 bits, or printing unsigned long long will be truncated!");
+		impl_toStreamIndented_int64(target, (int64_t)unsafeCast<unsigned long long>(value), indentation);
+	}
+	return target;
 }
 
 template<typename T>
@@ -392,12 +459,8 @@ void string_reserve(String& target, intptr_t minimumLength);
 // Append/push one character (to avoid integer to string conversion)
 void string_appendChar(String& target, DsrChar value);
 
-// Append one element
-template<typename TYPE>
-inline void string_append(String& target, const TYPE &value) {
-	string_toStreamIndented(target, value, U"");
-}
-// Append multiple elements
+// Append elements
+inline void string_append(String& target) {}
 template<typename HEAD, typename... TAIL>
 inline void string_append(String& target, HEAD head, TAIL&&... tail) {
 	string_toStreamIndented(target, head, U"");

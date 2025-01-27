@@ -114,11 +114,13 @@ Buffer file_loadBuffer(const ReadableString& filename, bool mustExist) {
 	if (file != nullptr) {
 		// Get the file's size by going to the end, measuring, and going back
 		fseek(file, 0L, SEEK_END);
-		int64_t fileSize = ftell(file);
+		uintptr_t fileSize = ftell(file);
 		rewind(file);
 		// Allocate a buffer of the file's size
 		Buffer buffer = buffer_create(fileSize);
-		fread((void*)buffer_dangerous_getUnsafeData(buffer), fileSize, 1, file);
+		size_t resultSize = fread((void*)buffer_dangerous_getUnsafeData(buffer), fileSize, 1, file);
+		// Supress warnings.
+		(void)resultSize;
 		fclose(file);
 		return buffer;
 	} else {
@@ -385,7 +387,9 @@ String file_getCurrentPath() {
 		return fromNativeString(resultBuffer);
 	#else
 		NativeChar resultBuffer[maxLength + 1] = {0};
-		getcwd(resultBuffer, maxLength);
+		char* result = getcwd(resultBuffer, maxLength);
+		// Supress warnings about not using the result, because we already have it in the buffer.
+		(void)result;
 		return fromNativeString(resultBuffer);
 	#endif
 }

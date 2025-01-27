@@ -27,6 +27,7 @@
 #define DFPSR_TRAITS
 
 	#include <stdint.h>
+	#include <type_traits>
 
 	namespace dsr {
 		// Subset of std::integral_constant.
@@ -74,6 +75,19 @@
 
 		#define DSR_CHECK_RELATION(RELATION_NAME, TYPE_A, TYPE_B) \
 			(RELATION_NAME<TYPE_A, TYPE_B>::value)
+
+		// Checking types.
+		#define DSR_SAME_TYPE(TYPE_A, TYPE_B) DsrTrait_SameType<TYPE_A, TYPE_B>::value
+		#define DSR_UTF32_LITERAL(TYPE) std::is_convertible<TYPE, const char32_t*>::value
+		#define DSR_ASCII_LITERAL(TYPE) std::is_convertible<TYPE, const char*>::value
+		#define DSR_INHERITS_FROM(DERIVED, BASE) std::is_base_of<BASE, DERIVED>::value
+
+		// Supress type safety when impossible conversions can never execute.
+		template<typename TO, typename FROM>
+		inline const TO& unsafeCast(const FROM &value) {
+			const void *pointer = (const void*)&value;
+			return *(const TO*)pointer;
+		}
 
 		DSR_DECLARE_PROPERTY(DsrTrait_Any_U8)
 		DSR_APPLY_PROPERTY(DsrTrait_Any_U8, uint8_t)
