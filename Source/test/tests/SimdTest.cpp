@@ -2,7 +2,7 @@
 #include "../testTools.h"
 #include "../../DFPSR/base/simd.h"
 
-// TODO: Test: allLanesNotEqual, allLanesLesser, allLanesGreater, allLanesLesserOrEqual, allLanesGreaterOrEqual, reinterpret_U16FromU32, reinterpret_U32FromU16, operand ~
+// TODO: Test: allLanesNotEqual, allLanesLesser, allLanesGreater, allLanesLesserOrEqual, allLanesGreaterOrEqual, reinterpret_U16FromU32, reinterpret_U32FromU16, operand ~, smaller bit shifts.
 // TODO: Test that truncateToU32 saturates to minimum and maximum values.
 // TODO: Test that truncateToI32 saturates to minimum and maximum values.
 

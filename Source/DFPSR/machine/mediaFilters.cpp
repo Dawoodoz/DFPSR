@@ -360,7 +360,6 @@ void dsr::media_fade_region_linear(ImageU8& targetImage, const IRect& viewport, 
 			// Each pixel needs to be evaluated in this fade.
 			for (int32_t y = viewport.top(); y < viewport.bottom(); y++) {
 				SafePointer<uint8_t> targetPixel = targetRow;
-				int64_t ratio = startRatio;
 				for (int32_t x = viewport.left(); x < viewport.right(); x++) {
 				int64_t saturatedRatio = startRatio;
 				if (saturatedRatio < 0) { saturatedRatio = 0; }
@@ -370,7 +369,6 @@ void dsr::media_fade_region_linear(ImageU8& targetImage, const IRect& viewport, 
 					if (mixedColor > 255) { mixedColor = 255; }
 					*targetPixel = mixedColor;
 					targetPixel += 1;
-					ratio += ratioDx;
 				}
 				targetRow.increaseBytes(targetStride);
 				startRatio += ratioDy;

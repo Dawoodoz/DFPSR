@@ -73,3 +73,6 @@ Changes from version 0.2.0 to version 0.3.0 (Performance, safety and template im
 		Replace 'getAlpha' with 'packOrder_getAlpha'.
 		Replace 'packBytes' with 'packOrder_packBytes'.
 		Replace 'floatToSaturatedByte' with 'packOrder_floatToSaturatedByte'.
+	* Because the new string printing uses exact matching for basic types, bool is now printed as true or false instead of 1 or 0.
+		Cast to uint32_t if you want bool interpreted as an integer as before.
+		Does not affect PersistentBoolean.

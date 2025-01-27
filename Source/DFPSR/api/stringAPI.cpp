@@ -826,32 +826,32 @@ static void atomic_append_readable(String &target, const ReadableString& source)
 static void atomic_append_utf32(String &target, const DsrChar* source) { APPEND(target, source, strlen_utf32(source), 0xFFFFFFFF); }
 void dsr::string_appendChar(String& target, DsrChar value) { APPEND(target, &value, 1, 0xFFFFFFFF); }
 
-String& dsr::string_toStreamIndented(String& target, const char *value, const ReadableString& indentation) {
+String& dsr::impl_toStreamIndented_ascii(String& target, const char *value, const ReadableString& indentation) {
 	atomic_append_readable(target, indentation);
 	atomic_append_ascii(target, value);
 	return target;
 }
-String& dsr::string_toStreamIndented(String& target, const DsrChar *value, const ReadableString& indentation) {
+String& dsr::impl_toStreamIndented_utf32(String& target, const char32_t *value, const ReadableString& indentation) {
 	atomic_append_readable(target, indentation);
 	atomic_append_utf32(target, value);
 	return target;
 }
-String& dsr::string_toStreamIndented(String& target, const ReadableString& value, const ReadableString& indentation) {
+String& dsr::impl_toStreamIndented_readable(String& target, const ReadableString& value, const ReadableString& indentation) {
 	atomic_append_readable(target, indentation);
 	atomic_append_readable(target, value);
 	return target;
 }
-String& dsr::string_toStreamIndented(String& target, const double &value, const ReadableString& indentation) {
+String& dsr::impl_toStreamIndented_double(String& target, const double &value, const ReadableString& indentation) {
 	atomic_append_readable(target, indentation);
 	string_fromDouble(target, (double)value);
 	return target;
 }
-String& dsr::string_toStreamIndented(String& target, const int64_t &value, const ReadableString& indentation) {
+String& dsr::impl_toStreamIndented_int64(String& target, const int64_t &value, const ReadableString& indentation) {
 	atomic_append_readable(target, indentation);
 	string_fromSigned(target, value);
 	return target;
 }
-String& dsr::string_toStreamIndented(String& target, const uint64_t &value, const ReadableString& indentation) {
+String& dsr::impl_toStreamIndented_uint64(String& target, const uint64_t &value, const ReadableString& indentation) {
 	atomic_append_readable(target, indentation);
 	string_fromUnsigned(target, value);
 	return target;
