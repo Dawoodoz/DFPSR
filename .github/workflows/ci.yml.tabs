@@ -3,9 +3,10 @@ name: DFPSR tests
 on: [push]
 jobs:
 	test:
-		runs-on: ubuntu-latest
+		runs-on: ${{ matrix.os }}
 		strategy:
 			matrix:
+				os: [ubuntu-latest, macos-latest]
 				architecture: [x86_32, x86_64]
 		steps:
 			- name: Checkout
