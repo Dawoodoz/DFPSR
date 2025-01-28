@@ -25,20 +25,28 @@
 #include "virtualStack.h"
 #include "../math/scalar.h"
 
-// Requires -pthread for linking
-#include <future>
-#include <thread>
-#include <mutex>
-#include <atomic>
+// Get settings from here.
+#include "../settings.h"
+
+#ifndef DISABLE_MULTI_THREADING
+	// Requires -pthread for linking
+	#include <thread>
+	#include <mutex>
+	#include <future>
+#endif
 
 namespace dsr {
 
-// Enable this macro to disable multi-threading
-//   If your application still crashes when using a single thread, it's probably not a concurrency problem
-//#define DISABLE_MULTI_THREADING
+#ifndef DISABLE_MULTI_THREADING
+	static std::mutex getTaskLock;
+#endif
 
 int getThreadCount() {
-	return (int)std::thread::hardware_concurrency();
+	#ifndef DISABLE_MULTI_THREADING
+		return (int)std::thread::hardware_concurrency();
+	#else
+		return 1;
+	#endif
 }
 
 void threadedWorkFromArray(std::function<void()>* jobs, int jobCount, int maxThreadCount) {
@@ -53,7 +61,6 @@ void threadedWorkFromArray(std::function<void()>* jobs, int jobCount, int maxThr
 		} else if (jobCount == 1) {
 			jobs[0]();
 		} else {
-			static std::recursive_mutex getTaskLock;
 			if (maxThreadCount <= 0) {
 				// No limit.
 				maxThreadCount = jobCount;
@@ -117,11 +124,15 @@ void threadedWorkFromList(List<std::function<void()>> jobs, int maxThreadCount) 
 }
 
 void threadedSplit(int startIndex, int stopIndex, std::function<void(int startIndex, int stopIndex)> task, int minimumJobSize, int jobsPerThread) {
-	int totalCount = stopIndex - startIndex;
-	int maxJobs = totalCount / minimumJobSize;
-	int jobCount = std::thread::hardware_concurrency() * jobsPerThread;
-	if (jobCount > maxJobs) { jobCount = maxJobs; }
-	if (jobCount < 1) { jobCount = 1; }
+	#ifndef DISABLE_MULTI_THREADING
+		int totalCount = stopIndex - startIndex;
+		int maxJobs = totalCount / minimumJobSize;
+		int jobCount = getThreadCount() * jobsPerThread;
+		if (jobCount > maxJobs) { jobCount = maxJobs; }
+		if (jobCount < 1) { jobCount = 1; }
+	#else
+		int jobCount = 1;
+	#endif
 	if (jobCount == 1) {
 		// Too little work for multi-threading
 		task(startIndex, stopIndex);
@@ -149,10 +160,14 @@ void threadedSplit_disabled(int startIndex, int stopIndex, std::function<void(in
 }
 
 void threadedSplit(const IRect& bound, std::function<void(const IRect& bound)> task, int minimumRowsPerJob, int jobsPerThread) {
-	int maxJobs = bound.height() / minimumRowsPerJob;
-	int jobCount = std::thread::hardware_concurrency() * jobsPerThread;
-	if (jobCount > maxJobs) { jobCount = maxJobs; }
-	if (jobCount < 1) { jobCount = 1; }
+	#ifndef DISABLE_MULTI_THREADING
+		int maxJobs = bound.height() / minimumRowsPerJob;
+		int jobCount = getThreadCount() * jobsPerThread;
+		if (jobCount > maxJobs) { jobCount = maxJobs; }
+		if (jobCount < 1) { jobCount = 1; }
+	#else
+		int jobCount = 1;
+	#endif
 	if (jobCount == 1) {
 		// Too little work for multi-threading
 		task(bound);

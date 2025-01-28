@@ -58,12 +58,17 @@ static void messageHandler(const ReadableString &message, MessageType type) {
 }
 
 #define START_TEST(NAME) \
-int main() { \
-	std::signal(SIGSEGV, [](int signal) { throwError(U"Segmentation fault!"); }); \
-	string_assignMessageHandler(&messageHandler); \
-	printText(U"Running test \"", #NAME, "\": ");
+	int main() { \
+		std::signal(SIGSEGV, [](int signal) { throwError(U"Segmentation fault!"); }); \
+		string_assignMessageHandler(&messageHandler); \
+		heap_startingApplication(); \
+		printText(U"Running test \"", #NAME, "\": ");
 
-#define END_TEST printText(U" (done)\n"); return PASSED; }
+#define END_TEST \
+		printText(U" (done)\n"); \
+		heap_terminatingApplication(); \
+		return PASSED; \
+	}
 
 #define OP_EQUALS(A, B) ((A) == (B))
 #define OP_NOT_EQUALS(A, B) ((A) != (B))

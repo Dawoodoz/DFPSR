@@ -17,13 +17,19 @@ Link to these dependencies for MS Windows:
 #include "../DFPSR/api/timeAPI.h"
 #include "../DFPSR/gui/BackendWindow.h"
 
-#include <mutex>
-#include <future>
+#include "../DFPSR/settings.h"
 
-static std::mutex windowLock;
+#ifndef DISABLE_MULTI_THREADING
+	#include <mutex>
+	#include <future>
 
-// Enable this macro to disable multi-threading
-//#define DISABLE_MULTI_THREADING
+	static std::mutex windowLock;
+	inline void lockWindow() { windowLock.lock(); }
+	inline void unlockWindow() { windowLock.unlock(); }
+#else
+	inline void lockWindow() {}
+	inline void unlockWindow() {}
+#endif
 
 static const int bufferCount = 2;
 
@@ -154,20 +160,20 @@ void Win32Window::saveToClipboard(const dsr::ReadableString &text, double timeou
 }
 
 void Win32Window::updateTitle_locked() {
-	windowLock.lock();
-		if (!SetWindowTextA(this->hwnd, dsr::FixedAscii<512>(this->title))) {
+	lockWindow();
+		if (!SetWindowTextA(this->hwnd, dsr::FixedAscii<512>(this->title).getPointer())) {
 			dsr::printText("Warning! Could not assign the window title ", dsr::string_mangleQuote(this->title), ".\n");
 		}
-	windowLock.unlock();
+	unlockWindow();
 }
 
 // The method can be seen as locked, but it overrides a virtual method that is independent of threading.
 void Win32Window::setCursorPosition(int x, int y) {
-	windowLock.lock();
+	lockWindow();
 		POINT point; point.x = x; point.y = y;
 		ClientToScreen(this->hwnd, &point);
 		SetCursorPos(point.x, point.y);
-	windowLock.unlock();
+	unlockWindow();
 }
 
 bool Win32Window::setCursorVisibility(bool visible) {
@@ -193,23 +199,23 @@ void Win32Window::setFullScreen(bool enabled) {
 }
 
 void Win32Window::removeOldWindow_locked() {
-	windowLock.lock();
+	lockWindow();
 		if (this->windowState != 0) {
 			DestroyWindow(this->hwnd);
 		}
 	this->windowState = 0;
-	windowLock.unlock();
+	unlockWindow();
 }
 
 void Win32Window::prepareWindow_locked() {
-	windowLock.lock();
+	lockWindow();
 		// Reallocate the canvas
 		this->resizeCanvas(this->windowWidth, this->windowHeight);
 		// Show the window
 		ShowWindow(this->hwnd, SW_NORMAL);
 		// Repaint
 		UpdateWindow(this->hwnd);
-	windowLock.unlock();
+	unlockWindow();
 }
 
 static bool registered = false;
@@ -249,7 +255,7 @@ void Win32Window::createWindowed_locked(const dsr::String& title, int width, int
 	this->windowHeight = height;
 	this->receivedWindowResize(width, height);
 
-	windowLock.lock();
+	lockWindow();
 		// Register the Window class during first creation
 		registerIfNeeded();
 
@@ -268,7 +274,7 @@ void Win32Window::createWindowed_locked(const dsr::String& title, int width, int
 		  NULL,                // hInstance
 		  (LPVOID)this         // lpParam
 		);
-	windowLock.unlock();
+	unlockWindow();
 
 	this->updateTitle_locked();
 
@@ -277,7 +283,7 @@ void Win32Window::createWindowed_locked(const dsr::String& title, int width, int
 }
 
 void Win32Window::createFullscreen_locked() {
-	windowLock.lock();
+	lockWindow();
 		int screenWidth = GetSystemMetrics(SM_CXSCREEN);
 		int screenHeight = GetSystemMetrics(SM_CYSCREEN);
 
@@ -304,7 +310,7 @@ void Win32Window::createFullscreen_locked() {
 		  NULL,                  // hInstance
 		  (LPVOID)this           // lpParam
 		);
-	windowLock.unlock();
+	unlockWindow();
 
 	this->windowState = 2;
 	this->prepareWindow_locked();
@@ -319,7 +325,7 @@ Win32Window::Win32Window(const dsr::String& title, int width, int height) {
 	// Remember the title
 	this->title = title;
 
-	windowLock.lock();
+	lockWindow();
 		// Get the default cursor
 		this->defaultCursor = LoadCursor(0, IDC_ARROW);
 
@@ -327,7 +333,7 @@ Win32Window::Win32Window(const dsr::String& title, int width, int height) {
 		uint32_t cursorAndMask = 0b11111111;
 		uint32_t cursorXorMask = 0b00000000;
 		this->noCursor = CreateCursor(NULL, 0, 0, 1, 1, (const void*)&cursorAndMask, (const void*)&cursorXorMask);
-	windowLock.unlock();
+	unlockWindow();
 
 	// Create a window
 	if (fullScreen) {
@@ -627,7 +633,7 @@ void Win32Window::prefetchEvents() {
 	// Only prefetch new events if nothing else is locking.
 	if (windowLock.try_lock()) {
 		this->prefetchEvents_impl();
-		windowLock.unlock();
+		unlockWindow();
 	}
 }
 
@@ -653,12 +659,12 @@ Win32Window::~Win32Window() {
 			this->displayFuture.wait();
 		}
 	#endif
-	windowLock.lock();
+	lockWindow();
 		// Destroy the invisible cursor
 		DestroyCursor(this->noCursor);
 		// Destroy the native window
 		DestroyWindow(this->hwnd);
-	windowLock.unlock();
+	unlockWindow();
 }
 
 // The lock argument must be true if not already within a lock and false if inside of a lock.
@@ -672,7 +678,7 @@ void Win32Window::redraw(HWND& hwnd, bool lock, bool swap) {
 
 	if (lock) {
 		// Any other requests will have to wait.
-		windowLock.lock();
+		lockWindow();
 		// Last chance to prefetch events before uploading the canvas.
 		this->prefetchEvents_impl();
 	}
@@ -701,7 +707,7 @@ void Win32Window::redraw(HWND& hwnd, bool lock, bool swap) {
 			SetDIBitsToDevice(targetContext, 0, 0, paddedWidth, height, 0, 0, 0, height, dsr::image_dangerous_getData(this->canvas[displayIndex]), &bmi, DIB_RGB_COLORS);
 		EndPaint(this->hwnd, &paintStruct);
 		if (lock) {
-			windowLock.unlock();
+			unlockWindow();
 		}
 	};
 	#ifdef DISABLE_MULTI_THREADING

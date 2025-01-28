@@ -10,17 +10,23 @@
 #include "../DFPSR/api/timeAPI.h"
 #include "../DFPSR/gui/BackendWindow.h"
 #include "../DFPSR/base/heap.h"
-
-// According to this documentation, XInitThreads doesn't have to be used if a mutex is wrapped around all the calls to XLib.
-//   https://tronche.com/gui/x/xlib/display/XInitThreads.html
-#include <mutex>
-#include <future>
 #include <climits>
 
-static std::mutex windowLock;
+#include "../DFPSR/settings.h"
 
-// Enable this macro to disable multi-threading
-//#define DISABLE_MULTI_THREADING
+#ifndef DISABLE_MULTI_THREADING
+	// According to this documentation, XInitThreads doesn't have to be used if a mutex is wrapped around all the calls to XLib.
+	//   https://tronche.com/gui/x/xlib/display/XInitThreads.html
+	#include <mutex>
+	#include <future>
+
+	static std::mutex windowLock;
+	inline void lockWindow() { windowLock.lock(); }
+	inline void unlockWindow() { windowLock.unlock(); }
+#else
+	inline void lockWindow() {}
+	inline void unlockWindow() {}
+#endif
 
 static const int bufferCount = 2;
 
@@ -148,13 +154,13 @@ void X11Window::saveToClipboard(const dsr::ReadableString &text, double timeoutI
 }
 
 void X11Window::setCursorPosition(int x, int y) {
-	windowLock.lock();
+	lockWindow();
 		XWarpPointer(this->display, this->window, this->window, 0, 0, this->windowWidth, this->windowHeight, x, y);
-	windowLock.unlock();
+	unlockWindow();
 }
 
 void X11Window::applyCursorVisibility_locked() {
-	windowLock.lock();
+	lockWindow();
 		if (this->visibleCursor) {
 			// Reset to parent cursor
 			XUndefineCursor(this->display, this->window);
@@ -162,7 +168,7 @@ void X11Window::applyCursorVisibility_locked() {
 			// Let the window display an empty cursor
 			XDefineCursor(this->display, this->window, this->noCursor);
 		}
-	windowLock.unlock();
+	unlockWindow();
 }
 
 bool X11Window::setCursorVisibility(bool visible) {
@@ -175,13 +181,13 @@ bool X11Window::setCursorVisibility(bool visible) {
 }
 
 void X11Window::updateTitle_locked() {
-	windowLock.lock();
-		XSetStandardProperties(this->display, this->window, dsr::FixedAscii<512>(this->title), "Icon", None, NULL, 0, NULL);
-	windowLock.unlock();
+	lockWindow();
+		XSetStandardProperties(this->display, this->window, dsr::FixedAscii<512>(this->title).getPointer(), "Icon", None, NULL, 0, NULL);
+	unlockWindow();
 }
 
 dsr::PackOrderIndex X11Window::getColorFormat_locked() {
-	windowLock.lock();
+	lockWindow();
 		XVisualInfo visualRequest;
 		visualRequest.screen = 0;
 		visualRequest.depth = 32;
@@ -217,7 +223,7 @@ dsr::PackOrderIndex X11Window::getColorFormat_locked() {
 			}
 			XFree(formatList);
 		}
-	windowLock.unlock();
+	unlockWindow();
 	return result;
 }
 
@@ -242,24 +248,24 @@ void X11Window::setFullScreen(bool enabled) {
 		this->createWindowed_locked(this->title, 800, 600); // TODO: Remember the dimensions from last windowed mode
 	}
 	this->applyCursorVisibility_locked();
-	windowLock.lock();
+	lockWindow();
 		listContentInClipboard();
-	windowLock.unlock();
+	unlockWindow();
 }
 
 void X11Window::removeOldWindow_locked() {
-	windowLock.lock();
+	lockWindow();
 		if (this->windowState != 0) {
 			XFreeGC(this->display, this->graphicsContext);
 			XDestroyWindow(this->display, this->window);
 			XUngrabPointer(this->display, CurrentTime);
 		}
 		this->windowState = 0;
-	windowLock.unlock();
+	unlockWindow();
 }
 
 void X11Window::prepareWindow_locked() {
-	windowLock.lock();
+	lockWindow();
 		// Set input masks
 		XSelectInput(this->display, this->window,
 		  ExposureMask | StructureNotifyMask |
@@ -271,13 +277,13 @@ void X11Window::prepareWindow_locked() {
 		// Listen to the window close event.
 		Atom WM_DELETE_WINDOW = XInternAtom(this->display, "WM_DELETE_WINDOW", False);
 		XSetWMProtocols(this->display, this->window, &WM_DELETE_WINDOW, 1);
-	windowLock.unlock();
+	unlockWindow();
 	// Reallocate the canvas
 	this->resizeCanvas(this->windowWidth, this->windowHeight);
 }
 
 void X11Window::createGCWindow_locked(const dsr::String& title, int width, int height) {
-	windowLock.lock();
+	lockWindow();
 		// Request to resize the canvas and interface according to the new window
 		this->windowWidth = width;
 		this->windowHeight = height;
@@ -287,42 +293,42 @@ void X11Window::createGCWindow_locked(const dsr::String& title, int width, int h
 		unsigned long white = WhitePixel(this->display, screenIndex);
 		// Create a new window
 		this->window = XCreateSimpleWindow(this->display, DefaultRootWindow(this->display), 0, 0, width, height, 0, white, black);
-	windowLock.unlock();
+	unlockWindow();
 
 	this->updateTitle_locked();
 
-	windowLock.lock();
+	lockWindow();
 		// Create a new graphics context
 		this->graphicsContext = XCreateGC(this->display, this->window, 0, 0);
 		XSetBackground(this->display, this->graphicsContext, black);
 		XSetForeground(this->display, this->graphicsContext, white);
 		XClearWindow(this->display, this->window);
-	windowLock.unlock();
+	unlockWindow();
 }
 
 void X11Window::createWindowed_locked(const dsr::String& title, int width, int height) {
 	// Create the window
 	this->createGCWindow_locked(title, width, height);
-	windowLock.lock();
+	lockWindow();
 		// Display the window when done placing it
 		XMapRaised(this->display, this->window);
 
 		this->windowState = 1;
 		this->firstFrame = true;
-	windowLock.unlock();
+	unlockWindow();
 	this->prepareWindow_locked();
 }
 
 void X11Window::createFullscreen_locked() {
-	windowLock.lock();
+	lockWindow();
 		// Get the screen resolution
 		Screen* screenInfo = DefaultScreenOfDisplay(this->display);
-	windowLock.unlock();
+	unlockWindow();
 
 	// Create the window
 	this->createGCWindow_locked(U"", screenInfo->width, screenInfo->height);
 
-	windowLock.lock();
+	lockWindow();
 		// Override redirect
 		unsigned long valuemask = CWOverrideRedirect;
 		XSetWindowAttributes setwinattr;
@@ -353,7 +359,7 @@ void X11Window::createFullscreen_locked() {
 
 		this->windowState = 2;
 		this->firstFrame = true;
-	windowLock.unlock();
+	unlockWindow();
 	this->prepareWindow_locked();
 }
 
@@ -365,9 +371,9 @@ X11Window::X11Window(const dsr::String& title, int width, int height) {
 		height = 300;
 	}
 
-	windowLock.lock();
+	lockWindow();
 		this->display = XOpenDisplay(nullptr);
-	windowLock.unlock();
+	unlockWindow();
 	if (this->display == nullptr) {
 		dsr::throwError(U"Error! Failed to open XLib display!\n");
 		return;
@@ -718,7 +724,7 @@ void X11Window::prefetchEvents() {
 				}
 			}
 		}
-		windowLock.unlock();
+		unlockWindow();
 	}
 }
 
@@ -735,7 +741,7 @@ static int destroyXImage(XImage *image) {
 
 // Locked because it overrides
 void X11Window::resizeCanvas(int width, int height) {
-	windowLock.lock();
+	lockWindow();
 		if (this->display) {
 			unsigned int defaultDepth = DefaultDepth(this->display, XDefaultScreen(this->display));
 			// Get the old canvas
@@ -767,7 +773,7 @@ void X11Window::resizeCanvas(int width, int height) {
 				image->f.destroy_image = destroyXImage;
 			}
 		}
-	windowLock.unlock();
+	unlockWindow();
 }
 
 X11Window::~X11Window() {
@@ -777,7 +783,7 @@ X11Window::~X11Window() {
 			this->displayFuture.wait();
 		}
 	#endif
-	windowLock.lock();
+	lockWindow();
 		if (this->display) {
 			this->terminateClipboard();
 			XFreeCursor(this->display, this->noCursor);
@@ -786,7 +792,7 @@ X11Window::~X11Window() {
 			XCloseDisplay(this->display);
 			this->display = nullptr;
 		}
-	windowLock.unlock();
+	unlockWindow();
 }
 
 void X11Window::showCanvas() {
@@ -801,14 +807,14 @@ void X11Window::showCanvas() {
 		this->showIndex = (this->showIndex + 1) % bufferCount;
 		this->prefetchEvents();
 		int displayIndex = this->showIndex;
-		windowLock.lock();
+		lockWindow();
 		std::function<void()> task = [this, displayIndex]() {
 				// Clamp canvas dimensions to the target window
 				int width = std::min(dsr::image_getWidth(this->canvas[displayIndex]), this->windowWidth);
 				int height = std::min(dsr::image_getHeight(this->canvas[displayIndex]), this->windowHeight);
 				// Display the result
 				XPutImage(this->display, this->window, this->graphicsContext, this->canvasX[displayIndex], 0, 0, 0, 0, width, height);
-			windowLock.unlock();
+			unlockWindow();
 		};
 		#ifdef DISABLE_MULTI_THREADING
 			// Perform instantly

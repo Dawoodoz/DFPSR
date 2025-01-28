@@ -492,15 +492,15 @@ void processScript(const String& sourcePath, const String& targetPath, OrthoSyst
 // The second argument is the target folder in which the results are saved.
 // The third argument is the ortho configuration file path.
 // The following arguments are plain names of the scripts to process without any path nor extension.
-void tool_main(int argn, char **argv) {
-	if (argn < 5) {
+void tool_main(const List<String> &args) {
+	if (args.length() < 5) {
 		printText("Nothing to process. Terminating sprite generation tool.\n");
 	} else {
-		String sourcePath = string_combine(argv[1], file_separator());
-		String targetPath = string_combine(argv[2], file_separator());
-		OrthoSystem ortho = OrthoSystem(string_load(String(argv[3])));
-		for (int a = 4; a < argn; a++) {
-			processScript(sourcePath, targetPath, ortho, String(argv[a]));
+		String sourcePath = string_combine(args[1], file_separator());
+		String targetPath = string_combine(args[2], file_separator());
+		OrthoSystem ortho = OrthoSystem(string_load(args[3]));
+		for (int a = 4; a < args.length(); a++) {
+			processScript(sourcePath, targetPath, ortho, args[a]);
 		}
 	}
 }

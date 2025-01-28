@@ -138,6 +138,12 @@ namespace dsr {
 	//   Recycled allocations are not included.
 	void heap_forAllHeapAllocations(std::function<void(AllocationHeader * header, void * allocation)> callback);
 
+	// Called by DSR_MAIN_CALLER when the program starts.
+	void heap_startingApplication();
+
+	// Called by DSR_MAIN_CALLER when the program closes.
+	void heap_terminatingApplication();
+
 	// If terminating the program using std::exit, you can call this first to free all heap memory in the allocator, leaked or not.
 	void heap_hardExitCleaning();
 

@@ -18,6 +18,10 @@
 	// Has no effect in release mode, because it is only active when SAFE_POINTER_CHECKS is also defined.
 	//#define EXTRA_SAFE_POINTER_CHECKS
 
+	// Enable this macro to disable multi-threading.
+	//   Can be used to quickly rule out concurrency problems when debugging, by recreating the same error without extra threads.
+	//#define DISABLE_MULTI_THREADING
+
 	// Determine which SIMD extensions to use in base/simd.h.
 	// Use the standard compiler flags for enabling SIMD extensions.
 	//   If your compiler uses a different macro name to indicate the presence of a SIMD extension, you can add them here to enable the USE_* macros.

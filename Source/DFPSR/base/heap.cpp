@@ -21,28 +21,128 @@
 //    3. This notice may not be removed or altered from any source
 //    distribution.
 
+// TODO: Apply thread safety to more memory operations.
+//       heap_getUsedSize and heap_setUsedSize are often used together, forming a transaction without any mutex.
+
 #include "heap.h"
 #include "../api/stringAPI.h"
-#include <mutex>
-#include <thread>
+#include "../api/timeAPI.h"
 #include <stdio.h>
 #include <new>
 
 // Get settings from here.
 #include "../settings.h"
 
+#ifndef DISABLE_MULTI_THREADING
+	// Requires -pthread for linking
+	#include <thread>
+	#include <mutex>
+#endif
+
 namespace dsr {
+	// Keep track of the program's state.
+	enum class ProgramState {
+		Starting, // A single thread does global construction without using any mutex.
+		Running, // Any number of threads allocate and free memory.
+		Terminating // A single thread does global destruction without using any mutex.
+	};
+	ProgramState programState = ProgramState::Starting;
+
+	// Count threads.
+	#ifndef DISABLE_MULTI_THREADING
+		static uint64_t threadCount = 0u;
+		static std::mutex threadLock;
+		struct ThreadCounter {
+			ThreadCounter() {
+				threadLock.lock();
+					threadCount++;
+					if (threadCount > 1 && programState != ProgramState::Running) {
+						if (programState == ProgramState::Starting) {
+							throwError(U"Tried to create another thread before construction of global variables was complete!\n");
+						} else if (programState == ProgramState::Terminating) {
+							throwError(U"Tried to create another thread after destruction of global variables had begun!\n");
+						}
+					}
+				threadLock.unlock();
+			};
+			~ThreadCounter() {
+				threadLock.lock();
+					threadCount--;
+				threadLock.unlock();
+			};
+		};
+		thread_local ThreadCounter threadCounter;
+		static uint64_t getThreadCount() {
+			uint64_t result = 0;
+			threadLock.lock();
+				result = threadCount;
+			threadLock.unlock();
+			return result;
+		}
+	#endif
+
+	// Because locking is recursive, it is safest to just have one global mutex for allocating, freeing and manipulating use counters.
+	//   Otherwise each use counter would need to store the thread identity and recursive depth for each heap allocation.
+	#ifndef DISABLE_MULTI_THREADING
+		static thread_local intptr_t lockDepth = 0;
+		static std::mutex memoryLock;
+	#endif
+
+	inline void lockMemory() {
+		#ifndef DISABLE_MULTI_THREADING
+			// Only call the mutex within main.
+			if (programState == ProgramState::Running) {
+				if (lockDepth == 0) {
+					memoryLock.lock();
+				}
+				lockDepth++;
+			}
+		#endif
+	}
+
+	inline void unlockMemory() {
+		#ifndef DISABLE_MULTI_THREADING
+			// Only call the mutex within main.
+			if (programState == ProgramState::Running) {
+				lockDepth--;
+				assert(lockDepth >= 0);
+				if (lockDepth == 0) {
+					memoryLock.unlock();
+				}
+			}
+		#endif
+	}
+
+	// Called before main, after global initiation completes.
+	void heap_startingApplication() {
+		// Once global initiation has completed, mutexes can be used for multi-threading.
+		programState = ProgramState::Running;
+	}
+
+	// Called after main, before global termination begins.
+	void heap_terminatingApplication() {
+		#ifndef DISABLE_MULTI_THREADING
+			// Wait for all other threads to terminate before closing the program.
+			while (getThreadCount() > 1) {
+				// Sleep for 10 milliseconds before trying again.
+				time_sleepSeconds(0.01);
+			}
+		#endif
+		// Once global termination begins, we can no longer use the mutex.
+		//   The memory system will still get calls to free resources, which must be handled with a single thread.
+		programState = ProgramState::Terminating;
+	}
+
+	// The total number of used heap allocations, excluding recycled memory.
+	// Only accessed when defaultHeap.poolLock is locked.
+	static intptr_t allocationCount = 0;
+
 	using HeapFlag = uint16_t;
 	using BinIndex = uint16_t;
 
 	// The framework's maximum memory alignment is either the largest float SIMD vector or the thread safe alignment.
 	static const uintptr_t heapAlignment = DSR_MAXIMUM_ALIGNMENT;
 	static const uintptr_t heapAlignmentAndMask = memory_createAlignmentAndMask(heapAlignment);
-
-	// Because locking is recursive, it is safest to just have one global mutex for allocating, freeing and manipulating use counters.
-	//   Otherwise each use counter would need to store the thread identity and recursive depth for each heap allocation.
-	static thread_local intptr_t lockDepth = 0;
-	std::mutex memoryLock;
 
 	// The free function is hidden, because all allocations are forced to use reference counting,
 	//   so that a hard exit can disable recursive calls to heap_free by incrementing all reference counters.
@@ -60,8 +160,6 @@ namespace dsr {
 			p++;
 		}
 	}
-	// TODO: Leave a few bins empty in the beginning until reaching heapAlignment from a minimum alignment.
-	static const int LOWEST_BIN_INDEX = 0;
 	static const int MAX_BIN_COUNT = calculateBinCount();
 
 	inline uintptr_t getBinSize(BinIndex index) {
@@ -72,7 +170,6 @@ namespace dsr {
 		for (intptr_t p = 0; p < MAX_BIN_COUNT; p++) {
 			uintptr_t result = getBinSize(p);
 			if (result >= minimumSize) {
-				//printf("getBinIndex %i from %i\n", (int)p, (int)minimumSize);
 				return p;
 			}
 		}
@@ -116,18 +213,13 @@ namespace dsr {
 			}
 		}
 		inline uintptr_t setUsedSize(uintptr_t size) {
-			//printf("setUsedSize: try %i\n", (int)size);
-			//printf("  MAX_BIN_COUNT: %i\n", (int)MAX_BIN_COUNT);
 			if (!(this->isRecycled())) {
 				uintptr_t allocationSize = getAllocationSize();
-				//printf("  binIndex: %i\n", (int)this->binIndex);
-				//printf("  allocationSize: %i\n", (int)allocationSize);
 				if (size > allocationSize) {
-					//printf("  too big!\n");
+					// Failed to assign the size, so it is important to check the result.
 					size = allocationSize;
 				}
 				this->usedSize = size;
-				//printf("  assigned size: %i\n", (int)this->usedSize);
 				return size;
 			} else {
 				return 0;
@@ -197,7 +289,6 @@ namespace dsr {
 		if (allocation != nullptr) {
 			HeapHeader *header = headerFromAllocation(allocation);
 			result = header->getUsedSize();
-			//printf("  heap_getUsedSize: get %i\n", (int)result);
 		}
 		return result;
 	}
@@ -205,10 +296,8 @@ namespace dsr {
 	uintptr_t heap_setUsedSize(void * const allocation, uintptr_t size) {
 		uintptr_t result = 0;
 		if (allocation != nullptr) {
-			//uintptr_t allocationSize = heap_getAllocationSize(allocation);
 			HeapHeader *header = headerFromAllocation(allocation);
 			result = header->setUsedSize(size);
-			//printf("  heap_setUsedSize: try %i get %i\n", (int)size, (int)result);
 		}
 		return result;
 	}
@@ -216,39 +305,25 @@ namespace dsr {
 	void heap_increaseUseCount(void const * const allocation) {
 		if (allocation != nullptr) {
 			HeapHeader *header = headerFromAllocation(allocation);
-			if (lockDepth == 0) memoryLock.lock();
-			//printf("heap_increaseUseCount called for allocation @ %ld\n", (uintptr_t)allocation);
-			//printf("    Use count: %ld -> %ld\n", header->useCount, header->useCount + 1);
-			//#ifdef SAFE_POINTER_CHECKS
-			//	printf("    ID: %lu\n", header->allocationIdentity);
-			//	printf("    Name: %s\n", header->name ? header->name : "<nameless>");
-			//#endif
+			lockMemory();
 			header->useCount++;
-			if (lockDepth == 0) memoryLock.unlock();
+			unlockMemory();
 		}
 	}
 
 	void heap_decreaseUseCount(void const * const allocation) {
 		if (allocation != nullptr) {
 			HeapHeader *header = headerFromAllocation(allocation);
-			if (lockDepth == 0) memoryLock.lock();
-			//printf("heap_decreaseUseCount called for allocation @ %ld\n", (uintptr_t)allocation);
-			//printf("    Use count: %ld -> %ld\n", header->useCount, header->useCount - 1);
-			//#ifdef SAFE_POINTER_CHECKS
-			//	printf("    ID: %lu\n", header->allocationIdentity);
-			//	printf("    Name: %s\n", header->name ? header->name : "<nameless>");
-			//#endif
+			lockMemory();
 			if (header->useCount == 0) {
 				throwError(U"Heap error: Decreasing a count that is already zero!\n");
 			} else {
 				header->useCount--;
 				if (header->useCount == 0) {
-					lockDepth++;
 					heap_free((void*)allocation);
-					lockDepth--;
 				}
 			}
-			if (lockDepth == 0) memoryLock.unlock();
+			unlockMemory();
 		}
 	}
 
@@ -277,15 +352,10 @@ namespace dsr {
 		}
 	};
 
-	// The total number of used heap allocations, excluding recycled memory.
-	// Only accessed when defaultHeap.poolLock is locked.
-	static intptr_t allocationCount = 0;
-
 	// The heap can have memory freed after its own destruction by telling the remaining allocations to clean up after themselves.
 	struct HeapPool {
 		HeapMemory *lastHeap = nullptr;
 		HeapHeader *recyclingBin[MAX_BIN_COUNT] = {};
-		bool terminating = false;
 		void cleanUp() {
 			// If memory safety checks are enabled, then we should indicate that everything is fine with the memory once cleaning up.
 			//   There is however no way to distinguish between leaking memory and not yet having terminated everything, so there is no leak warning to print.
@@ -303,12 +373,10 @@ namespace dsr {
 		}
 		HeapPool() {}
 		~HeapPool() {
-			memoryLock.lock();
-				this->terminating = true;
-				if (allocationCount == 0) {
-					this->cleanUp();
-				}
-			memoryLock.unlock();
+			// The destruction should be ignored to manually terminate once all memory allocations have been freed.
+			if (programState != ProgramState::Terminating) {
+				throwError(U"Heap error: Terminated the application without first calling heap_terminatingApplication or heap_hardExitCleaning!\n");
+			}
 		}
 	};
 
@@ -354,35 +422,32 @@ namespace dsr {
 	UnsafeAllocation heap_allocate(uintptr_t minimumSize, bool zeroed) {
 		UnsafeAllocation result(nullptr, nullptr);
 		int32_t binIndex = getBinIndex(minimumSize);
-		//printf("heap_allocate\n");
-		//printf("  minimumSize: %i\n", (int)minimumSize);
-		//printf("  binIndex: %i\n", (int)binIndex);
 		if (binIndex == -1) {
 			// If the requested allocation is so big that there is no power of two that can contain it without overflowing the address space, then it can not be allocated.
 			throwError(U"Heap error: Exceeded the maximum size when trying to allocate!\n");
 		} else {
 			uintptr_t paddedSize = ((uintptr_t)1 << binIndex) * heapAlignment;
-			if (lockDepth == 0) memoryLock.lock();
-			allocationCount++;
-			// Look for pre-existing allocations in the recycling bins.
-			HeapHeader *binHeader = defaultHeap.recyclingBin[binIndex];
-			if (binHeader != nullptr) {
-				// Make the recycled allocation's tail into the new head.
-				defaultHeap.recyclingBin[binIndex] = binHeader->nextRecycled;
-				// Clear the pointer to make room for the allocation's size in the union.
-				binHeader->nextRecycled = nullptr;
-				// Mark the allocation as not recycled. (assume that it was recycled when found in the bin)
-				binHeader->makeUsed();
-				binHeader->reuse(false, "Nameless reused allocation");
-				result = UnsafeAllocation((uint8_t*)allocationFromHeader(binHeader), binHeader);
-			} else {
-				// Look for a heap with enough space for a new allocation.
-				result = tryToAllocate(defaultHeap, paddedSize, heapAlignmentAndMask);
-				if (result.data == nullptr) {
-					throwError(U"Heap error: Failed to allocate more memory!\n");
+			lockMemory();
+				allocationCount++;
+				// Look for pre-existing allocations in the recycling bins.
+				HeapHeader *binHeader = defaultHeap.recyclingBin[binIndex];
+				if (binHeader != nullptr) {
+					// Make the recycled allocation's tail into the new head.
+					defaultHeap.recyclingBin[binIndex] = binHeader->nextRecycled;
+					// Clear the pointer to make room for the allocation's size in the union.
+					binHeader->nextRecycled = nullptr;
+					// Mark the allocation as not recycled. (assume that it was recycled when found in the bin)
+					binHeader->makeUsed();
+					binHeader->reuse(false, "Nameless reused allocation");
+					result = UnsafeAllocation((uint8_t*)allocationFromHeader(binHeader), binHeader);
+				} else {
+					// Look for a heap with enough space for a new allocation.
+					result = tryToAllocate(defaultHeap, paddedSize, heapAlignmentAndMask);
+					if (result.data == nullptr) {
+						throwError(U"Heap error: Failed to allocate more memory!\n");
+					}
 				}
-			}
-			if (lockDepth == 0) memoryLock.unlock();
+			unlockMemory();
 			if (zeroed && result.data != nullptr) {
 				memset(result.data, 0, paddedSize);
 			}
@@ -394,12 +459,6 @@ namespace dsr {
 			head->binIndex = binIndex;
 			// Tell the allocation how many of the bytes that are used.
 			head->setUsedSize(minimumSize);
-			// Give a debug name to the allocation if we are debugging.
-			//printf("Allocated memory @ %ld\n", (uintptr_t)result.data);
-			//printf("    Use count = %ld\n", head->useCount);
-			//#ifdef SAFE_POINTER_CHECKS
-			//	printf("    ID = %lu\n", head->allocationIdentity);
-			//#endif
 		}
 		return result;
 	}
@@ -410,57 +469,45 @@ namespace dsr {
 	}
 
 	static void heap_free(void * const allocation) {
-		if (lockDepth == 0) memoryLock.lock();
-		// Get the recycled allocation's header.
-		HeapHeader *header = headerFromAllocation(allocation);
-		if (header->isRecycled()) {
-			throwError(U"Heap error: A heap allocation was freed twice!\n");
-		} else {
-			// Call the destructor without using the mutex (lockDepth > 0).
-			lockDepth++;
-			//printf("heap_free called for allocation @ %ld\n", (uintptr_t)allocation);
-			//printf("    Use count: %ld\n", header->useCount);
-			//#ifdef SAFE_POINTER_CHECKS
-			//	printf("    ID: %lu\n", header->allocationIdentity);
-			//	printf("    Name: %s\n", header->name ? header->name : "<nameless>");
-			//#endif
-			//printf("    Calling destructor\n");
-			// Call the destructor provided with any external resource that also needs to be freed.
-			if (header->destructor.destructor) {
-				header->destructor.destructor(allocation, header->destructor.externalResource);
-			}
-			//printf("    Finished destructor\n");
-			lockDepth--;
-			assert(lockDepth >= 0);
-			// Remove the destructor so that it is not called again for the next allocation.
-			header->destructor = HeapDestructor();
-			int binIndex = header->binIndex;
-			if (binIndex >= MAX_BIN_COUNT) {
-				throwError(U"Heap error: Out of bound recycling bin index in corrupted head of freed allocation!\n");
+		lockMemory();
+			// Get the recycled allocation's header.
+			HeapHeader *header = headerFromAllocation(allocation);
+			if (header->isRecycled()) {
+				throwError(U"Heap error: A heap allocation was freed twice!\n");
 			} else {
-				// Make any previous head from the bin into the new tail.
-				HeapHeader *oldHeader = defaultHeap.recyclingBin[binIndex];
-				header->nextRecycled = oldHeader;
-				// Mark the allocation as recycled.
-				header->makeRecycled();
-				#ifdef SAFE_POINTER_CHECKS
-					// Remove the allocation identity, so that use of freed memory can be detected in SafePointer and Handle.
-					header->allocationIdentity = 0;
-					header->threadHash = 0;
-				#endif
-				// Store the newly recycled allocation in the bin.
-				defaultHeap.recyclingBin[binIndex] = header;
-				header->nextRecycled = oldHeader;
+				// Call the destructor provided with any external resource that also needs to be freed.
+				if (header->destructor.destructor) {
+					header->destructor.destructor(allocation, header->destructor.externalResource);
+				}
+				// Remove the destructor so that it is not called again for the next allocation.
+				header->destructor = HeapDestructor();
+				int binIndex = header->binIndex;
+				if (binIndex >= MAX_BIN_COUNT) {
+					throwError(U"Heap error: Out of bound recycling bin index in corrupted head of freed allocation!\n");
+				} else {
+					// Make any previous head from the bin into the new tail.
+					HeapHeader *oldHeader = defaultHeap.recyclingBin[binIndex];
+					header->nextRecycled = oldHeader;
+					// Mark the allocation as recycled.
+					header->makeRecycled();
+					#ifdef SAFE_POINTER_CHECKS
+						// Remove the allocation identity, so that use of freed memory can be detected in SafePointer and Handle.
+						header->allocationIdentity = 0;
+						header->threadHash = 0;
+					#endif
+					// Store the newly recycled allocation in the bin.
+					defaultHeap.recyclingBin[binIndex] = header;
+					header->nextRecycled = oldHeader;
+				}
 			}
-		}
-		// By decreasing the count after recursive calls to destructors, we can make sure that the arena is freed last.
-		// If a destructor allocates new memory, it will have to allocate a new arena and then clean it up again.
-		allocationCount--;
-		// If the heap has been told to terminate and we reached zero allocations, we can tell it to clean up.
-		if (defaultHeap.terminating && allocationCount == 0) {
-			defaultHeap.cleanUp();
-		}
-		if (lockDepth == 0) memoryLock.unlock();
+			// By decreasing the count after recursive calls to destructors, we can make sure that the arena is freed last.
+			// If a destructor allocates new memory, it will have to allocate a new arena and then clean it up again.
+			allocationCount--;
+			// If the heap has been told to terminate and we reached zero allocations, we can tell it to clean up.
+			if (programState == ProgramState::Terminating && allocationCount == 0) {
+				defaultHeap.cleanUp();
+			}
+		unlockMemory();
 	}
 
 	static void forAllHeapAllocations(HeapMemory &heap, std::function<void(AllocationHeader * header, void * allocation)> callback) {
@@ -485,12 +532,11 @@ namespace dsr {
 
 	void heap_hardExitCleaning() {
 		// TODO:
-		// * Implement a function that iterates over all heap allocations.
 		// * Increment the use count for each allocation, to prevent recursive freeing of resources.
 		// * Call the destructor on each allocation without freeing any memory, while all memory is still available.
 		// Then the arenas can safely be deallocated without looking at individual allocations again.
 		allocationCount = 0;
-		defaultHeap.terminating = true;
+		programState = ProgramState::Terminating;
 		defaultHeap.cleanUp();
 	}
 

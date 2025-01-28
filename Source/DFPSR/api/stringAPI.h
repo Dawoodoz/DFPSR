@@ -158,6 +158,52 @@ public:
 	virtual ~Printable();
 };
 
+// Used to generate fixed size ascii strings, which is useful when heap allocations are not possible
+//   or you need a safe format until you know which encoding a system call needs to support Unicode.
+template <intptr_t SIZE>
+struct FixedAscii {
+	char characters[SIZE];
+	// Create a fixed size ascii string from a null terminated ascii string.
+	// Crops if text is too long.
+	FixedAscii(const char *text) {
+		bool terminated = false;
+		for (intptr_t i = 0; i < SIZE - 1; i++) {
+			char c = text[i];
+			if (c == '\0') {
+				terminated = true;
+			}
+			if (terminated) {
+				this->characters[i] = '\0';
+			} else if (c > 127) {
+				this->characters[i] = '?';
+			} else {
+				this->characters[i] = c;
+			}
+		}
+		this->characters[SIZE - 1] = '\0';
+	}
+	FixedAscii(const ReadableString &text) {
+		bool terminated = false;
+		for (intptr_t i = 0; i < SIZE - 1; i++) {
+			char c = text[i];
+			if (c == '\0') {
+				terminated = true;
+			}
+			if (terminated) {
+				this->characters[i] = '\0';
+			} else if (c > 127) {
+				this->characters[i] = '?';
+			} else {
+				this->characters[i] = c;
+			}
+		}
+		this->characters[SIZE - 1] = '\0';
+	}
+	const char * getPointer() const {
+		return characters;
+	}
+};
+
 // Helper functions to resolve ambiguity without constexpr if statements in C++ 14.
 String& impl_toStreamIndented_ascii(String& target, const char *value, const ReadableString& indentation);
 String& impl_toStreamIndented_utf32(String& target, const char32_t *value, const ReadableString& indentation);
@@ -566,52 +612,6 @@ void printText(ARGS... args) {
 		string_sendMessage(*target, MessageType::DebugPrinting);
 	}
 #endif
-
-// Used to generate fixed size ascii strings, which is useful when heap allocations are not possible
-//   or you need a safe format until you know which encoding a system call needs to support Unicode.
-template <intptr_t SIZE>
-struct FixedAscii {
-	char characters[SIZE];
-	// Create a fixed size ascii string from a null terminated ascii string.
-	// Crops if text is too long.
-	FixedAscii(const char *text) {
-		bool terminated = false;
-		for (intptr_t i = 0; i < SIZE - 1; i++) {
-			char c = text[i];
-			if (c == '\0') {
-				terminated = true;
-			}
-			if (terminated) {
-				this->characters[i] = '\0';
-			} else if (c > 127) {
-				this->characters[i] = '?';
-			} else {
-				this->characters[i] = c;
-			}
-		}
-		this->characters[SIZE - 1] = '\0';
-	}
-	FixedAscii(const ReadableString &text) {
-		bool terminated = false;
-		for (intptr_t i = 0; i < SIZE - 1; i++) {
-			char c = text[i];
-			if (c == '\0') {
-				terminated = true;
-			}
-			if (terminated) {
-				this->characters[i] = '\0';
-			} else if (c > 127) {
-				this->characters[i] = '?';
-			} else {
-				this->characters[i] = c;
-			}
-		}
-		this->characters[SIZE - 1] = '\0';
-	}
-	operator const char *() const {
-		return characters;
-	}
-};
 
 }
 

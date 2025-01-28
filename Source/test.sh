@@ -52,7 +52,7 @@ for file in ./test/tests/*.cpp; do
 	else
 		echo "Failed ${name}!";
 		# Re-run with a memory debugger.
-		#gdb ./${TEMP_DIR}/application;
+		gdb -ex "run" -ex "bt" -ex "quit" --args ./${TEMP_DIR}/application;
 		exit 1
 	fi
 done

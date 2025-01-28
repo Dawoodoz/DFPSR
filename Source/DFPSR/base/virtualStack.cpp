@@ -52,6 +52,7 @@ namespace dsr {
 
 	// Additional stacks in heap memory.
 	struct DynamicStackMemory : public StackMemory {
+		DynamicStackMemory() {}
 		~DynamicStackMemory() {
 			if (this->top != nullptr) {
 				heap_decreaseUseCount(this->top);
