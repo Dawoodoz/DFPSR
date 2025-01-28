@@ -152,11 +152,21 @@ namespace dsr {
 	#ifdef USE_MICROSOFT_WINDOWS
 		#define DSR_MAIN_CALLER(MAIN_NAME) \
 			void MAIN_NAME(dsr::List<dsr::String> args); \
-			int main() { MAIN_NAME(dsr::file_impl_getInputArguments()); return 0; }
+			int main() { \
+				dsr::heap_startingApplication(); \
+				MAIN_NAME(dsr::file_impl_getInputArguments()); \
+				dsr::heap_terminatingApplication(); \
+				return 0; \
+			}
 	#else
 		#define DSR_MAIN_CALLER(MAIN_NAME) \
 			void MAIN_NAME(dsr::List<dsr::String> args); \
-			int main(int argc, char **argv) { MAIN_NAME(dsr::file_impl_convertInputArguments(argc, (void**)argv)); return 0; }
+			int main(int argc, char **argv) { \
+				dsr::heap_startingApplication(); \
+				MAIN_NAME(dsr::file_impl_convertInputArguments(argc, (void**)argv)); \
+				dsr::heap_terminatingApplication(); \
+				return 0; \
+			}
 	#endif
 	// Helper functions have to be exposed for the macro handle your input arguments.
 	//   Do not call these yourself.

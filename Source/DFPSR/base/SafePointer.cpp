@@ -137,7 +137,7 @@ using namespace dsr;
 		string_append(*target, U"|  Pointer name: ", pointerName, U"\n");
 		#ifdef EXTRA_SAFE_POINTER_CHECKS
 			if (pointerHeader != nullptr) {
-				string_append(*target, U"|  Allocation name    : ", allocationName, U"\n");
+				string_append(*target, U"|  Allocation name    : ", allocationName.getPointer(), U"\n");
 				string_append(*target, U"|  Thread hash:\n");
 				if (headerHash == ANY_THREAD_HASH) {
 					string_append(*target, U"|    Shared with all threads\n");
