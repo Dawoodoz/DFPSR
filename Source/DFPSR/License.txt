@@ -22,5 +22,12 @@ Main license for David Piuva's software renderer:
 	   3. This notice may not be removed or altered from any source
 	   distribution.
 
-External licenses:
+Contributions:
+	* api/randomAPI
+		Unlicense
+
+Dependencies:
 	* See image/stbImage for STB's license and copyright notice.
+		MIT/Unlicense
+
+Because all dependencies and contributions are public domain, you don't have to worry about the license terms.

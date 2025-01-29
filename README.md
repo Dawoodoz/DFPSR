@@ -1,8 +1,8 @@
 # DFPSR
-A modern software rendering library for C++14 using SSE/NEON created by David Forsgren Piuva. If you're looking for the latest mainstream fad, look elsewhere. This is a library for quality software meant to be developed over multiple decades and survive your grandchildren with minimal maintenance. Just like carving your legacy into stone, it takes more effort to master the skill but gives a more robust result by not relying on a far away library. Maximum user experience and minimum system dependency.
+A realtime software rendering library for C++14 using SSE/AVX/NEON created by David Forsgren Piuva with help from testers and contibutors.
 
-## Creator's background
-DXOMARK world record in digital video stabilization from the mobile industry. Worked with safety critical robotic vision for civilian airport traffic control. Held lectures in optimization at different companies in the mobile, medical and gaming industries. Worked with optimizations on GPU, CPU, DSP, ISP, FPGA and ASIC.
+## Purpose
+When you need to develop software that can be abandoned for generations and then dusted off to work again on a new system, you need a monolithic framework with software rendering and minimal system dependencies that can be maintained by a single developer. Instead of constantly chasing the latest trends and features, the priority is to make every system integration easy to reimplement relative to the added value. Otherwise the future maintainer would have to re-compile hundreds of dependencies written in different programming languages with different compilers, frameworks and tools to maintain. The complexity of legacy software includes everything that it depends on, not just the project's own code.
 
 ## Optimization needs good tools to save your time
 The most important part about optimizing code is to grasp both high algorithms and low hardware limitations, because you can not let a scientist design the algorithm and a programmer optimize it with no room for changes in handwritten assembler (the most common mistake). The algorithm design is not done until you have a good tradeoff between quality and performance with all optimizations in place. Time savings at the cost of quality in one place can be compensated by increasing quality at a lower cost somewhere else to increase both speed and quality. The faster you can create a near optimal vectorization of an algorithm, the faster you can iterate the design process. Think about what you are truly approximating. Is your goal to draw as many perfectly straight polygons as possible, or is the goal to approximate a complex real world shape using any technique?
@@ -53,7 +53,7 @@ Real-time dynamic light with depth-based casted shadows and normal mapping at 45
 * **Process management** Can start other applications and keep track of their status, so that you can call an application like a function writing the result to files.
 
 ## Summary of licenses
-This library mainly uses the Zlib Open Source License, but also includes the STB Image library for saving and loading images, which has a permissive dual license (MIT / Unlicense).
+This library mainly uses the Zlib Open Source License, but also includes the STB Image library (MIT / Unlicense), and contributions (Unlicense).
 Because the STB Image library can be used as public domain, it does not have any legal effect on using the library as a whole under the Zlib Open Source License.
 All included source code with all their licenses allow both commercial and non-commercial use, including undisclosed modification of the source code.
 If you are not redistributing the source code, then you do not have to tell anyone that you use this library, because an insincere endorsement has no value.
@@ -77,7 +77,7 @@ Linux Mint needs the compiler and X11 headers, so run "sudo apt install g++" and
 Currently supporting X11 and Wayland is planned for future versions.
 * **Microsoft Windows**, but slower than on Linux because Windows has lots of background processes and slower threading and memory management.
 
-## Partial support for
+## Partial support for:
 * MacOS can pass the regression tests, but has no native integration for sound or creating a window yet. MacOS does not have a symbolic link to the binary of the running process, so it would fall back on the current directory when asking for the application folder.
 
 ## Might also work on:
