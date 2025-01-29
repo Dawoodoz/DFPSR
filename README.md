@@ -77,15 +77,10 @@ Linux Mint needs the compiler and X11 headers, so run "sudo apt install g++" and
 Currently supporting X11 and Wayland is planned for future versions.
 * **Microsoft Windows**, but slower than on Linux because Windows has lots of background processes and slower threading and memory management.
 
+## Partial support for
+* MacOS can pass the regression tests, but has no native integration for sound or creating a window yet. MacOS does not have a symbolic link to the binary of the running process, so it would fall back on the current directory when asking for the application folder.
+
 ## Might also work on:
 * BSD and Solaris have code targeting the platforms in fileAPI.cpp for getting the application folder, but there are likely some applications missing for running the build script.
 Future Posix compliant systems should only have a few quirks to sort out if it has an X11 server.
 * Big-Endian is supported in theory if enabling the DSR_BIG_ENDIAN macro globally, but this has never actually been tested due to difficulties with targeting such an old system with modern compilers.
-
-## Not yet ported to:
-* Macintosh no longer uses X11, so it will require some porting effort.
-Macintosh does not have a symbolic link to the binary of the running process, so it would fall back on the current directory when asking for the application folder.
-
-## Will not target:
-* Mobile phones. Because the constant changes breaking backward compatibility on mobile platforms would defeat the purpose of using a long-lifetime framework. Mobile platforms require custom C++ compilers, access to signal processors, screen rotation, battery saving, knowing when to display the virtual keyboard, security permissions, forced full-screen... Trying to do both at the same time would end up with design compromises in both ends like Microsoft Windows 8 or Ubuntu's Unity lock screen, so it would be better to just take bits and pieces into a new library built on different design principles.
-* Web frontends. Such a wrapper over this library would not be able to get the power of SIMD intrinsics for defining your own image filters, so you would be better off targeting a GPU shading language from the browser which is more suited for dynamic scripting.
