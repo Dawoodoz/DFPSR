@@ -210,7 +210,7 @@ String dsr::string_unmangleQuote(const ReadableString& mangledText) {
 	intptr_t lastQuote = string_findLast(mangledText, '\"');
 	String result;
 	if (firstQuote == -1 || lastQuote == -1 || firstQuote == lastQuote) {
-		throwError(U"Cannot unmangle using string_unmangleQuote without beginning and ending with quote signs!\n", mangledText, "\n");
+		throwError(U"Cannot unmangle using string_unmangleQuote without beginning and ending with quote signs!\n", mangledText, U"\n");
 	} else {
 		for (intptr_t i = firstQuote + 1; i < lastQuote; i++) {
 			DsrChar c = mangledText[i];
@@ -241,19 +241,19 @@ String dsr::string_unmangleQuote(const ReadableString& mangledText) {
 			} else {
 				// Detect bad input
 				if (c == U'\"') { // Double quote
-					 throwError(U"Unmangled double quote sign detected in string_unmangleQuote!\n", mangledText, "\n");
+					 throwError(U"Unmangled double quote sign detected in string_unmangleQuote!\n", mangledText, U"\n");
 				} else if (c == U'\a') { // Audible bell
-					 throwError(U"Unmangled audible bell detected in string_unmangleQuote!\n", mangledText, "\n");
+					 throwError(U"Unmangled audible bell detected in string_unmangleQuote!\n", mangledText, U"\n");
 				} else if (c == U'\b') { // Backspace
-					 throwError(U"Unmangled backspace detected in string_unmangleQuote!\n", mangledText, "\n");
+					 throwError(U"Unmangled backspace detected in string_unmangleQuote!\n", mangledText, U"\n");
 				} else if (c == U'\f') { // Form feed
-					 throwError(U"Unmangled form feed detected in string_unmangleQuote!\n", mangledText, "\n");
+					 throwError(U"Unmangled form feed detected in string_unmangleQuote!\n", mangledText, U"\n");
 				} else if (c == U'\n') { // Line feed
-					 throwError(U"Unmangled line feed detected in string_unmangleQuote!\n", mangledText, "\n");
+					 throwError(U"Unmangled line feed detected in string_unmangleQuote!\n", mangledText, U"\n");
 				} else if (c == U'\r') { // Carriage return
-					 throwError(U"Unmangled carriage return detected in string_unmangleQuote!\n", mangledText, "\n");
+					 throwError(U"Unmangled carriage return detected in string_unmangleQuote!\n", mangledText, U"\n");
 				} else if (c == U'\0') { // Null terminator
-					 throwError(U"Unmangled null terminator detected in string_unmangleQuote!\n", mangledText, "\n");
+					 throwError(U"Unmangled null terminator detected in string_unmangleQuote!\n", mangledText, U"\n");
 				} else {
 					string_appendChar(result, c);
 				}
@@ -512,7 +512,7 @@ static void feedStringFromRawData(const UTF32WriterFunction &receiver, const uin
 	} else if (encoding == CharacterEncoding::BOM_UTF16LE) {
 		feedStringFromFileBuffer_UTF16<true, true>(receiver, buffer);
 	} else {
-		throwError("Unhandled encoding in feedStringFromRawData!\n");
+		throwError(U"Unhandled encoding in feedStringFromRawData!\n");
 	}
 }
 

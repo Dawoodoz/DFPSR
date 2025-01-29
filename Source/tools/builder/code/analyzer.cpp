@@ -259,7 +259,6 @@ static void traverserHeaderChecksums(ProjectContext &context, uint64_t &target, 
 	for (int64_t h = 0; h < context.dependencies[dependencyIndex].includes.length(); h++) {
 		int64_t includedIndex = context.dependencies[dependencyIndex].includes[h].dependencyIndex;
 		if (!context.dependencies[includedIndex].visited) {
-			//printText(U"	traverserHeaderChecksums(context, ", includedIndex, U") ", context.dependencies[includedIndex].path, "\n");
 			// Bitwise exclusive or is both order independent and entropy preserving for non-repeated content.
 			target = target ^ context.dependencies[includedIndex].contentChecksum;
 			// Just have to make sure that the same checksum is not used twice.
@@ -271,7 +270,6 @@ static void traverserHeaderChecksums(ProjectContext &context, uint64_t &target, 
 }
 
 static uint64_t getCombinedChecksum(ProjectContext &context, int64_t dependencyIndex) {
-	//printText(U"getCombinedChecksum(context, ", dependencyIndex, U") ", context.dependencies[dependencyIndex].path, "\n");
 	for (int64_t d = 0; d < context.dependencies.length(); d++) {
 		context.dependencies[d].visited = false;
 	}
@@ -298,9 +296,9 @@ void gatherBuildInstructions(SessionContext &output, ProjectContext &context, Ma
 	// Check if the build system was asked to run the compiler from a specific folder.
 	bool changePath = (string_length(compileFrom) > 0);
 	if (changePath) {
-		printText(U"Using ", compilerName, " as the compiler executed from ", compileFrom, ".\n");
+		printText(U"Using ", compilerName, U" as the compiler executed from ", compileFrom, U".\n");
 	} else {
-		printText(U"Using ", compilerName, " as the compiler from the current directory.\n");
+		printText(U"Using ", compilerName, U" as the compiler from the current directory.\n");
 	}
 	// TODO: Warn if -DNDEBUG, -DDEBUG, or optimization levels are given directly.
 	//       Using the variables instead is both more flexible by accepting input arguments
@@ -340,7 +338,7 @@ void gatherBuildInstructions(SessionContext &output, ProjectContext &context, Ma
 	String generatedCompilerFlags;
 	for (int64_t i = 0; i < settings.compilerFlags.length(); i++) {
 		printText(U"Build script gave compiler flag:", settings.compilerFlags[i], U"\n");
-		string_append(generatedCompilerFlags, " ", settings.compilerFlags[i]);
+		string_append(generatedCompilerFlags, U" ", settings.compilerFlags[i]);
 	}
 	String linkerFlags;
 	for (int64_t i = 0; i < settings.linkerFlags.length(); i++) {
@@ -384,7 +382,7 @@ void gatherBuildInstructions(SessionContext &output, ProjectContext &context, Ma
 		}
 	}
 	if (hasSourceCode) {
-		printText(U"Listing target executable ", programPath, " in the current session.\n");
+		printText(U"Listing target executable ", programPath, U" in the current session.\n");
 		bool executeResult = getFlagAsInteger(settings, U"Supressed") == 0;
 		output.linkerSteps.pushConstruct(compilerName, compileFrom, programPath, settings.linkerFlags, sourceObjectIndices, executeResult);
 	} else {
@@ -414,7 +412,7 @@ void buildProject(SessionContext &output, ReadableString projectFilePath, Machin
 	Machine settings(file_getPathlessName(projectFilePath));
 	inheritMachine(settings, sharedsettings);
 	validateSettings(settings, string_combine(U"in settings after inheriting settings from caller, for ", projectFilePath, U"\n"));
-	printText("Building project at ", projectFilePath, "\n");
+	printText(U"Building project at ", projectFilePath, U"\n");
 	// Check if this project has begun building previously during this session.
 	String absolutePath = file_getAbsolutePath(projectFilePath);
 	for (int64_t p = 0; p < initializedProjects.length(); p++) {
@@ -468,7 +466,7 @@ void buildProject(SessionContext &output, ReadableString projectFilePath, Machin
 
 // Using a folder path and input arguments for all projects.
 void buildProjects(SessionContext &output, ReadableString projectFolderPath, Machine &sharedsettings) {
-	printText("Building all projects in ", projectFolderPath, "\n");
+	printText(U"Building all projects in ", projectFolderPath, U"\n");
 	file_getFolderContent(projectFolderPath, [&sharedsettings, &output](const ReadableString& entryPath, const ReadableString& entryName, EntryType entryType) {
 		if (entryType == EntryType::Folder) {
 			buildProjects(output, entryPath, sharedsettings);
@@ -483,7 +481,7 @@ void buildProjects(SessionContext &output, ReadableString projectFolderPath, Mac
 
 void build(SessionContext &output, ReadableString projectPath, Machine &sharedsettings) {
 	EntryType entryType = file_getEntryType(projectPath);
-	printText("Building anything at ", projectPath, " which is ", entryType, "\n");
+	printText(U"Building anything at ", projectPath, U" which is ", entryType, U"\n");
 	if (entryType == EntryType::File) {
 		String extension = string_upperCase(file_getExtension(projectPath));
 		if (!string_match(extension, U"DSRPROJ")) {

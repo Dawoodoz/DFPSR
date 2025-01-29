@@ -189,7 +189,7 @@ static void interpretLine(Machine &target, const List<String> &tokens, int64_t s
 				validateSettings(sharedInputFlags, U"in the child after inheriting settings as a build child (build in interpretLine)");
 				argumentsToSettings(sharedInputFlags, tokens, startTokenIndex + 2, endTokenIndex); // Send all tokens after the second token as input arguments to buildProjects.
 				validateSettings(sharedInputFlags, U"in the child after parsing arguments (build in interpretLine)");
-				printText("Building ", second, " from ", fromPath, " which is ", projectPath, "\n");
+				printText(U"Building ", second, U" from ", fromPath, U" which is ", projectPath, U"\n");
 				target.otherProjectPaths.push(projectPath);
 				target.otherProjectSettings.push(sharedInputFlags);
 				validateSettings(target, U"in target after listing a child project\n");
@@ -219,7 +219,7 @@ static void interpretLine(Machine &target, const List<String> &tokens, int64_t s
 					if (validIdentifier(first)) {
 						assignValue(target, first, U"1", false);
 					} else {
-						throwError(U"The token ", first, " is not a valid identifier for implicit assignment to one.\n");
+						throwError(U"The token ", first, U" is not a valid identifier for implicit assignment to one.\n");
 					}
 					validateSettings(target, U"in target after implicitly assigning a value to a variable\n");
 				} else if (string_match(second, U"=")) {
@@ -230,7 +230,7 @@ static void interpretLine(Machine &target, const List<String> &tokens, int64_t s
 					if (validIdentifier(first)) {
 						assignValue(target, first, STRING_EXPR(startTokenIndex + 2, endTokenIndex), false);
 					} else {
-						throwError(U"The token ", first, " is not a valid identifier for assignments.\n");
+						throwError(U"The token ", first, U" is not a valid identifier for assignments.\n");
 					}
 					validateSettings(target, U"in target after explicitly assigning a value to a variable\n");
 				} else {

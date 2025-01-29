@@ -125,7 +125,7 @@ Buffer file_loadBuffer(const ReadableString& filename, bool mustExist) {
 		return buffer;
 	} else {
 		if (mustExist) {
-			throwError(U"Failed to load ", modifiedFilename, ".\n");
+			throwError(U"Failed to load ", modifiedFilename, U".\n");
 		}
 		// If the file cound not be found and opened, an empty buffer is returned
 		return Buffer();
@@ -146,7 +146,7 @@ bool file_saveBuffer(const ReadableString& filename, Buffer buffer, bool mustWor
 			fclose(file);
 		} else {
 			if (mustWork) {
-				throwError("Failed to save ", modifiedFilename, ".\n");
+				throwError(U"Failed to save ", modifiedFilename, U".\n");
 			}
 			return false;
 		}
@@ -406,7 +406,7 @@ String file_followSymbolicLink(const ReadableString &path, bool mustExist) {
 			return fromNativeString(resultBuffer);
 		}
 	#endif
-	if (mustExist) { throwError(U"The symbolic link ", path, " could not be found!\n"); }
+	if (mustExist) { throwError(U"The symbolic link ", path, U" could not be found!\n"); }
 	return U"?";
 }
 
@@ -429,7 +429,7 @@ String file_getApplicationFolder(bool allowFallback) {
 		} else if (allowFallback) {
 			return file_getCurrentPath();
 		} else {
-			throwError("file_getApplicationFolder is not implemented for the current system!\n");
+			throwError(U"file_getApplicationFolder is not implemented for the current system!\n");
 			return U"";
 		}
 	#endif

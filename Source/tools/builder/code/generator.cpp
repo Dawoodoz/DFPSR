@@ -26,16 +26,16 @@ static void produce_setCompilationFolder(String &generatedCode, ScriptLanguage l
 		if (!string_match(previousPath, newPath)) {
 			if (string_length(previousPath) > 0) {
 				if (language == ScriptLanguage::Batch) {
-					string_append(generatedCode,  "popd\n");
+					string_append(generatedCode, U"popd\n");
 				} else if (language == ScriptLanguage::Bash) {
 					string_append(generatedCode, U")\n");
 				}
 			}
 			if (string_length(newPath) > 0) {
 				if (language == ScriptLanguage::Batch) {
-					string_append(generatedCode,  "pushd ", newPath, "\n");
+					string_append(generatedCode, U"pushd ", newPath, U"\n");
 				} else if (language == ScriptLanguage::Bash) {
-					string_append(generatedCode, U"(cd ", newPath, ";\n");
+					string_append(generatedCode, U"(cd ", newPath, U";\n");
 				}
 			}
 		}
@@ -154,7 +154,7 @@ void produce(SessionContext &input, const ReadableString &scriptPath, ScriptLang
 			produce_printMessage<GENERATE>(generatedCode, language, string_combine(U"Compiling ", sourceObject->sourcePath, U" ID:", sourceObject->identityChecksum, U"."));
 			produce_callProgram<GENERATE>(generatedCode, language, sourceObject->compilerName, compilationArguments);
 			if (language == ScriptLanguage::Batch) {
-				string_append(generatedCode,  ")\n");
+				string_append(generatedCode,  U")\n");
 			} else if (language == ScriptLanguage::Bash) {
 				string_append(generatedCode, U"fi\n");
 			}
@@ -192,7 +192,7 @@ void produce(SessionContext &input, const ReadableString &scriptPath, ScriptLang
 		String linkerFlags;
 		for (int64_t l = 0; l < linkingStep->linkerFlags.length(); l++) {
 			String linkerFlag = linkingStep->linkerFlags[l];
-			string_append(linkerFlags, " ", linkerFlag);
+			string_append(linkerFlags, U" ", linkerFlag);
 			linkerArguments.push(linkerFlag);
 			printText(U"\t\t* ", linkerFlag, U" library\n");
 		}
@@ -215,7 +215,7 @@ void produce(SessionContext &input, const ReadableString &scriptPath, ScriptLang
 	produce_printMessage<GENERATE>(generatedCode, language, U"Done building.");
 
 	if (GENERATE) {
-		printText(U"Saving script to ", scriptPath, "\n");
+		printText(U"Saving script to ", scriptPath, U"\n");
 		if (language == ScriptLanguage::Batch) {
 			// Batch on MS-Windows can not recognize a Byte Order Mark, so just encode it as Latin 1.
 			string_save(scriptPath, generatedCode, CharacterEncoding::Raw_Latin1, LineEncoding::CrLf);
