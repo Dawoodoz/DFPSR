@@ -137,7 +137,7 @@ namespace dsr {
 			// Tell the allocation that we are using it.
 			heap_increaseUseCount(newAllocation.data);
 			if (newAllocation.data == nullptr) {
-				throwError(U"Failed to allocate ", regionSize, U" bytes of heap memory for expanding the virtual stack when trying to allocate ", paddedSize, " bytes!\n");
+				throwError(U"Failed to allocate ", regionSize, U" bytes of heap memory for expanding the virtual stack when trying to allocate ", paddedSize, U" bytes!\n");
 				return UnsafeAllocation(nullptr, nullptr);
 			} else {
 				// Keep the new allocation.

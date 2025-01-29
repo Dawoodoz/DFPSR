@@ -39,7 +39,7 @@ bool sound_streamToSpeakers(int channels, int sampleRate, std::function<bool(Saf
 	int errorCode;
 	if ((errorCode = snd_pcm_open(&pcm, "default", SND_PCM_STREAM_PLAYBACK, 0)) < 0) {
 		terminateSound();
-		sendWarning("Cannot open sound device. (", snd_strerror(errorCode), ")\n");
+		sendWarning(U"Cannot open sound device. (", snd_strerror(errorCode), U")\n");
 		return false;
 	}
 	snd_pcm_hw_params_t *hardwareParameters;
@@ -47,33 +47,33 @@ bool sound_streamToSpeakers(int channels, int sampleRate, std::function<bool(Saf
 	snd_pcm_hw_params_any(pcm, hardwareParameters);
 	if ((errorCode = snd_pcm_hw_params_set_access(pcm, hardwareParameters, SND_PCM_ACCESS_RW_INTERLEAVED)) < 0) {
 		terminateSound();
-		sendWarning("Failed to select interleaved sound. (", snd_strerror(errorCode), ")\n");
+		sendWarning(U"Failed to select interleaved sound. (", snd_strerror(errorCode), U")\n");
 		return false;
 	}
 	if ((errorCode = snd_pcm_hw_params_set_format(pcm, hardwareParameters, SND_PCM_FORMAT_S16_LE)) < 0) {
 		terminateSound();
-		sendWarning("Failed to select sound format. (", snd_strerror(errorCode), ")\n");
+		sendWarning(U"Failed to select sound format. (", snd_strerror(errorCode), U")\n");
 		return false;
 	}
 	if ((errorCode = snd_pcm_hw_params_set_channels(pcm, hardwareParameters, channels)) < 0) {
 		terminateSound();
-		sendWarning("Failed to select channel count. (", snd_strerror(errorCode), ")\n");
+		sendWarning(U"Failed to select channel count. (", snd_strerror(errorCode), U")\n");
 		return false;
 	}
 	if ((errorCode = snd_pcm_hw_params_set_buffer_size(pcm, hardwareParameters, 2048)) < 0) {
 		terminateSound();
-		sendWarning("Failed to select buffer size. (", snd_strerror(errorCode), ")\n");
+		sendWarning(U"Failed to select buffer size. (", snd_strerror(errorCode), U")\n");
 		return false;
 	}
 	uint rate = sampleRate;
 	if ((errorCode = snd_pcm_hw_params_set_rate_near(pcm, hardwareParameters, &rate, 0)) < 0) {
 		terminateSound();
-		sendWarning("Failed to select approximate sample rate. (", snd_strerror(errorCode), ")\n");
+		sendWarning(U"Failed to select approximate sample rate. (", snd_strerror(errorCode), U")\n");
 		return false;
 	}
 	if ((errorCode = snd_pcm_hw_params(pcm, hardwareParameters)) < 0) {
 		terminateSound();
-		sendWarning("Failed to select hardware parameters. (", snd_strerror(errorCode), ")\n");
+		sendWarning(U"Failed to select hardware parameters. (", snd_strerror(errorCode), U")\n");
 		return false;
 	}
 	// Allocate a buffer for sending data to speakers
@@ -112,7 +112,7 @@ bool sound_streamToSpeakers(int channels, int sampleRate, std::function<bool(Saf
 			snd_pcm_prepare(pcm);
 		} else if (errorCode < 0) {
 			terminateSound();
-			throwError("Failed writing data to PCM. (", snd_strerror(errorCode), ")\n");
+			throwError(U"Failed writing data to PCM. (", snd_strerror(errorCode), U")\n");
 		}
 		if (!keepRunning) {
 			break;
