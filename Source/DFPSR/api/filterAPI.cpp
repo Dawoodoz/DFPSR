@@ -29,7 +29,7 @@
 #include "filterAPI.h"
 #include "imageAPI.h"
 #include "drawAPI.h"
-#include "../image/PackOrder.h"
+#include "../implementation/image/PackOrder.h"
 #include "../base/simd.h"
 
 namespace dsr {

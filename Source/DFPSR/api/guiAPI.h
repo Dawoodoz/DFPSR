@@ -27,9 +27,9 @@
 
 #include "../base/Handle.h"
 #include "../api/stringAPI.h"
-#include "../image/Image.h"
-#include "../gui/InputEvent.h"
-#include "../gui/VisualTheme.h"
+#include "../implementation/image/Image.h"
+#include "../implementation/gui/InputEvent.h"
+#include "../implementation/gui/VisualTheme.h"
 
 // createBackendWindow should be implemented outside of the core framework
 //   Choose one of the window backends in SDK/native to compile and link with your application.

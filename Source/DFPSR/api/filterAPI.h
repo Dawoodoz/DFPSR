@@ -25,7 +25,7 @@
 #ifndef DFPSR_API_FILTER
 #define DFPSR_API_FILTER
 
-#include "../image/Image.h"
+#include "../implementation/image/Image.h"
 #include <functional>
 
 namespace dsr {

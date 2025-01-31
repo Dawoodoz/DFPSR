@@ -23,8 +23,8 @@
 //    distribution.
 
 #include "imageAPI.h"
-#include "../math/scalar.h"
-#include "../image/PackOrder.h"
+#include "../implementation/math/scalar.h"
+#include "../implementation/image/PackOrder.h"
 #include <limits>
 
 namespace dsr {

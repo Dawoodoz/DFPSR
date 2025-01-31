@@ -87,8 +87,8 @@
 #ifndef DFPSR_API_TEXTURE
 #define DFPSR_API_TEXTURE
 
-#include "../image/Texture.h"
-#include "../image/Image.h"
+#include "../implementation/image/Texture.h"
+#include "../implementation/image/Image.h"
 #ifndef NDEBUG
 	#include "../api/stringAPI.h"
 #endif

@@ -1,11 +1,14 @@
 ﻿
+// Use headers in the DFPSR/implementation folder at your own risk.
+//   They are not a part of the public interface and may change without warning.
+
 #include "spriteAPI.h"
 #include "Octree.h"
 #include "DirtyRectangles.h"
 #include "importer.h"
-#include "../../DFPSR/render/ITriangle2D.h"
+#include "../../DFPSR/implementation/render/ITriangle2D.h"
 #include "../../DFPSR/base/endian.h"
-#include "../../DFPSR/math/scalar.h"
+#include "../../DFPSR/implementation/math/scalar.h"
 #include "../../DFPSR/api/fileAPI.h"
 
 // Comment out a flag to disable an optimization when debugging

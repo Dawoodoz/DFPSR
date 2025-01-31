@@ -28,10 +28,10 @@
 #ifndef DFPSR_API_IMAGE
 #define DFPSR_API_IMAGE
 
-#include "../image/Image.h"
-#include "../image/Color.h"
+#include "../implementation/image/Image.h"
+#include "../implementation/image/Color.h"
+#include "../implementation/math/scalar.h"
 #include "../base/heap.h"
-#include "../math/scalar.h"
 
 namespace dsr {
 

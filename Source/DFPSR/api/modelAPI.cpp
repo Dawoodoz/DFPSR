@@ -26,9 +26,9 @@
 #include "modelAPI.h"
 #include "imageAPI.h"
 #include "drawAPI.h"
-#include "../render/model/Model.h"
-#include <limits>
+#include "../implementation/render/model/Model.h"
 #include "../base/virtualStack.h"
+#include <limits>
 
 #define MUST_EXIST(OBJECT, METHOD) if (OBJECT.isNull()) { throwError("The " #OBJECT " handle was null in " #METHOD "\n"); }
 
