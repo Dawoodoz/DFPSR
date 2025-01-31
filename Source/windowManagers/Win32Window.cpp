@@ -15,7 +15,7 @@ Link to these dependencies for MS Windows:
 #include "../DFPSR/api/drawAPI.h"
 #include "../DFPSR/api/bufferAPI.h"
 #include "../DFPSR/api/timeAPI.h"
-#include "../DFPSR/gui/BackendWindow.h"
+#include "../DFPSR/implementation/gui/BackendWindow.h"
 
 #include "../DFPSR/settings.h"
 

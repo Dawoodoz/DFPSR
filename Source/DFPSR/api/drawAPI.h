@@ -25,7 +25,7 @@
 #ifndef DFPSR_API_DRAW
 #define DFPSR_API_DRAW
 
-#include "../image/Image.h"
+#include "../implementation/image/Image.h"
 
 namespace dsr {
 

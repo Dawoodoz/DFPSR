@@ -24,8 +24,8 @@
 #define DSR_INTERNAL_ACCESS
 
 #include "mediaMachineAPI.h"
-#include "../machine/VirtualMachine.h"
-#include "../machine/mediaFilters.h"
+#include "../implementation/machine/VirtualMachine.h"
+#include "../implementation/machine/mediaFilters.h"
 #include "../api/imageAPI.h"
 #include "../api/drawAPI.h"
 #include "../api/filterAPI.h"

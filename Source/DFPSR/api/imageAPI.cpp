@@ -29,8 +29,8 @@
 #include "imageAPI.h"
 #include "drawAPI.h"
 #include "fileAPI.h"
-#include "../image/stbImage/stbImageWrapper.h"
-#include "../math/scalar.h"
+#include "../implementation/image/stbImage/stbImageWrapper.h"
+#include "../implementation/math/scalar.h"
 #include "../settings.h"
 
 namespace dsr {

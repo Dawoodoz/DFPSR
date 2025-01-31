@@ -24,7 +24,7 @@
 #ifndef DFPSR_API_FONT
 #define DFPSR_API_FONT
 
-#include "../image/Image.h"
+#include "../implementation/image/Image.h"
 #include "stringAPI.h"
 
 namespace dsr {

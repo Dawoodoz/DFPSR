@@ -25,8 +25,5 @@
 	#include "api/algorithmAPI.h" // Functions for performing operations on whole collections
 	#include "api/timeAPI.h" // Methods for time and delays
 	#include "api/configAPI.h" // Making it easy to load your application's settings from configuration files
-
-	// TODO: Create more APIs
-	#include "gui/VisualTheme.h" // An unfinished system for changing how the GUI looks
-
+	#include "api/randomAPI.h" // Deterministic random number generation
 #endif

@@ -26,7 +26,7 @@
 
 #include "guiAPI.h"
 #include "timeAPI.h"
-#include "../gui/DsrWindow.h"
+#include "../implementation/gui/DsrWindow.h"
 #include "fileAPI.h"
 
 using namespace dsr;

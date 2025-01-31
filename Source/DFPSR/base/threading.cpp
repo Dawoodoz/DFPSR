@@ -23,7 +23,7 @@
 
 #include "threading.h"
 #include "virtualStack.h"
-#include "../math/scalar.h"
+#include "../implementation/math/scalar.h"
 
 // Get settings from here.
 #include "../settings.h"

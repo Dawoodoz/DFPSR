@@ -10,6 +10,4 @@
 #include "FMatrix3x3.h"
 #include "Transform3D.h"
 #include "FPlane3D.h"
-#include "scalar.h"
 #include "FixedPoint.h"
-

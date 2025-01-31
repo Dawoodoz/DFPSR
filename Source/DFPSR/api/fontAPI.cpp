@@ -23,8 +23,8 @@
 
 #include "fontAPI.h"
 #include "imageAPI.h"
-#include "../font/Font.h"
-#include "../font/defaultFont.h"
+#include "../implementation/font/Font.h"
+#include "../implementation/font/defaultFont.h"
 
 namespace dsr {
 

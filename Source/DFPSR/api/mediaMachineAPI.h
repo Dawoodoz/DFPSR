@@ -24,7 +24,7 @@
 #ifndef DFPSR_API_MEDIA_MACHINE
 #define DFPSR_API_MEDIA_MACHINE
 
-#include "../image/Image.h"
+#include "../implementation/image/Image.h"
 #include "../base/Handle.h"
 #include "../math/FixedPoint.h"
 

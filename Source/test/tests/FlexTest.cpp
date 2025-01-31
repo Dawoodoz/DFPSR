@@ -1,6 +1,6 @@
 ﻿
 #include "../testTools.h"
-#include "../../DFPSR/gui/FlexRegion.h"
+#include "../../DFPSR/implementation/gui/FlexRegion.h"
 
 START_TEST(Flex)
 	// Comparisons

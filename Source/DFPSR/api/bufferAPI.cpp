@@ -24,7 +24,7 @@
 #include <fstream>
 #include "bufferAPI.h"
 #include "stringAPI.h"
-#include "../math/scalar.h"
+#include "../implementation/math/scalar.h"
 #include "../base/SafePointer.h"
 
 namespace dsr {

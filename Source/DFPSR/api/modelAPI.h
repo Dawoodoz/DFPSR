@@ -25,9 +25,9 @@
 #define DFPSR_API_MODEL
 
 #include "../math/FVector.h"
-#include "../image/Texture.h"
-#include "../render/Camera.h"
-#include "../render/ResourcePool.h"
+#include "../implementation/image/Texture.h"
+#include "../implementation/render/Camera.h"
+#include "../implementation/render/ResourcePool.h"
 
 // TODO: Create a folder with types.
 namespace dsr {
@@ -36,7 +36,7 @@ namespace dsr {
 	using Model = Handle<ModelImpl>;
 }
 
-#include "../render/model/format/dmf1.h"
+#include "../implementation/render/model/format/dmf1.h"
 
 namespace dsr {
 	// A handle to a multi-threaded rendering context.

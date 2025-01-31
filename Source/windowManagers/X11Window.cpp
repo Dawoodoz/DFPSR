@@ -8,7 +8,7 @@
 #include "../DFPSR/api/imageAPI.h"
 #include "../DFPSR/api/drawAPI.h"
 #include "../DFPSR/api/timeAPI.h"
-#include "../DFPSR/gui/BackendWindow.h"
+#include "../DFPSR/implementation/gui/BackendWindow.h"
 #include "../DFPSR/base/heap.h"
 #include <climits>
 

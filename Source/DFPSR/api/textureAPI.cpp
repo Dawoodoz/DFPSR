@@ -25,7 +25,6 @@
 #include "textureAPI.h"
 #include "imageAPI.h"
 #include "filterAPI.h"
-			#include "drawAPI.h"
 
 namespace dsr {
 

@@ -21,6 +21,8 @@
 //    3. This notice may not be removed or altered from any source
 //    distribution.
 
+// TODO: Replace simd3D.h with templates in the math folder using noSimd.h.
+
 #include "simd.h"
 #include "../math/FVector.h"
 
