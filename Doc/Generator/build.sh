@@ -1,7 +1,7 @@
 #!/bin/bash
 
 LIBRARY_PATH=../../Source/DFPSR
-DEPENDENCIES="${LIBRARY_PATH}/collection/collections.cpp ${LIBRARY_PATH}/api/fileAPI.cpp ${LIBRARY_PATH}/api/bufferAPI.cpp ${LIBRARY_PATH}/api/stringAPI.cpp ${LIBRARY_PATH}/base/SafePointer.cpp ${LIBRARY_PATH}/base/virtualStack.cpp ${LIBRARY_PATH}/base/heap.cpp"
+DEPENDENCIES="${LIBRARY_PATH}/collection/collections.cpp ${LIBRARY_PATH}/api/fileAPI.cpp ${LIBRARY_PATH}/api/bufferAPI.cpp ${LIBRARY_PATH}/api/timeAPI.cpp ${LIBRARY_PATH}/api/stringAPI.cpp ${LIBRARY_PATH}/base/SafePointer.cpp ${LIBRARY_PATH}/base/virtualStack.cpp ${LIBRARY_PATH}/base/heap.cpp"
 
 g++ main.cpp -o generator ${DEPENDENCIES} -std=c++14 -lm
 
