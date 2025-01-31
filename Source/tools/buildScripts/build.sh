@@ -16,14 +16,14 @@ TEMP_DIR=${TEMP_ROOT}/${TEMP_SUB}
 echo "Building version ${TEMP_SUB}"
 
 # Allow calling other scripts
-chmod +x ${ROOT_PATH}/tools/clean.sh
-chmod +x ${ROOT_PATH}/tools/buildLibrary.sh
+chmod +x ${ROOT_PATH}/tools/buildScripts/clean.sh
+chmod +x ${ROOT_PATH}/tools/buildScripts/buildLibrary.sh
 
 # Make a clean folder
-${ROOT_PATH}/tools/clean.sh ${TEMP_DIR}
+${ROOT_PATH}/tools/buildScripts/clean.sh ${TEMP_DIR}
 
 echo "Compiling renderer framework."
-${ROOT_PATH}/tools/buildLibrary.sh g++ ${ROOT_PATH}/DFPSR ${TEMP_DIR} "dfpsr" "${COMPILER_FLAGS}" LAZY
+${ROOT_PATH}/tools/buildScripts/buildLibrary.sh g++ ${ROOT_PATH}/DFPSR ${TEMP_DIR} "dfpsr" "${COMPILER_FLAGS}" LAZY
 if [ $? -ne 0 ]
 then
 	exit 1
@@ -36,7 +36,7 @@ then
 fi
 
 echo "Compiling application."
-${ROOT_PATH}/tools/buildLibrary.sh g++ "${PROJECT_FOLDERS}" ${TEMP_DIR} "application" "${COMPILER_FLAGS}" CLEAN
+${ROOT_PATH}/tools/buildScripts/buildLibrary.sh g++ "${PROJECT_FOLDERS}" ${TEMP_DIR} "application" "${COMPILER_FLAGS}" CLEAN
 if [ $? -ne 0 ]
 then
 	exit 1
