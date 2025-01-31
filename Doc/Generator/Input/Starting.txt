@@ -88,7 +88,7 @@ Title2: Create your own cross-platform project
 *
 Copy the folder of a template program to where you want it.
 If you want a 3D application with animations, start from basic3D.
-If you want graphical user interface that only redrawn when something happens, start from basicGUI.
+If you want graphical user interface that only redrawns when something happens, start from basicGUI.
 If you want a command line interface application, start from basicCLI to only depend on the most essential parts of the library.
 
 *

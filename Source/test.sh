@@ -8,7 +8,7 @@ DEBUGGER="-g"
 O_LEVEL=-O2
 
 chmod +x ${ROOT_PATH}/tools/build.sh;
-${ROOT_PATH}/tools/build.sh "NONE" "NONE" "${ROOT_PATH}" "${TEMP_ROOT}" "NONE" "${MODE} ${DEBUGGER} ${CPP_VERSION} ${O_LEVEL}";
+${ROOT_PATH}/tools/buildScripts/build.sh "NONE" "NONE" "${ROOT_PATH}" "${TEMP_ROOT}" "NONE" "${MODE} ${DEBUGGER} ${CPP_VERSION} ${O_LEVEL}";
 if [ $? -ne 0 ]
 then
 	exit 1
