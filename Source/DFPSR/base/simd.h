@@ -91,6 +91,8 @@
 	#include "../settings.h"
 	#include "../base/noSimd.h"
 
+	namespace dsr {
+
 	// Alignment in bytes
 	#define ALIGN_BYTES(SIZE)  __attribute__((aligned(SIZE)))
 	#define ALIGN16 ALIGN_BYTES(16) // 128-bit alignment
@@ -98,8 +100,6 @@
 	#define ALIGN64 ALIGN_BYTES(64) // 512-bit alignment
 	#define ALIGN128 ALIGN_BYTES(128) // 1024-bit alignment
 	#define ALIGN256 ALIGN_BYTES(256) // 2048-bit alignment
-
-	namespace dsr {
 
 	// Everything declared in here handles things specific for SSE.
 	// Direct use of the macros will not provide portability to all hardware.

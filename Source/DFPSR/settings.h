@@ -22,6 +22,30 @@
 	//   Can be used to quickly rule out concurrency problems when debugging, by recreating the same error without extra threads.
 	//#define DISABLE_MULTI_THREADING
 
+	// Identify operating systems in a somewhat future-proof way.
+	//   More will have to be added later.
+	#if defined(_WIN32) || defined(_WIN64) || defined(_WIN128) || defined(_WIN256) || defined(_WIN512) || defined(_WIN1024) || defined(_WIN2048)
+		#define USE_MICROSOFT_WINDOWS
+	#elif defined(__gnu_linux__) || defined(__linux__) || defined(__linux)
+		#define USE_LINUX
+		#define USE_POSIX
+	#elif defined(__APPLE__) || defined(__MACH__)
+		#define USE_MACOS
+		#define USE_POSIX
+	#elif defined(__unix) || defined(__unix__) || defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__NetBSD__) || defined(__BSD__)
+		// Trying to cover as many systems as possible using Posix for basic command line applications.
+		#define USE_POSIX
+	#else
+		#error "Could not identify the operating system!\n"
+	#endif
+
+	// Identify processor types.
+	#if defined(__INTEL__) || defined(__SSE2__)
+		#define USE_INTEL
+	#elif defined(__ARM__) || defined(__ARM_NEON)
+		#define USE_ARM
+	#endif
+
 	// Determine which SIMD extensions to use in base/simd.h.
 	// Use the standard compiler flags for enabling SIMD extensions.
 	//   If your compiler uses a different macro name to indicate the presence of a SIMD extension, you can add them here to enable the USE_* macros.
@@ -79,13 +103,6 @@
 		#define USE_BASIC_SIMD
 	#endif
 
-	// Get the largest size of SIMD vectors for memory alignment.
-	#ifdef USE_256BIT_F_SIMD
-		#define DSR_LARGEST_VECTOR_SIZE 32
-	#else
-		#define DSR_LARGEST_VECTOR_SIZE 16
-	#endif
-
 	// If using C++ 2020 or later.
 	#if (__cplusplus >= 202002L)
 		// Endianness
@@ -102,24 +119,5 @@
 			// We detected a mixed endian target!
 			#error "The DFPSR framework does not work on mixed-endian systems, because it relies on a linear relation between memory addresses and bit shifting!\n"
 		#endif
-	#endif
-
-	// TODO: Create a function that checks CPUID when available on the platform, to give warnings if the computer does not meet the system requirements of the specific build.
-	// Size of cache lines used to protect different threads from accidental sharing cache line across independent memory allocations.
-	//   Must be a power of two, and no less than the largest cache line among all CPU cores that might run the program.
-	//   Can be assigned using the DSR_THREAD_SAFE_ALIGNMENT macro externally or changed here.
-	#ifndef DSR_THREAD_SAFE_ALIGNMENT
-		// 64 bytes is generally a good choice, because it is large enough to align with cache lines on most computers and large enough to store an allocation header.
-		// Note that Apple M1 has a cache line of 128 bytes, which exceeds this default value.
-		#define DSR_THREAD_SAFE_ALIGNMENT 64
-	#endif
-
-	// TODO: Allow having a dynamic largest vector size to support SVE vectors of 1024 or 2048 bits in the future.
-	// When allocating memory for being reused many times for different purposes, we need to know the maximum alignment that will be required ahead of time.
-	//   Here we define it as the maximum of the largest SIMD vector and the thread safe alignment.
-	#if (DSR_LARGEST_VECTOR_SIZE > DSR_THREAD_SAFE_ALIGNMENT)
-		#define DSR_MAXIMUM_ALIGNMENT DSR_LARGEST_VECTOR_SIZE
-	#else
-		#define DSR_MAXIMUM_ALIGNMENT DSR_THREAD_SAFE_ALIGNMENT
 	#endif
 #endif

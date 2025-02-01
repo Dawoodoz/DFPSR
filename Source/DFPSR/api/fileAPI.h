@@ -27,9 +27,7 @@
 #include "stringAPI.h"
 #include "bufferAPI.h"
 #include "../base/Handle.h"
-#if defined(WIN32) || defined(_WIN32)
-	#define USE_MICROSOFT_WINDOWS
-#endif
+#include "../settings.h"
 
 // The file API exists to save and load buffers of data for any type of file.
 // Any file format that is implemented against the Buffer type instead of hardcoding against the file stream can easily be
@@ -38,12 +36,14 @@
 namespace dsr {
 	// The PathSyntax enum allow processing theoreical paths for other operating systems than the local.
 	enum class PathSyntax { Windows, Posix };
-	#ifdef USE_MICROSOFT_WINDOWS
+	#if defined(USE_MICROSOFT_WINDOWS)
 		// Let the local syntax be for Windows.
 		#define LOCAL_PATH_SYNTAX dsr::PathSyntax::Windows
-	#else
+	#elif defined(USE_POSIX)
 		// Let the local syntax be for Posix.
 		#define LOCAL_PATH_SYNTAX dsr::PathSyntax::Posix
+	#else
+		#error "The target platform was not recognized as one of the supported operating systems in the file API!\n"
 	#endif
 
 	// Define NO_IMPLICIT_PATH_SYNTAX before including the header if you want all PathSyntax arguments to be explicit.

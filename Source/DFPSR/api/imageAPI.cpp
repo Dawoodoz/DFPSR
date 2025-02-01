@@ -47,7 +47,7 @@ IMAGE_TYPE image_create_template(const char * name, int32_t width, int32_t heigh
 	} else {
 		static const int32_t pixelSize = image_getPixelSize<IMAGE_TYPE>();
 		// Calculate the stride.
-		uintptr_t byteStride = memory_getPaddedSize(width * pixelSize, DSR_MAXIMUM_ALIGNMENT);
+		uintptr_t byteStride = memory_getPaddedSize(width * pixelSize, heap_getHeapAlignment());
 		uint32_t pixelStride = byteStride / pixelSize;
 		// Create the image.
 		return IMAGE_TYPE(buffer_create(byteStride * height).setName(name), 0, width, height, pixelStride, packOrderIndex);

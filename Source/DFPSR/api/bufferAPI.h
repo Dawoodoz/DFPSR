@@ -61,9 +61,9 @@ namespace dsr {
 	Buffer buffer_create(intptr_t newSize);
 
 	// Allocate a Buffer with padding.
-	// The buffer always align the start with DSR_MAXIMUM_ALIGNMENT, but this function makes sure that paddToAlignment does not exceed DSR_MAXIMUM_ALIGNMENT.
-	// Pre-condition: paddToAlignment <= DSR_MAXIMUM_ALIGNMENT
-	Buffer buffer_create(intptr_t newSize, int paddToAlignment);
+	// The buffer always align the start with heap alignment, but this function makes sure that paddToAlignment does not exceed heap alignment.
+	// Pre-condition: paddToAlignment <= heap_getHeapAlignment()
+	Buffer buffer_create(intptr_t newSize, uintptr_t paddToAlignment);
 
 	// Sets the allocation's destructor, to be called when there are no more reference counted pointers to the buffer.
 	//   The destructor is not responsible for freeing the memory allocation itself, only calling destructors in the content.
