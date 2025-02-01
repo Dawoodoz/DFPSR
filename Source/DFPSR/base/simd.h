@@ -3341,87 +3341,81 @@
 	template <uint32_t bitOffset>
 	inline U8x32 bitShiftLeftImmediate(const U8x32& left) {
 		static_assert(bitOffset < 8u, "Immediate left shift of 32-bit values may not shift more than 7 bits!");
-		#if defined USE_AVX2
-			return U8x32(_mm256_slli_epi8(left.v, bitOffset));
-		#else
-			return U8x32(
-			  left.scalars[ 0] << bitOffset,
-			  left.scalars[ 1] << bitOffset,
-			  left.scalars[ 2] << bitOffset,
-			  left.scalars[ 3] << bitOffset,
-			  left.scalars[ 4] << bitOffset,
-			  left.scalars[ 5] << bitOffset,
-			  left.scalars[ 6] << bitOffset,
-			  left.scalars[ 7] << bitOffset,
-			  left.scalars[ 8] << bitOffset,
-			  left.scalars[ 9] << bitOffset,
-			  left.scalars[10] << bitOffset,
-			  left.scalars[11] << bitOffset,
-			  left.scalars[12] << bitOffset,
-			  left.scalars[13] << bitOffset,
-			  left.scalars[14] << bitOffset,
-			  left.scalars[15] << bitOffset,
-			  left.scalars[16] << bitOffset,
-			  left.scalars[17] << bitOffset,
-			  left.scalars[18] << bitOffset,
-			  left.scalars[19] << bitOffset,
-			  left.scalars[20] << bitOffset,
-			  left.scalars[21] << bitOffset,
-			  left.scalars[22] << bitOffset,
-			  left.scalars[23] << bitOffset,
-			  left.scalars[24] << bitOffset,
-			  left.scalars[25] << bitOffset,
-			  left.scalars[26] << bitOffset,
-			  left.scalars[27] << bitOffset,
-			  left.scalars[28] << bitOffset,
-			  left.scalars[29] << bitOffset,
-			  left.scalars[30] << bitOffset,
-			  left.scalars[31] << bitOffset
-			);
-		#endif
+		// TODO: Use a larger lane and a mask generated in compile time.
+		return U8x32(
+		  left.scalars[ 0] << bitOffset,
+		  left.scalars[ 1] << bitOffset,
+		  left.scalars[ 2] << bitOffset,
+		  left.scalars[ 3] << bitOffset,
+		  left.scalars[ 4] << bitOffset,
+		  left.scalars[ 5] << bitOffset,
+		  left.scalars[ 6] << bitOffset,
+		  left.scalars[ 7] << bitOffset,
+		  left.scalars[ 8] << bitOffset,
+		  left.scalars[ 9] << bitOffset,
+		  left.scalars[10] << bitOffset,
+		  left.scalars[11] << bitOffset,
+		  left.scalars[12] << bitOffset,
+		  left.scalars[13] << bitOffset,
+		  left.scalars[14] << bitOffset,
+		  left.scalars[15] << bitOffset,
+		  left.scalars[16] << bitOffset,
+		  left.scalars[17] << bitOffset,
+		  left.scalars[18] << bitOffset,
+		  left.scalars[19] << bitOffset,
+		  left.scalars[20] << bitOffset,
+		  left.scalars[21] << bitOffset,
+		  left.scalars[22] << bitOffset,
+		  left.scalars[23] << bitOffset,
+		  left.scalars[24] << bitOffset,
+		  left.scalars[25] << bitOffset,
+		  left.scalars[26] << bitOffset,
+		  left.scalars[27] << bitOffset,
+		  left.scalars[28] << bitOffset,
+		  left.scalars[29] << bitOffset,
+		  left.scalars[30] << bitOffset,
+		  left.scalars[31] << bitOffset
+		);
 	}
 	// bitOffset must be an immediate constant from 0 to 31, so a template argument is used.
 	template <uint32_t bitOffset>
 	inline U8x32 bitShiftRightImmediate(const U8x32& left) {
 		static_assert(bitOffset < 8u, "Immediate right shift of 32-bit values may not shift more than 7 bits!");
-		#if defined USE_AVX2
-			return U8x32(_mm256_srli_epi8(left.v, bitOffset));
-		#else
-			return U8x32(
-			  left.scalars[ 0] >> bitOffset,
-			  left.scalars[ 1] >> bitOffset,
-			  left.scalars[ 2] >> bitOffset,
-			  left.scalars[ 3] >> bitOffset,
-			  left.scalars[ 4] >> bitOffset,
-			  left.scalars[ 5] >> bitOffset,
-			  left.scalars[ 6] >> bitOffset,
-			  left.scalars[ 7] >> bitOffset,
-			  left.scalars[ 8] >> bitOffset,
-			  left.scalars[ 9] >> bitOffset,
-			  left.scalars[10] >> bitOffset,
-			  left.scalars[11] >> bitOffset,
-			  left.scalars[12] >> bitOffset,
-			  left.scalars[13] >> bitOffset,
-			  left.scalars[14] >> bitOffset,
-			  left.scalars[15] >> bitOffset,
-			  left.scalars[16] >> bitOffset,
-			  left.scalars[17] >> bitOffset,
-			  left.scalars[18] >> bitOffset,
-			  left.scalars[19] >> bitOffset,
-			  left.scalars[20] >> bitOffset,
-			  left.scalars[21] >> bitOffset,
-			  left.scalars[22] >> bitOffset,
-			  left.scalars[23] >> bitOffset,
-			  left.scalars[24] >> bitOffset,
-			  left.scalars[25] >> bitOffset,
-			  left.scalars[26] >> bitOffset,
-			  left.scalars[27] >> bitOffset,
-			  left.scalars[28] >> bitOffset,
-			  left.scalars[29] >> bitOffset,
-			  left.scalars[30] >> bitOffset,
-			  left.scalars[31] >> bitOffset
-			);
-		#endif
+		// TODO: Use a larger lane and a mask generated in compile time.
+		return U8x32(
+		  left.scalars[ 0] >> bitOffset,
+		  left.scalars[ 1] >> bitOffset,
+		  left.scalars[ 2] >> bitOffset,
+		  left.scalars[ 3] >> bitOffset,
+		  left.scalars[ 4] >> bitOffset,
+		  left.scalars[ 5] >> bitOffset,
+		  left.scalars[ 6] >> bitOffset,
+		  left.scalars[ 7] >> bitOffset,
+		  left.scalars[ 8] >> bitOffset,
+		  left.scalars[ 9] >> bitOffset,
+		  left.scalars[10] >> bitOffset,
+		  left.scalars[11] >> bitOffset,
+		  left.scalars[12] >> bitOffset,
+		  left.scalars[13] >> bitOffset,
+		  left.scalars[14] >> bitOffset,
+		  left.scalars[15] >> bitOffset,
+		  left.scalars[16] >> bitOffset,
+		  left.scalars[17] >> bitOffset,
+		  left.scalars[18] >> bitOffset,
+		  left.scalars[19] >> bitOffset,
+		  left.scalars[20] >> bitOffset,
+		  left.scalars[21] >> bitOffset,
+		  left.scalars[22] >> bitOffset,
+		  left.scalars[23] >> bitOffset,
+		  left.scalars[24] >> bitOffset,
+		  left.scalars[25] >> bitOffset,
+		  left.scalars[26] >> bitOffset,
+		  left.scalars[27] >> bitOffset,
+		  left.scalars[28] >> bitOffset,
+		  left.scalars[29] >> bitOffset,
+		  left.scalars[30] >> bitOffset,
+		  left.scalars[31] >> bitOffset
+		);
 	}
 
 	inline U16x16 operator+(const U16x16& left, const U16x16& right) {

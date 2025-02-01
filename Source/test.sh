@@ -5,17 +5,18 @@ TEMP_ROOT=${ROOT_PATH}/../../temporary
 CPP_VERSION=-std=c++14
 MODE="-DDEBUG"
 DEBUGGER="-g"
+SIMD="-march=native"
 O_LEVEL=-O2
 
 chmod +x ${ROOT_PATH}/tools/build.sh;
-${ROOT_PATH}/tools/buildScripts/build.sh "NONE" "NONE" "${ROOT_PATH}" "${TEMP_ROOT}" "NONE" "${MODE} ${DEBUGGER} ${CPP_VERSION} ${O_LEVEL}";
+${ROOT_PATH}/tools/buildScripts/build.sh "NONE" "NONE" "${ROOT_PATH}" "${TEMP_ROOT}" "NONE" "${MODE} ${DEBUGGER} ${SIMD} ${CPP_VERSION} ${O_LEVEL}";
 if [ $? -ne 0 ]
 then
 	exit 1
 fi
 
 # Get the specific temporary sub-folder for the compilation settings
-TEMP_SUB="${MODE}_${DEBUGGER}_${CPP_VERSION}_${O_LEVEL}"
+TEMP_SUB="${MODE}_${DEBUGGER}_${SIMD}_${CPP_VERSION}_${O_LEVEL}"
 TEMP_SUB=$(echo $TEMP_SUB | tr "+" "p")
 TEMP_SUB=$(echo $TEMP_SUB | tr -d " =-")
 TEMP_DIR=${TEMP_ROOT}/${TEMP_SUB}
@@ -31,7 +32,7 @@ for file in ./test/tests/*.cpp; do
 	rm -f ${TEMP_DIR}/application;
 	# Compile test case that defines main
 	echo "Compiling ${name}";
-	g++ ${CPP_VERSION} ${MODE} ${DEBUGGER} -c ${file} -o ${TEMP_DIR}/${base}_test.o;
+	g++ ${CPP_VERSION} ${MODE} ${DEBUGGER} ${SIMD} -c ${file} -o ${TEMP_DIR}/${base}_test.o;
 	if [ $? -ne 0 ]
 	then
 		exit 1
