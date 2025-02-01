@@ -64,7 +64,7 @@ namespace dsr {
 		void heap_setAllocationName(void * const allocation, const char *name);
 		// Get the ascii name of allocation, or "none" if allocation is nullptr.
 		const char * heap_getAllocationName(void * const allocation);
-		// Gets the size padded out to whole blocks of DSR_MAXIMUM_ALIGNMENT, for constructing a SafePointer.
+		// Gets the size padded out to whole blocks of heap alignment, for constructing a SafePointer.
 		uintptr_t heap_getPaddedSize(void const * const allocation);
 	#endif
 
@@ -129,6 +129,9 @@ namespace dsr {
 	//                 To use more memory than requested, you must round it down to whole elements.
 	//                 If the element's size is a power of two, you can pre-compute a bit mask using memory_createAlignmentAndMask for rounding down.
 	uintptr_t heap_getAllocationSize(void const * const allocation);
+
+	// Get the alignment of the heap, which depends on the largest cache line size.
+	uintptr_t heap_getHeapAlignment();
 
 	// Pre-condition: The allocation pointer must point to the start of a payload allocated using heap_allocate, no offsets nor other allocators allowed.
 	// Post-condition: Returns a pointer to the heap allocation's header, which is used to construct safe pointers.

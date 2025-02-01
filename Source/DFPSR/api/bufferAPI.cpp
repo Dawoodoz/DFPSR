@@ -26,6 +26,7 @@
 #include "stringAPI.h"
 #include "../implementation/math/scalar.h"
 #include "../base/SafePointer.h"
+#include "../base/heap.h"
 
 namespace dsr {
 
@@ -35,9 +36,9 @@ Buffer buffer_create(intptr_t newSize) {
 	return handle_createArray<uint8_t>(AllocationInitialization::Zeroed, (uintptr_t)newSize);
 }
 
-Buffer buffer_create(intptr_t newSize, int paddToAlignment) {
+Buffer buffer_create(intptr_t newSize, uintptr_t paddToAlignment) {
 	if (newSize < 0) newSize = 0;
-	if (paddToAlignment > DSR_MAXIMUM_ALIGNMENT) {
+	if (paddToAlignment > heap_getHeapAlignment()) {
 		throwError(U"Maximum alignment exceeded when creating a buffer!\n");
 		return Handle<uint8_t>();
 	} else {
