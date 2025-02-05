@@ -318,6 +318,9 @@
 		// Vector uploads in address order
 		inline SIMD_F32x4 LOAD_VECTOR_F32_SIMD(float a, float b, float c, float d) {
 			float data[4] ALIGN16 = {a, b, c, d};
+			#ifdef SAFE_POINTER_CHECKS
+				if (uintptr_t((void*)data) & 15u) { throwError(U"Unaligned stack memory detected in LOAD_VECTOR_F32_SIMD for NEON!\n"); }
+			#endif
 			return vld1q_f32(data);
 		}
 		inline SIMD_F32x4 LOAD_SCALAR_F32_SIMD(float a) {
@@ -326,6 +329,9 @@
 		inline SIMD_U8x16 LOAD_VECTOR_U8_SIMD(uint8_t a, uint8_t b, uint8_t c, uint8_t d, uint8_t e, uint8_t f, uint8_t g, uint8_t h,
 		                                      uint8_t i, uint8_t j, uint8_t k, uint8_t l, uint8_t m, uint8_t n, uint8_t o, uint8_t p) {
 			uint8_t data[16] ALIGN16 = {a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p};
+			#ifdef SAFE_POINTER_CHECKS
+				if (uintptr_t((void*)data) & 15u) { throwError(U"Unaligned stack memory detected in LOAD_VECTOR_U8_SIMD for NEON!\n"); }
+			#endif
 			return vld1q_u8(data);
 		}
 		inline SIMD_U8x16 LOAD_SCALAR_U8_SIMD(uint16_t a) {
@@ -333,6 +339,9 @@
 		}
 		inline SIMD_U16x8 LOAD_VECTOR_U16_SIMD(uint16_t a, uint16_t b, uint16_t c, uint16_t d, uint16_t e, uint16_t f, uint16_t g, uint16_t h) {
 			uint16_t data[8] ALIGN16 = {a, b, c, d, e, f, g, h};
+			#ifdef SAFE_POINTER_CHECKS
+				if (uintptr_t((void*)data) & 15u) { throwError(U"Unaligned stack memory detected in LOAD_VECTOR_U16_SIMD for NEON!\n"); }
+			#endif
 			return vld1q_u16(data);
 		}
 		inline SIMD_U16x8 LOAD_SCALAR_U16_SIMD(uint16_t a) {
@@ -340,6 +349,9 @@
 		}
 		inline SIMD_U32x4 LOAD_VECTOR_U32_SIMD(uint32_t a, uint32_t b, uint32_t c, uint32_t d) {
 			uint32_t data[4] ALIGN16 = {a, b, c, d};
+			#ifdef SAFE_POINTER_CHECKS
+				if (uintptr_t((void*)data) & 15u) { throwError(U"Unaligned stack memory detected in LOAD_VECTOR_U32_SIMD for NEON!\n"); }
+			#endif
 			return vld1q_u32(data);
 		}
 		inline SIMD_U32x4 LOAD_SCALAR_U32_SIMD(uint32_t a) {
@@ -347,6 +359,9 @@
 		}
 		inline SIMD_I32x4 LOAD_VECTOR_I32_SIMD(int32_t a, int32_t b, int32_t c, int32_t d) {
 			int32_t data[4] ALIGN16 = {a, b, c, d};
+			#ifdef SAFE_POINTER_CHECKS
+				if (uintptr_t((void*)data) & 15u) { throwError(U"Unaligned stack memory detected in LOAD_VECTOR_I32_SIMD for NEON!\n"); }
+			#endif
 			return vld1q_s32(data);
 		}
 		inline SIMD_I32x4 LOAD_SCALAR_I32_SIMD(int32_t a) {
@@ -478,6 +493,9 @@
 		// Construct a portable SIMD vector from a pointer to aligned data
 		// data must be aligned with at least 8 bytes, but preferrably 16 bytes
 		static inline F32x4 readAlignedUnsafe(const float* data) {
+			#ifdef SAFE_POINTER_CHECKS
+				if (uintptr_t((const void*)data) & 15u) { throwError(U"Unaligned pointer detected in F32x4::readAlignedUnsafe!\n"); }
+			#endif
 			#ifdef USE_BASIC_SIMD
 				#if defined USE_SSE2
 					return F32x4(_mm_load_ps(data));
@@ -491,6 +509,9 @@
 		// Write to aligned memory from the existing vector
 		// data must be aligned with at least 8 bytes, but preferrably 16 bytes
 		inline void writeAlignedUnsafe(float* data) const {
+			#ifdef SAFE_POINTER_CHECKS
+				if (uintptr_t((void*)data) & 15u) { throwError(U"Unaligned pionter detected in F32x4::writeAlignedUnsafe!\n"); }
+			#endif
 			#if defined USE_BASIC_SIMD
 				#if defined USE_SSE2
 					_mm_store_ps(data, this->v);
@@ -507,6 +528,9 @@
 		#if defined DFPSR_GEOMETRY_FVECTOR
 			dsr::FVector4D get() const {
 				float data[4] ALIGN16;
+				#ifdef SAFE_POINTER_CHECKS
+					if (uintptr_t(data) & 15u) { throwError(U"Unaligned stack memory detected in FVector4D F32x4::get!\n"); }
+				#endif
 				this->writeAlignedUnsafe(data);
 				return dsr::FVector4D(data[0], data[1], data[2], data[3]);
 			}
@@ -514,7 +538,6 @@
 		// Bound and alignment checked reading
 		static inline F32x4 readAligned(dsr::SafePointer<const float> data, const char* methodName) {
 			const float* pointer = data.getUnsafe();
-			assert(((uintptr_t)pointer & 15) == 0);
 			#if defined SAFE_POINTER_CHECKS
 				data.assertInside(methodName, pointer, 16);
 			#endif
@@ -523,7 +546,6 @@
 		// Bound and alignment checked writing
 		inline void writeAligned(dsr::SafePointer<float> data, const char* methodName) const {
 			float* pointer = data.getUnsafe();
-			assert(((uintptr_t)pointer & 15) == 0);
 			#if defined SAFE_POINTER_CHECKS
 				data.assertInside(methodName, pointer, 16);
 			#endif
@@ -648,6 +670,9 @@
 		// Construct a portable SIMD vector from a pointer to aligned data
 		// data must be aligned with at least 8 bytes, but preferrably 16 bytes
 		static inline I32x4 readAlignedUnsafe(const int32_t* data) {
+			#ifdef SAFE_POINTER_CHECKS
+				if (uintptr_t(data) & 15u) { throwError(U"Unaligned pointer detected in I32x4::readAlignedUnsafe!\n"); }
+			#endif
 			#if defined USE_BASIC_SIMD
 				#if defined USE_SSE2
 					return I32x4(_mm_load_si128((const __m128i*)data));
@@ -661,6 +686,9 @@
 		// Write to aligned memory from the existing vector
 		// data must be aligned with at least 8 bytes, but preferrably 16 bytes
 		inline void writeAlignedUnsafe(int32_t* data) const {
+			#ifdef SAFE_POINTER_CHECKS
+				if (uintptr_t(data) & 15u) { throwError(U"Unaligned pointer detected in I32x4::writeAlignedUnsafe!\n"); }
+			#endif
 			#if defined USE_BASIC_SIMD
 				#if defined USE_SSE2
 					_mm_store_si128((__m128i*)data, this->v);
@@ -677,6 +705,9 @@
 		#if defined DFPSR_GEOMETRY_IVECTOR
 			dsr::IVector4D get() const {
 				int32_t data[4] ALIGN16;
+				#ifdef SAFE_POINTER_CHECKS
+					if (uintptr_t(data) & 15u) { throwError(U"Unaligned stack memory detected in IVector4D I32x4::get!\n"); }
+				#endif
 				this->writeAlignedUnsafe(data);
 				return dsr::IVector4D(data[0], data[1], data[2], data[3]);
 			}
@@ -684,7 +715,6 @@
 		// Bound and alignment checked reading
 		static inline I32x4 readAligned(dsr::SafePointer<const int32_t> data, const char* methodName) {
 			const int32_t* pointer = data.getUnsafe();
-			assert(((uintptr_t)pointer & 15) == 0);
 			#if defined SAFE_POINTER_CHECKS
 				data.assertInside(methodName, pointer, 16);
 			#endif
@@ -693,7 +723,6 @@
 		// Bound and alignment checked writing
 		inline void writeAligned(dsr::SafePointer<int32_t> data, const char* methodName) const {
 			int32_t* pointer = data.getUnsafe();
-			assert(((uintptr_t)pointer & 15) == 0);
 			#if defined SAFE_POINTER_CHECKS
 				data.assertInside(methodName, pointer, 16);
 			#endif
@@ -745,6 +774,9 @@
 		// Construct a portable SIMD vector from a pointer to aligned data
 		// data must be aligned with at least 8 bytes, but preferrably 16 bytes
 		static inline U32x4 readAlignedUnsafe(const uint32_t* data) {
+			#ifdef SAFE_POINTER_CHECKS
+				if (uintptr_t(data) & 15u) { throwError(U"Unaligned pointer detected in U32x4::readAlignedUnsafe!\n"); }
+			#endif
 			#if defined USE_BASIC_SIMD
 				#if defined USE_SSE2
 					return U32x4(_mm_load_si128((const __m128i*)data));
@@ -758,6 +790,9 @@
 		// Write to aligned memory from the existing vector
 		// data must be aligned with at least 8 bytes, but preferrably 16 bytes
 		inline void writeAlignedUnsafe(uint32_t* data) const {
+			#ifdef SAFE_POINTER_CHECKS
+				if (uintptr_t(data) & 15u) { throwError(U"Unaligned pointer detected in U32x4::writeAlignedUnsafe!\n"); }
+			#endif
 			#if defined USE_BASIC_SIMD
 				#if defined USE_SSE2
 					_mm_store_si128((__m128i*)data, this->v);
@@ -774,6 +809,9 @@
 		#if defined DFPSR_GEOMETRY_UVECTOR
 			dsr::UVector4D get() const {
 				uint32_t data[4] ALIGN16;
+				#ifdef SAFE_POINTER_CHECKS
+					if (uintptr_t(data) & 15u) { throwError(U"Unaligned stack memory detected in UVector4D U32x4::get!\n"); }
+				#endif
 				this->writeAlignedUnsafe(data);
 				return dsr::UVector4D(data[0], data[1], data[2], data[3]);
 			}
@@ -781,7 +819,6 @@
 		// Bound and alignment checked reading
 		static inline U32x4 readAligned(dsr::SafePointer<const uint32_t> data, const char* methodName) {
 			const uint32_t* pointer = data.getUnsafe();
-			assert(((uintptr_t)pointer & 15) == 0);
 			#if defined SAFE_POINTER_CHECKS
 				data.assertInside(methodName, pointer, 16);
 			#endif
@@ -790,7 +827,6 @@
 		// Bound and alignment checked writing
 		inline void writeAligned(dsr::SafePointer<uint32_t> data, const char* methodName) const {
 			uint32_t* pointer = data.getUnsafe();
-			assert(((uintptr_t)pointer & 15) == 0);
 			#if defined SAFE_POINTER_CHECKS
 				data.assertInside(methodName, pointer, 16);
 			#endif
@@ -900,6 +936,9 @@
 			);
 		}
 		static inline U16x8 readAlignedUnsafe(const uint16_t* data) {
+			#ifdef SAFE_POINTER_CHECKS
+				if (uintptr_t(data) & 15u) { throwError(U"Unaligned pointer detected in U16x8::readAlignedUnsafe!\n"); }
+			#endif
 			#if defined USE_BASIC_SIMD
 				#if defined USE_SSE2
 					return U16x8(_mm_load_si128((const __m128i*)data));
@@ -912,6 +951,9 @@
 		}
 		// data must be aligned with at least 8 bytes, but preferrably 16 bytes
 		inline void writeAlignedUnsafe(uint16_t* data) const {
+			#ifdef SAFE_POINTER_CHECKS
+				if (uintptr_t(data) & 15u) { throwError(U"Unaligned pointer detected in U16x8::writeAlignedUnsafe!\n"); }
+			#endif
 			#if defined USE_BASIC_SIMD
 				#if defined USE_SSE2
 					_mm_store_si128((__m128i*)data, this->v);
@@ -932,7 +974,6 @@
 		// Bound and alignment checked reading
 		static inline U16x8 readAligned(dsr::SafePointer<const uint16_t> data, const char* methodName) {
 			const uint16_t* pointer = data.getUnsafe();
-			assert(((uintptr_t)pointer & 15) == 0);
 			#if defined SAFE_POINTER_CHECKS
 				data.assertInside(methodName, pointer, 16);
 			#endif
@@ -941,7 +982,6 @@
 		// Bound and alignment checked writing
 		inline void writeAligned(dsr::SafePointer<uint16_t> data, const char* methodName) const {
 			uint16_t* pointer = data.getUnsafe();
-			assert(((uintptr_t)pointer & 15) == 0);
 			#if defined SAFE_POINTER_CHECKS
 				data.assertInside(methodName, pointer, 16);
 			#endif
@@ -1041,6 +1081,9 @@
 			);
 		}
 		static inline U8x16 readAlignedUnsafe(const uint8_t* data) {
+			#ifdef SAFE_POINTER_CHECKS
+				if (uintptr_t(data) & 15u) { throwError(U"Unaligned pointer detected in U8x16::readAlignedUnsafe!\n"); }
+			#endif
 			#if defined USE_BASIC_SIMD
 				#if defined USE_SSE2
 					return U8x16(_mm_load_si128((const __m128i*)data));
@@ -1056,6 +1099,9 @@
 		}
 		// data must be aligned with at least 8 bytes, but preferrably 16 bytes
 		inline void writeAlignedUnsafe(uint8_t* data) const {
+			#ifdef SAFE_POINTER_CHECKS
+				if (uintptr_t(data) & 15u) { throwError(U"Unaligned pointer detected in U8x16::writeAlignedUnsafe!\n"); }
+			#endif
 			#if defined USE_BASIC_SIMD
 				#if defined USE_SSE2
 					_mm_store_si128((__m128i*)data, this->v);
@@ -1084,7 +1130,6 @@
 		// Bound and alignment checked reading
 		static inline U8x16 readAligned(dsr::SafePointer<const uint8_t> data, const char* methodName) {
 			const uint8_t* pointer = data.getUnsafe();
-			assert(((uintptr_t)pointer & 15) == 0);
 			#if defined SAFE_POINTER_CHECKS
 				data.assertInside(methodName, pointer, 16);
 			#endif
@@ -1093,7 +1138,6 @@
 		// Bound and alignment checked writing
 		inline void writeAligned(dsr::SafePointer<uint8_t> data, const char* methodName) const {
 			uint8_t* pointer = data.getUnsafe();
-			assert(((uintptr_t)pointer & 15) == 0);
 			#if defined SAFE_POINTER_CHECKS
 				data.assertInside(methodName, pointer, 16);
 			#endif
@@ -1168,6 +1212,9 @@
 		// Construct a portable SIMD vector from a pointer to aligned data
 		// data must be aligned with at least 8 bytes, but preferrably 16 bytes
 		static inline F32x8 readAlignedUnsafe(const float* data) {
+			#ifdef SAFE_POINTER_CHECKS
+				if (uintptr_t(data) & 31u) { throwError(U"Unaligned pointer detected in F32x8::readAlignedUnsafe!\n"); }
+			#endif
 			#if defined USE_AVX2
 				return F32x8(_mm256_load_ps(data));
 			#else
@@ -1177,6 +1224,9 @@
 		// Write to aligned memory from the existing vector
 		// data must be aligned with at least 8 bytes, but preferrably 16 bytes
 		inline void writeAlignedUnsafe(float* data) const {
+			#ifdef SAFE_POINTER_CHECKS
+				if (uintptr_t(data) & 31u) { throwError(U"Unaligned pointer detected in F32x8::writeAlignedUnsafe!\n"); }
+			#endif
 			#if defined USE_AVX2
 				_mm256_store_ps(data, this->v);
 			#else
@@ -1193,7 +1243,6 @@
 		// Bound and alignment checked reading
 		static inline F32x8 readAligned(dsr::SafePointer<const float> data, const char* methodName) {
 			const float* pointer = data.getUnsafe();
-			assert(((uintptr_t)pointer & 31) == 0);
 			#if defined SAFE_POINTER_CHECKS
 				data.assertInside(methodName, pointer, 32);
 			#endif
@@ -1202,7 +1251,6 @@
 		// Bound and alignment checked writing
 		inline void writeAligned(dsr::SafePointer<float> data, const char* methodName) const {
 			float* pointer = data.getUnsafe();
-			assert(((uintptr_t)pointer & 31) == 0);
 			#if defined SAFE_POINTER_CHECKS
 				data.assertInside(methodName, pointer, 32);
 			#endif
@@ -1341,6 +1389,9 @@
 		// Construct a portable SIMD vector from a pointer to aligned data
 		// data must be aligned with at least 8 bytes, but preferrably 16 bytes
 		static inline I32x8 readAlignedUnsafe(const int32_t* data) {
+			#ifdef SAFE_POINTER_CHECKS
+				if (uintptr_t(data) & 31u) { throwError(U"Unaligned pointer detected in I32x8::readAlignedUnsafe!\n"); }
+			#endif
 			#if defined USE_AVX2
 				return I32x8(_mm256_load_si256((const __m256i*)data));
 			#else
@@ -1350,6 +1401,9 @@
 		// Write to aligned memory from the existing vector
 		// data must be aligned with at least 8 bytes, but preferrably 16 bytes
 		inline void writeAlignedUnsafe(int32_t* data) const {
+			#ifdef SAFE_POINTER_CHECKS
+				if (uintptr_t(data) & 31u) { throwError(U"Unaligned pointer detected in I32x8::writeAlignedUnsafe!\n"); }
+			#endif
 			#if defined USE_AVX2
 				_mm256_store_si256((__m256i*)data, this->v);
 			#else
@@ -1366,7 +1420,6 @@
 		// Bound and alignment checked reading
 		static inline I32x8 readAligned(dsr::SafePointer<const int32_t> data, const char* methodName) {
 			const int32_t* pointer = data.getUnsafe();
-			assert(((uintptr_t)pointer & 31) == 0);
 			#if defined SAFE_POINTER_CHECKS
 				data.assertInside(methodName, pointer, 32);
 			#endif
@@ -1375,7 +1428,6 @@
 		// Bound and alignment checked writing
 		inline void writeAligned(dsr::SafePointer<int32_t> data, const char* methodName) const {
 			int32_t* pointer = data.getUnsafe();
-			assert(((uintptr_t)pointer & 31) == 0);
 			#if defined SAFE_POINTER_CHECKS
 				data.assertInside(methodName, pointer, 32);
 			#endif
@@ -1450,6 +1502,9 @@
 		// Construct a portable SIMD vector from a pointer to aligned data
 		// data must be aligned with at least 8 bytes, but preferrably 16 bytes
 		static inline U32x8 readAlignedUnsafe(const uint32_t* data) {
+			#ifdef SAFE_POINTER_CHECKS
+				if (uintptr_t(data) & 31u) { throwError(U"Unaligned pointer detected in U32x8::readAlignedUnsafe!\n"); }
+			#endif
 			#if defined USE_AVX2
 				return U32x8(_mm256_load_si256((const __m256i*)data));
 			#else
@@ -1459,6 +1514,9 @@
 		// Write to aligned memory from the existing vector
 		// data must be aligned with at least 8 bytes, but preferrably 16 bytes
 		inline void writeAlignedUnsafe(uint32_t* data) const {
+			#ifdef SAFE_POINTER_CHECKS
+				if (uintptr_t(data) & 31u) { throwError(U"Unaligned pointer detected in U32x8::writeAlignedUnsafe!\n"); }
+			#endif
 			#if defined USE_AVX2
 				_mm256_store_si256((__m256i*)data, this->v);
 			#else
@@ -1475,7 +1533,6 @@
 		// Bound and alignment checked reading
 		static inline U32x8 readAligned(dsr::SafePointer<const uint32_t> data, const char* methodName) {
 			const uint32_t* pointer = data.getUnsafe();
-			assert(((uintptr_t)pointer & 31) == 0);
 			#if defined SAFE_POINTER_CHECKS
 				data.assertInside(methodName, pointer, 32);
 			#endif
@@ -1484,7 +1541,6 @@
 		// Bound and alignment checked writing
 		inline void writeAligned(dsr::SafePointer<uint32_t> data, const char* methodName) const {
 			uint32_t* pointer = data.getUnsafe();
-			assert(((uintptr_t)pointer & 31) == 0);
 			#if defined SAFE_POINTER_CHECKS
 				data.assertInside(methodName, pointer, 32);
 			#endif
@@ -1632,6 +1688,9 @@
 		//	return U16x16(data[0], data[1], data[2], data[3], data[4], data[5], data[6], data[7]);
 		//}
 		static inline U16x16 readAlignedUnsafe(const uint16_t* data) {
+			#ifdef SAFE_POINTER_CHECKS
+				if (uintptr_t(data) & 31u) { throwError(U"Unaligned pointer detected in U16x16::readAlignedUnsafe!\n"); }
+			#endif
 			#if defined USE_AVX2
 				return U16x16(_mm256_load_si256((const __m256i*)data));
 			#else
@@ -1657,6 +1716,9 @@
 		}
 		// data must be aligned with at least 8 bytes, but preferrably 16 bytes
 		inline void writeAlignedUnsafe(uint16_t* data) const {
+			#ifdef SAFE_POINTER_CHECKS
+				if (uintptr_t(data) & 31u) { throwError(U"Unaligned pointer detected in U16x16::writeAlignedUnsafe!\n"); }
+			#endif
 			#if defined USE_AVX2
 				_mm256_store_si256((__m256i*)data, this->v);
 			#else
@@ -1681,7 +1743,6 @@
 		// Bound and alignment checked reading
 		static inline U16x16 readAligned(dsr::SafePointer<const uint16_t> data, const char* methodName) {
 			const uint16_t* pointer = data.getUnsafe();
-			assert(((uintptr_t)pointer & 31) == 0);
 			#if defined SAFE_POINTER_CHECKS
 				data.assertInside(methodName, pointer, 32);
 			#endif
@@ -1690,7 +1751,6 @@
 		// Bound and alignment checked writing
 		inline void writeAligned(dsr::SafePointer<uint16_t> data, const char* methodName) const {
 			uint16_t* pointer = data.getUnsafe();
-			assert(((uintptr_t)pointer & 31) == 0);
 			#if defined SAFE_POINTER_CHECKS
 				data.assertInside(methodName, pointer, 32);
 			#endif
@@ -1815,6 +1875,9 @@
 			);
 		}
 		static inline U8x32 readAlignedUnsafe(const uint8_t* data) {
+			#ifdef SAFE_POINTER_CHECKS
+				if (uintptr_t(data) & 31u) { throwError(U"Unaligned pointer detected in U8x32::readAlignedUnsafe!\n"); }
+			#endif
 			#if defined USE_AVX2
 				return U8x32(_mm256_load_si256((const __m256i*)data));
 			#else
@@ -1827,6 +1890,9 @@
 		}
 		// data must be aligned with at least 8 bytes, but preferrably 16 bytes
 		inline void writeAlignedUnsafe(uint8_t* data) const {
+			#ifdef SAFE_POINTER_CHECKS
+				if (uintptr_t(data) & 31u) { throwError(U"Unaligned pointer detected in U8x32::writeAlignedUnsafe!\n"); }
+			#endif
 			#if defined USE_AVX2
 				_mm256_store_si256((__m256i*)data, this->v);
 			#else
@@ -1838,7 +1904,6 @@
 		// Bound and alignment checked reading
 		static inline U8x32 readAligned(dsr::SafePointer<const uint8_t> data, const char* methodName) {
 			const uint8_t* pointer = data.getUnsafe();
-			assert(((uintptr_t)pointer & 31) == 0);
 			#if defined SAFE_POINTER_CHECKS
 				data.assertInside(methodName, pointer, 32);
 			#endif
@@ -1847,7 +1912,6 @@
 		// Bound and alignment checked writing
 		inline void writeAligned(dsr::SafePointer<uint8_t> data, const char* methodName) const {
 			uint8_t* pointer = data.getUnsafe();
-			assert(((uintptr_t)pointer & 31) == 0);
 			#if defined SAFE_POINTER_CHECKS
 				data.assertInside(methodName, pointer, 32);
 			#endif
@@ -2704,6 +2768,9 @@
 				// If SSSE3 is not used, emulate it using stack memory and unaligned reading of data.
 				static inline SIMD_U8x16 _MM_ALIGNR_EPI8(SIMD_U8x16 a, SIMD_U8x16 b, int offset) {
 					ALIGN16 uint8_t vectorBuffer[32];
+					#ifdef SAFE_POINTER_CHECKS
+						if (uintptr_t((void*)vectorBuffer) & 15u) { throwError(U"Unaligned stack memory detected in 128-bit VECTOR_EXTRACT_GENERATOR!\n"); }
+					#endif
 					_mm_store_si128((SIMD_U8x16*)(vectorBuffer), b);
 					_mm_store_si128((SIMD_U8x16*)(vectorBuffer + 16), a);
 					return _mm_loadu_si128((SIMD_U8x16*)(vectorBuffer + offset));
@@ -2787,12 +2854,22 @@
 		#define GATHER_F32x4_AVX2(SOURCE, FOUR_OFFSETS, SCALE) _mm_i32gather_ps((const float*)(SOURCE), FOUR_OFFSETS, SCALE)
 	#endif
 	static inline U32x4 gather_U32(dsr::SafePointer<const uint32_t> data, const U32x4 &elementOffset) {
+		#ifdef SAFE_POINTER_CHECKS
+			ALIGN16 uint32_t elementOffsets[4];
+			if (uintptr_t((void*)elementOffsets) & 15u) { throwError(U"Unaligned stack memory detected in 128-bit gather_U32!\n"); }
+			elementOffset.writeAlignedUnsafe(elementOffsets);
+			data.assertInside("U32x4 gather_U32 lane 0", (data + elementOffsets[0]).getUnchecked());
+			data.assertInside("U32x4 gather_U32 lane 1", (data + elementOffsets[1]).getUnchecked());
+			data.assertInside("U32x4 gather_U32 lane 2", (data + elementOffsets[2]).getUnchecked());
+			data.assertInside("U32x4 gather_U32 lane 3", (data + elementOffsets[3]).getUnchecked());
+		#endif
 		#if defined USE_AVX2
-			// TODO: Implement safety checks for debug mode.
 			return U32x4(GATHER_U32x4_AVX2(data.getUnsafe(), elementOffset.v, 4));
 		#else
-			ALIGN16 uint32_t elementOffsets[4];
-			elementOffset.writeAlignedUnsafe(elementOffsets);
+			#ifndef SAFE_POINTER_CHECKS
+				ALIGN16 uint32_t elementOffsets[4];
+				elementOffset.writeAlignedUnsafe(elementOffsets);
+			#endif
 			return U32x4(
 			  *(data + elementOffsets[0]),
 			  *(data + elementOffsets[1]),
@@ -2802,12 +2879,22 @@
 		#endif
 	}
 	static inline I32x4 gather_I32(dsr::SafePointer<const int32_t> data, const U32x4 &elementOffset) {
+		#ifdef SAFE_POINTER_CHECKS
+			ALIGN16 uint32_t elementOffsets[4];
+			if (uintptr_t((void*)elementOffsets) & 15u) { throwError(U"Unaligned stack memory detected in 128-bit gather_I32!\n"); }
+			elementOffset.writeAlignedUnsafe(elementOffsets);
+			data.assertInside("I32x4 gather_I32 lane 0", (data + elementOffsets[0]).getUnchecked());
+			data.assertInside("I32x4 gather_I32 lane 1", (data + elementOffsets[1]).getUnchecked());
+			data.assertInside("I32x4 gather_I32 lane 2", (data + elementOffsets[2]).getUnchecked());
+			data.assertInside("I32x4 gather_I32 lane 3", (data + elementOffsets[3]).getUnchecked());
+		#endif
 		#if defined USE_AVX2
-			// TODO: Implement safety checks for debug mode.
 			return I32x4(GATHER_U32x4_AVX2(data.getUnsafe(), elementOffset.v, 4));
 		#else
-			ALIGN16 uint32_t elementOffsets[4];
-			elementOffset.writeAlignedUnsafe(elementOffsets);
+			#ifndef SAFE_POINTER_CHECKS
+				ALIGN16 uint32_t elementOffsets[4];
+				elementOffset.writeAlignedUnsafe(elementOffsets);
+			#endif
 			return I32x4(
 			  *(data + elementOffsets[0]),
 			  *(data + elementOffsets[1]),
@@ -2817,12 +2904,22 @@
 		#endif
 	}
 	static inline F32x4 gather_F32(dsr::SafePointer<const float> data, const U32x4 &elementOffset) {
+		#ifdef SAFE_POINTER_CHECKS
+			ALIGN16 uint32_t elementOffsets[4];
+			if (uintptr_t((void*)elementOffsets) & 15u) { throwError(U"Unaligned stack memory detected in 128-bit gather_F32!\n"); }
+			elementOffset.writeAlignedUnsafe(elementOffsets);
+			data.assertInside("F32x4 gather_F32 lane 0", (data + elementOffsets[0]).getUnchecked());
+			data.assertInside("F32x4 gather_F32 lane 1", (data + elementOffsets[1]).getUnchecked());
+			data.assertInside("F32x4 gather_F32 lane 2", (data + elementOffsets[2]).getUnchecked());
+			data.assertInside("F32x4 gather_F32 lane 3", (data + elementOffsets[3]).getUnchecked());
+		#endif
 		#if defined USE_AVX2
-			// TODO: Implement safety checks for debug mode.
 			return F32x4(GATHER_F32x4_AVX2(data.getUnsafe(), elementOffset.v, 4));
 		#else
-			ALIGN16 uint32_t elementOffsets[4];
-			elementOffset.writeAlignedUnsafe(elementOffsets);
+			#ifndef SAFE_POINTER_CHECKS
+				ALIGN16 uint32_t elementOffsets[4];
+				elementOffset.writeAlignedUnsafe(elementOffsets);
+			#endif
 			return F32x4(
 			  *(data + elementOffsets[0]),
 			  *(data + elementOffsets[1]),
@@ -3865,12 +3962,26 @@
 		#define GATHER_F32x8_AVX2(SOURCE, EIGHT_OFFSETS, SCALE) _mm256_i32gather_ps((const float*)(SOURCE), EIGHT_OFFSETS, SCALE)
 	#endif
 	static inline U32x8 gather_U32(dsr::SafePointer<const uint32_t> data, const U32x8 &elementOffset) {
+		#ifdef SAFE_POINTER_CHECKS
+			ALIGN16 uint32_t elementOffsets[8];
+			if (uintptr_t((void*)elementOffsets) & 31u) { throwError(U"Unaligned stack memory detected in 256-bit gather_U32!\n"); }
+			elementOffset.writeAlignedUnsafe(elementOffsets);
+			data.assertInside("U32x4 gather_U32 lane 0", (data + elementOffsets[0]).getUnchecked());
+			data.assertInside("U32x4 gather_U32 lane 1", (data + elementOffsets[1]).getUnchecked());
+			data.assertInside("U32x4 gather_U32 lane 2", (data + elementOffsets[2]).getUnchecked());
+			data.assertInside("U32x4 gather_U32 lane 3", (data + elementOffsets[3]).getUnchecked());
+			data.assertInside("U32x4 gather_U32 lane 4", (data + elementOffsets[4]).getUnchecked());
+			data.assertInside("U32x4 gather_U32 lane 5", (data + elementOffsets[5]).getUnchecked());
+			data.assertInside("U32x4 gather_U32 lane 6", (data + elementOffsets[6]).getUnchecked());
+			data.assertInside("U32x4 gather_U32 lane 7", (data + elementOffsets[7]).getUnchecked());
+		#endif
 		#if defined USE_AVX2
-			// TODO: Implement safety checks for debug mode.
 			return U32x8(GATHER_I32x8_AVX2(data.getUnsafe(), elementOffset.v, 4));
 		#else
-			ALIGN32 uint32_t elementOffsets[8];
-			elementOffset.writeAlignedUnsafe(elementOffsets);
+			#ifndef SAFE_POINTER_CHECKS
+				ALIGN32 uint32_t elementOffsets[8];
+				elementOffset.writeAlignedUnsafe(elementOffsets);
+			#endif
 			return U32x8(
 			  *(data + elementOffsets[0]),
 			  *(data + elementOffsets[1]),
@@ -3884,12 +3995,26 @@
 		#endif
 	}
 	static inline I32x8 gather_I32(dsr::SafePointer<const int32_t> data, const U32x8 &elementOffset) {
+		#ifdef SAFE_POINTER_CHECKS
+			ALIGN16 uint32_t elementOffsets[8];
+			if (uintptr_t((void*)elementOffsets) & 31u) { throwError(U"Unaligned stack memory detected in 256-bit gather_I32!\n"); }
+			elementOffset.writeAlignedUnsafe(elementOffsets);
+			data.assertInside("I32x4 gather_I32 lane 0", (data + elementOffsets[0]).getUnchecked());
+			data.assertInside("I32x4 gather_I32 lane 1", (data + elementOffsets[1]).getUnchecked());
+			data.assertInside("I32x4 gather_I32 lane 2", (data + elementOffsets[2]).getUnchecked());
+			data.assertInside("I32x4 gather_I32 lane 3", (data + elementOffsets[3]).getUnchecked());
+			data.assertInside("I32x4 gather_I32 lane 4", (data + elementOffsets[4]).getUnchecked());
+			data.assertInside("I32x4 gather_I32 lane 5", (data + elementOffsets[5]).getUnchecked());
+			data.assertInside("I32x4 gather_I32 lane 6", (data + elementOffsets[6]).getUnchecked());
+			data.assertInside("I32x4 gather_I32 lane 7", (data + elementOffsets[7]).getUnchecked());
+		#endif
 		#if defined USE_AVX2
-			// TODO: Implement safety checks for debug mode.
 			return I32x8(GATHER_U32x8_AVX2(data.getUnsafe(), elementOffset.v, 4));
 		#else
-			ALIGN32 uint32_t elementOffsets[8];
-			elementOffset.writeAlignedUnsafe(elementOffsets);
+			#ifndef SAFE_POINTER_CHECKS
+				ALIGN32 uint32_t elementOffsets[8];
+				elementOffset.writeAlignedUnsafe(elementOffsets);
+			#endif
 			return I32x8(
 			  *(data + elementOffsets[0]),
 			  *(data + elementOffsets[1]),
@@ -3903,12 +4028,26 @@
 		#endif
 	}
 	static inline F32x8 gather_F32(dsr::SafePointer<const float> data, const U32x8 &elementOffset) {
+		#ifdef SAFE_POINTER_CHECKS
+			ALIGN16 uint32_t elementOffsets[8];
+			if (uintptr_t((void*)elementOffsets) & 31u) { throwError(U"Unaligned stack memory detected in 256-bit gather_F32!\n"); }
+			elementOffset.writeAlignedUnsafe(elementOffsets);
+			data.assertInside("F32x4 gather_F32 lane 0", (data + elementOffsets[0]).getUnchecked());
+			data.assertInside("F32x4 gather_F32 lane 1", (data + elementOffsets[1]).getUnchecked());
+			data.assertInside("F32x4 gather_F32 lane 2", (data + elementOffsets[2]).getUnchecked());
+			data.assertInside("F32x4 gather_F32 lane 3", (data + elementOffsets[3]).getUnchecked());
+			data.assertInside("F32x4 gather_I32 lane 4", (data + elementOffsets[4]).getUnchecked());
+			data.assertInside("F32x4 gather_F32 lane 5", (data + elementOffsets[5]).getUnchecked());
+			data.assertInside("F32x4 gather_F32 lane 6", (data + elementOffsets[6]).getUnchecked());
+			data.assertInside("F32x4 gather_F32 lane 7", (data + elementOffsets[7]).getUnchecked());
+		#endif
 		#if defined USE_AVX2
-			// TODO: Implement safety checks for debug mode.
 			return F32x8(GATHER_F32x8_AVX2(data.getUnsafe(), elementOffset.v, 4));
 		#else
-			ALIGN32 uint32_t elementOffsets[8];
-			elementOffset.writeAlignedUnsafe(elementOffsets);
+			#ifndef SAFE_POINTER_CHECKS
+				ALIGN32 uint32_t elementOffsets[8];
+				elementOffset.writeAlignedUnsafe(elementOffsets);
+			#endif
 			return F32x8(
 			  *(data + elementOffsets[0]),
 			  *(data + elementOffsets[1]),
