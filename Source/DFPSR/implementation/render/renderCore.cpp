@@ -37,7 +37,7 @@ public:
 	float value = 0.0f; // Used by algorithms
 	SubVertex() : cs(FVector3D()), subB(0.0f), subC(0.0f) {}
 	SubVertex(FVector3D cs, float subB, float subC) : cs(cs), subB(subB), subC(subC) {}
-	SubVertex(SubVertex vertexA, SubVertex vertexB, float ratio) {
+	SubVertex(const SubVertex &vertexA, const SubVertex &vertexB, float ratio) {
 		float invRatio = 1.0f - ratio;
 		this->cs = vertexA.cs * invRatio + vertexB.cs * ratio;
 		this->subB = vertexA.subB * invRatio + vertexB.subB * ratio;
@@ -284,7 +284,7 @@ void dsr::renderTriangleFromData(
   CommandQueue *commandQueue, ImageRgbaU8 *targetImage, ImageF32 *depthBuffer,
   const Camera &camera, const ProjectedPoint &posA, const ProjectedPoint &posB, const ProjectedPoint &posC,
   Filter filter, const TextureRgbaU8 *diffuse, const TextureRgbaU8 *light,
-  TriangleTexCoords texCoords, TriangleColors colors) {
+  const TriangleTexCoords &texCoords, const TriangleColors &colors) {
 	// Get dimensions from both buffers
 	int colorWidth = targetImage != nullptr ? image_getWidth(*targetImage) : 0;
 	int colorHeight = targetImage != nullptr ? image_getHeight(*targetImage) : 0;

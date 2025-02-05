@@ -67,7 +67,7 @@ struct Part {
 	TextureRgbaU8 diffuseMap, lightMap;
 	List<Polygon> polygonBuffer;
 	String name;
-	explicit Part(String name);
+	explicit Part(const ReadableString &name);
 	Part(const TextureRgbaU8 &diffuseMap, const TextureRgbaU8 &lightMap, const List<Polygon> &polygonBuffer, const String &name);
 	Part clone() const;
 	void render(CommandQueue *commandQueue, ImageRgbaU8* targetImage, ImageF32* depthBuffer, const Transform3D &modelToWorldTransform, const Camera &camera, Filter filter, const ProjectedPoint* projected) const;

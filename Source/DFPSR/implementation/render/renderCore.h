@@ -105,7 +105,7 @@ void renderTriangleFromData(
   CommandQueue *commandQueue, ImageRgbaU8 *targetImage, ImageF32 *depthBuffer,
   const Camera &camera, const ProjectedPoint &posA, const ProjectedPoint &posB, const ProjectedPoint &posC,
   Filter filter, const TextureRgbaU8 *diffuse, const TextureRgbaU8 *light,
-  TriangleTexCoords texCoords, TriangleColors colors
+  const TriangleTexCoords &texCoords, const TriangleColors &colors
 );
 void renderTriangleFromDataDepth(ImageF32 *depthBuffer, const Camera &camera, const ProjectedPoint &posA, const ProjectedPoint &posB, const ProjectedPoint &posC);
 

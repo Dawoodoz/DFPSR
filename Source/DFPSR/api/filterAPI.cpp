@@ -770,7 +770,7 @@ static void mapRgbaU8(const ImageRgbaU8& target, const ImageGenRgbaU8& lambda, i
 		targetRow.increaseBytes(targetStride);
 	}
 }
-void filter_mapRgbaU8(const ImageRgbaU8 target, const ImageGenRgbaU8& lambda, int startX, int startY) {
+void filter_mapRgbaU8(const ImageRgbaU8 &target, const ImageGenRgbaU8& lambda, int startX, int startY) {
 	if (image_exists(target)) {
 		mapRgbaU8(target, lambda, startX, startY);
 	}
@@ -799,7 +799,7 @@ static void mapMonochrome(const IMAGE_TYPE& target, const ImageGenI32& lambda, i
 		targetRow.increaseBytes(targetStride);
 	}
 }
-void filter_mapU8(const ImageU8 target, const ImageGenI32& lambda, int startX, int startY) {
+void filter_mapU8(const ImageU8 &target, const ImageGenI32& lambda, int startX, int startY) {
 	if (image_exists(target)) {
 		mapMonochrome<ImageU8, uint8_t, 0, 255>(target, lambda, startX, startY);
 	}
@@ -809,7 +809,7 @@ AlignedImageU8 filter_generateU8(int width, int height, const ImageGenI32& lambd
 	filter_mapU8(result, lambda, startX, startY);
 	return result;
 }
-void filter_mapU16(const ImageU16 target, const ImageGenI32& lambda, int startX, int startY) {
+void filter_mapU16(const ImageU16 &target, const ImageGenI32& lambda, int startX, int startY) {
 	if (image_exists(target)) {
 		mapMonochrome<ImageU16, uint16_t, 0, 65535>(target, lambda, startX, startY);
 	}
@@ -834,7 +834,7 @@ static void mapF32(const ImageF32& target, const ImageGenF32& lambda, int startX
 		targetRow.increaseBytes(targetStride);
 	}
 }
-void filter_mapF32(const ImageF32 target, const ImageGenF32& lambda, int startX, int startY) {
+void filter_mapF32(const ImageF32 &target, const ImageGenF32& lambda, int startX, int startY) {
 	if (image_exists(target)) {
 		mapF32(target, lambda, startX, startY);
 	}

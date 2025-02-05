@@ -115,7 +115,7 @@ int Polygon::getVertexCount() const {
 	}
 }
 
-Part::Part(String name) : name(name) {}
+Part::Part(const ReadableString &name) : name(name) {}
 Part::Part(const TextureRgbaU8 &diffuseMap, const TextureRgbaU8 &lightMap, const List<Polygon> &polygonBuffer, const String &name) :
   diffuseMap(diffuseMap), lightMap(lightMap), polygonBuffer(polygonBuffer), name(name) {}
 Part Part::clone() const { return Part(this->diffuseMap, this->lightMap, this->polygonBuffer, this->name); }
