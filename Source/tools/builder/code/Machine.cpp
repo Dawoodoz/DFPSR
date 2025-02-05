@@ -33,6 +33,9 @@ static bool isUnique(const List<Flag> &list) {
 
 void printSettings(const Machine &settings) {
 	printText(U"    Project name: ", settings.projectName, U"\n");
+	for (int64_t i = 0; i < settings.crawlOrigins.length(); i++) {
+		printText(U"    Crawl origins ", settings.crawlOrigins[i], U"\n");
+	}
 	for (int64_t i = 0; i < settings.compilerFlags.length(); i++) {
 		printText(U"    Compiler flag ", settings.compilerFlags[i], U"\n");
 	}
@@ -114,11 +117,27 @@ static String evaluateExpression(Machine &target, const List<String> &tokens, in
 
 // Copy inherited variables from parent to child.
 void inheritMachine(Machine &child, const Machine &parent) {
+	// Only take selected variables, such as the target platform's name.
 	for (int64_t v = 0; v < parent.variables.length(); v++) {
-		String key = string_upperCase(parent.variables[v].key);
 		if (parent.variables[v].inherited) {
 			child.variables.push(parent.variables[v]);
 		}
+	}
+}
+
+void cloneMachine(Machine &child, const Machine &parent) {
+	// Inherit everything.
+	for (int64_t v = 0; v < parent.variables.length(); v++) {
+		child.variables.push(parent.variables[v]);
+	}
+	for (int64_t v = 0; v < parent.compilerFlags.length(); v++) {
+		child.compilerFlags.push(parent.compilerFlags[v]);
+	}
+	for (int64_t v = 0; v < parent.linkerFlags.length(); v++) {
+		child.linkerFlags.push(parent.linkerFlags[v]);
+	}
+	for (int64_t v = 0; v < parent.crawlOrigins.length(); v++) {
+		child.crawlOrigins.push(parent.crawlOrigins[v]);
 	}
 }
 
@@ -135,6 +154,67 @@ static bool validIdentifier(const dsr::ReadableString &identifier) {
 	}
 	return true;
 }
+
+using NameFilter = std::function<bool(const ReadableString &filename)>;
+static NameFilter generateFilterFromPattern(const dsr::ReadableString &pattern) {
+	int64_t firstStar = string_findFirst(pattern, U'*');
+	int64_t lastStar = string_findLast(pattern, U'*');
+	if (firstStar == -1) {
+		return [pattern](const ReadableString &filename) -> bool {
+			return string_caseInsensitiveMatch(filename, pattern);
+		};
+	} else if (firstStar == lastStar) {
+		String prefix = string_before(pattern, firstStar);
+		String postfix = string_after(pattern, lastStar);
+		int64_t preLength = string_length(prefix);
+		int64_t postLength = string_length(postfix);
+		int64_t minimumLength = preLength + postLength;
+		return [prefix, postfix, preLength, postLength, minimumLength](const ReadableString &filename) -> bool {
+			int64_t nameLength = string_length(filename);
+			if (nameLength < minimumLength) {
+				return false;
+			} else {
+				ReadableString foundPrefix = string_before(filename, preLength);
+				ReadableString foundPostfix = string_from(filename, nameLength - postLength);
+				return string_caseInsensitiveMatch(foundPrefix, prefix) && string_caseInsensitiveMatch(foundPostfix, postfix);
+			}
+		};
+	} else {
+		throwError(U"Can not use '", pattern, "' as a name pattern, because the matching expression may not use more than one '*' character!\n");
+		return [](const ReadableString &filename) -> bool {
+			return false;
+		};
+	}
+}
+
+static void findFiles(const dsr::ReadableString &inPath, NameFilter filter, std::function<void(const ReadableString &path)> action) {
+	if (!file_getFolderContent(inPath, [&filter, &action](const ReadableString& entryPath, const ReadableString& entryName, EntryType entryType) {
+		if (entryType == EntryType::File) {
+			if (filter(entryName)) {
+				action(entryPath);
+			}
+		} else if (entryType == EntryType::Folder) {
+			findFiles(entryPath, filter, action);
+		}
+	})) {
+		printText("Failed to look for files in '", inPath, "'\n");
+	}
+}
+
+static void findFilesAsProjects(Machine &target, const dsr::ReadableString &inPath, const dsr::ReadableString &fromPattern) {
+	printText(U"findFilesAsProjects: Looking for ", fromPattern, U" in ", inPath, U".\n");
+	validateSettings(target, U"in the parent about to create projects from files");
+	findFiles(inPath, generateFilterFromPattern(fromPattern), [&target](const ReadableString &path) {
+		printText(U"Creating a temporary project for ", path, U"\n");		
+		// List the file as a project.
+		target.projectFromSourceFilenames.push(path);
+		Machine allInputFlags(file_getPathlessName(path));
+		cloneMachine(allInputFlags, target);
+		target.projectFromSourceSettings.push(allInputFlags);
+	});
+}
+
+// TODO: Improve error messages with line numbers and quoted content instead of just throwing errors.
 
 static void interpretLine(Machine &target, const List<String> &tokens, int64_t startTokenIndex, int64_t endTokenIndex, const dsr::ReadableString &fromPath) {
 	// Automatically clamp to safe bounds.
@@ -176,6 +256,46 @@ static void interpretLine(Machine &target, const List<String> &tokens, int64_t s
 				// The right hand expression is evaluated into a path relative to the build script and used as the root for searching for source code.
 				target.crawlOrigins.push(PATH_EXPR(startTokenIndex + 1, endTokenIndex));
 				validateSettings(target, U"in target after listing a crawl origin\n");
+			} else if (string_caseInsensitiveMatch(first, U"projects")) {
+				// TODO: Should it be possible to give the string content of variables as patterns and paths?
+				//Projects from "*Test.cpp" in "tests"
+				int currentTokenIndex = startTokenIndex + 1;
+				String arg_from;
+				String arg_in;
+				while (currentTokenIndex < endTokenIndex) {
+					ReadableString key = expression_getToken(tokens, currentTokenIndex, U"");
+					ReadableString value = expression_getToken(tokens, currentTokenIndex + 1, U"");
+					if (string_caseInsensitiveMatch(key, U"from")) {
+						if (string_length(value) == 0) {
+							throwError(U"Missing folder path after 'from' keyword in 'projects' command!\n");
+						} else {
+							printText(U"Using ", value, U" as the 'from' argument.\n");
+							arg_from = string_unmangleQuote(value);
+							// Consume both key and value.
+							currentTokenIndex += 2;
+						}
+					} else if (string_caseInsensitiveMatch(key, U"in")) {
+						if (string_length(value) == 0) {
+							throwError(U"Missing file name pattern after 'in' keyword in 'projects' command!\n");
+						} else {
+							printText(U"Using ", value, U" as the 'in' argument.\n");
+							arg_in = string_unmangleQuote(value);
+							// Consume both key and value.
+							currentTokenIndex += 2;
+						}
+					} else {
+						throwError(U"Unexpected key '", key, "' in 'projects' command!\n");
+					}
+				}
+				if (string_length(arg_from) == 0 && string_length(arg_in) == 0) {
+					throwError(U"Need 'from' and 'in' keywords in 'projects' command!\n");
+				} else if (string_length(arg_from) == 0) {
+					throwError(U"Missing 'from' keyword in 'projects' command!\n");
+				} else if (string_length(arg_in) == 0) {
+					throwError(U"Missing 'in' keywords in 'projects' command!\n");
+				} else {
+					findFilesAsProjects(target, file_combinePaths(fromPath, arg_in), arg_from);
+				}
 			} else if (string_caseInsensitiveMatch(first, U"build")) {
 				// Build one or more other projects from a project file or folder path, as dependencies.
 				//   Having the same external project built twice during the same session is not allowed.
@@ -235,7 +355,6 @@ static void interpretLine(Machine &target, const List<String> &tokens, int64_t s
 					validateSettings(target, U"in target after explicitly assigning a value to a variable\n");
 				} else {
 					String errorMessage = U"Failed to parse statement: ";
-					printText(U"Failed to parse statement of tokens: ");
 					for (int64_t t = startTokenIndex; t <= endTokenIndex; t++) {
 						string_append(errorMessage, U" ", string_mangleQuote(tokens[t]));
 					}

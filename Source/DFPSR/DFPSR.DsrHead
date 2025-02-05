@@ -15,6 +15,9 @@
 if Linux
 	Message "Building for Linux\n"
 end if
+if MacOS
+	Message "Building for MacOS\n"
+end if
 if Windows
 	Message "Building for Windows\n"
 end if

@@ -1,0 +1,28 @@
+﻿# Use C++ 2014.
+CompilerFlag "-std=c++14"
+
+# Use all locally available SIMD extensions.
+CompilerFlag "-march=native"
+
+Debug = 1
+Supressed = 1
+Graphics = 0
+Sound = 0
+Import "../DFPSR/DFPSR.DsrHead"
+
+# Compile and run each source file ending with Test.cpp in tests as its own project.
+#   All settings are inherited from the caller when using source files as projects.
+Projects from "*Test.cpp" in "tests"
+
+# TODO:
+# * Allow creating scopes for temporary settings, so that a stack keeps track of which
+#   settings were local to the scope and should be erased when leaving the scope.
+# * Or just make a method for clearing all local settings while keeping external settings such as target platform.
+
+# TestCaller needs to be called with specific arguments, so we keep supressing automatic execution for more control.
+
+# Enable to run faster by skipping compilation of testCaller when it already exists.
+#SkipIfBinaryExists
+
+# Compile the program that will run all the tests
+Crawl "testCaller.cpp"

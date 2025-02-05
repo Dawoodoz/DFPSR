@@ -9,9 +9,12 @@ WINDOW_MANAGER=$5 # Which library to use for creating a window
 COMPILER_FLAGS=$6 # -DDEBUG/-DNDEBUG -std=c++14/-std=c++17 -O2/-O3
 LINKER_FLAGS=$7 # Additional linker flags for libraries and such
 
+# Replace space with underscore
 TEMP_SUB="${COMPILER_FLAGS// /_}"
+# Replace + with p
 TEMP_SUB=$(echo $TEMP_SUB | tr "+" "p")
-TEMP_SUB=$(echo $TEMP_SUB | tr -d " =-")
+# Remove = and -
+TEMP_SUB=$(echo $TEMP_SUB | tr -d "=-")
 TEMP_DIR=${TEMP_ROOT}/${TEMP_SUB}
 echo "Building version ${TEMP_SUB}"
 

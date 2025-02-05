@@ -43,7 +43,6 @@ Project::Project(const ReadableString &projectFilePath)
 	String projectFolderPath = file_getRelativeParentFolder(projectFilePath);
 	String extensionlessProjectPath = file_getExtensionless(projectFilePath);
 	this->title = file_getPathlessName(extensionlessProjectPath);
-	// TODO: Get the native extension for each type of file? .exe, .dll, .so...
 	#ifdef USE_MICROSOFT_WINDOWS
 		this->executableFilePath = string_combine(extensionlessProjectPath, U".exe");
 	#else
@@ -141,8 +140,7 @@ static void selectProject(int64_t projectIndex) {
 	updateInterface(true);
 }
 
-static void populateInterface(const ReadableString& folderPath) {
-	findProjects(folderPath);
+static void populateInterface() {
 	for (int p = 0; p < projects.length(); p++) {
 		component_call(projectList, U"PushElement", projects[p].title);
 	}
@@ -180,7 +178,9 @@ void dsrMain(List<String> args) {
 	// Find projects to showcase.
 	//   On systems that don't allow getting the application's folder, the program must be started somewhere within the Source folder.
 	String sourceFolder = findParent(applicationFolder, U"Source");
-	populateInterface(sourceFolder);
+	findProjects(file_combinePaths(sourceFolder, U"SDK"));
+	findProjects(file_combinePaths(sourceFolder, U"templates"));
+	populateInterface();
 
 	// Bind methods to events.
 	window_setKeyboardEvent(window, [](const KeyboardEvent& event) {

@@ -24,21 +24,9 @@
 // TODO: Apply thread safety to more memory operations.
 //       heap_getUsedSize and heap_setUsedSize are often used together, forming a transaction without any mutex.
 
-#include "heap.h"
-#include "../api/stringAPI.h"
-#include "../api/timeAPI.h"
-#include <stdio.h>
-#include <new>
-#include "simd.h"
-
-#ifndef DISABLE_MULTI_THREADING
-	// Requires -pthread for linking
-	#include <thread>
-	#include <mutex>
-#endif
-
+#include "../settings.h"
 #if defined(USE_MICROSOFT_WINDOWS)	
-	#include <Windows.h> uint32_t getCacheLineSize() { return (uint32_t) (sizeof(void*) * 8); } // Approximation for ARM
+	#include <Windows.h>
 #elif defined(USE_MACOS)
 	#include <sys/sysctl.h>
 #elif defined(USE_LINUX)
@@ -46,6 +34,19 @@
 	#include <stdint.h>
 	#include <stdlib.h>
 #endif
+
+#ifndef DISABLE_MULTI_THREADING
+	// Requires -pthread for linking
+	#include <thread>
+	#include <mutex>
+#endif
+
+#include "heap.h"
+#include "../api/stringAPI.h"
+#include "../api/timeAPI.h"
+#include <stdio.h>
+#include <new>
+#include "simd.h"
 
 #ifdef SAFE_POINTER_CHECKS
 	#define DSR_PRINT_CACHE_LINE_SIZE

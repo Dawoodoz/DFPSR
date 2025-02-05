@@ -47,7 +47,6 @@ START_TEST(SafePointer)
 		#endif
 	}
 	#ifndef SAFE_POINTER_CHECKS
-		printf("WARNING! SafePointer test ran without bound checks enabled.\n");
+		#error "ERROR! SafePointer test ran without bound checks enabled!\n"
 	#endif
 END_TEST
-

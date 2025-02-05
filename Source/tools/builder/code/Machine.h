@@ -22,6 +22,8 @@ void assignValue(Machine &target, const dsr::ReadableString &key, const dsr::Rea
 void evaluateScript(Machine &target, const ReadableString &scriptPath);
 
 void inheritMachine(Machine &child, const Machine &parent);
+void cloneMachine(Machine &child, const Machine &parent);
+
 void argumentsToSettings(Machine &settings, const List<String> &arguments, int64_t firstArgument, int64_t lastArgument);
 
 void printSettings(const Machine &settings);
