@@ -227,7 +227,7 @@ void VisualComponent::draw(ImageRgbaU8& targetImage, const IVector2D& offset) {
 	}
 }
 
-void VisualComponent::drawClipped(ImageRgbaU8 targetImage, const IVector2D& offset, const IRect& clipRegion) {
+void VisualComponent::drawClipped(ImageRgbaU8& targetImage, const IVector2D& offset, const IRect& clipRegion) {
 	IRect finalRegion = IRect::cut(clipRegion, IRect(0, 0, image_getWidth(targetImage), image_getHeight(targetImage)));
 	if (finalRegion.hasArea()) {
 		// TODO: Optimize allocation of sub-images

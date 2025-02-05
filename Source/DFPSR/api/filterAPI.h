@@ -56,10 +56,10 @@ namespace dsr {
 	using ImageGenF32 = std::function<float(int x, int y)>;
 	// In-place image generation to an existing image.
 	//   The pixel at the upper left corner gets (startX, startY) as x and y arguments to the function.
-	void filter_mapRgbaU8(const ImageRgbaU8 target, const ImageGenRgbaU8& lambda, int startX = 0, int startY = 0);
-	void filter_mapU8(const ImageU8 target, const ImageGenI32& lambda, int startX = 0, int startY = 0);
-	void filter_mapU16(const ImageU16 target, const ImageGenI32& lambda, int startX = 0, int startY = 0);
-	void filter_mapF32(const ImageF32 target, const ImageGenF32& lambda, int startX = 0, int startY = 0);
+	void filter_mapRgbaU8(const ImageRgbaU8 &target, const ImageGenRgbaU8& lambda, int startX = 0, int startY = 0);
+	void filter_mapU8(const ImageU8 &target, const ImageGenI32& lambda, int startX = 0, int startY = 0);
+	void filter_mapU16(const ImageU16 &target, const ImageGenI32& lambda, int startX = 0, int startY = 0);
+	void filter_mapF32(const ImageF32 &target, const ImageGenF32& lambda, int startX = 0, int startY = 0);
 	// A simpler image generation that constructs the image as a result.
 	// Example:
 	//     int width = 64;
