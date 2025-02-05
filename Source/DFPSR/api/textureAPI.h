@@ -164,7 +164,6 @@ namespace dsr {
 	  typename U, // uint32_t, U32x4, U32x8, U32xX
 	  DSR_ENABLE_IF(DSR_CHECK_PROPERTY(DsrTrait_Any_U32, U))>
 	inline U texture_getPixelOffset(const TextureRgbaU8 &texture, U x, U y, U mipLevel) {
-		// TODO: Reuse the tile masks when sampling a whole neighborhood for bi-linear sampling.
 		// Clamp the mip-level using bitwise operations in a logarithmic scale, by masking out excess bits with zeroes and filling missing bits with ones.
 		U tileMaskX = U(texture.impl_maxWidthAndMask );
 		U tileMaskY = U(texture.impl_maxHeightAndMask);

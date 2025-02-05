@@ -6,6 +6,16 @@ START_TEST(Texture)
 	{
 		// 1x1, 2x2, 4x4, 8x8, 16x16
 		TextureRgbaU8 texture = TextureRgbaU8(4, 4);
+		{
+			stateName = U"Getting eight pixel offsets to layer.\n";
+			U32x8 layerOffsets = texture_getPixelOffsetToLayer(texture, U32x8(0u));
+			stateName = U"Comparing eight pixel offsets to layer.\n";
+			ASSERT(allLanesEqual(layerOffsets, U32x8(85u)));
+			stateName = U"Getting eight pixel offsets.\n";
+			U32x8 pixelOffsets = texture_getPixelOffset(texture, U32x8(0u, 1u, 2u, 3u, 0u, 1u, 2u, 3u), U32x8(0u, 0u, 0u, 0u, 1u, 1u, 1u, 1u), U32x8(0u));
+			stateName = U"Comparing eight pixel offsets.\n";
+			ASSERT(allLanesEqual((pixelOffsets), U32x8(85u, 86u, 87u, 88u, 101u, 102u, 103u, 104u)));
+		}
 		ASSERT(texture_hasPyramid(texture));
 		ASSERT_EQUAL(texture_getMaxWidth(texture), 16);
 		ASSERT_EQUAL(texture_getMaxHeight(texture), 16);

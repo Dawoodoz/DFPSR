@@ -490,8 +490,8 @@
 		static inline F32x4 createGradient(float start, float increment) {
 			return F32x4(start, start + increment, start + increment * 2.0f, start + increment * 3.0f);
 		}
-		// Construct a portable SIMD vector from a pointer to aligned data
-		// data must be aligned with at least 8 bytes, but preferrably 16 bytes
+		// Construct a portable SIMD vector from a pointer to aligned data.
+		// Data must be aligned with at least 16 bytes.
 		static inline F32x4 readAlignedUnsafe(const float* data) {
 			#ifdef SAFE_POINTER_CHECKS
 				if (uintptr_t((const void*)data) & 15u) { throwError(U"Unaligned pointer detected in F32x4::readAlignedUnsafe!\n"); }
@@ -507,7 +507,7 @@
 			#endif
 		}
 		// Write to aligned memory from the existing vector
-		// data must be aligned with at least 8 bytes, but preferrably 16 bytes
+		// data must be aligned with 32 bytes.
 		inline void writeAlignedUnsafe(float* data) const {
 			#ifdef SAFE_POINTER_CHECKS
 				if (uintptr_t((void*)data) & 15u) { throwError(U"Unaligned pionter detected in F32x4::writeAlignedUnsafe!\n"); }
@@ -667,8 +667,8 @@
 		static inline I32x4 createGradient(int32_t start, int32_t increment) {
 			return I32x4(start, start + increment, start + increment * 2, start + increment * 3);
 		}
-		// Construct a portable SIMD vector from a pointer to aligned data
-		// data must be aligned with at least 8 bytes, but preferrably 16 bytes
+		// Construct a portable SIMD vector from a pointer to aligned data.
+		// Data must be aligned with at least 16 bytes.
 		static inline I32x4 readAlignedUnsafe(const int32_t* data) {
 			#ifdef SAFE_POINTER_CHECKS
 				if (uintptr_t(data) & 15u) { throwError(U"Unaligned pointer detected in I32x4::readAlignedUnsafe!\n"); }
@@ -684,7 +684,7 @@
 			#endif
 		}
 		// Write to aligned memory from the existing vector
-		// data must be aligned with at least 8 bytes, but preferrably 16 bytes
+		// data must be aligned with 32 bytes.
 		inline void writeAlignedUnsafe(int32_t* data) const {
 			#ifdef SAFE_POINTER_CHECKS
 				if (uintptr_t(data) & 15u) { throwError(U"Unaligned pointer detected in I32x4::writeAlignedUnsafe!\n"); }
@@ -772,7 +772,7 @@
 			return U32x4(start, start + increment, start + increment * 2, start + increment * 3);
 		}
 		// Construct a portable SIMD vector from a pointer to aligned data
-		// data must be aligned with at least 8 bytes, but preferrably 16 bytes
+		// Data must be aligned with at least 16 bytes.
 		static inline U32x4 readAlignedUnsafe(const uint32_t* data) {
 			#ifdef SAFE_POINTER_CHECKS
 				if (uintptr_t(data) & 15u) { throwError(U"Unaligned pointer detected in U32x4::readAlignedUnsafe!\n"); }
@@ -788,7 +788,7 @@
 			#endif
 		}
 		// Write to aligned memory from the existing vector
-		// data must be aligned with at least 8 bytes, but preferrably 16 bytes
+		// data must be aligned with 32 bytes.
 		inline void writeAlignedUnsafe(uint32_t* data) const {
 			#ifdef SAFE_POINTER_CHECKS
 				if (uintptr_t(data) & 15u) { throwError(U"Unaligned pointer detected in U32x4::writeAlignedUnsafe!\n"); }
@@ -949,7 +949,7 @@
 				return U16x8(data[0], data[1], data[2], data[3], data[4], data[5], data[6], data[7]);
 			#endif
 		}
-		// data must be aligned with at least 8 bytes, but preferrably 16 bytes
+		// Data must be aligned with at least 16 bytes.
 		inline void writeAlignedUnsafe(uint16_t* data) const {
 			#ifdef SAFE_POINTER_CHECKS
 				if (uintptr_t(data) & 15u) { throwError(U"Unaligned pointer detected in U16x8::writeAlignedUnsafe!\n"); }
@@ -1097,7 +1097,7 @@
 				);
 			#endif
 		}
-		// data must be aligned with at least 8 bytes, but preferrably 16 bytes
+		// Data must be aligned with at least 16 bytes.
 		inline void writeAlignedUnsafe(uint8_t* data) const {
 			#ifdef SAFE_POINTER_CHECKS
 				if (uintptr_t(data) & 15u) { throwError(U"Unaligned pointer detected in U8x16::writeAlignedUnsafe!\n"); }
@@ -1209,8 +1209,7 @@
 			  start + increment * 7.0f
 			);
 		}
-		// Construct a portable SIMD vector from a pointer to aligned data
-		// data must be aligned with at least 8 bytes, but preferrably 16 bytes
+		// Construct a portable SIMD vector from a pointer to aligned data.
 		static inline F32x8 readAlignedUnsafe(const float* data) {
 			#ifdef SAFE_POINTER_CHECKS
 				if (uintptr_t(data) & 31u) { throwError(U"Unaligned pointer detected in F32x8::readAlignedUnsafe!\n"); }
@@ -1221,8 +1220,7 @@
 				return F32x8(data[0], data[1], data[2], data[3], data[4], data[5], data[6], data[7]);
 			#endif
 		}
-		// Write to aligned memory from the existing vector
-		// data must be aligned with at least 8 bytes, but preferrably 16 bytes
+		// Write to aligned memory from the existing vector.
 		inline void writeAlignedUnsafe(float* data) const {
 			#ifdef SAFE_POINTER_CHECKS
 				if (uintptr_t(data) & 31u) { throwError(U"Unaligned pointer detected in F32x8::writeAlignedUnsafe!\n"); }
@@ -1386,8 +1384,7 @@
 			  start + increment * 7
 			);
 		}
-		// Construct a portable SIMD vector from a pointer to aligned data
-		// data must be aligned with at least 8 bytes, but preferrably 16 bytes
+		// Construct a portable SIMD vector from a pointer to aligned data.
 		static inline I32x8 readAlignedUnsafe(const int32_t* data) {
 			#ifdef SAFE_POINTER_CHECKS
 				if (uintptr_t(data) & 31u) { throwError(U"Unaligned pointer detected in I32x8::readAlignedUnsafe!\n"); }
@@ -1398,8 +1395,7 @@
 				return I32x8(data[0], data[1], data[2], data[3], data[4], data[5], data[6], data[7]);
 			#endif
 		}
-		// Write to aligned memory from the existing vector
-		// data must be aligned with at least 8 bytes, but preferrably 16 bytes
+		// Write to aligned memory from the existing vector.
 		inline void writeAlignedUnsafe(int32_t* data) const {
 			#ifdef SAFE_POINTER_CHECKS
 				if (uintptr_t(data) & 31u) { throwError(U"Unaligned pointer detected in I32x8::writeAlignedUnsafe!\n"); }
@@ -1499,8 +1495,8 @@
 			  start + increment * 7
 			);
 		}
-		// Construct a portable SIMD vector from a pointer to aligned data
-		// data must be aligned with at least 8 bytes, but preferrably 16 bytes
+		// Construct a portable SIMD vector from a pointer to aligned data.
+		// Data must be aligned with at least 32 bytes.
 		static inline U32x8 readAlignedUnsafe(const uint32_t* data) {
 			#ifdef SAFE_POINTER_CHECKS
 				if (uintptr_t(data) & 31u) { throwError(U"Unaligned pointer detected in U32x8::readAlignedUnsafe!\n"); }
@@ -1511,8 +1507,8 @@
 				return U32x8(data[0], data[1], data[2], data[3], data[4], data[5], data[6], data[7]);
 			#endif
 		}
-		// Write to aligned memory from the existing vector
-		// data must be aligned with at least 8 bytes, but preferrably 16 bytes
+		// Write to aligned memory from the existing vector.
+		// data must be aligned with 32 bytes.
 		inline void writeAlignedUnsafe(uint32_t* data) const {
 			#ifdef SAFE_POINTER_CHECKS
 				if (uintptr_t(data) & 31u) { throwError(U"Unaligned pointer detected in U32x8::writeAlignedUnsafe!\n"); }
@@ -1683,10 +1679,7 @@
 			  start + increment * 15
 			);
 		}
-		// data must be aligned with at least 8 bytes, but preferrably 16 bytes
-		//static inline U16x16 readSlow(uint16_t* data) {
-		//	return U16x16(data[0], data[1], data[2], data[3], data[4], data[5], data[6], data[7]);
-		//}
+		// Data must be aligned with at least 32 bytes.
 		static inline U16x16 readAlignedUnsafe(const uint16_t* data) {
 			#ifdef SAFE_POINTER_CHECKS
 				if (uintptr_t(data) & 31u) { throwError(U"Unaligned pointer detected in U16x16::readAlignedUnsafe!\n"); }
@@ -1714,7 +1707,7 @@
 				);
 			#endif
 		}
-		// data must be aligned with at least 8 bytes, but preferrably 16 bytes
+		// Data must be aligned with at least 32 bytes.
 		inline void writeAlignedUnsafe(uint16_t* data) const {
 			#ifdef SAFE_POINTER_CHECKS
 				if (uintptr_t(data) & 31u) { throwError(U"Unaligned pointer detected in U16x16::writeAlignedUnsafe!\n"); }
@@ -1874,6 +1867,7 @@
 			  start + increment * 31
 			);
 		}
+		// Data must be aligned with at least 32 bytes.
 		static inline U8x32 readAlignedUnsafe(const uint8_t* data) {
 			#ifdef SAFE_POINTER_CHECKS
 				if (uintptr_t(data) & 31u) { throwError(U"Unaligned pointer detected in U8x32::readAlignedUnsafe!\n"); }
@@ -1888,7 +1882,7 @@
 				return result;
 			#endif
 		}
-		// data must be aligned with at least 8 bytes, but preferrably 16 bytes
+		// Data must be aligned with at least 32 bytes.
 		inline void writeAlignedUnsafe(uint8_t* data) const {
 			#ifdef SAFE_POINTER_CHECKS
 				if (uintptr_t(data) & 31u) { throwError(U"Unaligned pointer detected in U8x32::writeAlignedUnsafe!\n"); }
