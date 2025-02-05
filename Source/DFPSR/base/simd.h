@@ -3963,7 +3963,7 @@
 	#endif
 	static inline U32x8 gather_U32(dsr::SafePointer<const uint32_t> data, const U32x8 &elementOffset) {
 		#ifdef SAFE_POINTER_CHECKS
-			ALIGN16 uint32_t elementOffsets[8];
+			ALIGN32 uint32_t elementOffsets[8];
 			if (uintptr_t((void*)elementOffsets) & 31u) { throwError(U"Unaligned stack memory detected in 256-bit gather_U32!\n"); }
 			elementOffset.writeAlignedUnsafe(elementOffsets);
 			data.assertInside("U32x4 gather_U32 lane 0", (data + elementOffsets[0]).getUnchecked());
@@ -3996,7 +3996,7 @@
 	}
 	static inline I32x8 gather_I32(dsr::SafePointer<const int32_t> data, const U32x8 &elementOffset) {
 		#ifdef SAFE_POINTER_CHECKS
-			ALIGN16 uint32_t elementOffsets[8];
+			ALIGN32 uint32_t elementOffsets[8];
 			if (uintptr_t((void*)elementOffsets) & 31u) { throwError(U"Unaligned stack memory detected in 256-bit gather_I32!\n"); }
 			elementOffset.writeAlignedUnsafe(elementOffsets);
 			data.assertInside("I32x4 gather_I32 lane 0", (data + elementOffsets[0]).getUnchecked());
@@ -4029,7 +4029,7 @@
 	}
 	static inline F32x8 gather_F32(dsr::SafePointer<const float> data, const U32x8 &elementOffset) {
 		#ifdef SAFE_POINTER_CHECKS
-			ALIGN16 uint32_t elementOffsets[8];
+			ALIGN32 uint32_t elementOffsets[8];
 			if (uintptr_t((void*)elementOffsets) & 31u) { throwError(U"Unaligned stack memory detected in 256-bit gather_F32!\n"); }
 			elementOffset.writeAlignedUnsafe(elementOffsets);
 			data.assertInside("F32x4 gather_F32 lane 0", (data + elementOffsets[0]).getUnchecked());
