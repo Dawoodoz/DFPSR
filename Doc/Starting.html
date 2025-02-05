@@ -79,12 +79,6 @@ sudo apt install libasound2-dev</BLOCKQUOTE></PRE>
 
 </P><P>
 <IMG SRC="Images/SmallDot.png">
-Check that you have g++ installed at /usr/bin/g++ and change CPP_COMPILER_PATH in Source/tools/builder/buildProject.sh if it's located somewhere else.
-You can also change TEMPORARY_FOLDER if using another system than Linux where /tmp is called something else, or you want to keep objects in a persistent folder after your system reboots.
-The advantage of using /tmp, is that the files there can be placed in memory and you don't have to erase them manually.
-
-</P><P>
-<IMG SRC="Images/SmallDot.png">
 Go to the Source\tools\wizard folder in a terminal.
 
 </P><P>
@@ -100,16 +94,8 @@ Run the build script.
 </P><H2> Buliding the wizard application on Windows</H2><P>
 </P><P>
 <IMG SRC="Images/SmallDot.png">
-Download a mingw edition of CodeBlocks from their website. <A href="http://www.codeblocks.org/downloads/26#windows">www.codeblocks.org/downloads</A>
+Download and install a mingw edition of CodeBlocks from their website. <A href="http://www.codeblocks.org/downloads/26#windows">www.codeblocks.org/downloads</A>
 This is the easiest way to install GNU's C++ compiler g++ on Windows, but CodeBlocks can also be used as a debugger if you create a project with the same source code, backends and compiler flags.
-
-</P><P>
-<IMG SRC="Images/SmallDot.png">
-Open Source\tools\builder\buildProject.bat in a text editor.
-
-</P><P>
-<IMG SRC="Images/SmallDot.png">
-Check that CPP_COMPILER_FOLDER and CPP_COMPILER_PATH refers to where your GNU C++ compiler is installed. If you installed CodeBlocks in the default path C:\Program, this should usually be the case. Otherwise just update the path.
 
 </P><P>
 <IMG SRC="Images/SmallDot.png">

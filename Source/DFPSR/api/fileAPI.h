@@ -309,9 +309,10 @@ namespace dsr {
 	// Path-syntax: According to the local computer.
 	// Pre-condition: The executable at path must exist and have execution rights.
 	// Side-effects: Starts the program at programPath, with programPath given again as argv[0] and arguments to argv[1...] to the program's main function.
+	//               If mustWork is true, then failure will throw an error.
 	// Post-condition: Returns a DsrProcess handle to the started process.
 	//                 On failure to start, the handle is empty and process_getStatus will then return DsrProcessStatus::NotStarted from it.
-	DsrProcess process_execute(const ReadableString& programPath, List<String> arguments);
+	DsrProcess process_execute(const ReadableString& programPath, List<String> arguments, bool mustWork = true);
 }
 
 #endif

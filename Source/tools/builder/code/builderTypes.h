@@ -16,13 +16,23 @@ struct Flag {
 };
 
 struct Machine {
+	// Name of this project.
 	String projectName;
+	// Variables that can be assigned and used for logic.
 	List<Flag> variables;
+	// The flags to give the compiler.
 	List<String> compilerFlags;
+	// The flags to give the linker.
 	List<String> linkerFlags;
+	// A list of implementation files to start crawling from, usually main.cpp or a disconnected backend implementation.
 	List<String> crawlOrigins;
-	List<String> otherProjectPaths; // Corresponding to otherProjectSettings.
-	List<Machine> otherProjectSettings; // Corresponding to otherProjectPaths.
+	// Paths to look for other projects in.
+	List<String> otherProjectPaths;
+	List<Machine> otherProjectSettings;
+	// Filenames to create projects for automatically without needing project files for each.
+	//   Useful for running automated tests, so that memory leaks can easily be narrowed down to the test causing the leak.
+	List<String> projectFromSourceFilenames;
+	List<Machine> projectFromSourceSettings;
 	// When activeStackDepth < currentStackDepth, we are skipping false cases.
 	int64_t currentStackDepth = 0; // How many scopes we are inside of, from the root script including all the others.
 	int64_t activeStackDepth = 0;

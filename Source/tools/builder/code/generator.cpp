@@ -209,13 +209,15 @@ void produce(SessionContext &input, const ReadableString &scriptPath, ScriptLang
 			produce_printMessage<GENERATE>(generatedCode, language, string_combine(U"Starting ", programPath));
 			produce_callProgram<GENERATE>(generatedCode, language, programPath, List<String>());
 			produce_printMessage<GENERATE>(generatedCode, language, U"The program terminated.");
+		} else {
+			produce_printMessage<GENERATE>(generatedCode, language, string_combine(U"Supressed execution of ", programPath, U" as requested by the project settings."));
 		}
 	}
 	produce_resetCompilationFolder<GENERATE>(generatedCode, language);
 	produce_printMessage<GENERATE>(generatedCode, language, U"Done building.");
 
 	if (GENERATE) {
-		printText(U"Saving script to ", scriptPath, U"\n");
+		printText(U"Saving script to ", scriptPath, U":\n", generatedCode, U"\n");
 		if (language == ScriptLanguage::Batch) {
 			// Batch on MS-Windows can not recognize a Byte Order Mark, so just encode it as Latin 1.
 			string_save(scriptPath, generatedCode, CharacterEncoding::Raw_Latin1, LineEncoding::CrLf);

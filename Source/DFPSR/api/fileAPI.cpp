@@ -744,7 +744,7 @@ DsrProcessStatus process_getStatus(const DsrProcess &process) {
 	}
 }
 
-DsrProcess process_execute(const ReadableString& programPath, List<String> arguments) {
+DsrProcess process_execute(const ReadableString& programPath, List<String> arguments, bool mustWork) {
 	// Convert the program path into the native format.
 	String optimizedPath = file_optimizePath(programPath, LOCAL_PATH_SYNTAX);
 	// Convert
@@ -771,6 +771,9 @@ DsrProcess process_execute(const ReadableString& programPath, List<String> argum
 		if (CreateProcessW(nullptr, (LPWSTR)nativeArgs, nullptr, nullptr, true, 0, nullptr, nullptr, &startInfo, &processInfo)) {
 			return handle_create<DsrProcessImpl>(processInfo).setName("DSR Process"); // Success
 		} else {
+			if (mustWork) {
+				throwError(U"Failed to call ", programPath, U"! False returned from CreateProcessW.\n");
+			}
 			return DsrProcess(); // Failure
 		}
 	#else
@@ -793,9 +796,13 @@ DsrProcess process_execute(const ReadableString& programPath, List<String> argum
 		}
 		argv[currentArg] = nullptr;
 		pid_t pid = 0;
-		if (posix_spawn(&pid, nativePath, nullptr, nullptr, (char**)argv.getUnsafe(), environ) == 0) {
+		int error = posix_spawn(&pid, nativePath, nullptr, nullptr, (char**)argv.getUnsafe(), environ);
+		if (error == 0) {
 			return handle_create<DsrProcessImpl>(pid).setName("DSR Process"); // Success
 		} else {
+			if (mustWork) {
+				throwError(U"Failed to call ", programPath, U"! Got error code ", error, " from posix_spawn.\n");
+			}
 			return DsrProcess(); // Failure
 		}
 	#endif

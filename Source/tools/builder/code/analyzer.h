@@ -16,14 +16,17 @@ void resolveDependencies(ProjectContext &context);
 void printDependencies(ProjectContext &context);
 
 // Build anything in projectPath.
-void build(SessionContext &output, ReadableString projectPath, Machine &sharedsettings);
+void buildFromFolder(SessionContext &output, ReadableString projectPath, Machine &sharedSettings);
+
+// Create a project from crawling a single source file and build it.
+void buildFromFile(SessionContext &output, ReadableString mainPath, Machine &sharedSettings);
 
 // Build the project in projectFilePath.
 // Settings must be taken by value to prevent side-effects from spilling over between different scripts.
-void buildProject(SessionContext &output, ReadableString projectFilePath, Machine &sharedsettings);
+void buildProject(SessionContext &output, ReadableString projectFilePath, Machine &sharedSettings);
 
 // Build all projects in projectFolderPath.
-void buildProjects(SessionContext &output, ReadableString projectFolderPath, Machine &sharedsettings);
+void buildProjects(SessionContext &output, ReadableString projectFolderPath, Machine &sharedSettings);
 
 void gatherBuildInstructions(SessionContext &output, ProjectContext &context, Machine &settings, ReadableString programPath);
 

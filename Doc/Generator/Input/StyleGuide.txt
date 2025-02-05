@@ -4,26 +4,26 @@ Title: Code convention for David Forsgren Piuva's Software Renderer
 
 To keep the style consistent, the style being used in the library is explained in this document.
 ---
-1. Tabs for indentation then spaces for alignment. It's the best of both worlds by both having variable length tabs	and correct alignment that works between lines of the same indentation.
+Tabs for indentation then spaces for alignment. It's the best of both worlds by both having variable length tabs	and correct alignment that works between lines of the same indentation.
 ---
-2. No new line for opening brackets.
+No new line for opening brackets.
 Makes the code more compact and decreases the risk of copy-paste errors.
 ---
-3. No hpp extensions, use h for all headers. Could be either way, but this library uses *.h for compact naming, so keep it consistent.
+No hpp extensions, use h for all headers. Could be either way, but this library uses *.h for compact naming, so keep it consistent.
 ---
-4. C-style casting for raw data manipulation and C++-style for high-level classes when possible.
+C-style casting for raw data manipulation and C++-style for high-level classes when possible.
 When using assembly intrinsics and raw pointer manipulation to alter the state of bits,
 verbose high-level abstractions only make it harder to count CPU cycles in your head.
 Always use the tool that makes sense for the problem you're trying to solve.
 C++ style is for things that are abstracted on a higher level.
 C style is for when a byte is just a byte and you just want to manipulate it in a specific way.
 ---
-5. Follow the most relevant standard without making contemporary assumptions.
+Follow the most relevant standard without making contemporary assumptions.
 For code not intended for a specific system, follow the C++ standard.
 For code targeting a certain hardware using intrinsic functions, follow the hardware's standard.
 For code targeting a certain operating system, follow the operating system's standard.
 ---
-6. Do not assume that a type has a certain size or format unless it is specified explicitly.
+Do not assume that a type has a certain size or format unless it is specified explicitly.
 The int type is not always 32 bits, so only use when 16 bits are enough, use int32_t for a signed 32-bit integer.
 Fixed integers such as uint8_t, uint16_t, uint32_t, uint64_t, int32_t and int64_t are preferred.
 For bit manipulation, use unsigned integers to avoid depending on two's complement.
@@ -32,22 +32,27 @@ The float type does not have to be any of the IEEE standards according to the C+
 std::string is not used, because it has an undefined character encoding, so use dsr::String or dsr::ReadableString with UTF-32 instead.
 char* should only be used for constant string literals and interfacing with external libraries.
 ---
-7. The code should work for both little-endian and big-endian, because both still exist.
+The code should work for both little-endian and big-endian, because both still exist.
 You may however ignore mixed-endian.
 ---
-8. Do not call member methods with "this" set to null, because that is undefined behavior.
+Do not call member methods with "this" set to null, because that is undefined behavior.
 ---
-9. Avoid mixing side-effects with expressions for determinism across compilers.
+Leave an empty line at the end of each source document.
+Even though the C++ standard tells compilers to ignore line breaks as white space during parsing, white space is still used to separate the tokens that are used.
+A future C++ compiler might be designed to allow interactive input directly from the developer and ignore end of file for consistent behavior between command line input and source files.
+So without a line break at the end, the last token in a cpp file may be ignored on some compilers.
+---
+Avoid mixing side-effects with expressions for determinism across compilers.
 Non-deterministic expressions such as ((x++ - ++x) * x--) should never be used, so use ++ and -- in separate statements.
 Side-effects within the same depth of an expressions may be evaluated in any order because it is not specified in C++.
 Checking the return value of a function with side-effects is okay, because the side effect always come before returning the result in the called function.
 Lazy evaluation such as x != nullptr && foo(x) is okay, because lazy evaluation is well specified as only evaluating the right hand side when needed.
 Call chaining such as constructor(args).setSomeValue(value).setSomeOtherValue(value) is okay, because the execution order is explicit from differences in expression depth.
 ---
-10. Use the std library as little as possible.
+Use the std library as little as possible.
 Each compiler, operating system and standard library implementation has subtle differences in how things work, which can cause programs to break on another computer.
 The goal of this framework is to make things more consistent across platforms, so that code that works on one computer is more likely to work on another computer.
 ---
-11. Don't over-use the auto keyword.
+Don't over-use the auto keyword.
 Spelling out the type explicitly makes the code easier to read.
 ---

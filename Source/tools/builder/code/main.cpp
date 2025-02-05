@@ -41,21 +41,37 @@ Project files:
 		* x is assigned a boolean value telling if the content of a matches "abc". (case sensitive comparison)
 			x = a matches "abc"
 	Commands:
-		* Build all projects in myFolder with the SkipIfBinaryExists flag in arbitrary order before continuing with compilation
-			Build "../myFolder" SkipIfBinaryExists
-		* Add file.cpp and other implementations found through includes into the list of source code to compile and link.
-			Crawl "folder/file.cpp"
-		* Add a linker flag as is for direct control
-			LinkerFlag -lLibrary
-		* Add a linker flag with automatic prefix for future proofing
-			Link Library
-		* Add a compiler flag as is
-			CompilerFlag -DMACRO
+		Finding source code for the current project:
+			* Add file.cpp and other implementations found through includes into the list of source code to compile and link.
+				Crawl "folder/file.cpp"
+		Settings for compiling:
+			* Add a compiler flag as is
+				CompilerFlag -DMACRO
+		Settings for linking:
+			* Add a linker flag as is for direct control
+				LinkerFlag -lLibrary
+			* Add a linker flag with automatic prefix for future proofing
+				Link Library
+		Building other projects at the same time:
+			* Build all projects in myFolder with the SkipIfBinaryExists flag in arbitrary order before continuing with compilation
+				Build "../myFolder" SkipIfBinaryExists
+		Building a project crawling from each file matching a pattern:
+			All variables are inherited, so no variables are given to the command.
+			* Build a project for each file ending with 'Test.cpp' in a folder named 'tests'.
+				Projects from "*Test.cpp" in "tests"
+			* Build a project for each file starting with 'main_' and ending with '.cpp' in a folder named "code/projects".
+				Projects from "main_*.cpp" in "code/projects"
+			* Build a project for each file named 'main.cpp' in a folder named "examples".
+				Projects from "main_*.cpp" in "examples"
+			* You can also swap argument order like this, because it is designed to be easily extended with more keywords if needed.
+				Projects in "tests" from "*Test.cpp"
 	Systems:
 		* Linux
 			Set to non-zero on Linux or similar operating systems.
 		* Windows
 			Set to non-zero on MS-Windows.
+		* MacOS
+			Set to non-zero on MacOS.
 	Variables:
 		* SkipIfBinaryExists, skips building if the binary already exists.
 		* Supressed, prevents a compiled program from running after building, which is usually given as an extra argument to Build to avoid launching all programs in a row.
@@ -160,7 +176,7 @@ void dsrMain(List<String> args) {
 			executableExtension = U".exe";
 		}
 		SessionContext buildContext = SessionContext(tempFolder, executableExtension);
-		build(buildContext, projectPath, settings);
+		buildFromFolder(buildContext, projectPath, settings);
 		validateSettings(settings, U"in settings after executing the root build script (in main)");
 		if (language == ScriptLanguage::Unknown) {
 			// Call the compiler directly.

@@ -1,4 +1,5 @@
 ﻿
+#include "analyzer.h"
 #include "generator.h"
 #include "Machine.h"
 
@@ -404,17 +405,11 @@ static void crawlSource(ProjectContext &context, ReadableString absolutePath) {
 	}
 }
 
-void build(SessionContext &output, ReadableString projectPath, Machine &settings);
-
 static List<String> initializedProjects;
-// Using a project file path and input arguments.
-void buildProject(SessionContext &output, ReadableString projectFilePath, Machine &sharedsettings) {
-	Machine settings(file_getPathlessName(projectFilePath));
-	inheritMachine(settings, sharedsettings);
-	validateSettings(settings, string_combine(U"in settings after inheriting settings from caller, for ", projectFilePath, U"\n"));
-	printText(U"Building project at ", projectFilePath, U"\n");
+static void buildProjectFromSettings(SessionContext &output, const ReadableString &path, Machine &settings) {
+	printText(U"Building project at ", path, U"\n");
 	// Check if this project has begun building previously during this session.
-	String absolutePath = file_getAbsolutePath(projectFilePath);
+	String absolutePath = file_getAbsolutePath(path);
 	for (int64_t p = 0; p < initializedProjects.length(); p++) {
 		if (string_caseInsensitiveMatch(absolutePath, initializedProjects[p])) {
 			throwError(U"Found duplicate requests to build from the same initial script ", absolutePath, U" which could cause non-determinism if different arguments are given to each!\n");
@@ -423,15 +418,11 @@ void buildProject(SessionContext &output, ReadableString projectFilePath, Machin
 	}
 	// Remember that building of this project has started.
 	initializedProjects.push(absolutePath);
-	// Evaluate compiler settings while searching for source code mentioned in the project and imported headers.
-	printText(U"Executing project file from ", projectFilePath, U".\n");
 	ProjectContext context;
-	evaluateScript(settings, projectFilePath);
-	validateSettings(settings, string_combine(U"in settings after evaluateScript in buildProject, for ", projectFilePath, U"\n"));
 	// Find out where things are located.
-	String projectPath = file_getAbsoluteParentFolder(projectFilePath);
+	String projectPath = file_getAbsoluteParentFolder(path);
 	// Get the project's name.
-	String projectName = file_getPathlessName(file_getExtensionless(projectFilePath));
+	String projectName = file_getPathlessName(file_getExtensionless(path));
 	// If no application path is given, the new executable will be named after the project and placed in the same folder.
 	String fullProgramPath = getFlag(settings, U"ProgramPath", projectName);
 	if (string_length(output.executableExtension) > 0) {
@@ -439,47 +430,69 @@ void buildProject(SessionContext &output, ReadableString projectFilePath, Machin
 	}
 	// Interpret ProgramPath relative to the project path.
 	fullProgramPath = file_getTheoreticalAbsolutePath(fullProgramPath, projectPath);
-	// Build other projects.
-	for (int64_t b = 0; b < settings.otherProjectPaths.length(); b++) {
-		build(output, settings.otherProjectPaths[b], settings.otherProjectSettings[b]);
+	
+	// Build projects from files. (used for running many tests)
+	for (int64_t b = 0; b < settings.projectFromSourceFilenames.length(); b++) {
+		buildFromFile(output, settings.projectFromSourceFilenames[b], settings.projectFromSourceSettings[b]);
 	}
-	validateSettings(settings, string_combine(U"in settings after building other projects in buildProject, for ", projectFilePath, U"\n"));
+	
+	// Build other projects. (used for compiling programs that the main program should call)
+	for (int64_t b = 0; b < settings.otherProjectPaths.length(); b++) {
+		buildFromFolder(output, settings.otherProjectPaths[b], settings.otherProjectSettings[b]);
+	}
+	validateSettings(settings, string_combine(U"in settings after building other projects in buildProject, for ", path, U"\n"));
 	// If the SkipIfBinaryExists flag is given, we will abort as soon as we have handled its external BuildProjects requests and confirmed that the application exists.
 	if (getFlagAsInteger(settings, U"SkipIfBinaryExists") && file_getEntryType(fullProgramPath) == EntryType::File) {
 		// SkipIfBinaryExists was active and the binary exists, so abort here to avoid redundant work.
-		printText(U"Skipping build of ", projectFilePath, U" because the SkipIfBinaryExists flag was given and ", fullProgramPath, U" was found.\n");
+		printText(U"Skipping build of ", path, U" because the SkipIfBinaryExists flag was given and ", fullProgramPath, U" was found.\n");
 		return;
 	}
 	// Once we know where the binary is and that it should be built, we can start searching for source code.
 	for (int64_t o = 0; o < settings.crawlOrigins.length(); o++) {
 		crawlSource(context, settings.crawlOrigins[o]);
 	}
-	validateSettings(settings, string_combine(U"in settings after crawling source in buildProject, for ", projectFilePath, U"\n"));
+	validateSettings(settings, string_combine(U"in settings after crawling source in buildProject, for ", path, U"\n"));
 	// Once we are done finding all source files, we can resolve the dependencies to create a graph connected by indices.
 	resolveDependencies(context);
 	if (getFlagAsInteger(settings, U"ListDependencies")) {
 		printDependencies(context);
 	}
 	gatherBuildInstructions(output, context, settings, fullProgramPath);
-	validateSettings(settings, string_combine(U"in settings after gathering build instructions in buildProject, for ", projectFilePath, U"\n"));
+	validateSettings(settings, string_combine(U"in settings after gathering build instructions in buildProject, for ", path, U"\n"));
+}
+
+// Using a project file path and input arguments.
+void buildProject(SessionContext &output, ReadableString projectFilePath, Machine &sharedSettings) {
+	// Inherit external settings.
+	Machine settings(file_getPathlessName(projectFilePath));
+	inheritMachine(settings, sharedSettings);
+	validateSettings(settings, string_combine(U"in settings after inheriting settings from caller, for ", projectFilePath, U"\n"));
+
+	// Evaluate the project's script.
+	printText(U"Executing project file from ", projectFilePath, U".\n");
+	evaluateScript(settings, projectFilePath);
+	validateSettings(settings, string_combine(U"in settings after evaluateScript in buildProject, for ", projectFilePath, U"\n"));
+
+	// Complete the project.
+	buildProjectFromSettings(output, projectFilePath, settings);
 }
 
 // Using a folder path and input arguments for all projects.
-void buildProjects(SessionContext &output, ReadableString projectFolderPath, Machine &sharedsettings) {
+void buildProjects(SessionContext &output, ReadableString projectFolderPath, Machine &sharedSettings) {
 	printText(U"Building all projects in ", projectFolderPath, U"\n");
-	file_getFolderContent(projectFolderPath, [&sharedsettings, &output](const ReadableString& entryPath, const ReadableString& entryName, EntryType entryType) {
+	file_getFolderContent(projectFolderPath, [&sharedSettings, &output](const ReadableString& entryPath, const ReadableString& entryName, EntryType entryType) {
 		if (entryType == EntryType::Folder) {
-			buildProjects(output, entryPath, sharedsettings);
+			buildProjects(output, entryPath, sharedSettings);
 		} else if (entryType == EntryType::File) {
-			ReadableString extension = string_upperCase(file_getExtension(entryName));
-			if (string_match(extension, U"DSRPROJ")) {
-				buildProject(output, entryPath, sharedsettings);
+			ReadableString extension = file_getExtension(entryName);
+			if (string_caseInsensitiveMatch(extension, U"DSRPROJ")) {
+				buildProject(output, entryPath, sharedSettings);
 			}
 		}
 	});
 }
 
-void build(SessionContext &output, ReadableString projectPath, Machine &sharedsettings) {
+void buildFromFolder(SessionContext &output, ReadableString projectPath, Machine &sharedSettings) {
 	EntryType entryType = file_getEntryType(projectPath);
 	printText(U"Building anything at ", projectPath, U" which is ", entryType, U"\n");
 	if (entryType == EntryType::File) {
@@ -488,9 +501,29 @@ void build(SessionContext &output, ReadableString projectPath, Machine &sharedse
 			printText(U"Can't use the Build keyword with a file that is not a project!\n");
 		} else {
 			// Build the given project
-			buildProject(output, projectPath, sharedsettings);
+			buildProject(output, projectPath, sharedSettings);
 		}
 	} else if (entryType == EntryType::Folder) {
-		buildProjects(output, projectPath, sharedsettings);
+		buildProjects(output, projectPath, sharedSettings);
 	}
+}
+
+void buildFromFile(SessionContext &output, ReadableString mainPath, Machine &sharedSettings) {
+	// Inherit settings, flags and dependencies from the parent, because they do not exist in single source files.
+	Machine settings(file_getPathlessName(mainPath));
+	cloneMachine(settings, sharedSettings);
+
+	ReadableString extension = file_getExtension(mainPath);
+	if (!(string_caseInsensitiveMatch(extension, U"c") || string_caseInsensitiveMatch(extension, U"cpp"))) {
+		throwError(U"Creating projects from source files is currently only supported for *.c and *.cpp, but the extension was '", extension, U"'.");
+	}
+
+	// Crawl from the selected file to discover direct dependencies.
+	settings.crawlOrigins.push(mainPath);
+
+	// Check that settings are okay.
+	validateSettings(settings, string_combine(U"in settings after inheriting settings from caller, for ", mainPath, U"\n"));
+
+	// Create the project to save as a script or build using direct calls to the compiler.
+	buildProjectFromSettings(output, mainPath, settings);
 }
