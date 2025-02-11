@@ -52,13 +52,13 @@ static inline U32x4 mixColorsUniform(const U32x4 &colorA, const U32x4 &colorB, u
 	U16x8 weightA = U16x8(invRatio);
 	U16x8 weightB = U16x8(ratio);
 	U32x4 lowMask(0x00FF00FFu);
-	U16x8 lowColorA = U16x8(colorA & lowMask);
-	U16x8 lowColorB = U16x8(colorB & lowMask);
+	U16x8 lowColorA = reinterpret_U16FromU32(U32x4(colorA & lowMask));
+	U16x8 lowColorB = reinterpret_U16FromU32(U32x4(colorB & lowMask));
 	U32x4 highMask(0xFF00FF00u);
-	U16x8 highColorA = bitShiftRightImmediate<8>(U16x8((colorA & highMask)));
-	U16x8 highColorB = bitShiftRightImmediate<8>(U16x8((colorB & highMask)));
-	U32x4 lowColor = (((lowColorA * weightA) + (lowColorB * weightB))).get_U32();
-	U32x4 highColor = (((highColorA * weightA) + (highColorB * weightB))).get_U32();
+	U16x8 highColorA = bitShiftRightImmediate<8>(reinterpret_U16FromU32(colorA & highMask));
+	U16x8 highColorB = bitShiftRightImmediate<8>(reinterpret_U16FromU32(colorB & highMask));
+	U32x4 lowColor = reinterpret_U32FromU16(((lowColorA * weightA) + (lowColorB * weightB)));
+	U32x4 highColor = reinterpret_U32FromU16(((highColorA * weightA) + (highColorB * weightB)));
 	return ((bitShiftRightImmediate<8>(lowColor) & lowMask) | (highColor & highMask));
 }
 

@@ -434,6 +434,22 @@
 			F32x4(float a1, float a2, float a3, float a4) : v(LOAD_VECTOR_F32_SIMD(a1, a2, a3, a4)) {}
 			// Construct a portable vector from a single duplicated scalar
 			explicit F32x4(float scalar) : v(LOAD_SCALAR_F32_SIMD(scalar)) {}
+			// Copy constructor.
+			F32x4(const F32x4& other) {
+				v = other.v;
+			}
+			// Assignment operator.
+			F32x4& operator=(const F32x4& other) {
+				if (this != &other) {
+					v = other.v;
+				}
+				return *this;
+			}
+			// Move operator.
+			F32x4& operator=(F32x4&& other) noexcept {
+				v = other.v;
+				return *this;
+			}
 		#else
 			public:
 			// Emulate a SIMD vector as an array of scalars without hardware support.
@@ -541,6 +557,22 @@
 			I32x4(int32_t a1, int32_t a2, int32_t a3, int32_t a4) : v(LOAD_VECTOR_I32_SIMD(a1, a2, a3, a4)) {}
 			// Construct a portable vector from a single duplicated scalar
 			explicit I32x4(int32_t scalar) : v(LOAD_SCALAR_I32_SIMD(scalar)) {}
+			// Copy constructor.
+			I32x4(const I32x4& other) {
+				v = other.v;
+			}
+			// Assignment operator.
+			I32x4& operator=(const I32x4& other) {
+				if (this != &other) {
+					v = other.v;
+				}
+				return *this;
+			}
+			// Move operator.
+			I32x4& operator=(I32x4&& other) noexcept {
+				v = other.v;
+				return *this;
+			}
 		#else
 			public:
 			// Emulate a SIMD vector as an array of scalars without hardware support.
@@ -648,6 +680,22 @@
 			U32x4(uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4) : v(LOAD_VECTOR_U32_SIMD(a1, a2, a3, a4)) {}
 			// Construct a portable vector from a single duplicated scalar
 			explicit U32x4(uint32_t scalar) : v(LOAD_SCALAR_U32_SIMD(scalar)) {}
+			// Copy constructor.
+			U32x4(const U32x4& other) {
+				v = other.v;
+			}
+			// Assignment operator.
+			U32x4& operator=(const U32x4& other) {
+				if (this != &other) {
+					v = other.v;
+				}
+				return *this;
+			}
+			// Move operator.
+			U32x4& operator=(U32x4&& other) noexcept {
+				v = other.v;
+				return *this;
+			}
 		#else
 			public:
 			// Emulate a SIMD vector as an array of scalars without hardware support.
@@ -751,34 +799,31 @@
 			SIMD_U16x8 v;
 			// Construct a portable vector from a native SIMD vector
 			explicit U16x8(const SIMD_U16x8& v) : v(v) {}
-			// Construct a vector of 8 x 16-bit unsigned integers from a vector of 4 x 32-bit unsigned integers
-			//   Reinterpret casting is used
-			explicit U16x8(const U32x4& vector) : v(REINTERPRET_U32_TO_U16_SIMD(vector.v)) {}
 			// Construct a portable vector from a set of scalars
 			U16x8(uint16_t a1, uint16_t a2, uint16_t a3, uint16_t a4, uint16_t a5, uint16_t a6, uint16_t a7, uint16_t a8) : v(LOAD_VECTOR_U16_SIMD(a1, a2, a3, a4, a5, a6, a7, a8)) {}
-			// Construct a vector of 8 x 16-bit unsigned integers from a single duplicated 32-bit unsigned integer
-			//   Reinterpret casting is used
-			// TODO: Remove all reintreprets from constructors to improve readability
-			//explicit U16x8(uint32_t scalar) : v(REINTERPRET_U32_TO_U16_SIMD(LOAD_SCALAR_U32_SIMD(scalar))) {}
 			// Construct a portable vector from a single duplicated scalar
 			explicit U16x8(uint16_t scalar) : v(LOAD_SCALAR_U16_SIMD(scalar)) {}
-			// Reinterpret cast to a vector of 4 x 32-bit unsigned integers
-			U32x4 get_U32() const {
-				return U32x4(REINTERPRET_U16_TO_U32_SIMD(this->v));
+			// Copy constructor.
+			U16x8(const U16x8& other) {
+				v = other.v;
+			}
+			// Assignment operator.
+			U16x8& operator=(const U16x8& other) {
+				if (this != &other) {
+					v = other.v;
+				}
+				return *this;
+			}
+			// Move operator.
+			U16x8& operator=(U16x8&& other) noexcept {
+				v = other.v;
+				return *this;
 			}
 		#else
 			public:
 			// Emulate a SIMD vector as an array of scalars without hardware support.
 			// Only accessible while emulating!
 			uint16_t scalars[8];
-			// Construct a vector of 8 x 16-bit unsigned integers from a vector of 4 x 32-bit unsigned integers
-			//   Reinterpret casting is used
-			explicit U16x8(const U32x4& vector) {
-				uint64_t *target = (uint64_t*)this->scalars;
-				uint64_t *source = (uint64_t*)vector.scalars;
-				target[0] = source[0];
-				target[1] = source[1];
-			}
 			// Construct a portable vector from a set of scalars
 			U16x8(uint16_t a1, uint16_t a2, uint16_t a3, uint16_t a4, uint16_t a5, uint16_t a6, uint16_t a7, uint16_t a8) {
 				this->scalars[0] = a1;
@@ -790,15 +835,6 @@
 				this->scalars[6] = a7;
 				this->scalars[7] = a8;
 			}
-			// Construct a vector of 8 x 16-bit unsigned integers from a single duplicated 32-bit unsigned integer
-			//   Reinterpret casting is used
-			explicit U16x8(uint32_t scalar) {
-				uint32_t *target = (uint32_t*)this->scalars;
-				target[0] = scalar;
-				target[1] = scalar;
-				target[2] = scalar;
-				target[3] = scalar;
-			}
 			// Construct a portable vector from a single duplicated scalar
 			explicit U16x8(uint16_t scalar) {
 				this->scalars[0] = scalar;
@@ -809,15 +845,6 @@
 				this->scalars[5] = scalar;
 				this->scalars[6] = scalar;
 				this->scalars[7] = scalar;
-			}
-			// Reinterpret cast to a vector of 4 x 32-bit unsigned integers
-			U32x4 get_U32() const {
-				U32x4 result(0);
-				uint64_t *target = (uint64_t*)result.scalars;
-				uint64_t *source = (uint64_t*)this->scalars;
-				target[0] = source[0];
-				target[1] = source[1];
-				return result;
 			}
 		#endif
 		// Create a gradient vector using start and increment, so that arbitrary length vectors have a way to initialize linear iterations.
@@ -909,6 +936,22 @@
 			: v(LOAD_VECTOR_U8_SIMD(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16)) {}
 			// Construct a portable vector from a single duplicated scalar
 			explicit U8x16(uint8_t scalar) : v(LOAD_SCALAR_U8_SIMD(scalar)) {}
+			// Copy constructor.
+			U8x16(const U8x16& other) {
+				v = other.v;
+			}
+			// Assignment operator.
+			U8x16& operator=(const U8x16& other) {
+				if (this != &other) {
+					v = other.v;
+				}
+				return *this;
+			}
+			// Move operator.
+			U8x16& operator=(U8x16&& other) noexcept {
+				v = other.v;
+				return *this;
+			}
 		#else
 			public:
 			// Emulate a SIMD vector as an array of scalars without hardware support.
@@ -1067,6 +1110,22 @@
 					ALIGN32 __m256 target = _mm256_set1_ps(scalar);
 					this->v = target;
 				}
+				// Copy constructor.
+				F32x8(const F32x8& other) {
+					v = other.v;
+				}
+				// Assignment operator.
+				F32x8& operator=(const F32x8& other) {
+					if (this != &other) {
+						v = other.v;
+					}
+					return *this;
+				}
+				// Move operator.
+				F32x8& operator=(F32x8&& other) noexcept {
+					v = other.v;
+					return *this;
+				}
 			#else
 				#error "Missing constructors for the F32x8 type!\n"
 			#endif
@@ -1183,6 +1242,22 @@
 				explicit I32x8(int32_t scalar) {
 					ALIGN32 __m256i target = _mm256_set1_epi32(scalar);
 					this->v = target;
+				}
+				// Copy constructor.
+				I32x8(const I32x8& other) {
+					v = other.v;
+				}
+				// Assignment operator.
+				I32x8& operator=(const I32x8& other) {
+					if (this != &other) {
+						v = other.v;
+					}
+					return *this;
+				}
+				// Move operator.
+				I32x8& operator=(I32x8&& other) noexcept {
+					v = other.v;
+					return *this;
 				}
 			#else
 				#error "Missing constructors for the I32x8 type!\n"
@@ -1301,6 +1376,22 @@
 					ALIGN32 __m256i target = _mm256_set1_epi32(scalar);
 					this->v = target;
 				}
+				// Copy constructor.
+				U32x8(const U32x8& other) {
+					v = other.v;
+				}
+				// Assignment operator.
+				U32x8& operator=(const U32x8& other) {
+					if (this != &other) {
+						v = other.v;
+					}
+					return *this;
+				}
+				// Move operator.
+				U32x8& operator=(U32x8&& other) noexcept {
+					v = other.v;
+					return *this;
+				}
 			#else
 				#error "Missing constructors for the U32x8 type!\n"
 			#endif
@@ -1409,9 +1500,6 @@
 			SIMD_U16x16 v;
 			// Construct a portable vector from a native SIMD vector
 			explicit U16x16(const SIMD_U16x16& v) : v(v) {}
-			// Construct a vector of 16 x 16-bit unsigned integers from a vector of 8 x 32-bit unsigned integers
-			//   Reinterpret casting is used
-			//explicit U16x16(const U32x8& vector) : v(REINTERPRET_U32_TO_U16_SIMD256(vector.v)) {}
 			#if defined(USE_AVX2)
 				// Construct a portable vector from a set of scalars.
 				U16x16(uint16_t a1, uint16_t a2, uint16_t a3, uint16_t a4, uint16_t a5, uint16_t a6, uint16_t a7, uint16_t a8,
@@ -1423,6 +1511,22 @@
 				explicit U16x16(uint16_t scalar) {
 					ALIGN32 __m256i target = _mm256_set1_epi16(scalar);
 					this->v = target;
+				}
+				// Copy constructor.
+				U16x16(const U16x16& other) {
+					v = other.v;
+				}
+				// Assignment operator.
+				U16x16& operator=(const U16x16& other) {
+					if (this != &other) {
+						v = other.v;
+					}
+					return *this;
+				}
+				// Move operator.
+				U16x16& operator=(U16x16&& other) noexcept {
+					v = other.v;
+					return *this;
 				}
 			#else
 				#error "Missing constructors for the U16x16 type!\n"
@@ -1593,6 +1697,22 @@
 				explicit U8x32(uint8_t scalar) {
 					ALIGN32 __m256i target = _mm256_set1_epi8(scalar);
 					this->v = target;
+				}
+				// Copy constructor.
+				U8x32(const U8x32& other) {
+					v = other.v;
+				}
+				// Assignment operator.
+				U8x32& operator=(const U8x32& other) {
+					if (this != &other) {
+						v = other.v;
+					}
+					return *this;
+				}
+				// Move operator.
+				U8x32& operator=(U8x32&& other) noexcept {
+					v = other.v;
+					return *this;
 				}
 			#else
 				#error "Missing constructors for the U8x32 type!\n"
