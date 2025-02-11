@@ -79,6 +79,21 @@
 //   On ARMv8 processors:
 //     NEON can not be disabled for ARMv8, because it is mandatory for ARMv8.
 
+// If getting crashes:
+// * Disable compiler optimizations and inspect generated assembler code.
+//   To see how the variables would be stored in the stack when running out of registers.
+//   Otherwise you have to wait until you run out of registers before noticing that a variable was incorrectly aligned.
+// * Make sure that the compiler did not automatically generate any non-aligned temporary variables of the __m256 or __m256i types.
+//   The Intel ABI strictly requires that 256-bit SIMD vectors are always aligned by 32 bytes. Not doing so will cause crashes on some processor models.
+//   The g++ compiler does not treat __m256 nor __m256i as strictly aligned by 32 bytes and sais that it is the developer's responsibility to align the memory according to Intel's ABI.
+//   But when you do align all variables explicitly to 32 bytes, g++ inserts unaligned temporary variables that cause crashes anyway.
+// * Instead of nesting calls to intrinsic functions, separate them into one statement per call and explicitly align all inputs and outputs.
+// * When making a wrapper function around intrinsic AVX2 functions, use aligned wrapper types for both input and output, so that generated temporary variables are explicitly aligned.
+//   If you must have inputs or outputs with __m256 or __m256i types, pass by reference and align with 32 bytes at the caller.
+// * Check which arguments are required to be immediate constants and either hardcode or pass through a template argument.
+//   The expression 5 + 5 will not becomes an immediate constant when optimization is disabled, which may cause a crash if passing the expression as an immediate constant.
+//   Sometimes you need to turn optimization off for debugging, so it is good if turning optimizations off does not cause the program to crash.
+
 #ifndef DFPSR_SIMD
 #define DFPSR_SIMD
 	#include <cstdint>
@@ -90,11 +105,25 @@
 	#include "DsrTraits.h"
 	#include "../settings.h"
 	#include "../base/noSimd.h"
+	#include "../api/stringAPI.h"
+
+	#ifdef USE_SSE2
+		#include <emmintrin.h> // SSE2
+		#ifdef USE_SSSE3
+			#include <tmmintrin.h> // SSSE3
+		#endif
+		#ifdef USE_AVX
+			#include <immintrin.h> // AVX / AVX2
+		#endif
+	#endif
+	#ifdef USE_NEON
+		#include <arm_neon.h> // NEON
+	#endif
 
 	namespace dsr {
 
 	// Alignment in bytes
-	#define ALIGN_BYTES(SIZE)  __attribute__((aligned(SIZE)))
+	#define ALIGN_BYTES(SIZE) alignas(SIZE)
 	#define ALIGN16 ALIGN_BYTES(16) // 128-bit alignment
 	#define ALIGN32 ALIGN_BYTES(32) // 256-bit alignment
 	#define ALIGN64 ALIGN_BYTES(64) // 512-bit alignment
@@ -104,15 +133,6 @@
 	// Everything declared in here handles things specific for SSE.
 	// Direct use of the macros will not provide portability to all hardware.
 	#ifdef USE_SSE2
-		#define USE_DIRECT_SIMD_MEMORY_ACCESS
-		#include <emmintrin.h> // SSE2
-		#ifdef USE_SSSE3
-			#include <tmmintrin.h> // SSSE3
-		#endif
-		#ifdef USE_AVX
-			#include <immintrin.h> // AVX / AVX2
-		#endif
-
 		// Vector types
 		#define SIMD_F32x4 __m128
 		#define SIMD_U8x16 __m128i
@@ -143,18 +163,6 @@
 		#define U8_HIGH_TO_U16_SIMD(A) _mm_unpackhi_epi8(A, _mm_set1_epi8(0))
 		#define U16_LOW_TO_U32_SIMD(A) _mm_unpacklo_epi16(A, _mm_set1_epi16(0))
 		#define U16_HIGH_TO_U32_SIMD(A) _mm_unpackhi_epi16(A, _mm_set1_epi16(0))
-
-		// Saturated packing
-		//   Credit: Using ideas from Victoria Zhislina's NEON_2_SSE.h header from the Intel corporation, but not trying to emulate NEON
-		inline SIMD_U8x16 PACK_SAT_U16_TO_U8_SIMD(const SIMD_U16x8& a, const SIMD_U16x8& b) {
-			SIMD_U16x8 mask, a2, b2;
-			mask = _mm_set1_epi16(0b0111111111111111);
-			a2 = _mm_and_si128(a, mask);
-			a2 = _mm_or_si128(a2, _mm_and_si128(_mm_cmpgt_epi16(a2, a), mask));
-			b2 = _mm_and_si128(b, mask);
-			b2 = _mm_or_si128(b2, _mm_and_si128(_mm_cmpgt_epi16(b2, b), mask));
-			return _mm_packus_epi16(a2, b2);
-		}
 
 		// Reinterpret casting
 		#define REINTERPRET_U32_TO_U8_SIMD(A) (A)
@@ -207,10 +215,6 @@
 			// 256-bit vector types
 			#define SIMD_F32x8 __m256
 
-			// Vector uploads in address order
-			#define LOAD_VECTOR_F32_SIMD256(A, B, C, D, E, F, G, H) _mm256_set_ps(H, G, F, E, D, C, B, A)
-			#define LOAD_SCALAR_F32_SIMD256(A) _mm256_set1_ps(A)
-
 			// Vector float operations returning SIMD_F32x4
 			#define ADD_F32_SIMD256(A, B) _mm256_add_ps(A, B)
 			#define SUB_F32_SIMD256(A, B) _mm256_sub_ps(A, B)
@@ -227,16 +231,6 @@
 				#define SIMD_U32x8 __m256i
 				#define SIMD_I32x8 __m256i
 
-				// Vector uploads in address order
-				#define LOAD_VECTOR_U8_SIMD256(A1, B1, C1, D1, E1, F1, G1, H1, I1, J1, K1, L1, M1, N1, O1, P1, Q1, R1, S1, T1, U1, V1, W1, X1, Y1, Z1, A2, B2, C2, D2, E2, F2) _mm256_set_epi8(F2, E2, D2, C2, B2, A2, Z1, Y1, X1, W1, V1, U1, T1, S1, R1, Q1, P1, O1, N1, M1, L1, K1, J1, I1, H1, G1, F1, E1, D1, C1, B1, A1)
-				#define LOAD_SCALAR_U8_SIMD256(A) _mm256_set1_epi8(A)
-				#define LOAD_VECTOR_U16_SIMD256(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P) _mm256_set_epi16(P, O, N, M, L, K, J, I, H, G, F, E, D, C, B, A)
-				#define LOAD_SCALAR_U16_SIMD256(A) _mm256_set1_epi16(A)
-				#define LOAD_VECTOR_U32_SIMD256(A, B, C, D, E, F, G, H) _mm256_set_epi32(H, G, F, E, D, C, B, A)
-				#define LOAD_SCALAR_U32_SIMD256(A) _mm256_set1_epi32(A)
-				#define LOAD_VECTOR_I32_SIMD256(A, B, C, D, E, F, G, H) _mm256_set_epi32(H, G, F, E, D, C, B, A)
-				#define LOAD_SCALAR_I32_SIMD256(A) _mm256_set1_epi32(A)
-
 				// Conversions
 				#define F32_TO_I32_SIMD256(A) _mm256_cvttps_epi32(A)
 				#define F32_TO_U32_SIMD256(A) _mm256_cvttps_epi32(A)
@@ -248,22 +242,6 @@
 				#define U8_HIGH_TO_U16_SIMD256(A) _mm256_unpackhi_epi8(_mm256_permute4x64_epi64(A, 0b11011000), _mm256_set1_epi8(0))
 				#define U16_LOW_TO_U32_SIMD256(A) _mm256_unpacklo_epi16(_mm256_permute4x64_epi64(A, 0b11011000), _mm256_set1_epi16(0))
 				#define U16_HIGH_TO_U32_SIMD256(A) _mm256_unpackhi_epi16(_mm256_permute4x64_epi64(A, 0b11011000), _mm256_set1_epi16(0))
-
-				// Saturated packing
-				//   Credit: Using ideas from Victoria Zhislina's NEON_2_SSE.h header from the Intel corporation, but not trying to emulate NEON
-				inline SIMD_U8x32 PACK_SAT_U16_TO_U8_SIMD256(const SIMD_U16x16& a, const SIMD_U16x16& b) {
-					SIMD_U16x16 mask, a2, b2;
-					mask = _mm256_set1_epi16(0b0111111111111111);
-					a2 = _mm256_and_si256(a, mask);
-					a2 = _mm256_or_si256(a2, _mm256_and_si256(_mm256_cmpgt_epi16(a2, a), mask));
-					b2 = _mm256_and_si256(b, mask);
-					b2 = _mm256_or_si256(b2, _mm256_and_si256(_mm256_cmpgt_epi16(b2, b), mask));
-					// The 256-bit pack instruction _mm256_packus_epi16 is not serial, so the result has to be permutated into the correct order.
-					//   0 2 1 3
-					//   |  X  |
-					//   0 1 2 3
-					return _mm256_permute4x64_epi64(_mm256_packus_epi16(a2, b2), 0b11011000);
-				}
 
 				// Reinterpret casting
 				#define REINTERPRET_U32_TO_U8_SIMD256(A) (A)
@@ -306,8 +284,6 @@
 	// Everything declared in here handles things specific for NEON.
 	// Direct use of the macros will not provide portability to all hardware.
 	#ifdef USE_NEON
-		#include <arm_neon.h> // NEON
-
 		// Vector types
 		#define SIMD_F32x4 float32x4_t
 		#define SIMD_U8x16 uint8x16_t
@@ -317,7 +293,7 @@
 
 		// Vector uploads in address order
 		inline SIMD_F32x4 LOAD_VECTOR_F32_SIMD(float a, float b, float c, float d) {
-			float data[4] ALIGN16 = {a, b, c, d};
+			ALIGN16 float data[4] = {a, b, c, d};
 			#ifdef SAFE_POINTER_CHECKS
 				if (uintptr_t((void*)data) & 15u) { throwError(U"Unaligned stack memory detected in LOAD_VECTOR_F32_SIMD for NEON!\n"); }
 			#endif
@@ -328,7 +304,7 @@
 		}
 		inline SIMD_U8x16 LOAD_VECTOR_U8_SIMD(uint8_t a, uint8_t b, uint8_t c, uint8_t d, uint8_t e, uint8_t f, uint8_t g, uint8_t h,
 		                                      uint8_t i, uint8_t j, uint8_t k, uint8_t l, uint8_t m, uint8_t n, uint8_t o, uint8_t p) {
-			uint8_t data[16] ALIGN16 = {a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p};
+			ALIGN16 uint8_t data[16] = {a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p};
 			#ifdef SAFE_POINTER_CHECKS
 				if (uintptr_t((void*)data) & 15u) { throwError(U"Unaligned stack memory detected in LOAD_VECTOR_U8_SIMD for NEON!\n"); }
 			#endif
@@ -338,7 +314,7 @@
 			return vdupq_n_u8(a);
 		}
 		inline SIMD_U16x8 LOAD_VECTOR_U16_SIMD(uint16_t a, uint16_t b, uint16_t c, uint16_t d, uint16_t e, uint16_t f, uint16_t g, uint16_t h) {
-			uint16_t data[8] ALIGN16 = {a, b, c, d, e, f, g, h};
+			ALIGN16 uint16_t data[8] = {a, b, c, d, e, f, g, h};
 			#ifdef SAFE_POINTER_CHECKS
 				if (uintptr_t((void*)data) & 15u) { throwError(U"Unaligned stack memory detected in LOAD_VECTOR_U16_SIMD for NEON!\n"); }
 			#endif
@@ -348,7 +324,7 @@
 			return vdupq_n_u16(a);
 		}
 		inline SIMD_U32x4 LOAD_VECTOR_U32_SIMD(uint32_t a, uint32_t b, uint32_t c, uint32_t d) {
-			uint32_t data[4] ALIGN16 = {a, b, c, d};
+			ALIGN16 uint32_t data[4] = {a, b, c, d};
 			#ifdef SAFE_POINTER_CHECKS
 				if (uintptr_t((void*)data) & 15u) { throwError(U"Unaligned stack memory detected in LOAD_VECTOR_U32_SIMD for NEON!\n"); }
 			#endif
@@ -358,7 +334,7 @@
 			return vdupq_n_u32(a);
 		}
 		inline SIMD_I32x4 LOAD_VECTOR_I32_SIMD(int32_t a, int32_t b, int32_t c, int32_t d) {
-			int32_t data[4] ALIGN16 = {a, b, c, d};
+			ALIGN16 int32_t data[4] = {a, b, c, d};
 			#ifdef SAFE_POINTER_CHECKS
 				if (uintptr_t((void*)data) & 15u) { throwError(U"Unaligned stack memory detected in LOAD_VECTOR_I32_SIMD for NEON!\n"); }
 			#endif
@@ -379,9 +355,6 @@
 		#define U8_HIGH_TO_U16_SIMD(A) vmovl_u8(vget_high_u8(A))
 		#define U16_LOW_TO_U32_SIMD(A) vmovl_u16(vget_low_u16(A))
 		#define U16_HIGH_TO_U32_SIMD(A) vmovl_u16(vget_high_u16(A))
-
-		// Saturated packing
-		#define PACK_SAT_U16_TO_U8_SIMD(A, B) vcombine_u8(vqmovn_u16(A), vqmovn_u16(B))
 
 		// Reinterpret casting
 		#define REINTERPRET_U32_TO_U8_SIMD(A) vreinterpretq_u8_u32(A)
@@ -443,7 +416,7 @@
 			Do not rely on these for accessing elements, because otherwise your code will not be able to compile for ARM NEON.
 	*/
 
-	union F32x4 {
+	struct ALIGN16 F32x4 {
 		private:
 			// The uninitialized default constructor is private for safety reasons.
 			F32x4() {}
@@ -452,11 +425,6 @@
 			static inline F32x4 create_dangerous_uninitialized() { return F32x4(); }
 		#ifdef USE_BASIC_SIMD
 			public:
-			#ifdef USE_DIRECT_SIMD_MEMORY_ACCESS
-				// Only use if USE_DIRECT_SIMD_MEMORY_ACCESS is defined!
-				// Direct access cannot be done on NEON!
-				float scalars[4];
-			#endif
 			// The SIMD vector of undefined type
 			// Not accessible while emulating!
 			SIMD_F32x4 v;
@@ -497,10 +465,12 @@
 				if (uintptr_t((const void*)data) & 15u) { throwError(U"Unaligned pointer detected in F32x4::readAlignedUnsafe!\n"); }
 			#endif
 			#ifdef USE_BASIC_SIMD
-				#if defined USE_SSE2
-					return F32x4(_mm_load_ps(data));
-				#elif defined USE_NEON
-					return F32x4(vld1q_f32(data));
+				#if defined(USE_SSE2)
+					ALIGN16 SIMD_F32x4 result = _mm_load_ps(data);
+					return F32x4(result);
+				#elif defined(USE_NEON)
+					ALIGN16 SIMD_F32x4 result = vld1q_f32(data);
+					return F32x4(result);
 				#endif
 			#else
 				return F32x4(data[0], data[1], data[2], data[3]);
@@ -512,10 +482,10 @@
 			#ifdef SAFE_POINTER_CHECKS
 				if (uintptr_t((void*)data) & 15u) { throwError(U"Unaligned pionter detected in F32x4::writeAlignedUnsafe!\n"); }
 			#endif
-			#if defined USE_BASIC_SIMD
-				#if defined USE_SSE2
+			#if defined(USE_BASIC_SIMD)
+				#if defined(USE_SSE2)
 					_mm_store_ps(data, this->v);
-				#elif defined USE_NEON
+				#elif defined(USE_NEON)
 					vst1q_f32(data, this->v);
 				#endif
 			#else
@@ -525,9 +495,9 @@
 				data[3] = this->scalars[3];
 			#endif
 		}
-		#if defined DFPSR_GEOMETRY_FVECTOR
+		#if defined(DFPSR_GEOMETRY_FVECTOR)
 			dsr::FVector4D get() const {
-				float data[4] ALIGN16;
+				ALIGN16 float data[4];
 				#ifdef SAFE_POINTER_CHECKS
 					if (uintptr_t(data) & 15u) { throwError(U"Unaligned stack memory detected in FVector4D F32x4::get!\n"); }
 				#endif
@@ -538,7 +508,7 @@
 		// Bound and alignment checked reading
 		static inline F32x4 readAligned(dsr::SafePointer<const float> data, const char* methodName) {
 			const float* pointer = data.getUnsafe();
-			#if defined SAFE_POINTER_CHECKS
+			#if defined(SAFE_POINTER_CHECKS)
 				data.assertInside(methodName, pointer, 16);
 			#endif
 			return F32x4::readAlignedUnsafe(pointer);
@@ -546,94 +516,22 @@
 		// Bound and alignment checked writing
 		inline void writeAligned(dsr::SafePointer<float> data, const char* methodName) const {
 			float* pointer = data.getUnsafe();
-			#if defined SAFE_POINTER_CHECKS
+			#if defined(SAFE_POINTER_CHECKS)
 				data.assertInside(methodName, pointer, 16);
 			#endif
 			this->writeAlignedUnsafe(pointer);
 		}
 	};
 
-	// 1 / value
-	inline F32x4 reciprocal(const F32x4 &value) {
-		#if defined USE_BASIC_SIMD
-			#if defined USE_SSE2
-				// Approximate
-				SIMD_F32x4 lowQ = _mm_rcp_ps(value.v);
-				// Refine
-				return F32x4(SUB_F32_SIMD(ADD_F32_SIMD(lowQ, lowQ), MUL_F32_SIMD(value.v, MUL_F32_SIMD(lowQ, lowQ))));
-			#elif defined USE_NEON
-				// Approximate
-				SIMD_F32x4 result = vrecpeq_f32(value.v);
-				// Refine
-				result = MUL_F32_SIMD(vrecpsq_f32(value.v, result), result);
-				return F32x4(MUL_F32_SIMD(vrecpsq_f32(value.v, result), result));
-			#else
-				assert(false);
-				return F32x4(0);
-			#endif
-		#else
-			return F32x4(1.0f / value.scalars[0], 1.0f / value.scalars[1], 1.0f / value.scalars[2], 1.0f / value.scalars[3]);
-		#endif
-	}
-
-	// 1 / sqrt(value)
-	inline F32x4 reciprocalSquareRoot(const F32x4 &value) {
-		#if defined USE_BASIC_SIMD
-			#if defined USE_SSE2
-				SIMD_F32x4 reciRoot = _mm_rsqrt_ps(value.v);
-				SIMD_F32x4 mul = MUL_F32_SIMD(MUL_F32_SIMD(value.v, reciRoot), reciRoot);
-				reciRoot = MUL_F32_SIMD(MUL_F32_SIMD(LOAD_SCALAR_F32_SIMD(0.5f), reciRoot), SUB_F32_SIMD(LOAD_SCALAR_F32_SIMD(3.0f), mul));
-				return F32x4(reciRoot);
-			#elif defined USE_NEON
-				// Approximate
-				SIMD_F32x4 reciRoot = vrsqrteq_f32(value.v);
-				// Refine
-				reciRoot = MUL_F32_SIMD(vrsqrtsq_f32(MUL_F32_SIMD(value.v, reciRoot), reciRoot), reciRoot);
-				return F32x4(reciRoot);
-			#else
-				assert(false);
-				return F32x4(0);
-			#endif
-		#else
-			return F32x4(1.0f / sqrt(value.scalars[0]), 1.0f / sqrt(value.scalars[1]), 1.0f / sqrt(value.scalars[2]), 1.0f / sqrt(value.scalars[3]));
-		#endif
-	}
-
-	// sqrt(value)
-	inline F32x4 squareRoot(const F32x4 &value) {
-		#if defined USE_BASIC_SIMD
-			#if defined USE_SSE2
-				SIMD_F32x4 half = LOAD_SCALAR_F32_SIMD(0.5f);
-				// Approximate
-				SIMD_F32x4 root = _mm_sqrt_ps(value.v);
-				// Refine
-				root = _mm_mul_ps(_mm_add_ps(root, _mm_div_ps(value.v, root)), half);
-				return F32x4(root);
-			#elif defined USE_NEON
-				return F32x4(MUL_F32_SIMD(value.v, reciprocalSquareRoot(value).v));
-			#else
-				assert(false);
-				return F32x4(0);
-			#endif
-		#else
-			return F32x4(sqrt(value.scalars[0]), sqrt(value.scalars[1]), sqrt(value.scalars[2]), sqrt(value.scalars[3]));
-		#endif
-	}
-
-	union I32x4 {
+	struct ALIGN16 I32x4 {
 		private:
 			// The uninitialized default constructor is private for safety reasons.
 			I32x4() {}
 		public:
 			// When the uninitialized constructor is needed for performance, use this named constructor instead.
 			static inline I32x4 create_dangerous_uninitialized() { return I32x4(); }
-		#if defined USE_BASIC_SIMD
+		#if defined(USE_BASIC_SIMD)
 			public:
-			#if defined USE_DIRECT_SIMD_MEMORY_ACCESS
-				// Only use if USE_DIRECT_SIMD_MEMORY_ACCESS is defined!
-				// Direct access cannot be done on NEON!
-				int32_t scalars[4];
-			#endif
 			// The SIMD vector of undefined type
 			// Not accessible while emulating!
 			SIMD_I32x4 v;
@@ -673,11 +571,13 @@
 			#ifdef SAFE_POINTER_CHECKS
 				if (uintptr_t(data) & 15u) { throwError(U"Unaligned pointer detected in I32x4::readAlignedUnsafe!\n"); }
 			#endif
-			#if defined USE_BASIC_SIMD
-				#if defined USE_SSE2
-					return I32x4(_mm_load_si128((const __m128i*)data));
-				#elif defined USE_NEON
-					return I32x4(vld1q_s32(data));
+			#if defined(USE_BASIC_SIMD)
+				#if defined(USE_SSE2)
+					ALIGN16 SIMD_I32x4 result = _mm_load_si128((const __m128i*)data);
+					return I32x4(result);
+				#elif defined(USE_NEON)
+					ALIGN16 SIMD_I32x4 result = vld1q_s32(data);
+					return I32x4(result);
 				#endif
 			#else
 				return I32x4(data[0], data[1], data[2], data[3]);
@@ -689,10 +589,10 @@
 			#ifdef SAFE_POINTER_CHECKS
 				if (uintptr_t(data) & 15u) { throwError(U"Unaligned pointer detected in I32x4::writeAlignedUnsafe!\n"); }
 			#endif
-			#if defined USE_BASIC_SIMD
-				#if defined USE_SSE2
+			#if defined(USE_BASIC_SIMD)
+				#if defined(USE_SSE2)
 					_mm_store_si128((__m128i*)data, this->v);
-				#elif defined USE_NEON
+				#elif defined(USE_NEON)
 					vst1q_s32(data, this->v);
 				#endif
 			#else
@@ -702,9 +602,9 @@
 				data[3] = this->scalars[3];
 			#endif
 		}
-		#if defined DFPSR_GEOMETRY_IVECTOR
+		#if defined(DFPSR_GEOMETRY_IVECTOR)
 			dsr::IVector4D get() const {
-				int32_t data[4] ALIGN16;
+				ALIGN16 int32_t data[4];
 				#ifdef SAFE_POINTER_CHECKS
 					if (uintptr_t(data) & 15u) { throwError(U"Unaligned stack memory detected in IVector4D I32x4::get!\n"); }
 				#endif
@@ -715,7 +615,7 @@
 		// Bound and alignment checked reading
 		static inline I32x4 readAligned(dsr::SafePointer<const int32_t> data, const char* methodName) {
 			const int32_t* pointer = data.getUnsafe();
-			#if defined SAFE_POINTER_CHECKS
+			#if defined(SAFE_POINTER_CHECKS)
 				data.assertInside(methodName, pointer, 16);
 			#endif
 			return I32x4::readAlignedUnsafe(pointer);
@@ -723,21 +623,22 @@
 		// Bound and alignment checked writing
 		inline void writeAligned(dsr::SafePointer<int32_t> data, const char* methodName) const {
 			int32_t* pointer = data.getUnsafe();
-			#if defined SAFE_POINTER_CHECKS
+			#if defined(SAFE_POINTER_CHECKS)
 				data.assertInside(methodName, pointer, 16);
 			#endif
 			this->writeAlignedUnsafe(pointer);
 		}
 	};
 
-	union U32x4 {
-		#if defined USE_BASIC_SIMD
+	struct ALIGN16 U32x4 {
+		private:
+			// The uninitialized default constructor is private for safety reasons.
+			U32x4() {}
+		public:
+			// When the uninitialized constructor is needed for performance, use this named constructor instead.
+			static inline U32x4 create_dangerous_uninitialized() { return U32x4(); }
+		#if defined(USE_BASIC_SIMD)
 			public:
-			#if defined USE_DIRECT_SIMD_MEMORY_ACCESS
-				// Only use if USE_DIRECT_SIMD_MEMORY_ACCESS is defined!
-				// Direct access cannot be done on NEON!
-				uint32_t scalars[4];
-			#endif
 			// The SIMD vector of undefined type
 			// Not accessible while emulating!
 			SIMD_U32x4 v;
@@ -777,11 +678,13 @@
 			#ifdef SAFE_POINTER_CHECKS
 				if (uintptr_t(data) & 15u) { throwError(U"Unaligned pointer detected in U32x4::readAlignedUnsafe!\n"); }
 			#endif
-			#if defined USE_BASIC_SIMD
-				#if defined USE_SSE2
-					return U32x4(_mm_load_si128((const __m128i*)data));
-				#elif defined USE_NEON
-					return U32x4(vld1q_u32(data));
+			#if defined(USE_BASIC_SIMD)
+				#if defined(USE_SSE2)
+					ALIGN16 SIMD_I32x4 result = _mm_load_si128((const __m128i*)data);
+					return U32x4(result);
+				#elif defined(USE_NEON)
+					ALIGN16 SIMD_I32x4 result = vld1q_u32(data);
+					return U32x4(result);
 				#endif
 			#else
 				return U32x4(data[0], data[1], data[2], data[3]);
@@ -793,10 +696,10 @@
 			#ifdef SAFE_POINTER_CHECKS
 				if (uintptr_t(data) & 15u) { throwError(U"Unaligned pointer detected in U32x4::writeAlignedUnsafe!\n"); }
 			#endif
-			#if defined USE_BASIC_SIMD
-				#if defined USE_SSE2
+			#if defined(USE_BASIC_SIMD)
+				#if defined(USE_SSE2)
 					_mm_store_si128((__m128i*)data, this->v);
-				#elif defined USE_NEON
+				#elif defined(USE_NEON)
 					vst1q_u32(data, this->v);
 				#endif
 			#else
@@ -806,9 +709,9 @@
 				data[3] = this->scalars[3];
 			#endif
 		}
-		#if defined DFPSR_GEOMETRY_UVECTOR
+		#if defined(DFPSR_GEOMETRY_UVECTOR)
 			dsr::UVector4D get() const {
-				uint32_t data[4] ALIGN16;
+				ALIGN16 uint32_t data[4];
 				#ifdef SAFE_POINTER_CHECKS
 					if (uintptr_t(data) & 15u) { throwError(U"Unaligned stack memory detected in UVector4D U32x4::get!\n"); }
 				#endif
@@ -819,7 +722,7 @@
 		// Bound and alignment checked reading
 		static inline U32x4 readAligned(dsr::SafePointer<const uint32_t> data, const char* methodName) {
 			const uint32_t* pointer = data.getUnsafe();
-			#if defined SAFE_POINTER_CHECKS
+			#if defined(SAFE_POINTER_CHECKS)
 				data.assertInside(methodName, pointer, 16);
 			#endif
 			return U32x4::readAlignedUnsafe(pointer);
@@ -827,27 +730,22 @@
 		// Bound and alignment checked writing
 		inline void writeAligned(dsr::SafePointer<uint32_t> data, const char* methodName) const {
 			uint32_t* pointer = data.getUnsafe();
-			#if defined SAFE_POINTER_CHECKS
+			#if defined(SAFE_POINTER_CHECKS)
 				data.assertInside(methodName, pointer, 16);
 			#endif
 			this->writeAlignedUnsafe(pointer);
 		}
 	};
 
-	union U16x8 {
+	struct ALIGN16 U16x8 {
 		private:
 			// The uninitialized default constructor is private for safety reasons.
 			U16x8() {}
 		public:
 			// When the uninitialized constructor is needed for performance, use this named constructor instead.
 			static inline U16x8 create_dangerous_uninitialized() { return U16x8(); }
-		#if defined USE_BASIC_SIMD
+		#if defined(USE_BASIC_SIMD)
 			public:
-			#if defined USE_DIRECT_SIMD_MEMORY_ACCESS
-				// Only use if USE_DIRECT_SIMD_MEMORY_ACCESS is defined!
-				// Direct access cannot be done on NEON!
-				uint16_t scalars[8];
-			#endif
 			// The SIMD vector of undefined type
 			// Not accessible while emulating!
 			SIMD_U16x8 v;
@@ -861,7 +759,7 @@
 			// Construct a vector of 8 x 16-bit unsigned integers from a single duplicated 32-bit unsigned integer
 			//   Reinterpret casting is used
 			// TODO: Remove all reintreprets from constructors to improve readability
-			explicit U16x8(uint32_t scalar) : v(REINTERPRET_U32_TO_U16_SIMD(LOAD_SCALAR_U32_SIMD(scalar))) {}
+			//explicit U16x8(uint32_t scalar) : v(REINTERPRET_U32_TO_U16_SIMD(LOAD_SCALAR_U32_SIMD(scalar))) {}
 			// Construct a portable vector from a single duplicated scalar
 			explicit U16x8(uint16_t scalar) : v(LOAD_SCALAR_U16_SIMD(scalar)) {}
 			// Reinterpret cast to a vector of 4 x 32-bit unsigned integers
@@ -939,11 +837,13 @@
 			#ifdef SAFE_POINTER_CHECKS
 				if (uintptr_t(data) & 15u) { throwError(U"Unaligned pointer detected in U16x8::readAlignedUnsafe!\n"); }
 			#endif
-			#if defined USE_BASIC_SIMD
-				#if defined USE_SSE2
-					return U16x8(_mm_load_si128((const __m128i*)data));
-				#elif defined USE_NEON
-					return U16x8(vld1q_u16(data));
+			#if defined(USE_BASIC_SIMD)
+				#if defined(USE_SSE2)
+					ALIGN16 SIMD_I32x4 result = _mm_load_si128((const __m128i*)data);
+					return U16x8(result);
+				#elif defined(USE_NEON)
+					ALIGN16 SIMD_I32x4 result = vld1q_u16(data);
+					return U16x8(result);
 				#endif
 			#else
 				return U16x8(data[0], data[1], data[2], data[3], data[4], data[5], data[6], data[7]);
@@ -954,10 +854,10 @@
 			#ifdef SAFE_POINTER_CHECKS
 				if (uintptr_t(data) & 15u) { throwError(U"Unaligned pointer detected in U16x8::writeAlignedUnsafe!\n"); }
 			#endif
-			#if defined USE_BASIC_SIMD
-				#if defined USE_SSE2
+			#if defined(USE_BASIC_SIMD)
+				#if defined(USE_SSE2)
 					_mm_store_si128((__m128i*)data, this->v);
-				#elif defined USE_NEON
+				#elif defined(USE_NEON)
 					vst1q_u16(data, this->v);
 				#endif
 			#else
@@ -974,7 +874,7 @@
 		// Bound and alignment checked reading
 		static inline U16x8 readAligned(dsr::SafePointer<const uint16_t> data, const char* methodName) {
 			const uint16_t* pointer = data.getUnsafe();
-			#if defined SAFE_POINTER_CHECKS
+			#if defined(SAFE_POINTER_CHECKS)
 				data.assertInside(methodName, pointer, 16);
 			#endif
 			return U16x8::readAlignedUnsafe(pointer);
@@ -982,27 +882,22 @@
 		// Bound and alignment checked writing
 		inline void writeAligned(dsr::SafePointer<uint16_t> data, const char* methodName) const {
 			uint16_t* pointer = data.getUnsafe();
-			#if defined SAFE_POINTER_CHECKS
+			#if defined(SAFE_POINTER_CHECKS)
 				data.assertInside(methodName, pointer, 16);
 			#endif
 			this->writeAlignedUnsafe(pointer);
 		}
 	};
 
-	union U8x16 {
+	struct ALIGN16 U8x16 {
 		private:
 			// The uninitialized default constructor is private for safety reasons.
 			U8x16() {}
 		public:
 			// When the uninitialized constructor is needed for performance, use this named constructor instead.
 			static inline U8x16 create_dangerous_uninitialized() { return U8x16(); }
-		#if defined USE_BASIC_SIMD
+		#if defined(USE_BASIC_SIMD)
 			public:
-			#if defined USE_DIRECT_SIMD_MEMORY_ACCESS
-				// Only use if USE_DIRECT_SIMD_MEMORY_ACCESS is defined!
-				// Direct access cannot be done on NEON!
-				uint8_t scalars[16];
-			#endif
 			// The SIMD vector of undefined type
 			// Not accessible while emulating!
 			SIMD_U8x16 v;
@@ -1010,7 +905,7 @@
 			explicit U8x16(const SIMD_U8x16& v) : v(v) {}
 			// Construct a portable vector from a set of scalars
 			U8x16(uint8_t a1, uint8_t a2, uint8_t a3, uint8_t a4, uint8_t a5, uint8_t a6, uint8_t a7, uint8_t a8,
-			      uint8_t a9, uint8_t a10, uint8_t a11, uint8_t a12, uint8_t a13, uint8_t a14, uint8_t a15, uint8_t a16)
+				  uint8_t a9, uint8_t a10, uint8_t a11, uint8_t a12, uint8_t a13, uint8_t a14, uint8_t a15, uint8_t a16)
 			: v(LOAD_VECTOR_U8_SIMD(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16)) {}
 			// Construct a portable vector from a single duplicated scalar
 			explicit U8x16(uint8_t scalar) : v(LOAD_SCALAR_U8_SIMD(scalar)) {}
@@ -1084,11 +979,13 @@
 			#ifdef SAFE_POINTER_CHECKS
 				if (uintptr_t(data) & 15u) { throwError(U"Unaligned pointer detected in U8x16::readAlignedUnsafe!\n"); }
 			#endif
-			#if defined USE_BASIC_SIMD
-				#if defined USE_SSE2
-					return U8x16(_mm_load_si128((const __m128i*)data));
-				#elif defined USE_NEON
-					return U8x16(vld1q_u8(data));
+			#if defined(USE_BASIC_SIMD)
+				#if defined(USE_SSE2)
+					ALIGN16 SIMD_I32x4 result = _mm_load_si128((const __m128i*)data);
+					return U8x16(result);
+				#elif defined(USE_NEON)
+					ALIGN16 SIMD_I32x4 result = vld1q_u8(data);
+					return U8x16(result);
 				#endif
 			#else
 				return U8x16(
@@ -1102,10 +999,10 @@
 			#ifdef SAFE_POINTER_CHECKS
 				if (uintptr_t(data) & 15u) { throwError(U"Unaligned pointer detected in U8x16::writeAlignedUnsafe!\n"); }
 			#endif
-			#if defined USE_BASIC_SIMD
-				#if defined USE_SSE2
+			#if defined(USE_BASIC_SIMD)
+				#if defined(USE_SSE2)
 					_mm_store_si128((__m128i*)data, this->v);
-				#elif defined USE_NEON
+				#elif defined(USE_NEON)
 					vst1q_u8(data, this->v);
 				#endif
 			#else
@@ -1130,7 +1027,7 @@
 		// Bound and alignment checked reading
 		static inline U8x16 readAligned(dsr::SafePointer<const uint8_t> data, const char* methodName) {
 			const uint8_t* pointer = data.getUnsafe();
-			#if defined SAFE_POINTER_CHECKS
+			#if defined(SAFE_POINTER_CHECKS)
 				data.assertInside(methodName, pointer, 16);
 			#endif
 			return U8x16::readAlignedUnsafe(pointer);
@@ -1138,36 +1035,41 @@
 		// Bound and alignment checked writing
 		inline void writeAligned(dsr::SafePointer<uint8_t> data, const char* methodName) const {
 			uint8_t* pointer = data.getUnsafe();
-			#if defined SAFE_POINTER_CHECKS
+			#if defined(SAFE_POINTER_CHECKS)
 				data.assertInside(methodName, pointer, 16);
 			#endif
 			this->writeAlignedUnsafe(pointer);
 		}
 	};
 
-	union F32x8 {
+	struct ALIGN32 F32x8 {
 		private:
 			// The uninitialized default constructor is private for safety reasons.
 			F32x8() {}
 		public:
 			// When the uninitialized constructor is needed for performance, use this named constructor instead.
 			static inline F32x8 create_dangerous_uninitialized() { return F32x8(); }
-		#if defined USE_256BIT_F_SIMD
+		#if defined(USE_256BIT_F_SIMD)
 			public:
-			#if defined USE_DIRECT_SIMD_MEMORY_ACCESS
-				// Only use if USE_DIRECT_SIMD_MEMORY_ACCESS is defined!
-				float scalars[8];
-			#endif
 			// The SIMD vector of undefined type
 			// Not accessible while emulating!
 			SIMD_F32x8 v;
-			// Construct a portable vector from a native SIMD vector
+			// Construct a portable vector from a native SIMD vector.
 			explicit F32x8(const SIMD_F32x8& v) : v(v) {}
-			// Construct a portable vector from a set of scalars
-			F32x8(float a1, float a2, float a3, float a4, float a5, float a6, float a7, float a8)
-			: v(LOAD_VECTOR_F32_SIMD256(a1, a2, a3, a4, a5, a6, a7, a8)) {}
-			// Construct a portable vector from a single duplicated scalar
-			explicit F32x8(float scalar) : v(LOAD_SCALAR_F32_SIMD256(scalar)) {}
+			#if defined(USE_AVX)
+				// Construct a portable vector from a set of scalars.
+				F32x8(float a1, float a2, float a3, float a4, float a5, float a6, float a7, float a8) {
+					ALIGN32 __m256 target = _mm256_set_ps(a8, a7, a6, a5, a4, a3, a2, a1);
+					this->v = target;
+				}
+				// Construct a portable vector from a single duplicated scalar.
+				explicit F32x8(float scalar) {
+					ALIGN32 __m256 target = _mm256_set1_ps(scalar);
+					this->v = target;
+				}
+			#else
+				#error "Missing constructors for the F32x8 type!\n"
+			#endif
 		#else
 			public:
 			// Emulate a SIMD vector as an array of scalars without hardware support.
@@ -1214,8 +1116,9 @@
 			#ifdef SAFE_POINTER_CHECKS
 				if (uintptr_t(data) & 31u) { throwError(U"Unaligned pointer detected in F32x8::readAlignedUnsafe!\n"); }
 			#endif
-			#if defined USE_AVX2
-				return F32x8(_mm256_load_ps(data));
+			#if defined(USE_AVX2)
+				ALIGN32 __m256 result = _mm256_load_ps(data);
+				return F32x8(result);
 			#else
 				return F32x8(data[0], data[1], data[2], data[3], data[4], data[5], data[6], data[7]);
 			#endif
@@ -1225,7 +1128,7 @@
 			#ifdef SAFE_POINTER_CHECKS
 				if (uintptr_t(data) & 31u) { throwError(U"Unaligned pointer detected in F32x8::writeAlignedUnsafe!\n"); }
 			#endif
-			#if defined USE_AVX2
+			#if defined(USE_AVX2)
 				_mm256_store_ps(data, this->v);
 			#else
 				data[0] = this->scalars[0];
@@ -1241,7 +1144,7 @@
 		// Bound and alignment checked reading
 		static inline F32x8 readAligned(dsr::SafePointer<const float> data, const char* methodName) {
 			const float* pointer = data.getUnsafe();
-			#if defined SAFE_POINTER_CHECKS
+			#if defined(SAFE_POINTER_CHECKS)
 				data.assertInside(methodName, pointer, 32);
 			#endif
 			return F32x8::readAlignedUnsafe(pointer);
@@ -1249,100 +1152,41 @@
 		// Bound and alignment checked writing
 		inline void writeAligned(dsr::SafePointer<float> data, const char* methodName) const {
 			float* pointer = data.getUnsafe();
-			#if defined SAFE_POINTER_CHECKS
+			#if defined(SAFE_POINTER_CHECKS)
 				data.assertInside(methodName, pointer, 32);
 			#endif
 			this->writeAlignedUnsafe(pointer);
 		}
 	};
 
-	// 1 / value
-	inline F32x8 reciprocal(const F32x8 &value) {
-		#if defined USE_AVX2
-			// Approximate
-			SIMD_F32x8 lowQ = _mm256_rcp_ps(value.v);
-			// Refine
-			return F32x8(SUB_F32_SIMD256(ADD_F32_SIMD256(lowQ, lowQ), MUL_F32_SIMD256(value.v, MUL_F32_SIMD256(lowQ, lowQ))));
-		#else
-			return F32x8(
-			  1.0f / value.scalars[0],
-			  1.0f / value.scalars[1],
-			  1.0f / value.scalars[2],
-			  1.0f / value.scalars[3],
-			  1.0f / value.scalars[4],
-			  1.0f / value.scalars[5],
-			  1.0f / value.scalars[6],
-			  1.0f / value.scalars[7]
-			);
-		#endif
-	}
-
-	// 1 / sqrt(value)
-	inline F32x8 reciprocalSquareRoot(const F32x8 &value) {
-		#if defined USE_AVX2
-			SIMD_F32x8 reciRoot = _mm256_rsqrt_ps(value.v);
-			SIMD_F32x8 mul = MUL_F32_SIMD256(MUL_F32_SIMD256(value.v, reciRoot), reciRoot);
-			reciRoot = MUL_F32_SIMD256(MUL_F32_SIMD256(LOAD_SCALAR_F32_SIMD256(0.5f), reciRoot), SUB_F32_SIMD256(LOAD_SCALAR_F32_SIMD256(3.0f), mul));
-			return F32x8(reciRoot);
-		#else
-			return F32x8(
-			  1.0f / sqrt(value.scalars[0]),
-			  1.0f / sqrt(value.scalars[1]),
-			  1.0f / sqrt(value.scalars[2]),
-			  1.0f / sqrt(value.scalars[3]),
-			  1.0f / sqrt(value.scalars[4]),
-			  1.0f / sqrt(value.scalars[5]),
-			  1.0f / sqrt(value.scalars[6]),
-			  1.0f / sqrt(value.scalars[7])
-			);
-		#endif
-	}
-
-	// sqrt(value)
-	inline F32x8 squareRoot(const F32x8 &value) {
-		#if defined USE_AVX2
-			SIMD_F32x8 half = LOAD_SCALAR_F32_SIMD256(0.5f);
-			// Approximate
-			SIMD_F32x8 root = _mm256_sqrt_ps(value.v);
-			// Refine
-			root = _mm256_mul_ps(_mm256_add_ps(root, _mm256_div_ps(value.v, root)), half);
-			return F32x8(root);
-		#else
-			return F32x8(
-			  sqrt(value.scalars[0]),
-			  sqrt(value.scalars[1]),
-			  sqrt(value.scalars[2]),
-			  sqrt(value.scalars[3]),
-			  sqrt(value.scalars[4]),
-			  sqrt(value.scalars[5]),
-			  sqrt(value.scalars[6]),
-			  sqrt(value.scalars[7]));
-		#endif
-	}
-
-	union I32x8 {
+	struct ALIGN32 I32x8 {
 		private:
 			// The uninitialized default constructor is private for safety reasons.
 			I32x8() {}
 		public:
 			// When the uninitialized constructor is needed for performance, use this named constructor instead.
 			static inline I32x8 create_dangerous_uninitialized() { return I32x8(); }
-		#if defined USE_256BIT_X_SIMD
+		#if defined(USE_256BIT_X_SIMD)
 			public:
-			#if defined USE_DIRECT_SIMD_MEMORY_ACCESS
-				// Only use if USE_DIRECT_SIMD_MEMORY_ACCESS is defined!
-				int32_t scalars[8];
-			#endif
 			// The SIMD vector of undefined type
 			// Not accessible while emulating!
 			SIMD_I32x8 v;
-			// Construct a portable vector from a native SIMD vector
+			// Construct a portable vector from a native SIMD vector.
 			explicit I32x8(const SIMD_I32x8& v) : v(v) {}
-			// Construct a portable vector from a set of scalars
-			I32x8(int32_t a1, int32_t a2, int32_t a3, int32_t a4, int32_t a5, int32_t a6, int32_t a7, int32_t a8)
-			: v(LOAD_VECTOR_I32_SIMD256(a1, a2, a3, a4, a5, a6, a7, a8)) {}
-			// Construct a portable vector from a single duplicated scalar
-			explicit I32x8(int32_t scalar) : v(LOAD_SCALAR_I32_SIMD256(scalar)) {}
+			#if defined(USE_AVX2)
+				// Construct a portable vector from a set of scalars.
+				I32x8(int32_t a1, int32_t a2, int32_t a3, int32_t a4, int32_t a5, int32_t a6, int32_t a7, int32_t a8) {
+					ALIGN32 __m256i target = _mm256_set_epi32(a8, a7, a6, a5, a4, a3, a2, a1);
+					this->v = target;
+				}
+				// Construct a portable vector from a single duplicated scalar.
+				explicit I32x8(int32_t scalar) {
+					ALIGN32 __m256i target = _mm256_set1_epi32(scalar);
+					this->v = target;
+				}
+			#else
+				#error "Missing constructors for the I32x8 type!\n"
+			#endif
 		#else
 			public:
 			// Emulate a SIMD vector as an array of scalars without hardware support.
@@ -1389,8 +1233,9 @@
 			#ifdef SAFE_POINTER_CHECKS
 				if (uintptr_t(data) & 31u) { throwError(U"Unaligned pointer detected in I32x8::readAlignedUnsafe!\n"); }
 			#endif
-			#if defined USE_AVX2
-				return I32x8(_mm256_load_si256((const __m256i*)data));
+			#if defined(USE_AVX2)
+				ALIGN32 __m256i result = _mm256_load_si256((const __m256i*)data);
+				return I32x8(result);
 			#else
 				return I32x8(data[0], data[1], data[2], data[3], data[4], data[5], data[6], data[7]);
 			#endif
@@ -1400,7 +1245,7 @@
 			#ifdef SAFE_POINTER_CHECKS
 				if (uintptr_t(data) & 31u) { throwError(U"Unaligned pointer detected in I32x8::writeAlignedUnsafe!\n"); }
 			#endif
-			#if defined USE_AVX2
+			#if defined(USE_AVX2)
 				_mm256_store_si256((__m256i*)data, this->v);
 			#else
 				data[0] = this->scalars[0];
@@ -1416,7 +1261,7 @@
 		// Bound and alignment checked reading
 		static inline I32x8 readAligned(dsr::SafePointer<const int32_t> data, const char* methodName) {
 			const int32_t* pointer = data.getUnsafe();
-			#if defined SAFE_POINTER_CHECKS
+			#if defined(SAFE_POINTER_CHECKS)
 				data.assertInside(methodName, pointer, 32);
 			#endif
 			return I32x8::readAlignedUnsafe(pointer);
@@ -1424,36 +1269,41 @@
 		// Bound and alignment checked writing
 		inline void writeAligned(dsr::SafePointer<int32_t> data, const char* methodName) const {
 			int32_t* pointer = data.getUnsafe();
-			#if defined SAFE_POINTER_CHECKS
+			#if defined(SAFE_POINTER_CHECKS)
 				data.assertInside(methodName, pointer, 32);
 			#endif
 			this->writeAlignedUnsafe(pointer);
 		}
 	};
 
-	union U32x8 {
+	struct ALIGN32 U32x8 {
 		private:
 			// The uninitialized default constructor is private for safety reasons.
 			U32x8() {}
 		public:
 			// When the uninitialized constructor is needed for performance, use this named constructor instead.
 			static inline U32x8 create_dangerous_uninitialized() { return U32x8(); }
-		#if defined USE_256BIT_X_SIMD
+		#if defined(USE_256BIT_X_SIMD)
 			public:
-			#if defined USE_DIRECT_SIMD_MEMORY_ACCESS
-				// Only use if USE_DIRECT_SIMD_MEMORY_ACCESS is defined!
-				uint32_t scalars[8];
-			#endif
 			// The SIMD vector of undefined type
 			// Not accessible while emulating!
 			SIMD_U32x8 v;
-			// Construct a portable vector from a native SIMD vector
+			// Construct a portable vector from a native SIMD vector.
 			explicit U32x8(const SIMD_U32x8& v) : v(v) {}
-			// Construct a portable vector from a set of scalars
-			U32x8(uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, uint32_t a5, uint32_t a6, uint32_t a7, uint32_t a8)
-			: v(LOAD_VECTOR_U32_SIMD256(a1, a2, a3, a4, a5, a6, a7, a8)) {}
-			// Construct a portable vector from a single duplicated scalar
-			explicit U32x8(uint32_t scalar) : v(LOAD_SCALAR_U32_SIMD256(scalar)) {}
+			#if defined(USE_AVX2)
+				// Construct a portable vector from a set of scalars.
+				U32x8(uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, uint32_t a5, uint32_t a6, uint32_t a7, uint32_t a8) {
+					ALIGN32 __m256i target = _mm256_set_epi32(a8, a7, a6, a5, a4, a3, a2, a1);
+					this->v = target;
+				}
+				// Construct a portable vector from a single duplicated scalar.
+				explicit U32x8(uint32_t scalar) {
+					ALIGN32 __m256i target = _mm256_set1_epi32(scalar);
+					this->v = target;
+				}
+			#else
+				#error "Missing constructors for the U32x8 type!\n"
+			#endif
 		#else
 			public:
 			// Emulate a SIMD vector as an array of scalars without hardware support.
@@ -1501,8 +1351,9 @@
 			#ifdef SAFE_POINTER_CHECKS
 				if (uintptr_t(data) & 31u) { throwError(U"Unaligned pointer detected in U32x8::readAlignedUnsafe!\n"); }
 			#endif
-			#if defined USE_AVX2
-				return U32x8(_mm256_load_si256((const __m256i*)data));
+			#if defined(USE_AVX2)
+				ALIGN32 __m256i result = _mm256_load_si256((const __m256i*)data);
+				return U32x8(result);
 			#else
 				return U32x8(data[0], data[1], data[2], data[3], data[4], data[5], data[6], data[7]);
 			#endif
@@ -1513,7 +1364,7 @@
 			#ifdef SAFE_POINTER_CHECKS
 				if (uintptr_t(data) & 31u) { throwError(U"Unaligned pointer detected in U32x8::writeAlignedUnsafe!\n"); }
 			#endif
-			#if defined USE_AVX2
+			#if defined(USE_AVX2)
 				_mm256_store_si256((__m256i*)data, this->v);
 			#else
 				data[0] = this->scalars[0];
@@ -1529,7 +1380,7 @@
 		// Bound and alignment checked reading
 		static inline U32x8 readAligned(dsr::SafePointer<const uint32_t> data, const char* methodName) {
 			const uint32_t* pointer = data.getUnsafe();
-			#if defined SAFE_POINTER_CHECKS
+			#if defined(SAFE_POINTER_CHECKS)
 				data.assertInside(methodName, pointer, 32);
 			#endif
 			return U32x8::readAlignedUnsafe(pointer);
@@ -1537,26 +1388,22 @@
 		// Bound and alignment checked writing
 		inline void writeAligned(dsr::SafePointer<uint32_t> data, const char* methodName) const {
 			uint32_t* pointer = data.getUnsafe();
-			#if defined SAFE_POINTER_CHECKS
+			#if defined(SAFE_POINTER_CHECKS)
 				data.assertInside(methodName, pointer, 32);
 			#endif
 			this->writeAlignedUnsafe(pointer);
 		}
 	};
 
-	union U16x16 {
+	struct ALIGN32 U16x16 {
 		private:
 			// The uninitialized default constructor is private for safety reasons.
 			U16x16() {}
 		public:
 			// When the uninitialized constructor is needed for performance, use this named constructor instead.
 			static inline U16x16 create_dangerous_uninitialized() { return U16x16(); }
-		#if defined USE_256BIT_X_SIMD
+		#if defined(USE_256BIT_X_SIMD)
 			public:
-			#if defined USE_DIRECT_SIMD_MEMORY_ACCESS
-				// Only use if USE_DIRECT_SIMD_MEMORY_ACCESS is defined!
-				uint16_t scalars[16];
-			#endif
 			// The SIMD vector of undefined type
 			// Not accessible while emulating!
 			SIMD_U16x16 v;
@@ -1564,36 +1411,27 @@
 			explicit U16x16(const SIMD_U16x16& v) : v(v) {}
 			// Construct a vector of 16 x 16-bit unsigned integers from a vector of 8 x 32-bit unsigned integers
 			//   Reinterpret casting is used
-			explicit U16x16(const U32x8& vector) : v(REINTERPRET_U32_TO_U16_SIMD256(vector.v)) {}
-			// Construct a portable vector from a set of scalars
-			U16x16(uint16_t a1, uint16_t a2, uint16_t a3, uint16_t a4, uint16_t a5, uint16_t a6, uint16_t a7, uint16_t a8,
-			       uint16_t a9, uint16_t a10, uint16_t a11, uint16_t a12, uint16_t a13, uint16_t a14, uint16_t a15, uint16_t a16)
-			: v(LOAD_VECTOR_U16_SIMD256(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16)) {}
-			// Construct a vector of 8 x 16-bit unsigned integers from a single duplicated 32-bit unsigned integer
-			//   Reinterpret casting is used
-			// TODO: Remove all reintreprets from constructors to improve readability
-			explicit U16x16(uint32_t scalar) : v(REINTERPRET_U32_TO_U16_SIMD256(LOAD_SCALAR_U32_SIMD256(scalar))) {}
-			// Construct a portable vector from a single duplicated scalar
-			explicit U16x16(uint16_t scalar) : v(LOAD_SCALAR_U16_SIMD256(scalar)) {}
-			// Reinterpret cast to a vector of 4 x 32-bit unsigned integers
-			U32x8 get_U32() const {
-				return U32x8(REINTERPRET_U16_TO_U32_SIMD256(this->v));
-			}
+			//explicit U16x16(const U32x8& vector) : v(REINTERPRET_U32_TO_U16_SIMD256(vector.v)) {}
+			#if defined(USE_AVX2)
+				// Construct a portable vector from a set of scalars.
+				U16x16(uint16_t a1, uint16_t a2, uint16_t a3, uint16_t a4, uint16_t a5, uint16_t a6, uint16_t a7, uint16_t a8,
+				  uint16_t a9, uint16_t a10, uint16_t a11, uint16_t a12, uint16_t a13, uint16_t a14, uint16_t a15, uint16_t a16) {
+					ALIGN32 __m256i target = _mm256_set_epi16(a16, a15, a14, a13, a12, a11, a10, a9, a8, a7, a6, a5, a4, a3, a2, a1);
+					this->v = target;
+				}
+				// Construct a portable vector from a single duplicated scalar.
+				explicit U16x16(uint16_t scalar) {
+					ALIGN32 __m256i target = _mm256_set1_epi16(scalar);
+					this->v = target;
+				}
+			#else
+				#error "Missing constructors for the U16x16 type!\n"
+			#endif
 		#else
 			public:
 			// Emulate a SIMD vector as an array of scalars without hardware support.
 			// Only accessible while emulating!
 			uint16_t scalars[16];
-			// Construct a vector of 8 x 16-bit unsigned integers from a vector of 4 x 32-bit unsigned integers
-			//   Reinterpret casting is used
-			explicit U16x16(const U32x8& vector) {
-				uint64_t *target = (uint64_t*)this->scalars;
-				uint64_t *source = (uint64_t*)vector.scalars;
-				target[0] = source[0];
-				target[1] = source[1];
-				target[2] = source[2];
-				target[3] = source[3];
-			}
 			// Construct a portable vector from a set of scalars
 			U16x16(uint16_t a1, uint16_t a2, uint16_t a3, uint16_t a4, uint16_t a5, uint16_t a6, uint16_t a7, uint16_t a8,
 			       uint16_t a9, uint16_t a10, uint16_t a11, uint16_t a12, uint16_t a13, uint16_t a14, uint16_t a15, uint16_t a16) {
@@ -1614,19 +1452,6 @@
 				this->scalars[14] = a15;
 				this->scalars[15] = a16;
 			}
-			// Construct a vector of 8 x 16-bit unsigned integers from a single duplicated 32-bit unsigned integer
-			//   Reinterpret casting is used
-			explicit U16x16(uint32_t scalar) {
-				uint32_t *target = (uint32_t*)this->scalars;
-				target[0] = scalar;
-				target[1] = scalar;
-				target[2] = scalar;
-				target[3] = scalar;
-				target[4] = scalar;
-				target[5] = scalar;
-				target[6] = scalar;
-				target[7] = scalar;
-			}
 			// Construct a portable vector from a single duplicated scalar
 			explicit U16x16(uint16_t scalar) {
 				this->scalars[0] = scalar;
@@ -1645,17 +1470,6 @@
 				this->scalars[13] = scalar;
 				this->scalars[14] = scalar;
 				this->scalars[15] = scalar;
-			}
-			// Reinterpret cast to a vector of 8 x 32-bit unsigned integers
-			U32x8 get_U32() const {
-				U32x8 result(0);
-				uint64_t *target = (uint64_t*)result.scalars;
-				uint64_t *source = (uint64_t*)this->scalars;
-				target[0] = source[0];
-				target[1] = source[1];
-				target[2] = source[2];
-				target[3] = source[3];
-				return result;
 			}
 		#endif
 		// Create a gradient vector using start and increment, so that arbitrary length vectors have a way to initialize linear iterations.
@@ -1684,8 +1498,9 @@
 			#ifdef SAFE_POINTER_CHECKS
 				if (uintptr_t(data) & 31u) { throwError(U"Unaligned pointer detected in U16x16::readAlignedUnsafe!\n"); }
 			#endif
-			#if defined USE_AVX2
-				return U16x16(_mm256_load_si256((const __m256i*)data));
+			#if defined(USE_AVX2)
+				ALIGN32 __m256i result = _mm256_load_si256((const __m256i*)data);
+				return U16x16(result);
 			#else
 				return U16x16(
 				  data[0],
@@ -1712,7 +1527,7 @@
 			#ifdef SAFE_POINTER_CHECKS
 				if (uintptr_t(data) & 31u) { throwError(U"Unaligned pointer detected in U16x16::writeAlignedUnsafe!\n"); }
 			#endif
-			#if defined USE_AVX2
+			#if defined(USE_AVX2)
 				_mm256_store_si256((__m256i*)data, this->v);
 			#else
 				data[0] = this->scalars[0];
@@ -1736,7 +1551,7 @@
 		// Bound and alignment checked reading
 		static inline U16x16 readAligned(dsr::SafePointer<const uint16_t> data, const char* methodName) {
 			const uint16_t* pointer = data.getUnsafe();
-			#if defined SAFE_POINTER_CHECKS
+			#if defined(SAFE_POINTER_CHECKS)
 				data.assertInside(methodName, pointer, 32);
 			#endif
 			return U16x16::readAlignedUnsafe(pointer);
@@ -1744,42 +1559,44 @@
 		// Bound and alignment checked writing
 		inline void writeAligned(dsr::SafePointer<uint16_t> data, const char* methodName) const {
 			uint16_t* pointer = data.getUnsafe();
-			#if defined SAFE_POINTER_CHECKS
+			#if defined(SAFE_POINTER_CHECKS)
 				data.assertInside(methodName, pointer, 32);
 			#endif
 			this->writeAlignedUnsafe(pointer);
 		}
 	};
 
-	union U8x32 {
+	struct ALIGN32 U8x32 {
 		private:
 			// The uninitialized default constructor is private for safety reasons.
 			U8x32() {}
 		public:
 			// When the uninitialized constructor is needed for performance, use this named constructor instead.
 			static inline U8x32 create_dangerous_uninitialized() { return U8x32(); }
-		#if defined USE_256BIT_X_SIMD
+		#if defined(USE_256BIT_X_SIMD)
 			public:
-			#if defined USE_DIRECT_SIMD_MEMORY_ACCESS
-				// Only use if USE_DIRECT_SIMD_MEMORY_ACCESS is defined!
-				uint8_t scalars[32];
-			#endif
 			// The SIMD vector of undefined type
 			// Not accessible while emulating!
 			SIMD_U8x32 v;
 			// Construct a portable vector from a native SIMD vector
 			explicit U8x32(const SIMD_U8x32& v) : v(v) {}
-			// Construct a portable vector from a set of scalars
-			U8x32(uint8_t a1, uint8_t a2, uint8_t a3, uint8_t a4, uint8_t a5, uint8_t a6, uint8_t a7, uint8_t a8,
+			#if defined(USE_AVX2)
+				// Construct a portable vector from a set of scalars.
+				U8x32(uint8_t a1, uint8_t a2, uint8_t a3, uint8_t a4, uint8_t a5, uint8_t a6, uint8_t a7, uint8_t a8,
 				  uint8_t a9, uint8_t a10, uint8_t a11, uint8_t a12, uint8_t a13, uint8_t a14, uint8_t a15, uint8_t a16,
 				  uint8_t a17, uint8_t a18, uint8_t a19, uint8_t a20, uint8_t a21, uint8_t a22, uint8_t a23, uint8_t a24,
-				  uint8_t a25, uint8_t a26, uint8_t a27, uint8_t a28, uint8_t a29, uint8_t a30, uint8_t a31, uint8_t a32)
-			: v(LOAD_VECTOR_U8_SIMD256(
-			  a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16,
-			  a17, a18, a19, a20, a21, a22, a23, a24, a25, a26, a27, a28, a29, a30, a31, a32
-			)) {}
-			// Construct a portable vector from a single duplicated scalar
-			explicit U8x32(uint8_t scalar) : v(LOAD_SCALAR_U8_SIMD256(scalar)) {}
+				  uint8_t a25, uint8_t a26, uint8_t a27, uint8_t a28, uint8_t a29, uint8_t a30, uint8_t a31, uint8_t a32) {
+					ALIGN32 __m256i target = _mm256_set_epi8(a32, a31, a30, a29, a28, a27, a26, a25, a24, a23, a22, a21, a20, a19, a18, a17, a16, a15, a14, a13, a12, a11, a10, a9, a8, a7, a6, a5, a4, a3, a2, a1);
+					this->v = target;
+				}
+				// Construct a portable vector from a single duplicated scalar.
+				explicit U8x32(uint8_t scalar) {
+					ALIGN32 __m256i target = _mm256_set1_epi8(scalar);
+					this->v = target;
+				}
+			#else
+				#error "Missing constructors for the U8x32 type!\n"
+			#endif
 		#else
 			public:
 			// Emulate a SIMD vector as an array of scalars without hardware support.
@@ -1872,8 +1689,9 @@
 			#ifdef SAFE_POINTER_CHECKS
 				if (uintptr_t(data) & 31u) { throwError(U"Unaligned pointer detected in U8x32::readAlignedUnsafe!\n"); }
 			#endif
-			#if defined USE_AVX2
-				return U8x32(_mm256_load_si256((const __m256i*)data));
+			#if defined(USE_AVX2)
+				ALIGN32 __m256i result = _mm256_load_si256((const __m256i*)data);
+				return U8x32(result);
 			#else
 				U8x32 result;
 				for (int i = 0; i < 32; i++) {
@@ -1887,7 +1705,7 @@
 			#ifdef SAFE_POINTER_CHECKS
 				if (uintptr_t(data) & 31u) { throwError(U"Unaligned pointer detected in U8x32::writeAlignedUnsafe!\n"); }
 			#endif
-			#if defined USE_AVX2
+			#if defined(USE_AVX2)
 				_mm256_store_si256((__m256i*)data, this->v);
 			#else
 				for (int i = 0; i < 32; i++) {
@@ -1898,7 +1716,7 @@
 		// Bound and alignment checked reading
 		static inline U8x32 readAligned(dsr::SafePointer<const uint8_t> data, const char* methodName) {
 			const uint8_t* pointer = data.getUnsafe();
-			#if defined SAFE_POINTER_CHECKS
+			#if defined(SAFE_POINTER_CHECKS)
 				data.assertInside(methodName, pointer, 32);
 			#endif
 			return U8x32::readAlignedUnsafe(pointer);
@@ -1906,12 +1724,182 @@
 		// Bound and alignment checked writing
 		inline void writeAligned(dsr::SafePointer<uint8_t> data, const char* methodName) const {
 			uint8_t* pointer = data.getUnsafe();
-			#if defined SAFE_POINTER_CHECKS
+			#if defined(SAFE_POINTER_CHECKS)
 				data.assertInside(methodName, pointer, 32);
 			#endif
 			this->writeAlignedUnsafe(pointer);
 		}
 	};
+
+	#define IMPL_SCALAR_FALLBACK_START(A, B, VECTOR_TYPE, ELEMENT_TYPE, LANE_COUNT) \
+		ALIGN_BYTES(sizeof(VECTOR_TYPE)) ELEMENT_TYPE lanesA[LANE_COUNT]; \
+		ALIGN_BYTES(sizeof(VECTOR_TYPE)) ELEMENT_TYPE lanesB[LANE_COUNT]; \
+		A.writeAlignedUnsafe(&(lanesA[0])); \
+		B.writeAlignedUnsafe(&(lanesB[0]));
+
+	// Used for vector types that have SIMD registers but not the operation needed.
+	#define IMPL_SCALAR_FALLBACK_INFIX_4_LANES(A, B, VECTOR_TYPE, ELEMENT_TYPE, OPERATION) { \
+		IMPL_SCALAR_FALLBACK_START(A, B, VECTOR_TYPE, ELEMENT_TYPE, 4) \
+		return VECTOR_TYPE( \
+		  ELEMENT_TYPE(lanesA[ 0] OPERATION lanesB[ 0]), \
+		  ELEMENT_TYPE(lanesA[ 1] OPERATION lanesB[ 1]), \
+		  ELEMENT_TYPE(lanesA[ 2] OPERATION lanesB[ 2]), \
+		  ELEMENT_TYPE(lanesA[ 3] OPERATION lanesB[ 3]) \
+		); \
+	}
+	#define IMPL_SCALAR_FALLBACK_INFIX_8_LANES(A, B, VECTOR_TYPE, ELEMENT_TYPE, OPERATION) { \
+		IMPL_SCALAR_FALLBACK_START(A, B, VECTOR_TYPE, ELEMENT_TYPE, 8) \
+		return VECTOR_TYPE( \
+		  ELEMENT_TYPE(lanesA[ 0] OPERATION lanesB[ 0]), \
+		  ELEMENT_TYPE(lanesA[ 1] OPERATION lanesB[ 1]), \
+		  ELEMENT_TYPE(lanesA[ 2] OPERATION lanesB[ 2]), \
+		  ELEMENT_TYPE(lanesA[ 3] OPERATION lanesB[ 3]), \
+		  ELEMENT_TYPE(lanesA[ 4] OPERATION lanesB[ 4]), \
+		  ELEMENT_TYPE(lanesA[ 5] OPERATION lanesB[ 5]), \
+		  ELEMENT_TYPE(lanesA[ 6] OPERATION lanesB[ 6]), \
+		  ELEMENT_TYPE(lanesA[ 7] OPERATION lanesB[ 7]) \
+		); \
+	}
+	#define IMPL_SCALAR_FALLBACK_INFIX_16_LANES(A, B, VECTOR_TYPE, ELEMENT_TYPE, OPERATION) { \
+		IMPL_SCALAR_FALLBACK_START(A, B, VECTOR_TYPE, ELEMENT_TYPE, 16) \
+		return VECTOR_TYPE( \
+		  ELEMENT_TYPE(lanesA[ 0] OPERATION lanesB[ 0]), \
+		  ELEMENT_TYPE(lanesA[ 1] OPERATION lanesB[ 1]), \
+		  ELEMENT_TYPE(lanesA[ 2] OPERATION lanesB[ 2]), \
+		  ELEMENT_TYPE(lanesA[ 3] OPERATION lanesB[ 3]), \
+		  ELEMENT_TYPE(lanesA[ 4] OPERATION lanesB[ 4]), \
+		  ELEMENT_TYPE(lanesA[ 5] OPERATION lanesB[ 5]), \
+		  ELEMENT_TYPE(lanesA[ 6] OPERATION lanesB[ 6]), \
+		  ELEMENT_TYPE(lanesA[ 7] OPERATION lanesB[ 7]), \
+		  ELEMENT_TYPE(lanesA[ 8] OPERATION lanesB[ 8]), \
+		  ELEMENT_TYPE(lanesA[ 9] OPERATION lanesB[ 9]), \
+		  ELEMENT_TYPE(lanesA[10] OPERATION lanesB[10]), \
+		  ELEMENT_TYPE(lanesA[11] OPERATION lanesB[11]), \
+		  ELEMENT_TYPE(lanesA[12] OPERATION lanesB[12]), \
+		  ELEMENT_TYPE(lanesA[13] OPERATION lanesB[13]), \
+		  ELEMENT_TYPE(lanesA[14] OPERATION lanesB[14]), \
+		  ELEMENT_TYPE(lanesA[15] OPERATION lanesB[15]) \
+		); \
+	}
+	#define IMPL_SCALAR_FALLBACK_INFIX_32_LANES(A, B, VECTOR_TYPE, ELEMENT_TYPE, OPERATION) { \
+		IMPL_SCALAR_FALLBACK_START(A, B, VECTOR_TYPE, ELEMENT_TYPE, 32) \
+		return VECTOR_TYPE( \
+		  ELEMENT_TYPE(lanesA[ 0] OPERATION lanesB[ 0]), \
+		  ELEMENT_TYPE(lanesA[ 1] OPERATION lanesB[ 1]), \
+		  ELEMENT_TYPE(lanesA[ 2] OPERATION lanesB[ 2]), \
+		  ELEMENT_TYPE(lanesA[ 3] OPERATION lanesB[ 3]), \
+		  ELEMENT_TYPE(lanesA[ 4] OPERATION lanesB[ 4]), \
+		  ELEMENT_TYPE(lanesA[ 5] OPERATION lanesB[ 5]), \
+		  ELEMENT_TYPE(lanesA[ 6] OPERATION lanesB[ 6]), \
+		  ELEMENT_TYPE(lanesA[ 7] OPERATION lanesB[ 7]), \
+		  ELEMENT_TYPE(lanesA[ 8] OPERATION lanesB[ 8]), \
+		  ELEMENT_TYPE(lanesA[ 9] OPERATION lanesB[ 9]), \
+		  ELEMENT_TYPE(lanesA[10] OPERATION lanesB[10]), \
+		  ELEMENT_TYPE(lanesA[11] OPERATION lanesB[11]), \
+		  ELEMENT_TYPE(lanesA[12] OPERATION lanesB[12]), \
+		  ELEMENT_TYPE(lanesA[13] OPERATION lanesB[13]), \
+		  ELEMENT_TYPE(lanesA[14] OPERATION lanesB[14]), \
+		  ELEMENT_TYPE(lanesA[15] OPERATION lanesB[15]), \
+		  ELEMENT_TYPE(lanesA[16] OPERATION lanesB[16]), \
+		  ELEMENT_TYPE(lanesA[17] OPERATION lanesB[17]), \
+		  ELEMENT_TYPE(lanesA[18] OPERATION lanesB[18]), \
+		  ELEMENT_TYPE(lanesA[19] OPERATION lanesB[19]), \
+		  ELEMENT_TYPE(lanesA[20] OPERATION lanesB[20]), \
+		  ELEMENT_TYPE(lanesA[21] OPERATION lanesB[21]), \
+		  ELEMENT_TYPE(lanesA[22] OPERATION lanesB[22]), \
+		  ELEMENT_TYPE(lanesA[23] OPERATION lanesB[23]), \
+		  ELEMENT_TYPE(lanesA[24] OPERATION lanesB[24]), \
+		  ELEMENT_TYPE(lanesA[25] OPERATION lanesB[25]), \
+		  ELEMENT_TYPE(lanesA[26] OPERATION lanesB[26]), \
+		  ELEMENT_TYPE(lanesA[27] OPERATION lanesB[27]), \
+		  ELEMENT_TYPE(lanesA[28] OPERATION lanesB[28]), \
+		  ELEMENT_TYPE(lanesA[29] OPERATION lanesB[29]), \
+		  ELEMENT_TYPE(lanesA[30] OPERATION lanesB[30]), \
+		  ELEMENT_TYPE(lanesA[31] OPERATION lanesB[31]) \
+		); \
+	}
+
+	// Used for vector types that do not have any supported SIMD register.
+	#define IMPL_SCALAR_REFERENCE_INFIX_4_LANES(A, B, VECTOR_TYPE, ELEMENT_TYPE, OPERATION) \
+	{ \
+		VECTOR_TYPE impl_result = VECTOR_TYPE::create_dangerous_uninitialized(); \
+		impl_result.scalars[ 0] = (A).scalars[ 0] OPERATION (B).scalars[ 0]; \
+		impl_result.scalars[ 1] = (A).scalars[ 1] OPERATION (B).scalars[ 1]; \
+		impl_result.scalars[ 2] = (A).scalars[ 2] OPERATION (B).scalars[ 2]; \
+		impl_result.scalars[ 3] = (A).scalars[ 3] OPERATION (B).scalars[ 3]; \
+		return impl_result; \
+	}
+	#define IMPL_SCALAR_REFERENCE_INFIX_8_LANES(A, B, VECTOR_TYPE, ELEMENT_TYPE, OPERATION) \
+	{ \
+		VECTOR_TYPE impl_result = VECTOR_TYPE::create_dangerous_uninitialized(); \
+		impl_result.scalars[ 0] = (A).scalars[ 0] OPERATION (B).scalars[ 0]; \
+		impl_result.scalars[ 1] = (A).scalars[ 1] OPERATION (B).scalars[ 1]; \
+		impl_result.scalars[ 2] = (A).scalars[ 2] OPERATION (B).scalars[ 2]; \
+		impl_result.scalars[ 3] = (A).scalars[ 3] OPERATION (B).scalars[ 3]; \
+		impl_result.scalars[ 4] = (A).scalars[ 4] OPERATION (B).scalars[ 4]; \
+		impl_result.scalars[ 5] = (A).scalars[ 5] OPERATION (B).scalars[ 5]; \
+		impl_result.scalars[ 6] = (A).scalars[ 6] OPERATION (B).scalars[ 6]; \
+		impl_result.scalars[ 7] = (A).scalars[ 7] OPERATION (B).scalars[ 7]; \
+		return impl_result; \
+	}
+	#define IMPL_SCALAR_REFERENCE_INFIX_16_LANES(A, B, VECTOR_TYPE, ELEMENT_TYPE, OPERATION) \
+	{ \
+		VECTOR_TYPE impl_result = VECTOR_TYPE::create_dangerous_uninitialized(); \
+		impl_result.scalars[ 0] = (A).scalars[ 0] OPERATION (B).scalars[ 0]; \
+		impl_result.scalars[ 1] = (A).scalars[ 1] OPERATION (B).scalars[ 1]; \
+		impl_result.scalars[ 2] = (A).scalars[ 2] OPERATION (B).scalars[ 2]; \
+		impl_result.scalars[ 3] = (A).scalars[ 3] OPERATION (B).scalars[ 3]; \
+		impl_result.scalars[ 4] = (A).scalars[ 4] OPERATION (B).scalars[ 4]; \
+		impl_result.scalars[ 5] = (A).scalars[ 5] OPERATION (B).scalars[ 5]; \
+		impl_result.scalars[ 6] = (A).scalars[ 6] OPERATION (B).scalars[ 6]; \
+		impl_result.scalars[ 7] = (A).scalars[ 7] OPERATION (B).scalars[ 7]; \
+		impl_result.scalars[ 8] = (A).scalars[ 8] OPERATION (B).scalars[ 8]; \
+		impl_result.scalars[ 9] = (A).scalars[ 9] OPERATION (B).scalars[ 9]; \
+		impl_result.scalars[10] = (A).scalars[10] OPERATION (B).scalars[10]; \
+		impl_result.scalars[11] = (A).scalars[11] OPERATION (B).scalars[11]; \
+		impl_result.scalars[12] = (A).scalars[12] OPERATION (B).scalars[12]; \
+		impl_result.scalars[13] = (A).scalars[13] OPERATION (B).scalars[13]; \
+		impl_result.scalars[14] = (A).scalars[14] OPERATION (B).scalars[14]; \
+		impl_result.scalars[15] = (A).scalars[15] OPERATION (B).scalars[15]; \
+		return impl_result; \
+	}
+	#define IMPL_SCALAR_REFERENCE_INFIX_32_LANES(A, B, VECTOR_TYPE, ELEMENT_TYPE, OPERATION) \
+	{ \
+		VECTOR_TYPE impl_result = VECTOR_TYPE::create_dangerous_uninitialized(); \
+		impl_result.scalars[ 0] = (A).scalars[ 0] OPERATION (B).scalars[ 0]; \
+		impl_result.scalars[ 1] = (A).scalars[ 1] OPERATION (B).scalars[ 1]; \
+		impl_result.scalars[ 2] = (A).scalars[ 2] OPERATION (B).scalars[ 2]; \
+		impl_result.scalars[ 3] = (A).scalars[ 3] OPERATION (B).scalars[ 3]; \
+		impl_result.scalars[ 4] = (A).scalars[ 4] OPERATION (B).scalars[ 4]; \
+		impl_result.scalars[ 5] = (A).scalars[ 5] OPERATION (B).scalars[ 5]; \
+		impl_result.scalars[ 6] = (A).scalars[ 6] OPERATION (B).scalars[ 6]; \
+		impl_result.scalars[ 7] = (A).scalars[ 7] OPERATION (B).scalars[ 7]; \
+		impl_result.scalars[ 8] = (A).scalars[ 8] OPERATION (B).scalars[ 8]; \
+		impl_result.scalars[ 9] = (A).scalars[ 9] OPERATION (B).scalars[ 9]; \
+		impl_result.scalars[10] = (A).scalars[10] OPERATION (B).scalars[10]; \
+		impl_result.scalars[11] = (A).scalars[11] OPERATION (B).scalars[11]; \
+		impl_result.scalars[12] = (A).scalars[12] OPERATION (B).scalars[12]; \
+		impl_result.scalars[13] = (A).scalars[13] OPERATION (B).scalars[13]; \
+		impl_result.scalars[14] = (A).scalars[14] OPERATION (B).scalars[14]; \
+		impl_result.scalars[15] = (A).scalars[15] OPERATION (B).scalars[15]; \
+		impl_result.scalars[16] = (A).scalars[16] OPERATION (B).scalars[16]; \
+		impl_result.scalars[17] = (A).scalars[17] OPERATION (B).scalars[17]; \
+		impl_result.scalars[18] = (A).scalars[18] OPERATION (B).scalars[18]; \
+		impl_result.scalars[19] = (A).scalars[19] OPERATION (B).scalars[19]; \
+		impl_result.scalars[20] = (A).scalars[20] OPERATION (B).scalars[20]; \
+		impl_result.scalars[21] = (A).scalars[21] OPERATION (B).scalars[21]; \
+		impl_result.scalars[22] = (A).scalars[22] OPERATION (B).scalars[22]; \
+		impl_result.scalars[23] = (A).scalars[23] OPERATION (B).scalars[23]; \
+		impl_result.scalars[24] = (A).scalars[24] OPERATION (B).scalars[24]; \
+		impl_result.scalars[25] = (A).scalars[25] OPERATION (B).scalars[25]; \
+		impl_result.scalars[26] = (A).scalars[26] OPERATION (B).scalars[26]; \
+		impl_result.scalars[27] = (A).scalars[27] OPERATION (B).scalars[27]; \
+		impl_result.scalars[28] = (A).scalars[28] OPERATION (B).scalars[28]; \
+		impl_result.scalars[29] = (A).scalars[29] OPERATION (B).scalars[29]; \
+		impl_result.scalars[30] = (A).scalars[30] OPERATION (B).scalars[30]; \
+		impl_result.scalars[31] = (A).scalars[31] OPERATION (B).scalars[31]; \
+		return impl_result; \
+	}
 
 	// Helper macros for doing things to certain sets of SIMD vector types
 	//  Performing do(vector_type, element_type, lane_count)
@@ -1955,7 +1943,7 @@
 	#define CREATE_METHOD_PRINT(VECTOR_TYPE, ELEMENT_TYPE, LANE_COUNT) \
 		inline dsr::String& string_toStreamIndented(dsr::String& target, const VECTOR_TYPE& source, const dsr::ReadableString& indentation) { \
 			ALIGN_BYTES(sizeof(VECTOR_TYPE)) ELEMENT_TYPE a[LANE_COUNT]; \
-			source.writeAlignedUnsafe(a); \
+			source.writeAlignedUnsafe(&(a[0])); \
 			dsr::string_append(target, indentation, a[0]); \
 			for (int i = 1; i < LANE_COUNT; i++) { \
 				string_append(target, U", ", a[i]); \
@@ -1971,8 +1959,8 @@
 		inline bool allLanesEqual(const VECTOR_TYPE& left, const VECTOR_TYPE& right) { \
 			ALIGN_BYTES(sizeof(VECTOR_TYPE)) ELEMENT_TYPE a[LANE_COUNT]; \
 			ALIGN_BYTES(sizeof(VECTOR_TYPE)) ELEMENT_TYPE b[LANE_COUNT]; \
-			left.writeAlignedUnsafe(a); \
-			right.writeAlignedUnsafe(b); \
+			left.writeAlignedUnsafe(&(a[0])); \
+			right.writeAlignedUnsafe(&(b[0])); \
 			for (int i = 0; i < LANE_COUNT; i++) { \
 				if (a[i] != b[i]) return false; \
 			} \
@@ -1981,8 +1969,8 @@
 		inline bool allLanesNotEqual(const VECTOR_TYPE& left, const VECTOR_TYPE& right) { \
 			ALIGN_BYTES(sizeof(VECTOR_TYPE)) ELEMENT_TYPE a[LANE_COUNT]; \
 			ALIGN_BYTES(sizeof(VECTOR_TYPE)) ELEMENT_TYPE b[LANE_COUNT]; \
-			left.writeAlignedUnsafe(a); \
-			right.writeAlignedUnsafe(b); \
+			left.writeAlignedUnsafe(&(a[0])); \
+			right.writeAlignedUnsafe(&(b[0])); \
 			for (int i = 0; i < LANE_COUNT; i++) { \
 				if (a[i] == b[i]) return false; \
 			} \
@@ -1997,8 +1985,8 @@
 		inline bool allLanesEqual(const VECTOR_TYPE& left, const VECTOR_TYPE& right) { \
 			ALIGN_BYTES(sizeof(VECTOR_TYPE)) ELEMENT_TYPE a[LANE_COUNT]; \
 			ALIGN_BYTES(sizeof(VECTOR_TYPE)) ELEMENT_TYPE b[LANE_COUNT]; \
-			left.writeAlignedUnsafe(a); \
-			right.writeAlignedUnsafe(b); \
+			left.writeAlignedUnsafe(&(a[0])); \
+			right.writeAlignedUnsafe(&(b[0])); \
 			for (int i = 0; i < LANE_COUNT; i++) { \
 				if (fabs(a[i] - b[i]) >= 0.0001f) return false; \
 			} \
@@ -2007,8 +1995,8 @@
 		inline bool allLanesNotEqual(const VECTOR_TYPE& left, const VECTOR_TYPE& right) { \
 			ALIGN_BYTES(sizeof(VECTOR_TYPE)) ELEMENT_TYPE a[LANE_COUNT]; \
 			ALIGN_BYTES(sizeof(VECTOR_TYPE)) ELEMENT_TYPE b[LANE_COUNT]; \
-			left.writeAlignedUnsafe(a); \
-			right.writeAlignedUnsafe(b); \
+			left.writeAlignedUnsafe(&(a[0])); \
+			right.writeAlignedUnsafe(&(b[0])); \
 			for (int i = 0; i < LANE_COUNT; i++) { \
 				if (fabs(a[i] - b[i]) < 0.0001f) return false; \
 			} \
@@ -2022,8 +2010,8 @@
 		inline bool allLanesGreater(const VECTOR_TYPE& left, const VECTOR_TYPE& right) { \
 			ALIGN_BYTES(sizeof(VECTOR_TYPE)) ELEMENT_TYPE a[LANE_COUNT]; \
 			ALIGN_BYTES(sizeof(VECTOR_TYPE)) ELEMENT_TYPE b[LANE_COUNT]; \
-			left.writeAlignedUnsafe(a); \
-			right.writeAlignedUnsafe(b); \
+			left.writeAlignedUnsafe(&(a[0])); \
+			right.writeAlignedUnsafe(&(b[0])); \
 			for (int i = 0; i < LANE_COUNT; i++) { \
 				if (a[i] <= b[i]) return false; \
 			} \
@@ -2032,8 +2020,8 @@
 		inline bool allLanesGreaterOrEqual(const VECTOR_TYPE& left, const VECTOR_TYPE& right) { \
 			ALIGN_BYTES(sizeof(VECTOR_TYPE)) ELEMENT_TYPE a[LANE_COUNT]; \
 			ALIGN_BYTES(sizeof(VECTOR_TYPE)) ELEMENT_TYPE b[LANE_COUNT]; \
-			left.writeAlignedUnsafe(a); \
-			right.writeAlignedUnsafe(b); \
+			left.writeAlignedUnsafe(&(a[0])); \
+			right.writeAlignedUnsafe(&(b[0])); \
 			for (int i = 0; i < LANE_COUNT; i++) { \
 				if (a[i] < b[i]) return false; \
 			} \
@@ -2042,8 +2030,8 @@
 		inline bool allLanesLesser(const VECTOR_TYPE& left, const VECTOR_TYPE& right) { \
 			ALIGN_BYTES(sizeof(VECTOR_TYPE)) ELEMENT_TYPE a[LANE_COUNT]; \
 			ALIGN_BYTES(sizeof(VECTOR_TYPE)) ELEMENT_TYPE b[LANE_COUNT]; \
-			left.writeAlignedUnsafe(a); \
-			right.writeAlignedUnsafe(b); \
+			left.writeAlignedUnsafe(&(a[0])); \
+			right.writeAlignedUnsafe(&(b[0])); \
 			for (int i = 0; i < LANE_COUNT; i++) { \
 				if (a[i] >= b[i]) return false; \
 			} \
@@ -2052,8 +2040,8 @@
 		inline bool allLanesLesserOrEqual(const VECTOR_TYPE& left, const VECTOR_TYPE& right) { \
 			ALIGN_BYTES(sizeof(VECTOR_TYPE)) ELEMENT_TYPE a[LANE_COUNT]; \
 			ALIGN_BYTES(sizeof(VECTOR_TYPE)) ELEMENT_TYPE b[LANE_COUNT]; \
-			left.writeAlignedUnsafe(a); \
-			right.writeAlignedUnsafe(b); \
+			left.writeAlignedUnsafe(&(a[0])); \
+			right.writeAlignedUnsafe(&(b[0])); \
 			for (int i = 0; i < LANE_COUNT; i++) { \
 				if (a[i] > b[i]) return false; \
 			} \
@@ -2063,7 +2051,7 @@
 	#undef CREATE_COMPARISONS
 
 	inline F32x4 operator+(const F32x4& left, const F32x4& right) {
-		#if defined USE_BASIC_SIMD
+		#if defined(USE_BASIC_SIMD)
 			return F32x4(ADD_F32_SIMD(left.v, right.v));
 		#else
 			return F32x4(left.scalars[0] + right.scalars[0], left.scalars[1] + right.scalars[1], left.scalars[2] + right.scalars[2], left.scalars[3] + right.scalars[3]);
@@ -2071,7 +2059,7 @@
 	}
 
 	inline F32x4 operator-(const F32x4& left, const F32x4& right) {
-		#if defined USE_BASIC_SIMD
+		#if defined(USE_BASIC_SIMD)
 			return F32x4(SUB_F32_SIMD(left.v, right.v));
 		#else
 			return F32x4(left.scalars[0] - right.scalars[0], left.scalars[1] - right.scalars[1], left.scalars[2] - right.scalars[2], left.scalars[3] - right.scalars[3]);
@@ -2079,14 +2067,14 @@
 	}
 
 	inline F32x4 operator*(const F32x4& left, const F32x4& right) {
-		#if defined USE_BASIC_SIMD
+		#if defined(USE_BASIC_SIMD)
 			return F32x4(MUL_F32_SIMD(left.v, right.v));
 		#else
 			return F32x4(left.scalars[0] * right.scalars[0], left.scalars[1] * right.scalars[1], left.scalars[2] * right.scalars[2], left.scalars[3] * right.scalars[3]);
 		#endif
 	}
 	inline F32x4 min(const F32x4& left, const F32x4& right) {
-		#if defined USE_BASIC_SIMD
+		#if defined(USE_BASIC_SIMD)
 			return F32x4(MIN_F32_SIMD(left.v, right.v));
 		#else
 			float v0 = left.scalars[0];
@@ -2105,7 +2093,7 @@
 		#endif
 	}
 	inline F32x4 max(const F32x4& left, const F32x4& right) {
-		#if defined USE_BASIC_SIMD
+		#if defined(USE_BASIC_SIMD)
 			return F32x4(MAX_F32_SIMD(left.v, right.v));
 		#else
 			float v0 = left.scalars[0];
@@ -2124,418 +2112,250 @@
 		#endif
 	}
 	inline I32x4 operator+(const I32x4& left, const I32x4& right) {
-		#if defined USE_BASIC_SIMD
+		#if defined(USE_BASIC_SIMD)
 			return I32x4(ADD_I32_SIMD(left.v, right.v));
 		#else
 			return I32x4(left.scalars[0] + right.scalars[0], left.scalars[1] + right.scalars[1], left.scalars[2] + right.scalars[2], left.scalars[3] + right.scalars[3]);
 		#endif
 	}
 	inline I32x4 operator-(const I32x4& left, const I32x4& right) {
-		#if defined USE_BASIC_SIMD
+		#if defined(USE_BASIC_SIMD)
 			return I32x4(SUB_I32_SIMD(left.v, right.v));
 		#else
 			return I32x4(left.scalars[0] - right.scalars[0], left.scalars[1] - right.scalars[1], left.scalars[2] - right.scalars[2], left.scalars[3] - right.scalars[3]);
 		#endif
 	}
 	inline I32x4 operator*(const I32x4& left, const I32x4& right) {
-		#if defined USE_BASIC_SIMD
-			#if defined USE_SSE2
+		#if defined(USE_BASIC_SIMD)
+			#if defined(USE_SSE2)
 				// TODO: Use AVX2 for 32-bit integer multiplication when available.
-				return I32x4(left.scalars[0] * right.scalars[0], left.scalars[1] * right.scalars[1], left.scalars[2] * right.scalars[2], left.scalars[3] * right.scalars[3]);
-			#elif defined USE_NEON
+				IMPL_SCALAR_FALLBACK_INFIX_4_LANES(left, right, I32x4, int32_t, *)
+			#elif defined(USE_NEON)
 				return I32x4(MUL_I32_NEON(left.v, right.v));
 			#endif
 		#else
-			return I32x4(left.scalars[0] * right.scalars[0], left.scalars[1] * right.scalars[1], left.scalars[2] * right.scalars[2], left.scalars[3] * right.scalars[3]);
+			IMPL_SCALAR_REFERENCE_INFIX_4_LANES(left, right, I32x4, int32_t, *)
 		#endif
 	}
 	// TODO: Specify the behavior of truncated unsigned integer overflow and add it to the tests.
 	inline U32x4 operator+(const U32x4& left, const U32x4& right) {
-		#if defined USE_BASIC_SIMD
+		#if defined(USE_BASIC_SIMD)
 			return U32x4(ADD_U32_SIMD(left.v, right.v));
 		#else
-			return U32x4(left.scalars[0] + right.scalars[0], left.scalars[1] + right.scalars[1], left.scalars[2] + right.scalars[2], left.scalars[3] + right.scalars[3]);
+			IMPL_SCALAR_REFERENCE_INFIX_4_LANES(left, right, U32x4, uint32_t, +)
 		#endif
 	}
 	inline U32x4 operator-(const U32x4& left, const U32x4& right) {
-		#if defined USE_BASIC_SIMD
+		#if defined(USE_BASIC_SIMD)
 			return U32x4(SUB_U32_SIMD(left.v, right.v));
 		#else
-			return U32x4(left.scalars[0] - right.scalars[0], left.scalars[1] - right.scalars[1], left.scalars[2] - right.scalars[2], left.scalars[3] - right.scalars[3]);
+			IMPL_SCALAR_REFERENCE_INFIX_4_LANES(left, right, U32x4, uint32_t, -)
 		#endif
 	}
 	inline U32x4 operator*(const U32x4& left, const U32x4& right) {
-		#if defined USE_BASIC_SIMD
-			#if defined USE_SSE2
-				// Emulate a NEON instruction on SSE2 registers
-				return U32x4(left.scalars[0] * right.scalars[0], left.scalars[1] * right.scalars[1], left.scalars[2] * right.scalars[2], left.scalars[3] * right.scalars[3]);
+		#if defined(USE_BASIC_SIMD)
+			#if defined(USE_SSE2)
+				// TODO: Use AVX2 for 32-bit integer multiplication when available.
+				IMPL_SCALAR_FALLBACK_INFIX_4_LANES(left, right, U32x4, uint32_t, *)
 			#else // NEON
 				return U32x4(MUL_U32_NEON(left.v, right.v));
 			#endif
 		#else
-			return U32x4(left.scalars[0] * right.scalars[0], left.scalars[1] * right.scalars[1], left.scalars[2] * right.scalars[2], left.scalars[3] * right.scalars[3]);
+			IMPL_SCALAR_REFERENCE_INFIX_4_LANES(left, right, U32x4, uint32_t, *)
 		#endif
 	}
 	// Bitwise and
 	inline U32x4 operator&(const U32x4& left, const U32x4& right) {
-		#if defined USE_BASIC_SIMD
+		#if defined(USE_BASIC_SIMD)
 			return U32x4(BITWISE_AND_U32_SIMD(left.v, right.v));
 		#else
-			return U32x4(left.scalars[0] & right.scalars[0], left.scalars[1] & right.scalars[1], left.scalars[2] & right.scalars[2], left.scalars[3] & right.scalars[3]);
+			IMPL_SCALAR_REFERENCE_INFIX_4_LANES(left, right, U32x4, uint32_t, &)
 		#endif
 	}
 	// Bitwise or
 	inline U32x4 operator|(const U32x4& left, const U32x4& right) {
-		#if defined USE_BASIC_SIMD
+		#if defined(USE_BASIC_SIMD)
 			return U32x4(BITWISE_OR_U32_SIMD(left.v, right.v));
 		#else
-			return U32x4(left.scalars[0] | right.scalars[0], left.scalars[1] | right.scalars[1], left.scalars[2] | right.scalars[2], left.scalars[3] | right.scalars[3]);
+			IMPL_SCALAR_REFERENCE_INFIX(left, right, U32x4, uint32_t, 4, |)
 		#endif
 	}
 	// Bitwise xor
 	inline U32x4 operator^(const U32x4& left, const U32x4& right) {
-		#if defined USE_BASIC_SIMD
+		#if defined(USE_BASIC_SIMD)
 			return U32x4(BITWISE_XOR_U32_SIMD(left.v, right.v));
 		#else
-			return U32x4(left.scalars[0] ^ right.scalars[0], left.scalars[1] ^ right.scalars[1], left.scalars[2] ^ right.scalars[2], left.scalars[3] ^ right.scalars[3]);
+			IMPL_SCALAR_REFERENCE_INFIX(left, right, U32x4, uint32_t, 4, ^)
 		#endif
 	}
 	// Bitwise negation
 	inline U32x4 operator~(const U32x4& value) {
-		#if defined USE_NEON
+		#if defined(USE_NEON)
 			return U32x4(vmvnq_u32(value.v));
-		#elif defined USE_BASIC_SIMD
+		#elif defined(USE_BASIC_SIMD)
 			// Fall back on xor against all ones.
 			return value ^ U32x4(~uint32_t(0));
 		#else
+			// TODO: Generate automatically using a macro.
 			return U32x4(~value.scalars[0], ~value.scalars[1], ~value.scalars[2], ~value.scalars[3]);
 		#endif
 	}
 	inline U32x4 operator<<(const U32x4& left, const U32x4 &bitOffsets) {
-		assert(allLanesLesser(bitOffsets, U32x4(32u)));
-		#if defined USE_NEON
+		#ifdef SAFE_POINTER_CHECKS
+			if(!allLanesLesser(bitOffsets, U32x4(32u))) {
+				throwError(U"Tried to shift ", left, U" by bit offsets ", bitOffsets, U", which is non-deterministic from being out of bound 0..31!\n");
+			}
+		#endif
+		#if defined(USE_SSE2)
+			IMPL_SCALAR_FALLBACK_INFIX_4_LANES(left, bitOffsets, U32x4, uint32_t, <<)
+		#elif defined(USE_NEON)
 			return U32x4(vshlq_u32(left.v, vreinterpretq_s32_u32(bitOffsets.v)));
 		#else
-			return U32x4(
-			  left.scalars[0] << bitOffsets.scalars[0],
-			  left.scalars[1] << bitOffsets.scalars[1],
-			  left.scalars[2] << bitOffsets.scalars[2],
-			  left.scalars[3] << bitOffsets.scalars[3]
-			);
+			IMPL_SCALAR_REFERENCE_INFIX_4_LANES(left, bitOffsets, U32x4, uint32_t, <<)
 		#endif
 	}
 	inline U32x4 operator>>(const U32x4& left, const U32x4 &bitOffsets) {
-		assert(allLanesLesser(bitOffsets, U32x4(32u)));
-		#if defined USE_NEON
+		#ifdef SAFE_POINTER_CHECKS
+			if(!allLanesLesser(bitOffsets, U32x4(32u))) {
+				throwError(U"Tried to shift ", left, U" by bit offsets ", bitOffsets, U", which is non-deterministic from being out of bound 0..31!\n");
+			}
+		#endif
+		#if defined(USE_SSE2)
+			IMPL_SCALAR_FALLBACK_INFIX_4_LANES(left, bitOffsets, U32x4, uint32_t, >>)
+		#elif defined(USE_NEON)
+			// TODO: Why is vshrq_u32 not found?
 			//return U32x4(vshrq_u32(left.v, vreinterpretq_s32_u32(bitOffsets.v)));
 			return U32x4(vshlq_u32(left.v, vnegq_s32(vreinterpretq_s32_u32(bitOffsets.v))));
 		#else
-			return U32x4(
-			  left.scalars[0] >> bitOffsets.scalars[0],
-			  left.scalars[1] >> bitOffsets.scalars[1],
-			  left.scalars[2] >> bitOffsets.scalars[2],
-			  left.scalars[3] >> bitOffsets.scalars[3]
-			);
+			IMPL_SCALAR_REFERENCE_INFIX_4_LANES(left, bitOffsets, U32x4, uint32_t, >>)
 		#endif
 	}
 	// bitOffset must be an immediate constant, so a template argument is used.
 	template <uint32_t bitOffset>
 	inline U32x4 bitShiftLeftImmediate(const U32x4& left) {
 		static_assert(bitOffset < 32u, "Immediate left shift of 32-bit values may not shift more than 31 bits!");
-		#if defined USE_SSE2
+		#if defined(USE_SSE2)
 			return U32x4(_mm_slli_epi32(left.v, bitOffset));
+		#elif defined(USE_NEON)
+			return U32x4(vshlq_u32(left.v, LOAD_SCALAR_I32_SIMD(bitOffset)));
 		#else
-			#if defined USE_NEON
-				return U32x4(vshlq_u32(left.v, LOAD_SCALAR_I32_SIMD(bitOffset)));
-			#else
-				return U32x4(left.scalars[0] << bitOffset, left.scalars[1] << bitOffset, left.scalars[2] << bitOffset, left.scalars[3] << bitOffset);
-			#endif
+			U32x4 bitOffsets = U32x4(bitOffset);
+			IMPL_SCALAR_REFERENCE_INFIX_4_LANES(left, bitOffsets, U32x4, uint32_t, <<)
 		#endif
 	}
 	// bitOffset must be an immediate constant.
 	template <uint32_t bitOffset>
 	inline U32x4 bitShiftRightImmediate(const U32x4& left) {
 		static_assert(bitOffset < 32u, "Immediate right shift of 32-bit values may not shift more than 31 bits!");
-		#if defined USE_SSE2
+		#if defined(USE_SSE2)
 			return U32x4(_mm_srli_epi32(left.v, bitOffset));
+		#elif defined(USE_NEON)
+			// TODO: Why is vshrq_u32 not found?
+			//return U32x4(vshrq_u32(left.v, LOAD_SCALAR_I32_SIMD(bitOffset)));
+			return U32x4(vshlq_u32(left.v, LOAD_SCALAR_I32_SIMD(-(int32_t)bitOffset)));
 		#else
-			#if defined USE_NEON
-				// TODO: Why is vshrq_u32 not found?
-				//return U32x4(vshrq_u32(left.v, LOAD_SCALAR_I32_SIMD(bitOffset)));
-				return U32x4(vshlq_u32(left.v, LOAD_SCALAR_I32_SIMD(-(int32_t)bitOffset)));
-			#else
-				return U32x4(left.scalars[0] >> bitOffset, left.scalars[1] >> bitOffset, left.scalars[2] >> bitOffset, left.scalars[3] >> bitOffset);
-			#endif
+			U32x4 bitOffsets = U32x4(bitOffset);
+			IMPL_SCALAR_REFERENCE_INFIX_4_LANES(left, bitOffsets, U32x4, uint32_t, >>)
 		#endif
 	}
-	
+
 	inline U16x8 operator<<(const U16x8& left, const U16x8 &bitOffsets) {
-		assert(allLanesLesser(bitOffsets, U16x8(16u)));
-		#if defined USE_NEON
+		#ifdef SAFE_POINTER_CHECKS
+			if(!allLanesLesser(bitOffsets, U16x8(16u))) {
+				throwError(U"Tried to shift ", left, U" by bit offsets ", bitOffsets, U", which is non-deterministic from being out of bound 0..15!\n");
+			}
+		#endif
+		#if defined(USE_SSE2)
+			IMPL_SCALAR_FALLBACK_INFIX_8_LANES(left, bitOffsets, U16x8, uint16_t, <<)
+		#elif defined(USE_NEON)
 			return U16x8(vshlq_u16(left.v, vreinterpretq_s16_u16(bitOffsets.v)));
 		#else
-			return U16x8(
-			  left.scalars[0] << bitOffsets.scalars[0],
-			  left.scalars[1] << bitOffsets.scalars[1],
-			  left.scalars[2] << bitOffsets.scalars[2],
-			  left.scalars[3] << bitOffsets.scalars[3],
-			  left.scalars[4] << bitOffsets.scalars[4],
-			  left.scalars[5] << bitOffsets.scalars[5],
-			  left.scalars[6] << bitOffsets.scalars[6],
-			  left.scalars[7] << bitOffsets.scalars[7]
-			);
+			IMPL_SCALAR_REFERENCE_INFIX_8_LANES(left, bitOffsets, U16x8, uint16_t, <<)
 		#endif
 	}
 	inline U16x8 operator>>(const U16x8& left, const U16x8 &bitOffsets) {
-		assert(allLanesLesser(bitOffsets, U16x8(16u)));
-		#if defined USE_NEON
+		#ifdef SAFE_POINTER_CHECKS
+			if(!allLanesLesser(bitOffsets, U16x8(16u))) {
+				throwError(U"Tried to shift ", left, U" by bit offsets ", bitOffsets, U", which is non-deterministic from being out of bound 0..15!\n");
+			}
+		#endif
+		#if defined(USE_SSE2)
+			IMPL_SCALAR_FALLBACK_INFIX_8_LANES(left, bitOffsets, U16x8, uint16_t, >>)
+		#elif defined(USE_NEON)
 			//return U16x8(vshrq_u16(left.v, vreinterpretq_s16_u16(bitOffsets.v)));
 			return U16x8(vshlq_u16(left.v, vnegq_s16(vreinterpretq_s16_u16(bitOffsets.v))));
 		#else
-			return U16x8(
-			  left.scalars[0] >> bitOffsets.scalars[0],
-			  left.scalars[1] >> bitOffsets.scalars[1],
-			  left.scalars[2] >> bitOffsets.scalars[2],
-			  left.scalars[3] >> bitOffsets.scalars[3],
-			  left.scalars[4] >> bitOffsets.scalars[4],
-			  left.scalars[5] >> bitOffsets.scalars[5],
-			  left.scalars[6] >> bitOffsets.scalars[6],
-			  left.scalars[7] >> bitOffsets.scalars[7]
-			);
+			IMPL_SCALAR_REFERENCE_INFIX_8_LANES(left, bitOffsets, U16x8, uint16_t, >>)
 		#endif
 	}
 	// bitOffset must be an immediate constant, so a template argument is used.
 	template <uint32_t bitOffset>
 	inline U16x8 bitShiftLeftImmediate(const U16x8& left) {
 		static_assert(bitOffset < 16u, "Immediate left shift of 16-bit values may not shift more than 15 bits!");
-		#if defined USE_SSE2
+		#if defined(USE_SSE2)
 			return U16x8(_mm_slli_epi16(left.v, bitOffset));
+		#elif defined(USE_NEON)
+			return U16x8(vshlq_u32(left.v, vdupq_n_s16(bitOffset)));
 		#else
-			#if defined USE_NEON
-				return U16x8(vshlq_u32(left.v, vdupq_n_s16(bitOffset)));
-			#else
-				return U16x8(
-				  left.scalars[0] << bitOffset,
-				  left.scalars[1] << bitOffset,
-				  left.scalars[2] << bitOffset,
-				  left.scalars[3] << bitOffset,
-				  left.scalars[4] << bitOffset,
-				  left.scalars[5] << bitOffset,
-				  left.scalars[6] << bitOffset,
-				  left.scalars[7] << bitOffset
-				);
-			#endif
+			U16x8 bitOffsets = U16x8(bitOffset);
+			IMPL_SCALAR_REFERENCE_INFIX_8_LANES(left, bitOffsets, U16x8, uint16_t, <<)
 		#endif
 	}
 	// bitOffset must be an immediate constant.
 	template <uint32_t bitOffset>
 	inline U16x8 bitShiftRightImmediate(const U16x8& left) {
 		static_assert(bitOffset < 16u, "Immediate right shift of 16-bit values may not shift more than 15 bits!");
-		#if defined USE_SSE2
+		#if defined(USE_SSE2)
 			return U16x8(_mm_srli_epi16(left.v, bitOffset));
+		#elif defined(USE_NEON)
+			//return U16x8(vshrq_u16(left.v, vdupq_n_s16(bitOffset)));
+			return U16x8(vshlq_u16(left.v, vdupq_n_s16(-(int32_t)bitOffset)));
 		#else
-			#if defined USE_NEON
-				//return U16x8(vshrq_u16(left.v, vdupq_n_s16(bitOffset)));
-				return U16x8(vshlq_u16(left.v, vdupq_n_s16(-(int32_t)bitOffset)));
-			#else
-				return U16x8(
-				  left.scalars[0] >> bitOffset,
-				  left.scalars[1] >> bitOffset,
-				  left.scalars[2] >> bitOffset,
-				  left.scalars[3] >> bitOffset,
-				  left.scalars[4] >> bitOffset,
-				  left.scalars[5] >> bitOffset,
-				  left.scalars[6] >> bitOffset,
-				  left.scalars[7] >> bitOffset
-				);
-			#endif
-		#endif
-	}
-
-	inline U8x16 operator<<(const U8x16& left, const U8x16 &bitOffsets) {
-		assert(allLanesLesser(bitOffsets, U8x16(8u)));
-		#if defined USE_NEON
-			return U8x16(vshlq_u16(left.v, vreinterpretq_s8_u8(bitOffsets.v)));
-		#else
-			return U8x16(
-			  left.scalars[ 0] << bitOffsets.scalars[ 0],
-			  left.scalars[ 1] << bitOffsets.scalars[ 1],
-			  left.scalars[ 2] << bitOffsets.scalars[ 2],
-			  left.scalars[ 3] << bitOffsets.scalars[ 3],
-			  left.scalars[ 4] << bitOffsets.scalars[ 4],
-			  left.scalars[ 5] << bitOffsets.scalars[ 5],
-			  left.scalars[ 6] << bitOffsets.scalars[ 6],
-			  left.scalars[ 7] << bitOffsets.scalars[ 7],
-			  left.scalars[ 8] << bitOffsets.scalars[ 8],
-			  left.scalars[ 9] << bitOffsets.scalars[ 9],
-			  left.scalars[10] << bitOffsets.scalars[10],
-			  left.scalars[11] << bitOffsets.scalars[11],
-			  left.scalars[12] << bitOffsets.scalars[12],
-			  left.scalars[13] << bitOffsets.scalars[13],
-			  left.scalars[14] << bitOffsets.scalars[14],
-			  left.scalars[15] << bitOffsets.scalars[15]
-			);
-		#endif
-	}
-	inline U8x16 operator>>(const U8x16& left, const U8x16 &bitOffsets) {
-		assert(allLanesLesser(bitOffsets, U8x16(8u)));
-		#if defined USE_NEON
-			//return U8x16(vshrq_u16(left.v, vreinterpretq_s8_u8(bitOffsets.v)));
-			return U8x16(vshlq_u16(left.v, vnegq_s8(vreinterpretq_s8_u8(bitOffsets.v))));
-		#else
-			return U8x16(
-			  left.scalars[ 0] >> bitOffsets.scalars[ 0],
-			  left.scalars[ 1] >> bitOffsets.scalars[ 1],
-			  left.scalars[ 2] >> bitOffsets.scalars[ 2],
-			  left.scalars[ 3] >> bitOffsets.scalars[ 3],
-			  left.scalars[ 4] >> bitOffsets.scalars[ 4],
-			  left.scalars[ 5] >> bitOffsets.scalars[ 5],
-			  left.scalars[ 6] >> bitOffsets.scalars[ 6],
-			  left.scalars[ 7] >> bitOffsets.scalars[ 7],
-			  left.scalars[ 8] >> bitOffsets.scalars[ 8],
-			  left.scalars[ 9] >> bitOffsets.scalars[ 9],
-			  left.scalars[10] >> bitOffsets.scalars[10],
-			  left.scalars[11] >> bitOffsets.scalars[11],
-			  left.scalars[12] >> bitOffsets.scalars[12],
-			  left.scalars[13] >> bitOffsets.scalars[13],
-			  left.scalars[14] >> bitOffsets.scalars[14],
-			  left.scalars[15] >> bitOffsets.scalars[15]
-			);
-		#endif
-	}
-	// bitOffset must be an immediate constant, so a template argument is used.
-	template <uint32_t bitOffset>
-	inline U8x16 bitShiftLeftImmediate(const U8x16& left) {
-		static_assert(bitOffset < 8u, "Immediate left shift of 8-bit values may not shift more than 7 bits!");
-		#if defined USE_NEON
-			return U8x16(vshlq_u32(left.v, vdupq_n_s8(bitOffset)));
-		#else
-			return U8x16(
-			  left.scalars[ 0] << bitOffset,
-			  left.scalars[ 1] << bitOffset,
-			  left.scalars[ 2] << bitOffset,
-			  left.scalars[ 3] << bitOffset,
-			  left.scalars[ 4] << bitOffset,
-			  left.scalars[ 5] << bitOffset,
-			  left.scalars[ 6] << bitOffset,
-			  left.scalars[ 7] << bitOffset,
-			  left.scalars[ 8] << bitOffset,
-			  left.scalars[ 9] << bitOffset,
-			  left.scalars[10] << bitOffset,
-			  left.scalars[11] << bitOffset,
-			  left.scalars[12] << bitOffset,
-			  left.scalars[13] << bitOffset,
-			  left.scalars[14] << bitOffset,
-			  left.scalars[15] << bitOffset
-			);
-		#endif
-	}
-	// bitOffset must be an immediate constant.
-	template <uint32_t bitOffset>
-	inline U8x16 bitShiftRightImmediate(const U8x16& left) {
-		static_assert(bitOffset < 8u, "Immediate right shift of 8-bit values may not shift more than 7 bits!");
-		#if defined USE_NEON
-			//return U8x16(vshrq_u32(left.v, vdupq_n_s8(bitOffset)));
-			return U8x16(vshlq_u32(left.v, vdupq_n_s8(-(int32_t)bitOffset)));
-		#else
-			return U8x16(
-			  left.scalars[ 0] >> bitOffset,
-			  left.scalars[ 1] >> bitOffset,
-			  left.scalars[ 2] >> bitOffset,
-			  left.scalars[ 3] >> bitOffset,
-			  left.scalars[ 4] >> bitOffset,
-			  left.scalars[ 5] >> bitOffset,
-			  left.scalars[ 6] >> bitOffset,
-			  left.scalars[ 7] >> bitOffset,
-			  left.scalars[ 8] >> bitOffset,
-			  left.scalars[ 9] >> bitOffset,
-			  left.scalars[10] >> bitOffset,
-			  left.scalars[11] >> bitOffset,
-			  left.scalars[12] >> bitOffset,
-			  left.scalars[13] >> bitOffset,
-			  left.scalars[14] >> bitOffset,
-			  left.scalars[15] >> bitOffset
-			);
+			U16x8 bitOffsets = U16x8(bitOffset);
+			IMPL_SCALAR_REFERENCE_INFIX_8_LANES(left, bitOffsets, U16x8, uint16_t, >>)
 		#endif
 	}
 
 	inline U16x8 operator+(const U16x8& left, const U16x8& right) {
-		#if defined USE_BASIC_SIMD
+		#if defined(USE_BASIC_SIMD)
 			return U16x8(ADD_U16_SIMD(left.v, right.v));
 		#else
-			return U16x8(left.scalars[0] + right.scalars[0], left.scalars[1] + right.scalars[1], left.scalars[2] + right.scalars[2], left.scalars[3] + right.scalars[3],
-			           left.scalars[4] + right.scalars[4], left.scalars[5] + right.scalars[5], left.scalars[6] + right.scalars[6], left.scalars[7] + right.scalars[7]);
+			IMPL_SCALAR_REFERENCE_INFIX_8_LANES(left, right, U16x8, uint16_t, +)
 		#endif
 	}
 	inline U16x8 operator-(const U16x8& left, const U16x8& right) {
-		#if defined USE_BASIC_SIMD
+		#if defined(USE_BASIC_SIMD)
 			return U16x8(SUB_U16_SIMD(left.v, right.v));
 		#else
-			return U16x8(left.scalars[0] - right.scalars[0], left.scalars[1] - right.scalars[1], left.scalars[2] - right.scalars[2], left.scalars[3] - right.scalars[3],
-			           left.scalars[4] - right.scalars[4], left.scalars[5] - right.scalars[5], left.scalars[6] - right.scalars[6], left.scalars[7] - right.scalars[7]);
+			IMPL_SCALAR_REFERENCE_INFIX_8_LANES(left, right, U16x8, uint16_t, -)
 		#endif
 	}
 	inline U16x8 operator*(const U16x8& left, const U16x8& right) {
-		#if defined USE_BASIC_SIMD
+		#if defined(USE_BASIC_SIMD)
 			return U16x8(MUL_U16_SIMD(left.v, right.v));
 		#else
-			return U16x8(left.scalars[0] * right.scalars[0], left.scalars[1] * right.scalars[1], left.scalars[2] * right.scalars[2], left.scalars[3] * right.scalars[3],
-			           left.scalars[4] * right.scalars[4], left.scalars[5] * right.scalars[5], left.scalars[6] * right.scalars[6], left.scalars[7] * right.scalars[7]);
+			IMPL_SCALAR_REFERENCE_INFIX_8_LANES(left, right, U16x8, uint16_t, *)
 		#endif
 	}
 	inline U8x16 operator+(const U8x16& left, const U8x16& right) {
-		#if defined USE_BASIC_SIMD
+		#if defined(USE_BASIC_SIMD)
 			return U8x16(ADD_U8_SIMD(left.v, right.v));
 		#else
-			return U8x16(
-			  left.scalars[0] + right.scalars[0],
-			  left.scalars[1] + right.scalars[1],
-			  left.scalars[2] + right.scalars[2],
-			  left.scalars[3] + right.scalars[3],
-			  left.scalars[4] + right.scalars[4],
-			  left.scalars[5] + right.scalars[5],
-			  left.scalars[6] + right.scalars[6],
-			  left.scalars[7] + right.scalars[7],
-			  left.scalars[8] + right.scalars[8],
-			  left.scalars[9] + right.scalars[9],
-			  left.scalars[10] + right.scalars[10],
-			  left.scalars[11] + right.scalars[11],
-			  left.scalars[12] + right.scalars[12],
-			  left.scalars[13] + right.scalars[13],
-			  left.scalars[14] + right.scalars[14],
-			  left.scalars[15] + right.scalars[15]
-			);
+			IMPL_SCALAR_REFERENCE_INFIX_16_LANES(left, right, U8x16, uint8_t, +)
 		#endif
 	}
 	inline U8x16 operator-(const U8x16& left, const U8x16& right) {
-		#if defined USE_BASIC_SIMD
+		#if defined(USE_BASIC_SIMD)
 			return U8x16(SUB_U8_SIMD(left.v, right.v));
 		#else
-			return U8x16(
-			  left.scalars[0] - right.scalars[0],
-			  left.scalars[1] - right.scalars[1],
-			  left.scalars[2] - right.scalars[2],
-			  left.scalars[3] - right.scalars[3],
-			  left.scalars[4] - right.scalars[4],
-			  left.scalars[5] - right.scalars[5],
-			  left.scalars[6] - right.scalars[6],
-			  left.scalars[7] - right.scalars[7],
-			  left.scalars[8] - right.scalars[8],
-			  left.scalars[9] - right.scalars[9],
-			  left.scalars[10] - right.scalars[10],
-			  left.scalars[11] - right.scalars[11],
-			  left.scalars[12] - right.scalars[12],
-			  left.scalars[13] - right.scalars[13],
-			  left.scalars[14] - right.scalars[14],
-			  left.scalars[15] - right.scalars[15]
-			);
+			IMPL_SCALAR_REFERENCE_INFIX_16_LANES(left, right, U8x16, uint8_t, -)
 		#endif
 	}
 
 	inline uint8_t impl_limit0(int32_t x) { return x < 0 ? 0 : x; }
 	inline uint8_t impl_limit255(uint32_t x) { return x > 255 ? 255 : x; }
 	inline U8x16 saturatedAddition(const U8x16& left, const U8x16& right) {
-		#if defined USE_BASIC_SIMD
+		#if defined(USE_BASIC_SIMD)
 			return U8x16(ADD_SAT_U8_SIMD(left.v, right.v));
 		#else
 			return U8x16(
@@ -2559,7 +2379,7 @@
 		#endif
 	}
 	inline U8x16 saturatedSubtraction(const U8x16& left, const U8x16& right) {
-		#if defined USE_BASIC_SIMD
+		#if defined(USE_BASIC_SIMD)
 			return U8x16(SUB_SAT_U8_SIMD(left.v, right.v));
 		#else
 			return U8x16(
@@ -2584,42 +2404,42 @@
 	}
 
 	inline I32x4 truncateToI32(const F32x4& vector) {
-		#if defined USE_BASIC_SIMD
+		#if defined(USE_BASIC_SIMD)
 			return I32x4(F32_TO_I32_SIMD(vector.v));
 		#else
 			return I32x4((int32_t)vector.scalars[0], (int32_t)vector.scalars[1], (int32_t)vector.scalars[2], (int32_t)vector.scalars[3]);
 		#endif
 	}
 	inline U32x4 truncateToU32(const F32x4& vector) {
-		#if defined USE_BASIC_SIMD
+		#if defined(USE_BASIC_SIMD)
 			return U32x4(F32_TO_U32_SIMD(vector.v));
 		#else
 			return U32x4((uint32_t)vector.scalars[0], (uint32_t)vector.scalars[1], (uint32_t)vector.scalars[2], (uint32_t)vector.scalars[3]);
 		#endif
 	}
 	inline F32x4 floatFromI32(const I32x4& vector) {
-		#if defined USE_BASIC_SIMD
+		#if defined(USE_BASIC_SIMD)
 			return F32x4(I32_TO_F32_SIMD(vector.v));
 		#else
 			return F32x4((float)vector.scalars[0], (float)vector.scalars[1], (float)vector.scalars[2], (float)vector.scalars[3]);
 		#endif
 	}
 	inline F32x4 floatFromU32(const U32x4& vector) {
-		#if defined USE_BASIC_SIMD
+		#if defined(USE_BASIC_SIMD)
 			return F32x4(U32_TO_F32_SIMD(vector.v));
 		#else
 			return F32x4((float)vector.scalars[0], (float)vector.scalars[1], (float)vector.scalars[2], (float)vector.scalars[3]);
 		#endif
 	}
 	inline I32x4 I32FromU32(const U32x4& vector) {
-		#if defined USE_BASIC_SIMD
+		#if defined(USE_BASIC_SIMD)
 			return I32x4(REINTERPRET_U32_TO_I32_SIMD(vector.v));
 		#else
 			return I32x4((int32_t)vector.scalars[0], (int32_t)vector.scalars[1], (int32_t)vector.scalars[2], (int32_t)vector.scalars[3]);
 		#endif
 	}
 	inline U32x4 U32FromI32(const I32x4& vector) {
-		#if defined USE_BASIC_SIMD
+		#if defined(USE_BASIC_SIMD)
 			return U32x4(REINTERPRET_I32_TO_U32_SIMD(vector.v));
 		#else
 			return U32x4((uint32_t)vector.scalars[0], (uint32_t)vector.scalars[1], (uint32_t)vector.scalars[2], (uint32_t)vector.scalars[3]);
@@ -2627,7 +2447,7 @@
 	}
 	// Warning! Behavior depends on endianness.
 	inline U8x16 reinterpret_U8FromU32(const U32x4& vector) {
-		#if defined USE_BASIC_SIMD
+		#if defined(USE_BASIC_SIMD)
 			return U8x16(REINTERPRET_U32_TO_U8_SIMD(vector.v));
 		#else
 			const uint8_t *source = (const uint8_t*)vector.scalars;
@@ -2639,7 +2459,7 @@
 	}
 	// Warning! Behavior depends on endianness.
 	inline U32x4 reinterpret_U32FromU8(const U8x16& vector) {
-		#if defined USE_BASIC_SIMD
+		#if defined(USE_BASIC_SIMD)
 			return U32x4(REINTERPRET_U8_TO_U32_SIMD(vector.v));
 		#else
 			const uint32_t *source = (const uint32_t*)vector.scalars;
@@ -2648,7 +2468,7 @@
 	}
 	// Warning! Behavior depends on endianness.
 	inline U16x8 reinterpret_U16FromU32(const U32x4& vector) {
-		#if defined USE_BASIC_SIMD
+		#if defined(USE_BASIC_SIMD)
 			return U16x8(REINTERPRET_U32_TO_U16_SIMD(vector.v));
 		#else
 			const uint16_t *source = (const uint16_t*)vector.scalars;
@@ -2659,7 +2479,7 @@
 	}
 	// Warning! Behavior depends on endianness.
 	inline U32x4 reinterpret_U32FromU16(const U16x8& vector) {
-		#if defined USE_BASIC_SIMD
+		#if defined(USE_BASIC_SIMD)
 			return U32x4(REINTERPRET_U16_TO_U32_SIMD(vector.v));
 		#else
 			const uint32_t *source = (const uint32_t*)vector.scalars;
@@ -2669,21 +2489,21 @@
 
 	// Unpacking to larger integers
 	inline U32x4 lowerToU32(const U16x8& vector) {
-		#if defined USE_BASIC_SIMD
+		#if defined(USE_BASIC_SIMD)
 			return U32x4(U16_LOW_TO_U32_SIMD(vector.v));
 		#else
 			return U32x4(vector.scalars[0], vector.scalars[1], vector.scalars[2], vector.scalars[3]);
 		#endif
 	}
 	inline U32x4 higherToU32(const U16x8& vector) {
-		#if defined USE_BASIC_SIMD
+		#if defined(USE_BASIC_SIMD)
 			return U32x4(U16_HIGH_TO_U32_SIMD(vector.v));
 		#else
 			return U32x4(vector.scalars[4], vector.scalars[5], vector.scalars[6], vector.scalars[7]);
 		#endif
 	}
 	inline U16x8 lowerToU16(const U8x16& vector) {
-		#if defined USE_BASIC_SIMD
+		#if defined(USE_BASIC_SIMD)
 			return U16x8(U8_LOW_TO_U16_SIMD(vector.v));
 		#else
 			return U16x8(
@@ -2693,38 +2513,12 @@
 		#endif
 	}
 	inline U16x8 higherToU16(const U8x16& vector) {
-		#if defined USE_BASIC_SIMD
+		#if defined(USE_BASIC_SIMD)
 			return U16x8(U8_HIGH_TO_U16_SIMD(vector.v));
 		#else
 			return U16x8(
 			  vector.scalars[8], vector.scalars[9], vector.scalars[10], vector.scalars[11],
 			  vector.scalars[12], vector.scalars[13], vector.scalars[14], vector.scalars[15]
-			);
-		#endif
-	}
-
-	// Saturated packing
-	inline U8x16 saturateToU8(const U16x8& lower, const U16x8& upper) {
-		#if defined USE_BASIC_SIMD
-			return U8x16(PACK_SAT_U16_TO_U8_SIMD(lower.v, upper.v));
-		#else
-			return U8x16(
-			  impl_limit255(lower.scalars[0]),
-			  impl_limit255(lower.scalars[1]),
-			  impl_limit255(lower.scalars[2]),
-			  impl_limit255(lower.scalars[3]),
-			  impl_limit255(lower.scalars[4]),
-			  impl_limit255(lower.scalars[5]),
-			  impl_limit255(lower.scalars[6]),
-			  impl_limit255(lower.scalars[7]),
-			  impl_limit255(upper.scalars[0]),
-			  impl_limit255(upper.scalars[1]),
-			  impl_limit255(upper.scalars[2]),
-			  impl_limit255(upper.scalars[3]),
-			  impl_limit255(upper.scalars[4]),
-			  impl_limit255(upper.scalars[5]),
-			  impl_limit255(upper.scalars[6]),
-			  impl_limit255(upper.scalars[7])
 			);
 		#endif
 	}
@@ -2738,14 +2532,14 @@
 	//      x = -b * 2
 	//      x = b * -2
 	inline F32x4 operator-(const F32x4& value) {
-		#if defined USE_BASIC_SIMD
+		#if defined(USE_BASIC_SIMD)
 			return F32x4(0.0f) - value;
 		#else
 			return F32x4(-value.scalars[0], -value.scalars[1], -value.scalars[2], -value.scalars[3]);
 		#endif
 	}
 	inline I32x4 operator-(const I32x4& value) {
-		#if defined USE_BASIC_SIMD
+		#if defined(USE_BASIC_SIMD)
 			return I32x4(0) - value;
 		#else
 			return I32x4(-value.scalars[0], -value.scalars[1], -value.scalars[2], -value.scalars[3]);
@@ -2754,9 +2548,9 @@
 
 	// Helper macros for generating the vector extract functions.
 	//   Having one function for each type and offset makes sure that the compiler gets an immediate integer within the valid range.
-	#if defined USE_BASIC_SIMD
-		#if defined USE_SSE2
-			#if defined USE_SSSE3
+	#if defined(USE_BASIC_SIMD)
+		#if defined(USE_SSE2)
+			#if defined(USE_SSSE3)
 				#define _MM_ALIGNR_EPI8(A, B, OFFSET) _mm_alignr_epi8(A, B, OFFSET)
 			#else
 				// If SSSE3 is not used, emulate it using stack memory and unaligned reading of data.
@@ -2767,7 +2561,8 @@
 					#endif
 					_mm_store_si128((SIMD_U8x16*)(vectorBuffer), b);
 					_mm_store_si128((SIMD_U8x16*)(vectorBuffer + 16), a);
-					return _mm_loadu_si128((SIMD_U8x16*)(vectorBuffer + offset));
+					ALIGN16 SIMD_U8x16 result = _mm_loadu_si128((SIMD_U8x16*)(vectorBuffer + offset));
+					return result;
 				}
 			#endif
 			#define VECTOR_EXTRACT_GENERATOR_U8(OFFSET, FALLBACK_RESULT) return U8x16(_MM_ALIGNR_EPI8(b.v, a.v, OFFSET));
@@ -2775,7 +2570,7 @@
 			#define VECTOR_EXTRACT_GENERATOR_U32(OFFSET, FALLBACK_RESULT) return U32x4(_MM_ALIGNR_EPI8(b.v, a.v, OFFSET * 4));
 			#define VECTOR_EXTRACT_GENERATOR_I32(OFFSET, FALLBACK_RESULT) return I32x4(_MM_ALIGNR_EPI8(b.v, a.v, OFFSET * 4));
 			#define VECTOR_EXTRACT_GENERATOR_F32(OFFSET, FALLBACK_RESULT) return F32x4(SIMD_F32x4(_MM_ALIGNR_EPI8(SIMD_U32x4(b.v), SIMD_U32x4(a.v), OFFSET * 4)));
-		#elif defined USE_NEON
+		#elif defined(USE_NEON)
 			#define VECTOR_EXTRACT_GENERATOR_U8(OFFSET, FALLBACK_RESULT) return U8x16(vextq_u8(a.v, b.v, OFFSET));
 			#define VECTOR_EXTRACT_GENERATOR_U16(OFFSET, FALLBACK_RESULT) return U16x8(vextq_u16(a.v, b.v, OFFSET));
 			#define VECTOR_EXTRACT_GENERATOR_U32(OFFSET, FALLBACK_RESULT) return U32x4(vextq_u32(a.v, b.v, OFFSET));
@@ -2842,7 +2637,7 @@
 
 	// Gather instructions load memory from a pointer at multiple index offsets at the same time.
 	//   The given pointers should be aligned with 4 bytes, so that the fallback solution works on machines with strict alignment requirements.
-	#if defined USE_AVX2
+	#if defined(USE_AVX2)
 		#define GATHER_I32x4_AVX2(SOURCE, FOUR_OFFSETS, SCALE) _mm_i32gather_epi32((const int32_t*)(SOURCE), FOUR_OFFSETS, SCALE)
 		#define GATHER_U32x4_AVX2(SOURCE, FOUR_OFFSETS, SCALE) _mm_i32gather_epi32((const int32_t*)(SOURCE), FOUR_OFFSETS, SCALE)
 		#define GATHER_F32x4_AVX2(SOURCE, FOUR_OFFSETS, SCALE) _mm_i32gather_ps((const float*)(SOURCE), FOUR_OFFSETS, SCALE)
@@ -2857,7 +2652,7 @@
 			data.assertInside("U32x4 gather_U32 lane 2", (data + elementOffsets[2]).getUnchecked());
 			data.assertInside("U32x4 gather_U32 lane 3", (data + elementOffsets[3]).getUnchecked());
 		#endif
-		#if defined USE_AVX2
+		#if defined(USE_AVX2)
 			return U32x4(GATHER_U32x4_AVX2(data.getUnsafe(), elementOffset.v, 4));
 		#else
 			#ifndef SAFE_POINTER_CHECKS
@@ -2882,7 +2677,7 @@
 			data.assertInside("I32x4 gather_I32 lane 2", (data + elementOffsets[2]).getUnchecked());
 			data.assertInside("I32x4 gather_I32 lane 3", (data + elementOffsets[3]).getUnchecked());
 		#endif
-		#if defined USE_AVX2
+		#if defined(USE_AVX2)
 			return I32x4(GATHER_U32x4_AVX2(data.getUnsafe(), elementOffset.v, 4));
 		#else
 			#ifndef SAFE_POINTER_CHECKS
@@ -2907,7 +2702,7 @@
 			data.assertInside("F32x4 gather_F32 lane 2", (data + elementOffsets[2]).getUnchecked());
 			data.assertInside("F32x4 gather_F32 lane 3", (data + elementOffsets[3]).getUnchecked());
 		#endif
-		#if defined USE_AVX2
+		#if defined(USE_AVX2)
 			return F32x4(GATHER_F32x4_AVX2(data.getUnsafe(), elementOffset.v, 4));
 		#else
 			#ifndef SAFE_POINTER_CHECKS
@@ -2923,55 +2718,28 @@
 		#endif
 	}
 	inline F32x8 operator+(const F32x8& left, const F32x8& right) {
-		#if defined USE_256BIT_F_SIMD
+		#if defined(USE_256BIT_F_SIMD)
 			return F32x8(ADD_F32_SIMD256(left.v, right.v));
 		#else
-			return F32x8(
-			  left.scalars[0] + right.scalars[0],
-			  left.scalars[1] + right.scalars[1],
-			  left.scalars[2] + right.scalars[2],
-			  left.scalars[3] + right.scalars[3],
-			  left.scalars[4] + right.scalars[4],
-			  left.scalars[5] + right.scalars[5],
-			  left.scalars[6] + right.scalars[6],
-			  left.scalars[7] + right.scalars[7]
-			);
+			IMPL_SCALAR_REFERENCE_INFIX_8_LANES(left, right, F32x8, float, +)
 		#endif
 	}
 	inline F32x8 operator-(const F32x8& left, const F32x8& right) {
-		#if defined USE_256BIT_F_SIMD
+		#if defined(USE_256BIT_F_SIMD)
 			return F32x8(SUB_F32_SIMD256(left.v, right.v));
 		#else
-			return F32x8(
-			  left.scalars[0] - right.scalars[0],
-			  left.scalars[1] - right.scalars[1],
-			  left.scalars[2] - right.scalars[2],
-			  left.scalars[3] - right.scalars[3],
-			  left.scalars[4] - right.scalars[4],
-			  left.scalars[5] - right.scalars[5],
-			  left.scalars[6] - right.scalars[6],
-			  left.scalars[7] - right.scalars[7]
-			);
+			IMPL_SCALAR_REFERENCE_INFIX_8_LANES(left, right, F32x8, float, -)
 		#endif
 	}
 	inline F32x8 operator*(const F32x8& left, const F32x8& right) {
-		#if defined USE_256BIT_F_SIMD
+		#if defined(USE_256BIT_F_SIMD)
 			return F32x8(MUL_F32_SIMD256(left.v, right.v));
 		#else
-			return F32x8(
-			  left.scalars[0] * right.scalars[0],
-			  left.scalars[1] * right.scalars[1],
-			  left.scalars[2] * right.scalars[2],
-			  left.scalars[3] * right.scalars[3],
-			  left.scalars[4] * right.scalars[4],
-			  left.scalars[5] * right.scalars[5],
-			  left.scalars[6] * right.scalars[6],
-			  left.scalars[7] * right.scalars[7]
-			);
+			IMPL_SCALAR_REFERENCE_INFIX_8_LANES(left, right, F32x8, float, *)
 		#endif
 	}
 	inline F32x8 min(const F32x8& left, const F32x8& right) {
-		#if defined USE_256BIT_F_SIMD
+		#if defined(USE_256BIT_F_SIMD)
 			return F32x8(MIN_F32_SIMD256(left.v, right.v));
 		#else
 			float v0 = left.scalars[0];
@@ -3002,7 +2770,7 @@
 		#endif
 	}
 	inline F32x8 max(const F32x8& left, const F32x8& right) {
-		#if defined USE_256BIT_F_SIMD
+		#if defined(USE_256BIT_F_SIMD)
 			return F32x8(MAX_F32_SIMD256(left.v, right.v));
 		#else
 			float v0 = left.scalars[0];
@@ -3033,149 +2801,74 @@
 		#endif
 	}
 	inline I32x8 operator+(const I32x8& left, const I32x8& right) {
-		#if defined USE_256BIT_X_SIMD
+		#if defined(USE_256BIT_X_SIMD)
 			return I32x8(ADD_I32_SIMD256(left.v, right.v));
 		#else
-			return I32x8(
-			  left.scalars[0] + right.scalars[0],
-			  left.scalars[1] + right.scalars[1],
-			  left.scalars[2] + right.scalars[2],
-			  left.scalars[3] + right.scalars[3],
-			  left.scalars[4] + right.scalars[4],
-			  left.scalars[5] + right.scalars[5],
-			  left.scalars[6] + right.scalars[6],
-			  left.scalars[7] + right.scalars[7]);
+			IMPL_SCALAR_REFERENCE_INFIX_8_LANES(left, right, I32x8, int32_t, +)
 		#endif
 	}
 	inline I32x8 operator-(const I32x8& left, const I32x8& right) {
-		#if defined USE_256BIT_X_SIMD
+		#if defined(USE_256BIT_X_SIMD)
 			return I32x8(SUB_I32_SIMD256(left.v, right.v));
 		#else
-			return I32x8(
-			  left.scalars[0] - right.scalars[0],
-			  left.scalars[1] - right.scalars[1],
-			  left.scalars[2] - right.scalars[2],
-			  left.scalars[3] - right.scalars[3],
-			  left.scalars[4] - right.scalars[4],
-			  left.scalars[5] - right.scalars[5],
-			  left.scalars[6] - right.scalars[6],
-			  left.scalars[7] - right.scalars[7]);
+			IMPL_SCALAR_REFERENCE_INFIX_8_LANES(left, right, I32x8, int32_t, -)
 		#endif
 	}
 	inline I32x8 operator*(const I32x8& left, const I32x8& right) {
-		#if defined USE_AVX2
+		#if defined(USE_AVX2)
 			return I32x8(MUL_I32_SIMD256(left.v, right.v));
 		#else
-			return I32x8(
-			  left.scalars[0] * right.scalars[0],
-			  left.scalars[1] * right.scalars[1],
-			  left.scalars[2] * right.scalars[2],
-			  left.scalars[3] * right.scalars[3],
-			  left.scalars[4] * right.scalars[4],
-			  left.scalars[5] * right.scalars[5],
-			  left.scalars[6] * right.scalars[6],
-			  left.scalars[7] * right.scalars[7]
-			);
+			IMPL_SCALAR_REFERENCE_INFIX_8_LANES(left, right, I32x8, int32_t, *)
 		#endif
 	}
 	inline U32x8 operator+(const U32x8& left, const U32x8& right) {
-		#if defined USE_256BIT_X_SIMD
+		#if defined(USE_256BIT_X_SIMD)
 			return U32x8(ADD_U32_SIMD256(left.v, right.v));
 		#else
-			return U32x8(
-			  left.scalars[0] + right.scalars[0],
-			  left.scalars[1] + right.scalars[1],
-			  left.scalars[2] + right.scalars[2],
-			  left.scalars[3] + right.scalars[3],
-			  left.scalars[4] + right.scalars[4],
-			  left.scalars[5] + right.scalars[5],
-			  left.scalars[6] + right.scalars[6],
-			  left.scalars[7] + right.scalars[7]
-			);
+			IMPL_SCALAR_REFERENCE_INFIX_8_LANES(left, right, U32x8, uint32_t, +)
 		#endif
 	}
 	inline U32x8 operator-(const U32x8& left, const U32x8& right) {
-		#if defined USE_256BIT_X_SIMD
+		#if defined(USE_256BIT_X_SIMD)
 			return U32x8(SUB_U32_SIMD256(left.v, right.v));
 		#else
-			return U32x8(
-			  left.scalars[0] - right.scalars[0],
-			  left.scalars[1] - right.scalars[1],
-			  left.scalars[2] - right.scalars[2],
-			  left.scalars[3] - right.scalars[3],
-			  left.scalars[4] - right.scalars[4],
-			  left.scalars[5] - right.scalars[5],
-			  left.scalars[6] - right.scalars[6],
-			  left.scalars[7] - right.scalars[7]
-			);
+			IMPL_SCALAR_REFERENCE_INFIX_8_LANES(left, right, U32x8, uint32_t, -)
 		#endif
 	}
 	inline U32x8 operator*(const U32x8& left, const U32x8& right) {
-		#if defined USE_256BIT_X_SIMD
+		#if defined(USE_256BIT_X_SIMD)
 			return U32x8(MUL_U32_SIMD256(left.v, right.v));
 		#else
-			return U32x8(
-			  left.scalars[0] * right.scalars[0],
-			  left.scalars[1] * right.scalars[1],
-			  left.scalars[2] * right.scalars[2],
-			  left.scalars[3] * right.scalars[3],
-			  left.scalars[4] * right.scalars[4],
-			  left.scalars[5] * right.scalars[5],
-			  left.scalars[6] * right.scalars[6],
-			  left.scalars[7] * right.scalars[7]
-			);
+			IMPL_SCALAR_REFERENCE_INFIX_8_LANES(left, right, U32x8, uint32_t, *)
 		#endif
 	}
 	inline U32x8 operator&(const U32x8& left, const U32x8& right) {
-		#if defined USE_256BIT_X_SIMD
+		assert((uintptr_t(&left) & 31u) == 0);
+		#if defined(USE_256BIT_X_SIMD)
 			return U32x8(BITWISE_AND_U32_SIMD256(left.v, right.v));
 		#else
-			return U32x8(
-			  left.scalars[0] & right.scalars[0],
-			  left.scalars[1] & right.scalars[1],
-			  left.scalars[2] & right.scalars[2],
-			  left.scalars[3] & right.scalars[3],
-			  left.scalars[4] & right.scalars[4],
-			  left.scalars[5] & right.scalars[5],
-			  left.scalars[6] & right.scalars[6],
-			  left.scalars[7] & right.scalars[7]
-			);
+			IMPL_SCALAR_REFERENCE_INFIX_8_LANES(left, right, U32x8, uint32_t, &)
 		#endif
 	}
 	inline U32x8 operator|(const U32x8& left, const U32x8& right) {
-		#if defined USE_256BIT_X_SIMD
+		assert((uintptr_t(&left) & 31u) == 0);
+		#if defined(USE_256BIT_X_SIMD)
 			return U32x8(BITWISE_OR_U32_SIMD256(left.v, right.v));
 		#else
-			return U32x8(
-			  left.scalars[0] | right.scalars[0],
-			  left.scalars[1] | right.scalars[1],
-			  left.scalars[2] | right.scalars[2],
-			  left.scalars[3] | right.scalars[3],
-			  left.scalars[4] | right.scalars[4],
-			  left.scalars[5] | right.scalars[5],
-			  left.scalars[6] | right.scalars[6],
-			  left.scalars[7] | right.scalars[7]
-			);
+			IMPL_SCALAR_REFERENCE_INFIX_8_LANES(left, right, U32x8, uint32_t, |)
 		#endif
 	}
 	inline U32x8 operator^(const U32x8& left, const U32x8& right) {
-		#if defined USE_256BIT_X_SIMD
+		assert((uintptr_t(&left) & 31u) == 0);
+		#if defined(USE_256BIT_X_SIMD)
 			return U32x8(BITWISE_XOR_U32_SIMD256(left.v, right.v));
 		#else
-			return U32x8(
-			  left.scalars[0] ^ right.scalars[0],
-			  left.scalars[1] ^ right.scalars[1],
-			  left.scalars[2] ^ right.scalars[2],
-			  left.scalars[3] ^ right.scalars[3],
-			  left.scalars[4] ^ right.scalars[4],
-			  left.scalars[5] ^ right.scalars[5],
-			  left.scalars[6] ^ right.scalars[6],
-			  left.scalars[7] ^ right.scalars[7]
-			);
+			IMPL_SCALAR_REFERENCE_INFIX_8_LANES(left, right, U32x8, uint32_t, ^)
 		#endif
 	}
 	inline U32x8 operator~(const U32x8& value) {
-		#if defined USE_BASIC_SIMD
+		assert((uintptr_t(&value) & 31u) == 0);
+		#if defined(USE_BASIC_SIMD)
 			return value ^ U32x8(~uint32_t(0));
 		#else
 			return U32x8(
@@ -3193,418 +2886,140 @@
 
 	// ARM NEON does not support 256-bit vectors and Intel's AVX2 does not support variable shifting.
 	inline U32x8 operator<<(const U32x8& left, const U32x8 &bitOffsets) {
-		assert(allLanesLesser(bitOffsets, U32x8(32u)));
-		return U32x8(
-		  left.scalars[0] << bitOffsets.scalars[0],
-		  left.scalars[1] << bitOffsets.scalars[1],
-		  left.scalars[2] << bitOffsets.scalars[2],
-		  left.scalars[3] << bitOffsets.scalars[3],
-		  left.scalars[4] << bitOffsets.scalars[4],
-		  left.scalars[5] << bitOffsets.scalars[5],
-		  left.scalars[6] << bitOffsets.scalars[6],
-		  left.scalars[7] << bitOffsets.scalars[7]
-		);
+		assert((uintptr_t(&left) & 31u) == 0);
+		#ifdef SAFE_POINTER_CHECKS
+			if(!allLanesLesser(bitOffsets, U32x8(32u))) {
+				throwError(U"Tried to shift ", left, U" by bit offsets ", bitOffsets, U", which is non-deterministic from being out of bound 0..31!\n");
+			}
+		#endif
+		#if defined(USE_AVX2)
+			IMPL_SCALAR_FALLBACK_INFIX_8_LANES(left, bitOffsets, U32x8, uint32_t, <<)
+		#else
+			IMPL_SCALAR_REFERENCE_INFIX_8_LANES(left, bitOffsets, U32x8, uint32_t, <<)
+		#endif
 	}
 	inline U32x8 operator>>(const U32x8& left, const U32x8 &bitOffsets) {
-		assert(allLanesLesser(bitOffsets, U32x8(32u)));
-		return U32x8(
-		  left.scalars[0] >> bitOffsets.scalars[0],
-		  left.scalars[1] >> bitOffsets.scalars[1],
-		  left.scalars[2] >> bitOffsets.scalars[2],
-		  left.scalars[3] >> bitOffsets.scalars[3],
-		  left.scalars[4] >> bitOffsets.scalars[4],
-		  left.scalars[5] >> bitOffsets.scalars[5],
-		  left.scalars[6] >> bitOffsets.scalars[6],
-		  left.scalars[7] >> bitOffsets.scalars[7]
-		);
+		assert((uintptr_t(&left) & 31u) == 0);
+		#ifdef SAFE_POINTER_CHECKS
+			if(!allLanesLesser(bitOffsets, U32x8(32u))) {
+				throwError(U"Tried to shift ", left, U" by bit offsets ", bitOffsets, U", which is non-deterministic from being out of bound 0..31!\n");
+			}
+		#endif
+		#if defined(USE_AVX2)
+			IMPL_SCALAR_FALLBACK_INFIX_8_LANES(left, bitOffsets, U32x8, uint32_t, >>)
+		#else
+			IMPL_SCALAR_REFERENCE_INFIX_8_LANES(left, bitOffsets, U32x8, uint32_t, >>)
+		#endif
 	}
 	// bitOffset must be an immediate constant from 0 to 31, so a template argument is used.
 	template <uint32_t bitOffset>
 	inline U32x8 bitShiftLeftImmediate(const U32x8& left) {
+		assert((uintptr_t(&left) & 31u) == 0);
 		static_assert(bitOffset < 32u, "Immediate left shift of 32-bit values may not shift more than 31 bits!");
-		#if defined USE_AVX2
+		#if defined(USE_AVX2)
 			return U32x8(_mm256_slli_epi32(left.v, bitOffset));
 		#else
-			return U32x8(
-			  left.scalars[0] << bitOffset,
-			  left.scalars[1] << bitOffset,
-			  left.scalars[2] << bitOffset,
-			  left.scalars[3] << bitOffset,
-			  left.scalars[4] << bitOffset,
-			  left.scalars[5] << bitOffset,
-			  left.scalars[6] << bitOffset,
-			  left.scalars[7] << bitOffset
-			);
+			U32x8 bitOffsets = U32x8(bitOffset);
+			IMPL_SCALAR_REFERENCE_INFIX_8_LANES(left, bitOffsets, U32x8, uint32_t, <<)
 		#endif
 	}
 	// bitOffset must be an immediate constant from 0 to 31, so a template argument is used.
 	template <uint32_t bitOffset>
 	inline U32x8 bitShiftRightImmediate(const U32x8& left) {
+		assert((uintptr_t(&left) & 31u) == 0);
 		static_assert(bitOffset < 32u, "Immediate right shift of 32-bit values may not shift more than 31 bits!");
-		#if defined USE_AVX2
+		#if defined(USE_AVX2)
 			return U32x8(_mm256_srli_epi32(left.v, bitOffset));
 		#else
-			return U32x8(
-			  left.scalars[0] >> bitOffset,
-			  left.scalars[1] >> bitOffset,
-			  left.scalars[2] >> bitOffset,
-			  left.scalars[3] >> bitOffset,
-			  left.scalars[4] >> bitOffset,
-			  left.scalars[5] >> bitOffset,
-			  left.scalars[6] >> bitOffset,
-			  left.scalars[7] >> bitOffset
-			);
+			U32x8 bitOffsets = U32x8(bitOffset);
+			IMPL_SCALAR_REFERENCE_INFIX_8_LANES(left, bitOffsets, U32x8, uint32_t, >>)
 		#endif
 	}
 
 	inline U16x16 operator<<(const U16x16& left, const U16x16 &bitOffsets) {
-		assert(allLanesLesser(bitOffsets, U16x16(16u)));
-		return U16x16(
-		  left.scalars[ 0] << bitOffsets.scalars[ 0],
-		  left.scalars[ 1] << bitOffsets.scalars[ 1],
-		  left.scalars[ 2] << bitOffsets.scalars[ 2],
-		  left.scalars[ 3] << bitOffsets.scalars[ 3],
-		  left.scalars[ 4] << bitOffsets.scalars[ 4],
-		  left.scalars[ 5] << bitOffsets.scalars[ 5],
-		  left.scalars[ 6] << bitOffsets.scalars[ 6],
-		  left.scalars[ 7] << bitOffsets.scalars[ 7],
-		  left.scalars[ 8] << bitOffsets.scalars[ 8],
-		  left.scalars[ 9] << bitOffsets.scalars[ 9],
-		  left.scalars[10] << bitOffsets.scalars[10],
-		  left.scalars[11] << bitOffsets.scalars[11],
-		  left.scalars[12] << bitOffsets.scalars[12],
-		  left.scalars[13] << bitOffsets.scalars[13],
-		  left.scalars[14] << bitOffsets.scalars[14],
-		  left.scalars[15] << bitOffsets.scalars[15]
-		);
+		#ifdef SAFE_POINTER_CHECKS
+			if(!allLanesLesser(bitOffsets, U16x16(16u))) {
+				throwError(U"Tried to shift ", left, U" by bit offsets ", bitOffsets, U", which is non-deterministic from being out of bound 0..15!\n");
+			}
+		#endif
+		#if defined(USE_AVX2)
+			IMPL_SCALAR_FALLBACK_INFIX_16_LANES(left, bitOffsets, U16x16, uint16_t, <<)
+		#else
+			IMPL_SCALAR_REFERENCE_INFIX_16_LANES(left, bitOffsets, U16x16, uint16_t, <<)
+		#endif
 	}
 	inline U16x16 operator>>(const U16x16& left, const U16x16 &bitOffsets) {
-		assert(allLanesLesser(bitOffsets, U16x16(16u)));
-		return U16x16(
-		  left.scalars[ 0] >> bitOffsets.scalars[ 0],
-		  left.scalars[ 1] >> bitOffsets.scalars[ 1],
-		  left.scalars[ 2] >> bitOffsets.scalars[ 2],
-		  left.scalars[ 3] >> bitOffsets.scalars[ 3],
-		  left.scalars[ 4] >> bitOffsets.scalars[ 4],
-		  left.scalars[ 5] >> bitOffsets.scalars[ 5],
-		  left.scalars[ 6] >> bitOffsets.scalars[ 6],
-		  left.scalars[ 7] >> bitOffsets.scalars[ 7],
-		  left.scalars[ 8] >> bitOffsets.scalars[ 8],
-		  left.scalars[ 9] >> bitOffsets.scalars[ 9],
-		  left.scalars[10] >> bitOffsets.scalars[10],
-		  left.scalars[11] >> bitOffsets.scalars[11],
-		  left.scalars[12] >> bitOffsets.scalars[12],
-		  left.scalars[13] >> bitOffsets.scalars[13],
-		  left.scalars[14] >> bitOffsets.scalars[14],
-		  left.scalars[15] >> bitOffsets.scalars[15]
-		);
+		#ifdef SAFE_POINTER_CHECKS
+			if(!allLanesLesser(bitOffsets, U16x16(16u))) {
+				throwError(U"Tried to shift ", left, U" by bit offsets ", bitOffsets, U", which is non-deterministic from being out of bound 0..15!\n");
+			}
+		#endif
+		#if defined(USE_AVX2)
+			IMPL_SCALAR_FALLBACK_INFIX_16_LANES(left, bitOffsets, U16x16, uint16_t, >>)
+		#else
+			IMPL_SCALAR_REFERENCE_INFIX_16_LANES(left, bitOffsets, U16x16, uint16_t, >>)
+		#endif
 	}
 	// bitOffset must be an immediate constant from 0 to 31, so a template argument is used.
 	template <uint32_t bitOffset>
 	inline U16x16 bitShiftLeftImmediate(const U16x16& left) {
 		static_assert(bitOffset < 16u, "Immediate left shift of 16-bit values may not shift more than 15 bits!");
-		#if defined USE_AVX2
+		#if defined(USE_AVX2)
 			return U16x16(_mm256_slli_epi16(left.v, bitOffset));
 		#else
-			return U16x16(
-			  left.scalars[ 0] << bitOffset,
-			  left.scalars[ 1] << bitOffset,
-			  left.scalars[ 2] << bitOffset,
-			  left.scalars[ 3] << bitOffset,
-			  left.scalars[ 4] << bitOffset,
-			  left.scalars[ 5] << bitOffset,
-			  left.scalars[ 6] << bitOffset,
-			  left.scalars[ 7] << bitOffset,
-			  left.scalars[ 8] << bitOffset,
-			  left.scalars[ 9] << bitOffset,
-			  left.scalars[10] << bitOffset,
-			  left.scalars[11] << bitOffset,
-			  left.scalars[12] << bitOffset,
-			  left.scalars[13] << bitOffset,
-			  left.scalars[14] << bitOffset,
-			  left.scalars[15] << bitOffset
-			);
+			U16x16 bitOffsets = U16x16(bitOffset);
+			IMPL_SCALAR_REFERENCE_INFIX_16_LANES(left, bitOffsets, U16x16, uint16_t, <<)
 		#endif
 	}
 	// bitOffset must be an immediate constant from 0 to 31, so a template argument is used.
 	template <uint32_t bitOffset>
 	inline U16x16 bitShiftRightImmediate(const U16x16& left) {
 		static_assert(bitOffset < 16u, "Immediate right shift of 16-bit values may not shift more than 15 bits!");
-		#if defined USE_AVX2
+		#if defined(USE_AVX2)
 			return U16x16(_mm256_srli_epi16(left.v, bitOffset));
 		#else
-			return U16x16(
-			  left.scalars[ 0] >> bitOffset,
-			  left.scalars[ 1] >> bitOffset,
-			  left.scalars[ 2] >> bitOffset,
-			  left.scalars[ 3] >> bitOffset,
-			  left.scalars[ 4] >> bitOffset,
-			  left.scalars[ 5] >> bitOffset,
-			  left.scalars[ 6] >> bitOffset,
-			  left.scalars[ 7] >> bitOffset,
-			  left.scalars[ 8] >> bitOffset,
-			  left.scalars[ 9] >> bitOffset,
-			  left.scalars[10] >> bitOffset,
-			  left.scalars[11] >> bitOffset,
-			  left.scalars[12] >> bitOffset,
-			  left.scalars[13] >> bitOffset,
-			  left.scalars[14] >> bitOffset,
-			  left.scalars[15] >> bitOffset
-			);
+			U16x16 bitOffsets = U16x16(bitOffset);
+			IMPL_SCALAR_REFERENCE_INFIX_16_LANES(left, bitOffsets, U16x16, uint16_t, <<)
 		#endif
-	}
-
-	inline U8x32 operator<<(const U8x32& left, const U8x32 &bitOffsets) {
-		assert(allLanesLesser(bitOffsets, U8x32(32u)));
-		return U8x32(
-		  left.scalars[ 0] << bitOffsets.scalars[ 0],
-		  left.scalars[ 1] << bitOffsets.scalars[ 1],
-		  left.scalars[ 2] << bitOffsets.scalars[ 2],
-		  left.scalars[ 3] << bitOffsets.scalars[ 3],
-		  left.scalars[ 4] << bitOffsets.scalars[ 4],
-		  left.scalars[ 5] << bitOffsets.scalars[ 5],
-		  left.scalars[ 6] << bitOffsets.scalars[ 6],
-		  left.scalars[ 7] << bitOffsets.scalars[ 7],
-		  left.scalars[ 8] << bitOffsets.scalars[ 8],
-		  left.scalars[ 9] << bitOffsets.scalars[ 9],
-		  left.scalars[10] << bitOffsets.scalars[10],
-		  left.scalars[11] << bitOffsets.scalars[11],
-		  left.scalars[12] << bitOffsets.scalars[12],
-		  left.scalars[13] << bitOffsets.scalars[13],
-		  left.scalars[14] << bitOffsets.scalars[14],
-		  left.scalars[15] << bitOffsets.scalars[15],
-		  left.scalars[16] << bitOffsets.scalars[16],
-		  left.scalars[17] << bitOffsets.scalars[17],
-		  left.scalars[18] << bitOffsets.scalars[18],
-		  left.scalars[19] << bitOffsets.scalars[19],
-		  left.scalars[20] << bitOffsets.scalars[20],
-		  left.scalars[21] << bitOffsets.scalars[21],
-		  left.scalars[22] << bitOffsets.scalars[22],
-		  left.scalars[23] << bitOffsets.scalars[23],
-		  left.scalars[24] << bitOffsets.scalars[24],
-		  left.scalars[25] << bitOffsets.scalars[25],
-		  left.scalars[26] << bitOffsets.scalars[26],
-		  left.scalars[27] << bitOffsets.scalars[27],
-		  left.scalars[28] << bitOffsets.scalars[28],
-		  left.scalars[29] << bitOffsets.scalars[29],
-		  left.scalars[30] << bitOffsets.scalars[30],
-		  left.scalars[31] << bitOffsets.scalars[31]
-		);
-	}
-	inline U8x32 operator>>(const U8x32& left, const U8x32 &bitOffsets) {
-		assert(allLanesLesser(bitOffsets, U8x32(32u)));
-		return U8x32(
-		  left.scalars[ 0] >> bitOffsets.scalars[ 0],
-		  left.scalars[ 1] >> bitOffsets.scalars[ 1],
-		  left.scalars[ 2] >> bitOffsets.scalars[ 2],
-		  left.scalars[ 3] >> bitOffsets.scalars[ 3],
-		  left.scalars[ 4] >> bitOffsets.scalars[ 4],
-		  left.scalars[ 5] >> bitOffsets.scalars[ 5],
-		  left.scalars[ 6] >> bitOffsets.scalars[ 6],
-		  left.scalars[ 7] >> bitOffsets.scalars[ 7],
-		  left.scalars[ 8] >> bitOffsets.scalars[ 8],
-		  left.scalars[ 9] >> bitOffsets.scalars[ 9],
-		  left.scalars[10] >> bitOffsets.scalars[10],
-		  left.scalars[11] >> bitOffsets.scalars[11],
-		  left.scalars[12] >> bitOffsets.scalars[12],
-		  left.scalars[13] >> bitOffsets.scalars[13],
-		  left.scalars[14] >> bitOffsets.scalars[14],
-		  left.scalars[15] >> bitOffsets.scalars[15],
-		  left.scalars[16] >> bitOffsets.scalars[16],
-		  left.scalars[17] >> bitOffsets.scalars[17],
-		  left.scalars[18] >> bitOffsets.scalars[18],
-		  left.scalars[19] >> bitOffsets.scalars[19],
-		  left.scalars[20] >> bitOffsets.scalars[20],
-		  left.scalars[21] >> bitOffsets.scalars[21],
-		  left.scalars[22] >> bitOffsets.scalars[22],
-		  left.scalars[23] >> bitOffsets.scalars[23],
-		  left.scalars[24] >> bitOffsets.scalars[24],
-		  left.scalars[25] >> bitOffsets.scalars[25],
-		  left.scalars[26] >> bitOffsets.scalars[26],
-		  left.scalars[27] >> bitOffsets.scalars[27],
-		  left.scalars[28] >> bitOffsets.scalars[28],
-		  left.scalars[29] >> bitOffsets.scalars[29],
-		  left.scalars[30] >> bitOffsets.scalars[30],
-		  left.scalars[31] >> bitOffsets.scalars[31]
-		);
-	}
-	// bitOffset must be an immediate constant from 0 to 31, so a template argument is used.
-	template <uint32_t bitOffset>
-	inline U8x32 bitShiftLeftImmediate(const U8x32& left) {
-		static_assert(bitOffset < 8u, "Immediate left shift of 32-bit values may not shift more than 7 bits!");
-		// TODO: Use a larger lane and a mask generated in compile time.
-		return U8x32(
-		  left.scalars[ 0] << bitOffset,
-		  left.scalars[ 1] << bitOffset,
-		  left.scalars[ 2] << bitOffset,
-		  left.scalars[ 3] << bitOffset,
-		  left.scalars[ 4] << bitOffset,
-		  left.scalars[ 5] << bitOffset,
-		  left.scalars[ 6] << bitOffset,
-		  left.scalars[ 7] << bitOffset,
-		  left.scalars[ 8] << bitOffset,
-		  left.scalars[ 9] << bitOffset,
-		  left.scalars[10] << bitOffset,
-		  left.scalars[11] << bitOffset,
-		  left.scalars[12] << bitOffset,
-		  left.scalars[13] << bitOffset,
-		  left.scalars[14] << bitOffset,
-		  left.scalars[15] << bitOffset,
-		  left.scalars[16] << bitOffset,
-		  left.scalars[17] << bitOffset,
-		  left.scalars[18] << bitOffset,
-		  left.scalars[19] << bitOffset,
-		  left.scalars[20] << bitOffset,
-		  left.scalars[21] << bitOffset,
-		  left.scalars[22] << bitOffset,
-		  left.scalars[23] << bitOffset,
-		  left.scalars[24] << bitOffset,
-		  left.scalars[25] << bitOffset,
-		  left.scalars[26] << bitOffset,
-		  left.scalars[27] << bitOffset,
-		  left.scalars[28] << bitOffset,
-		  left.scalars[29] << bitOffset,
-		  left.scalars[30] << bitOffset,
-		  left.scalars[31] << bitOffset
-		);
-	}
-	// bitOffset must be an immediate constant from 0 to 31, so a template argument is used.
-	template <uint32_t bitOffset>
-	inline U8x32 bitShiftRightImmediate(const U8x32& left) {
-		static_assert(bitOffset < 8u, "Immediate right shift of 32-bit values may not shift more than 7 bits!");
-		// TODO: Use a larger lane and a mask generated in compile time.
-		return U8x32(
-		  left.scalars[ 0] >> bitOffset,
-		  left.scalars[ 1] >> bitOffset,
-		  left.scalars[ 2] >> bitOffset,
-		  left.scalars[ 3] >> bitOffset,
-		  left.scalars[ 4] >> bitOffset,
-		  left.scalars[ 5] >> bitOffset,
-		  left.scalars[ 6] >> bitOffset,
-		  left.scalars[ 7] >> bitOffset,
-		  left.scalars[ 8] >> bitOffset,
-		  left.scalars[ 9] >> bitOffset,
-		  left.scalars[10] >> bitOffset,
-		  left.scalars[11] >> bitOffset,
-		  left.scalars[12] >> bitOffset,
-		  left.scalars[13] >> bitOffset,
-		  left.scalars[14] >> bitOffset,
-		  left.scalars[15] >> bitOffset,
-		  left.scalars[16] >> bitOffset,
-		  left.scalars[17] >> bitOffset,
-		  left.scalars[18] >> bitOffset,
-		  left.scalars[19] >> bitOffset,
-		  left.scalars[20] >> bitOffset,
-		  left.scalars[21] >> bitOffset,
-		  left.scalars[22] >> bitOffset,
-		  left.scalars[23] >> bitOffset,
-		  left.scalars[24] >> bitOffset,
-		  left.scalars[25] >> bitOffset,
-		  left.scalars[26] >> bitOffset,
-		  left.scalars[27] >> bitOffset,
-		  left.scalars[28] >> bitOffset,
-		  left.scalars[29] >> bitOffset,
-		  left.scalars[30] >> bitOffset,
-		  left.scalars[31] >> bitOffset
-		);
 	}
 
 	inline U16x16 operator+(const U16x16& left, const U16x16& right) {
-		#if defined USE_256BIT_X_SIMD
+		#if defined(USE_256BIT_X_SIMD)
 			return U16x16(ADD_U16_SIMD256(left.v, right.v));
 		#else
-			return U16x16(
-			  left.scalars[0] + right.scalars[0],
-			  left.scalars[1] + right.scalars[1],
-			  left.scalars[2] + right.scalars[2],
-			  left.scalars[3] + right.scalars[3],
-			  left.scalars[4] + right.scalars[4],
-			  left.scalars[5] + right.scalars[5],
-			  left.scalars[6] + right.scalars[6],
-			  left.scalars[7] + right.scalars[7],
-			  left.scalars[8] + right.scalars[8],
-			  left.scalars[9] + right.scalars[9],
-			  left.scalars[10] + right.scalars[10],
-			  left.scalars[11] + right.scalars[11],
-			  left.scalars[12] + right.scalars[12],
-			  left.scalars[13] + right.scalars[13],
-			  left.scalars[14] + right.scalars[14],
-			  left.scalars[15] + right.scalars[15]
-			);
+			IMPL_SCALAR_REFERENCE_INFIX_16_LANES(left, right, U16x16, uint16_t, +)
 		#endif
 	}
 	inline U16x16 operator-(const U16x16& left, const U16x16& right) {
-		#if defined USE_256BIT_X_SIMD
+		#if defined(USE_256BIT_X_SIMD)
 			return U16x16(SUB_U16_SIMD256(left.v, right.v));
 		#else
-			return U16x16(
-			  left.scalars[0] - right.scalars[0],
-			  left.scalars[1] - right.scalars[1],
-			  left.scalars[2] - right.scalars[2],
-			  left.scalars[3] - right.scalars[3],
-			  left.scalars[4] - right.scalars[4],
-			  left.scalars[5] - right.scalars[5],
-			  left.scalars[6] - right.scalars[6],
-			  left.scalars[7] - right.scalars[7],
-			  left.scalars[8] - right.scalars[8],
-			  left.scalars[9] - right.scalars[9],
-			  left.scalars[10] - right.scalars[10],
-			  left.scalars[11] - right.scalars[11],
-			  left.scalars[12] - right.scalars[12],
-			  left.scalars[13] - right.scalars[13],
-			  left.scalars[14] - right.scalars[14],
-			  left.scalars[15] - right.scalars[15]
-			);
+			IMPL_SCALAR_REFERENCE_INFIX_16_LANES(left, right, U16x16, uint16_t, -)
 		#endif
 	}
 	inline U16x16 operator*(const U16x16& left, const U16x16& right) {
-		#if defined USE_256BIT_X_SIMD
+		#if defined(USE_256BIT_X_SIMD)
 			return U16x16(MUL_U16_SIMD256(left.v, right.v));
 		#else
-			return U16x16(
-			  left.scalars[0] * right.scalars[0],
-			  left.scalars[1] * right.scalars[1],
-			  left.scalars[2] * right.scalars[2],
-			  left.scalars[3] * right.scalars[3],
-			  left.scalars[4] * right.scalars[4],
-			  left.scalars[5] * right.scalars[5],
-			  left.scalars[6] * right.scalars[6],
-			  left.scalars[7] * right.scalars[7],
-			  left.scalars[8] * right.scalars[8],
-			  left.scalars[9] * right.scalars[9],
-			  left.scalars[10] * right.scalars[10],
-			  left.scalars[11] * right.scalars[11],
-			  left.scalars[12] * right.scalars[12],
-			  left.scalars[13] * right.scalars[13],
-			  left.scalars[14] * right.scalars[14],
-			  left.scalars[15] * right.scalars[15]
-			);
+			IMPL_SCALAR_REFERENCE_INFIX_16_LANES(left, right, U16x16, uint16_t, *)
 		#endif
 	}
 	inline U8x32 operator+(const U8x32& left, const U8x32& right) {
-		#if defined USE_256BIT_X_SIMD
+		#if defined(USE_256BIT_X_SIMD)
 			return U8x32(ADD_U8_SIMD256(left.v, right.v));
 		#else
-			U8x32 result = U8x32::create_dangerous_uninitialized();
-			for (int i = 0; i < 32; i++) {
-				result.scalars[i] = left.scalars[i] + right.scalars[i];
-			}
-			return result;
+			IMPL_SCALAR_REFERENCE_INFIX_32_LANES(left, right, U8x32, uint8_t, +)
 		#endif
 	}
 	inline U8x32 operator-(const U8x32& left, const U8x32& right) {
-		#if defined USE_256BIT_X_SIMD
+		#if defined(USE_256BIT_X_SIMD)
 			return U8x32(SUB_U8_SIMD256(left.v, right.v));
 		#else
-			U8x32 result = U8x32::create_dangerous_uninitialized();
-			for (int i = 0; i < 32; i++) {
-				result.scalars[i] = left.scalars[i] - right.scalars[i];
-			}
-			return result;
+			IMPL_SCALAR_REFERENCE_INFIX_32_LANES(left, right, U8x32, uint8_t, -)
 		#endif
 	}
 	inline U8x32 saturatedAddition(const U8x32& left, const U8x32& right) {
-		#if defined USE_256BIT_X_SIMD
+		#if defined(USE_256BIT_X_SIMD)
 			return U8x32(ADD_SAT_U8_SIMD256(left.v, right.v));
 		#else
 			U8x32 result = U8x32::create_dangerous_uninitialized();
@@ -3615,7 +3030,7 @@
 		#endif
 	}
 	inline U8x32 saturatedSubtraction(const U8x32& left, const U8x32& right) {
-		#if defined USE_256BIT_X_SIMD
+		#if defined(USE_256BIT_X_SIMD)
 			return U8x32(SUB_SAT_U8_SIMD256(left.v, right.v));
 		#else
 			U8x32 result = U8x32::create_dangerous_uninitialized();
@@ -3627,7 +3042,7 @@
 	}
 
 	inline I32x8 truncateToI32(const F32x8& vector) {
-		#if defined USE_256BIT_X_SIMD
+		#if defined(USE_256BIT_X_SIMD)
 			return I32x8(F32_TO_I32_SIMD256(vector.v));
 		#else
 			return I32x8(
@@ -3637,7 +3052,7 @@
 		#endif
 	}
 	inline U32x8 truncateToU32(const F32x8& vector) {
-		#if defined USE_256BIT_X_SIMD
+		#if defined(USE_256BIT_X_SIMD)
 			return U32x8(F32_TO_U32_SIMD256(vector.v));
 		#else
 			return U32x8(
@@ -3647,7 +3062,7 @@
 		#endif
 	}
 	inline F32x8 floatFromI32(const I32x8& vector) {
-		#if defined USE_256BIT_X_SIMD
+		#if defined(USE_256BIT_X_SIMD)
 			return F32x8(I32_TO_F32_SIMD256(vector.v));
 		#else
 			return F32x8(
@@ -3657,7 +3072,7 @@
 		#endif
 	}
 	inline F32x8 floatFromU32(const U32x8& vector) {
-		#if defined USE_256BIT_X_SIMD
+		#if defined(USE_256BIT_X_SIMD)
 			return F32x8(U32_TO_F32_SIMD256(vector.v));
 		#else
 			return F32x8(
@@ -3667,7 +3082,7 @@
 		#endif
 	}
 	inline I32x8 I32FromU32(const U32x8& vector) {
-		#if defined USE_256BIT_X_SIMD
+		#if defined(USE_256BIT_X_SIMD)
 			return I32x8(REINTERPRET_U32_TO_I32_SIMD256(vector.v));
 		#else
 			return I32x8(
@@ -3677,7 +3092,7 @@
 		#endif
 	}
 	inline U32x8 U32FromI32(const I32x8& vector) {
-		#if defined USE_256BIT_X_SIMD
+		#if defined(USE_256BIT_X_SIMD)
 			return U32x8(REINTERPRET_I32_TO_U32_SIMD256(vector.v));
 		#else
 			return U32x8(
@@ -3688,7 +3103,7 @@
 	}
 	// Warning! Behavior depends on endianness.
 	inline U8x32 reinterpret_U8FromU32(const U32x8& vector) {
-		#if defined USE_256BIT_X_SIMD
+		#if defined(USE_256BIT_X_SIMD)
 			return U8x32(REINTERPRET_U32_TO_U8_SIMD256(vector.v));
 		#else
 			const uint8_t *source = (const uint8_t*)vector.scalars;
@@ -3701,7 +3116,7 @@
 	}
 	// Warning! Behavior depends on endianness.
 	inline U32x8 reinterpret_U32FromU8(const U8x32& vector) {
-		#if defined USE_256BIT_X_SIMD
+		#if defined(USE_256BIT_X_SIMD)
 			return U32x8(REINTERPRET_U8_TO_U32_SIMD256(vector.v));
 		#else
 			const uint32_t *source = (const uint32_t*)vector.scalars;
@@ -3710,7 +3125,7 @@
 	}
 	// Warning! Behavior depends on endianness.
 	inline U16x16 reinterpret_U16FromU32(const U32x8& vector) {
-		#if defined USE_256BIT_X_SIMD
+		#if defined(USE_256BIT_X_SIMD)
 			return U16x16(REINTERPRET_U32_TO_U16_SIMD256(vector.v));
 		#else
 			const uint16_t *source = (const uint16_t*)vector.scalars;
@@ -3722,7 +3137,7 @@
 	}
 	// Warning! Behavior depends on endianness.
 	inline U32x8 reinterpret_U32FromU16(const U16x16& vector) {
-		#if defined USE_256BIT_X_SIMD
+		#if defined(USE_256BIT_X_SIMD)
 			return U32x8(REINTERPRET_U16_TO_U32_SIMD256(vector.v));
 		#else
 			const uint32_t *source = (const uint32_t*)vector.scalars;
@@ -3732,21 +3147,21 @@
 
 	// Unpacking to larger integers
 	inline U32x8 lowerToU32(const U16x16& vector) {
-		#if defined USE_256BIT_X_SIMD
+		#if defined(USE_256BIT_X_SIMD)
 			return U32x8(U16_LOW_TO_U32_SIMD256(vector.v));
 		#else
 			return U32x8(vector.scalars[0], vector.scalars[1], vector.scalars[2], vector.scalars[3], vector.scalars[4], vector.scalars[5], vector.scalars[6], vector.scalars[7]);
 		#endif
 	}
 	inline U32x8 higherToU32(const U16x16& vector) {
-		#if defined USE_256BIT_X_SIMD
+		#if defined(USE_256BIT_X_SIMD)
 			return U32x8(U16_HIGH_TO_U32_SIMD256(vector.v));
 		#else
 			return U32x8(vector.scalars[8], vector.scalars[9], vector.scalars[10], vector.scalars[11], vector.scalars[12], vector.scalars[13], vector.scalars[14], vector.scalars[15]);
 		#endif
 	}
 	inline U16x16 lowerToU16(const U8x32& vector) {
-		#if defined USE_256BIT_X_SIMD
+		#if defined(USE_256BIT_X_SIMD)
 			return U16x16(U8_LOW_TO_U16_SIMD256(vector.v));
 		#else
 			return U16x16(
@@ -3758,7 +3173,7 @@
 		#endif
 	}
 	inline U16x16 higherToU16(const U8x32& vector) {
-		#if defined USE_256BIT_X_SIMD
+		#if defined(USE_256BIT_X_SIMD)
 			return U16x16(U8_HIGH_TO_U16_SIMD256(vector.v));
 		#else
 			return U16x16(
@@ -3767,22 +3182,6 @@
 			  vector.scalars[24], vector.scalars[25], vector.scalars[26], vector.scalars[27],
 			  vector.scalars[28], vector.scalars[29], vector.scalars[30], vector.scalars[31]
 			);
-		#endif
-	}
-
-	// Saturated packing
-	inline U8x32 saturateToU8(const U16x16& lower, const U16x16& upper) {
-		#if defined USE_256BIT_X_SIMD
-			return U8x32(PACK_SAT_U16_TO_U8_SIMD256(lower.v, upper.v));
-		#else
-			U8x32 result = U8x32::create_dangerous_uninitialized();
-			for (int i = 0; i < 16; i++) {
-				result.scalars[i] = impl_limit255(lower.scalars[i]);
-			}
-			for (int i = 0; i < 16; i++) {
-				result.scalars[i + 16] = impl_limit255(upper.scalars[i]);
-			}
-			return result;
 		#endif
 	}
 
@@ -3795,7 +3194,7 @@
 	//      x = -b * 2
 	//      x = b * -2
 	inline F32x8 operator-(const F32x8& value) {
-		#if defined USE_256BIT_F_SIMD
+		#if defined(USE_256BIT_F_SIMD)
 			return F32x8(0.0f) - value;
 		#else
 			return F32x8(
@@ -3805,7 +3204,7 @@
 		#endif
 	}
 	inline I32x8 operator-(const I32x8& value) {
-		#if defined USE_256BIT_X_SIMD
+		#if defined(USE_256BIT_X_SIMD)
 			return I32x8(0) - value;
 		#else
 			return I32x8(
@@ -3817,46 +3216,78 @@
 
 	// Helper macros for generating the vector extract functions.
 	//   Having one function for each type and offset makes sure that the compiler gets an immediate integer within the valid range.
-	#if defined USE_AVX2
+	#if defined(USE_AVX2)
 		// AVX2 does not offer any 256-bit element extraction, only two 128-bit shifts done in parallel, so we might as well use two separate 128-bit extractions.
-		template <int OFFSET>
-		__m256i impl_extractBytes_AVX2(const __m256i leftInput, const __m256i rightInput) {
+		// The __m256i type should never be returned from a non-intrinsic function, because g++ does not automatically enforce
+		//   32 byte alignment for __m256i vectors when creating temporary variables in the generated assembler instructions.
+		template <typename T, int INNER_OFFSET, int EDGE_HALF_INDEX, int MIDDLE_HALF_INDEX>
+		inline T impl_extractBytes_AVX2(const T &leftInput, const T &middleInput, const T &rightInput) {
+			static_assert(0 <= INNER_OFFSET && INNER_OFFSET < 16, "impl_extractBytes_AVX2: INNER_OFFSET is out of bound 0..15!\n");
+			static_assert(0 <= EDGE_HALF_INDEX && EDGE_HALF_INDEX < 2, "impl_extractBytes_AVX2: INNER_OFFSET is out of bound 0..1!n");
+			static_assert(0 <= MIDDLE_HALF_INDEX && MIDDLE_HALF_INDEX < 2, "impl_extractBytes_AVX2: INNER_OFFSET is out of bound 0..1!\n");
 			// Extract three halves depending on which ones overlap with the offset.
-			__m128i leftPart = _mm256_extractf128_si256(leftInput, (OFFSET < 16) ? 0 : 1);
-			__m128i middlePart = _mm256_extractf128_si256(OFFSET < 16 ? rightInput : leftInput, (OFFSET < 16) ? 1 : 0);
-			__m128i rightPart = _mm256_extractf128_si256(rightInput, (OFFSET < 16) ? 0 : 1);
-			// Combine two 128-bit extracts into a whole 256-bit extract.
-			return _mm256_set_m128i(
-			  _mm_alignr_epi8(leftPart, middlePart, OFFSET - ((OFFSET < 16) ? 0 : 16)),
-			  _mm_alignr_epi8(middlePart, rightPart, OFFSET - ((OFFSET < 16) ? 0 : 16))
-			);
+			ALIGN16 __m128i leftPart   = _mm256_extractf128_si256(leftInput.v  , EDGE_HALF_INDEX  );
+			ALIGN16 __m128i middlePart = _mm256_extractf128_si256(middleInput.v, MIDDLE_HALF_INDEX);
+			ALIGN16 __m128i rightPart  = _mm256_extractf128_si256(rightInput.v , EDGE_HALF_INDEX  );
+			// Make two 128-bit vector extractions.
+			ALIGN16 __m128i leftResult = _mm_alignr_epi8(leftPart, middlePart, INNER_OFFSET);
+			ALIGN16 __m128i rightResult = _mm_alignr_epi8(middlePart, rightPart, INNER_OFFSET);
+			// Combine the results.
+			ALIGN32 __m256i result = _mm256_set_m128i(leftResult, rightResult);
+			return T(result);
 		}
-		#define VECTOR_EXTRACT_GENERATOR_256_U8(OFFSET) return U8x32(impl_extractBytes_AVX2<OFFSET>(b.v, a.v));
-		#define VECTOR_EXTRACT_GENERATOR_256_U16(OFFSET) return U16x16(impl_extractBytes_AVX2<OFFSET * 2>(b.v, a.v));
-		#define VECTOR_EXTRACT_GENERATOR_256_U32(OFFSET) return U32x8(impl_extractBytes_AVX2<OFFSET * 4>(b.v, a.v));
-		#define VECTOR_EXTRACT_GENERATOR_256_I32(OFFSET) return I32x8(impl_extractBytes_AVX2<OFFSET * 4>(b.v, a.v));
-		#define VECTOR_EXTRACT_GENERATOR_256_F32(OFFSET) return F32x8(SIMD_F32x8(impl_extractBytes_AVX2<OFFSET * 4>(SIMD_U32x8(b.v), SIMD_U32x8(a.v))));
+		template <typename T, int INNER_OFFSET, int EDGE_HALF_INDEX, int MIDDLE_HALF_INDEX>
+		inline T impl_extractBytes_AVX2_F32(const T &leftInput, const T &middleInput, const T &rightInput) {
+			static_assert(0 <= INNER_OFFSET && INNER_OFFSET < 16, "impl_extractBytes_AVX2: INNER_OFFSET is out of bound 0..15!\n");
+			static_assert(0 <= EDGE_HALF_INDEX && EDGE_HALF_INDEX < 2, "impl_extractBytes_AVX2: INNER_OFFSET is out of bound 0..1!n");
+			static_assert(0 <= MIDDLE_HALF_INDEX && MIDDLE_HALF_INDEX < 2, "impl_extractBytes_AVX2: INNER_OFFSET is out of bound 0..1!\n");
+			// Extract three halves depending on which ones overlap with the offset.
+			ALIGN16 __m128i leftPart   = _mm256_extractf128_si256(__m256i(leftInput.v)  , EDGE_HALF_INDEX  );
+			ALIGN16 __m128i middlePart = _mm256_extractf128_si256(__m256i(middleInput.v), MIDDLE_HALF_INDEX);
+			ALIGN16 __m128i rightPart  = _mm256_extractf128_si256(__m256i(rightInput.v) , EDGE_HALF_INDEX  );
+			// Make two 128-bit vector extractions.
+			ALIGN16 __m128i leftResult = _mm_alignr_epi8(leftPart, middlePart, INNER_OFFSET);
+			ALIGN16 __m128i rightResult = _mm_alignr_epi8(middlePart, rightPart, INNER_OFFSET);
+			// Combine the results.
+			ALIGN32 __m256i result = _mm256_set_m128i(leftResult, rightResult);
+			return T(__m256(result));
+		}
+		#define VECTOR_EXTRACT_GENERATOR_256(METHOD_NAME, VECTOR_TYPE, OFFSET, A, B) \
+			METHOD_NAME<VECTOR_TYPE, (OFFSET) - ((OFFSET) < 16 ? 0 : 16), (OFFSET) < 16 ? 0 : 1, (OFFSET) < 16 ? 1 : 0> ((B), (OFFSET) < 16 ? (A) : (B), (A))
+		#define VECTOR_EXTRACT_GENERATOR_256_U8( OFFSET) return U8x32 (VECTOR_EXTRACT_GENERATOR_256(impl_extractBytes_AVX2    , U8x32 , OFFSET    , a, b));
+		#define VECTOR_EXTRACT_GENERATOR_256_U16(OFFSET) return U16x16(VECTOR_EXTRACT_GENERATOR_256(impl_extractBytes_AVX2    , U16x16, OFFSET * 2, a, b));
+		#define VECTOR_EXTRACT_GENERATOR_256_U32(OFFSET) return U32x8 (VECTOR_EXTRACT_GENERATOR_256(impl_extractBytes_AVX2    , U32x8 , OFFSET * 4, a, b));
+		#define VECTOR_EXTRACT_GENERATOR_256_I32(OFFSET) return I32x8 (VECTOR_EXTRACT_GENERATOR_256(impl_extractBytes_AVX2    , I32x8 , OFFSET * 4, a, b));
+		#define VECTOR_EXTRACT_GENERATOR_256_F32(OFFSET) return F32x8 (VECTOR_EXTRACT_GENERATOR_256(impl_extractBytes_AVX2_F32, F32x8 , OFFSET * 4, a, b));
 	#else
-		template<typename T, int elementCount>
-		T vectorExtract_emulated(const T &a, const T &b, int offset) {
-			// For safety reasons, uninitialized default construction of SIMD vectors is only available during full emulation, not partial AVX support.
+		// TODO: Implement bound checks for scalars in debug mode. A static index can be checked in compile time.
+		template<typename T, int ELEMENT_COUNT, int OFFSET>
+		T impl_vectorExtract_emulated(const T &a, const T &b) {
+			static_assert(0 <= OFFSET && OFFSET <= ELEMENT_COUNT, "Offset is out of bound in impl_vectorExtract_emulated!\n");
+			static_assert(sizeof(a.scalars) == sizeof(a.scalars[0]) * ELEMENT_COUNT, "A does not match the element count in impl_vectorExtract_emulated!\n");
+			static_assert(sizeof(b.scalars) == sizeof(b.scalars[0]) * ELEMENT_COUNT, "B does not match the element count in impl_vectorExtract_emulated!\n");
 			T result = T::create_dangerous_uninitialized();
+			static_assert(sizeof(result.scalars) == sizeof(result.scalars[0]) * ELEMENT_COUNT, "The result does not match the element count in impl_vectorExtract_emulated!\n");
 			int t = 0;
-			for (int s = offset; s < elementCount; s++) {
+			for (int s = OFFSET; s < ELEMENT_COUNT; s++) {
+				assert(0 <= s && s < ELEMENT_COUNT);
+				assert(0 <= t && t < ELEMENT_COUNT);
 				result.scalars[t] = a.scalars[s];
 				t++;
 			}
-			for (int s = 0; s < offset; s++) {
+			for (int s = 0; s < OFFSET; s++) {
+				assert(0 <= s && s < ELEMENT_COUNT);
+				assert(0 <= t && t < ELEMENT_COUNT);
 				result.scalars[t] = b.scalars[s];
 				t++;
 			}
 			return result;
 		}
-		#define VECTOR_EXTRACT_GENERATOR_256_U8(OFFSET) return vectorExtract_emulated<U8x32, 32>(a, b, OFFSET);
-		#define VECTOR_EXTRACT_GENERATOR_256_U16(OFFSET) return vectorExtract_emulated<U16x16, 16>(a, b, OFFSET);
-		#define VECTOR_EXTRACT_GENERATOR_256_U32(OFFSET) return vectorExtract_emulated<U32x8, 8>(a, b, OFFSET);
-		#define VECTOR_EXTRACT_GENERATOR_256_I32(OFFSET) return vectorExtract_emulated<I32x8, 8>(a, b, OFFSET);
-		#define VECTOR_EXTRACT_GENERATOR_256_F32(OFFSET) return vectorExtract_emulated<F32x8, 8>(a, b, OFFSET);
+		#define VECTOR_EXTRACT_GENERATOR_256_U8( OFFSET) return impl_vectorExtract_emulated< U8x32, 32, OFFSET>(a, b);
+		#define VECTOR_EXTRACT_GENERATOR_256_U16(OFFSET) return impl_vectorExtract_emulated<U16x16, 16, OFFSET>(a, b);
+		#define VECTOR_EXTRACT_GENERATOR_256_U32(OFFSET) return impl_vectorExtract_emulated< U32x8,  8, OFFSET>(a, b);
+		#define VECTOR_EXTRACT_GENERATOR_256_I32(OFFSET) return impl_vectorExtract_emulated< I32x8,  8, OFFSET>(a, b);
+		#define VECTOR_EXTRACT_GENERATOR_256_F32(OFFSET) return impl_vectorExtract_emulated< F32x8,  8, OFFSET>(a, b);
 	#endif
 
 	// Vector extraction concatunates two input vectors and reads a vector between them using an offset.
@@ -3950,7 +3381,7 @@
 
 	// Gather instructions load memory from a pointer at multiple index offsets at the same time.
 	//   The given pointers should be aligned with 4 bytes, so that the fallback solution works on machines with strict alignment requirements.
-	#if defined USE_AVX2
+	#if defined(USE_AVX2)
 		#define GATHER_I32x8_AVX2(SOURCE, EIGHT_OFFSETS, SCALE) _mm256_i32gather_epi32((const int32_t*)(SOURCE), EIGHT_OFFSETS, SCALE)
 		#define GATHER_U32x8_AVX2(SOURCE, EIGHT_OFFSETS, SCALE) _mm256_i32gather_epi32((const int32_t*)(SOURCE), EIGHT_OFFSETS, SCALE)
 		#define GATHER_F32x8_AVX2(SOURCE, EIGHT_OFFSETS, SCALE) _mm256_i32gather_ps((const float*)(SOURCE), EIGHT_OFFSETS, SCALE)
@@ -3969,7 +3400,7 @@
 			data.assertInside("U32x4 gather_U32 lane 6", (data + elementOffsets[6]).getUnchecked());
 			data.assertInside("U32x4 gather_U32 lane 7", (data + elementOffsets[7]).getUnchecked());
 		#endif
-		#if defined USE_AVX2
+		#if defined(USE_AVX2)
 			return U32x8(GATHER_I32x8_AVX2(data.getUnsafe(), elementOffset.v, 4));
 		#else
 			#ifndef SAFE_POINTER_CHECKS
@@ -4002,7 +3433,7 @@
 			data.assertInside("I32x4 gather_I32 lane 6", (data + elementOffsets[6]).getUnchecked());
 			data.assertInside("I32x4 gather_I32 lane 7", (data + elementOffsets[7]).getUnchecked());
 		#endif
-		#if defined USE_AVX2
+		#if defined(USE_AVX2)
 			return I32x8(GATHER_U32x8_AVX2(data.getUnsafe(), elementOffset.v, 4));
 		#else
 			#ifndef SAFE_POINTER_CHECKS
@@ -4035,7 +3466,7 @@
 			data.assertInside("F32x4 gather_F32 lane 6", (data + elementOffsets[6]).getUnchecked());
 			data.assertInside("F32x4 gather_F32 lane 7", (data + elementOffsets[7]).getUnchecked());
 		#endif
-		#if defined USE_AVX2
+		#if defined(USE_AVX2)
 			return F32x8(GATHER_F32x8_AVX2(data.getUnsafe(), elementOffset.v, 4));
 		#else
 			#ifndef SAFE_POINTER_CHECKS
@@ -4055,6 +3486,7 @@
 		#endif
 	}
 
+	// TODO: Move to noSimd.h using SFINAE.
 	// Wrapper functions for explicitly expanding scalars into vectors during math operations.
 	#define NUMERICAL_SCALAR_OPERATIONS(VECTOR_TYPE, ELEMENT_TYPE, LANE_COUNT) \
 		inline VECTOR_TYPE operator+(const VECTOR_TYPE& left, ELEMENT_TYPE right) { return left + VECTOR_TYPE(right); } \
@@ -4064,6 +3496,7 @@
 		FOR_ALL_VECTOR_TYPES(NUMERICAL_SCALAR_OPERATIONS)
 	#undef NUMERICAL_SCALAR_OPERATIONS
 
+	// TODO: Move to noSimd.h using SFINAE.
 	#define MULTIPLY_SCALAR_OPERATIONS(VECTOR_TYPE, ELEMENT_TYPE, LANE_COUNT) \
 		inline VECTOR_TYPE operator*(const VECTOR_TYPE& left, ELEMENT_TYPE right) { return left * VECTOR_TYPE(right); } \
 		inline VECTOR_TYPE operator*(ELEMENT_TYPE left, const VECTOR_TYPE& right) { return VECTOR_TYPE(left) * right; }
@@ -4079,6 +3512,7 @@
 		MULTIPLY_SCALAR_OPERATIONS(U16x16, uint16_t, 16)
 	#undef MULTIPLY_SCALAR_OPERATIONS
 
+	// TODO: Move to noSimd.h using SFINAE.
 	// Wrapper functions for explicitly duplicating bit masks into the same lane count.
 	#define BITWISE_SCALAR_OPERATIONS(VECTOR_TYPE, ELEMENT_TYPE, LANE_COUNT) \
 		inline VECTOR_TYPE operator&(const VECTOR_TYPE& left, ELEMENT_TYPE right) { return left & VECTOR_TYPE(right); } \
@@ -4100,6 +3534,131 @@
 	#undef FOR_SIGNED_VECTOR_TYPES
 	#undef FOR_UNSIGNED_VECTOR_TYPES
 
+	// 1 / value
+	inline F32x4 reciprocal(const F32x4 &value) {
+		#if defined(USE_BASIC_SIMD)
+			#if defined(USE_SSE2)
+				// Approximate
+				ALIGN16 SIMD_F32x4 lowQS = _mm_rcp_ps(value.v);
+				F32x4 lowQ = F32x4(lowQS);
+				// Refine
+				return ((lowQ + lowQ) - (value * lowQ * lowQ));
+			#elif defined(USE_NEON)
+				// Approximate
+				ALIGN16 SIMD_F32x4 result = vrecpeq_f32(value.v);
+				// Refine
+				ALIGN16 SIMD_F32x4 a = vrecpsq_f32(value.v, result);
+				result = MUL_F32_SIMD(a, result);
+				return F32x4(MUL_F32_SIMD(vrecpsq_f32(value.v, result), result));
+			#else
+				#error "Missing F32x4 implementation of reciprocal!\n");
+				return F32x4(0);
+			#endif
+		#else
+			F32x4 one = F32x4(1.0f);
+			IMPL_SCALAR_REFERENCE_INFIX_4_LANES(one, value, F32x4, float, /)
+		#endif
+	}
+
+	// 1 / value
+	inline F32x8 reciprocal(const F32x8 &value) {
+		#if defined(USE_AVX2)
+			// Approximate
+			ALIGN32 SIMD_F32x8 lowQ = _mm256_rcp_ps(value.v);
+			// Refine
+			return F32x8(SUB_F32_SIMD256(ADD_F32_SIMD256(lowQ, lowQ), MUL_F32_SIMD256(value.v, MUL_F32_SIMD256(lowQ, lowQ))));
+		#else
+			F32x8 one = F32x8(1.0f);
+			IMPL_SCALAR_REFERENCE_INFIX_8_LANES(one, value, F32x8, float, /)
+		#endif
+	}
+
+	// 1 / sqrt(value)
+	inline F32x4 reciprocalSquareRoot(const F32x4 &value) {
+		#if defined(USE_BASIC_SIMD)
+			#if defined(USE_SSE2)
+				ALIGN16 SIMD_F32x4 reciRootS = _mm_rsqrt_ps(value.v);
+				F32x4 reciRoot = F32x4(reciRootS);
+				F32x4 mul = value * reciRoot * reciRoot;
+				return (reciRoot * 0.5f) * (3.0f - mul);
+			#elif defined(USE_NEON)
+				// Approximate
+				ALIGN16 SIMD_F32x4 reciRoot = vrsqrteq_f32(value.v);
+				// Refine
+				ALIGN16 SIMD_F32x4 a = MUL_F32_SIMD(value.v, reciRoot);
+				ALIGN16 SIMD_F32x4 b = vrsqrtsq_f32(a, reciRoot);
+				ALIGN16 SIMD_F32x4 c = MUL_F32_SIMD(b, reciRoot);
+				return F32x4(c);
+			#else
+				static_assert(false, "Missing SIMD implementation of reciprocalSquareRoot!\n");
+				return F32x4(0);
+			#endif
+		#else
+			return F32x4(1.0f / sqrt(value.scalars[0]), 1.0f / sqrt(value.scalars[1]), 1.0f / sqrt(value.scalars[2]), 1.0f / sqrt(value.scalars[3]));
+		#endif
+	}
+
+	// 1 / sqrt(value)
+	inline F32x8 reciprocalSquareRoot(const F32x8 &value) {
+		#if defined(USE_AVX2)
+			ALIGN32 SIMD_F32x8 reciRootS = _mm256_rsqrt_ps(value.v);
+			F32x8 reciRoot = F32x8(reciRootS);
+			F32x8 mul = value * reciRoot * reciRoot;
+			return (reciRoot * 0.5f) * (3.0f - mul);
+		#else
+			return F32x8(
+			  1.0f / sqrt(value.scalars[0]),
+			  1.0f / sqrt(value.scalars[1]),
+			  1.0f / sqrt(value.scalars[2]),
+			  1.0f / sqrt(value.scalars[3]),
+			  1.0f / sqrt(value.scalars[4]),
+			  1.0f / sqrt(value.scalars[5]),
+			  1.0f / sqrt(value.scalars[6]),
+			  1.0f / sqrt(value.scalars[7])
+			);
+		#endif
+	}
+
+	// sqrt(value)
+	inline F32x4 squareRoot(const F32x4 &value) {
+		#if defined(USE_BASIC_SIMD)
+			#if defined(USE_SSE2)
+				ALIGN16 SIMD_F32x4 half = _mm_set1_ps(0.5f);
+				// Approximate
+				ALIGN16 SIMD_F32x4 root = _mm_sqrt_ps(value.v);
+				// Refine
+				root = _mm_mul_ps(_mm_add_ps(root, _mm_div_ps(value.v, root)), half);
+				return F32x4(root);
+			#else
+				return reciprocalSquareRoot(value) * value;
+			#endif
+		#else
+			return F32x4(sqrt(value.scalars[0]), sqrt(value.scalars[1]), sqrt(value.scalars[2]), sqrt(value.scalars[3]));
+		#endif
+	}
+
+	// sqrt(value)
+	inline F32x8 squareRoot(const F32x8 &value) {
+		#if defined(USE_AVX2)
+			ALIGN32 SIMD_F32x8 half = _mm256_set1_ps(0.5f);
+			// Approximate
+			ALIGN32 SIMD_F32x8 root = _mm256_sqrt_ps(value.v);
+			// Refine
+			root = _mm256_mul_ps(_mm256_add_ps(root, _mm256_div_ps(value.v, root)), half);
+			return F32x8(root);
+		#else
+			return F32x8(
+			  sqrt(value.scalars[0]),
+			  sqrt(value.scalars[1]),
+			  sqrt(value.scalars[2]),
+			  sqrt(value.scalars[3]),
+			  sqrt(value.scalars[4]),
+			  sqrt(value.scalars[5]),
+			  sqrt(value.scalars[6]),
+			  sqrt(value.scalars[7]));
+		#endif
+	}
+
 	// TODO: Let SVE define completely separate types for dynamic vectors.
 	// The X vectors using the longest SIMD length that is efficient to use for both floating-point and integer types.
 	//   DSR_DEFAULT_ALIGNMENT
@@ -4114,7 +3673,7 @@
 	//     The longest available SIMD vector for storing unsigned 16-bit integer values. Iterating laneCountX_16Bit integers at a time.
 	//   U8xX
 	//     The longest available SIMD vector for storing unsigned 8-bit integer values. Iterating laneCountX_8Bit integers at a time.
-	#if defined USE_256BIT_X_SIMD || defined EMULATE_256BIT_X_SIMD
+	#if defined(USE_256BIT_X_SIMD) || defined(EMULATE_256BIT_X_SIMD)
 		// Using 256-bit SIMD
 		#define DSR_DEFAULT_VECTOR_SIZE 32
 		#define DSR_DEFAULT_ALIGNMENT 32
@@ -4135,6 +3694,7 @@
 		using U16xX = U16x8;
 		using U8xX = U8x16;
 	#endif
+
 	// How many lanes do the longest available vector have for a specified lane size.
 	//   Used to iterate indices and pointers using whole elements.
 	static const int laneCountX_32Bit = DSR_DEFAULT_VECTOR_SIZE / 4;
@@ -4147,7 +3707,7 @@
 	//     Some processors have AVX but not AVX2, meaning that it has 256-bit SIMD for floats, but only 128-bit SIMD for integers.
 	//   F32xF
 	//     The longest available SIMD vector for storing 32-bit float values. Iterating laneCountF_32Bit floats at a time.
-	#if defined USE_256BIT_F_SIMD || defined EMULATE_256BIT_F_SIMD
+	#if defined(USE_256BIT_F_SIMD) || defined(EMULATE_256BIT_F_SIMD)
 		#define DSR_FLOAT_VECTOR_SIZE 32
 		#define DSR_FLOAT_ALIGNMENT 32
 		using F32xF = F32x8;

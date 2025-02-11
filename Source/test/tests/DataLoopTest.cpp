@@ -17,15 +17,15 @@
 				errors++; \
 			} \
 		} \
-		ASSERT(errors == 0); \
+		ASSERT_EQUAL(errors, 0); \
 	}
 
 START_TEST(DataLoop)
 	// Allocate aligned memory
 	const int elements = 256;
-	int32_t allocationA[elements] ALIGN16;
-	int32_t allocationB[elements] ALIGN16;
-	int32_t allocationC[elements] ALIGN16;
+	ALIGN16 int32_t allocationA[elements];
+	ALIGN16 int32_t allocationB[elements];
+	ALIGN16 int32_t allocationC[elements];
 	// The SafePointer class will emulate the behaviour of a raw data pointer while providing full bound checks in debug mode.
 	SafePointer<int32_t> bufferA("bufferA", allocationA, sizeof(allocationA));
 	SafePointer<int32_t> bufferB("bufferB", allocationB, sizeof(allocationB));
