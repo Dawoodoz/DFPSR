@@ -953,7 +953,7 @@ List<String> dsr::string_split(const ReadableString& source, DsrChar separator, 
 }
 
 intptr_t dsr::string_splitCount(const ReadableString& source, DsrChar separator) {
-	intptr_t result;
+	intptr_t result = 0;
 	string_split_callback([&result](ReadableString element) {
 		result++;
 	}, source, separator);

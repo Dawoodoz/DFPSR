@@ -60,7 +60,7 @@ bool Button::isContainer() const {
 	return false;
 }
 
-static OrderedImageRgbaU8 generateButtonImage(Button &button, MediaMethod imageGenerator, int pressed, int width, int height, ColorRgbI32 backColor, ColorRgbI32 foreColor, String text, RasterFont font) {
+static OrderedImageRgbaU8 generateButtonImage(Button &button, MediaMethod imageGenerator, int pressed, int width, int height, ColorRgbI32 backColor, ColorRgbI32 foreColor, const ReadableString &text, RasterFont font) {
 	// Create a scaled image
 	OrderedImageRgbaU8 result;
  	component_generateImage(button.getTheme(), imageGenerator, width, height, backColor.red, backColor.green, backColor.blue, pressed)(result);

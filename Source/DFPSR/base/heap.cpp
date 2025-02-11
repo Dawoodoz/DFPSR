@@ -154,8 +154,8 @@ namespace dsr {
 		static uintptr_t heapAlignment = 0u;
 		if (heapAlignment == 0) {
 			heapAlignment = getCacheLineSize();
-			if (heapAlignment < sizeof(DSR_FLOAT_VECTOR_SIZE)) heapAlignment = sizeof(DSR_FLOAT_VECTOR_SIZE);
-			if (heapAlignment < minimumHeapAlignment) heapAlignment = minimumHeapAlignment;
+			if (heapAlignment < DSR_FLOAT_VECTOR_SIZE) { heapAlignment = DSR_FLOAT_VECTOR_SIZE; }
+			if (heapAlignment < minimumHeapAlignment) { heapAlignment = minimumHeapAlignment; }
 			heapAlignmentAndMask = memory_createAlignmentAndMask(heapAlignment);
 		}
 		return heapAlignment;

@@ -190,7 +190,7 @@ public:
 	//       drawClipped(i, o, IRect(10, 0, 10, 20)) // Right half
 	//   Drawing with the whole target image as a clip region should be equivalent to a corresponding call to draw with the same targetImage and offset.
 	//     draw(i, o) <=> drawClipped(i, o, IRect(0, 0, i.width(), i.height()))
-	void drawClipped(ImageRgbaU8 targetImage, const IVector2D& offset, const IRect& clipRegion);
+	void drawClipped(ImageRgbaU8& targetImage, const IVector2D& offset, const IRect& clipRegion);
 
 	// Add a child component
 	//   Preconditions:
