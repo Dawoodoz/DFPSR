@@ -79,18 +79,18 @@
 //   On ARMv8 processors:
 //     NEON can not be disabled for ARMv8, because it is mandatory for ARMv8.
 
-// If getting crashes:
-// * Disable compiler optimizations and inspect generated assembler code.
-//   To see how the variables would be stored in the stack when running out of registers.
-//   Otherwise you have to wait until you run out of registers before noticing that a variable was incorrectly aligned.
-// * Make sure that the compiler did not automatically generate any non-aligned temporary variables of the __m256 or __m256i types.
-//   The Intel ABI strictly requires that 256-bit SIMD vectors are always aligned by 32 bytes. Not doing so will cause crashes on some processor models.
-//   The g++ compiler does not treat __m256 nor __m256i as strictly aligned by 32 bytes and sais that it is the developer's responsibility to align the memory according to Intel's ABI.
-//   But when you do align all variables explicitly to 32 bytes, g++ inserts unaligned temporary variables that cause crashes anyway.
-// * Instead of nesting calls to intrinsic functions, separate them into one statement per call and explicitly align all inputs and outputs.
-// * When making a wrapper function around intrinsic AVX2 functions, use aligned wrapper types for both input and output, so that generated temporary variables are explicitly aligned.
-//   If you must have inputs or outputs with __m256 or __m256i types, pass by reference and align with 32 bytes at the caller.
-// * Check which arguments are required to be immediate constants and either hardcode or pass through a template argument.
+// The g++ compiler does not consider __m256 and __m256i to have strict alignment requirements, despite crashing if they are not aligned.
+//   * Each container or variable for __m256 and __m256i has to be explicitly aligned using alignas, because it is not enough that alignof returns 32.
+//     The compiler only cares about the strict alignment requirement, but somehow the 256-bit AVX2 types are not treated as
+//       strictly required to be aligned, despite Intel's ABI being clear about the need for them to awlays be aligned.
+//   * It is also not enough to have all variables strictly aligned, because the compiler may generate temporary variables automatically that are unaligned.
+//     Each intrinsic SIMD function, has to write the result directly to an explicitly aligned named variable to supress the creation of unaligned temps.
+//     The intrinsic functions can not be used to form nest expressions due to this compiler bug, because intermediate values will generate unaligned temporary variables.
+//   * Even if you always contain the SIMD types in an explicitly aligned struct, you must also define the copy, assignment and move operators,
+//       to make sure that no unaligned temporary variables are created when moving the data around at the end of function calls.
+
+// Some intrinsic functions require input arguments to be immediate constants.
+//   Then a template argument can be used as a wrapper making sure that constant evaluation is enforced even when optimization is turned off.
 //   The expression 5 + 5 will not becomes an immediate constant when optimization is disabled, which may cause a crash if passing the expression as an immediate constant.
 //   Sometimes you need to turn optimization off for debugging, so it is good if turning optimizations off does not cause the program to crash.
 

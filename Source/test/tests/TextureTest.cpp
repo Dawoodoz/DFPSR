@@ -6,132 +6,6 @@
 #define ASSERT_EQUAL_SIMD(A, B) ASSERT_COMP(A, B, allLanesEqual, "==")
 #define ASSERT_NOTEQUAL_SIMD(A, B) ASSERT_COMP(A, B, !allLanesEqual, "!=")
 
-inline U32x8 shr_test(const U32x8& left, const U32x8 &bitOffsets) {
-stateName = U"shr_test: A.\n";
-	assert((uintptr_t(&left) & 31u) == 0);
-	#ifdef SAFE_POINTER_CHECKS
-stateName = U"shr_test: B.\n";
-		if(!allLanesLesser(bitOffsets, U32x8(32u))) {
-			throwError(U"Tried to shift ", left, U" by bit offsets ", bitOffsets, U", which is non-deterministic from being out of bound 0..31!\n");
-		}
-	#endif
-	#if defined(USE_AVX2)
-stateName = U"shr_test: C 1.\n";
-		ALIGN_BYTES(sizeof(U32x8)) uint32_t lanesA[8];
-		ALIGN_BYTES(sizeof(U32x8)) uint32_t lanesB[8];
-stateName = U"shr_test: C 2.\n";
-		left.writeAlignedUnsafe(&(lanesA[0]));
-stateName = U"shr_test: C 3.\n";
-		bitOffsets.writeAlignedUnsafe(&(lanesB[0]));
-stateName = U"shr_test: C 4 calculate.\n";
-		uint32_t a1 = uint32_t(lanesA[0] >> lanesB[0]);
-		uint32_t a2 = uint32_t(lanesA[1] >> lanesB[1]);
-		uint32_t a3 = uint32_t(lanesA[2] >> lanesB[2]);
-		uint32_t a4 = uint32_t(lanesA[3] >> lanesB[3]);
-		uint32_t a5 = uint32_t(lanesA[4] >> lanesB[4]);
-		uint32_t a6 = uint32_t(lanesA[5] >> lanesB[5]);
-		uint32_t a7 = uint32_t(lanesA[6] >> lanesB[6]);
-		uint32_t a8 = uint32_t(lanesA[7] >> lanesB[7]);
-stateName = U"shr_test: C 5 _mm256_set_epi32.\n";
-		ALIGN32 __m256i result = _mm256_set_epi32(a8, a7, a6, a5, a4, a3, a2, a1);
-stateName = U"shr_test: C 6 return.\n";
-		return U32x8(result);
-	#else
-stateName = U"shr_test: D.\n";
-		IMPL_SCALAR_REFERENCE_INFIX_8_LANES(left, bitOffsets, U32x8, uint32_t, >>)
-	#endif
-}
-
-template<
-  bool SQUARE = false,             // Width and height must be the same.
-  bool SINGLE_LAYER = false,       // Demanding that the texture only has a single layer.
-  bool XY_INSIDE = false,          // No pixels may be sampled outside.
-  bool MIP_INSIDE = false,         // Mip level may not go outside of existing layer indices.
-  bool HIGHEST_RESOLUTION = false, // Ignoring any lower layers.
-  typename U, // uint32_t, U32x4, U32x8, U32xX
-  DSR_ENABLE_IF(DSR_CHECK_PROPERTY(DsrTrait_Any_U32, U))>
-U texture_getPixelOffset_test(const TextureRgbaU8 &texture, const U &x, const U &y, const U &mipLevel) {
-stateName = U"Getting eight pixel offsets A.\n";
-	// Clamp the mip-level using bitwise operations in a logarithmic scale, by masking out excess bits with zeroes and filling missing bits with ones.
-	U tileMaskX = U(texture.impl_maxWidthAndMask );
-	U tileMaskY = U(texture.impl_maxHeightAndMask);
-stateName = U"Getting eight pixel offsets B.\n"; // Crashes here on the server!
-	if (!SINGLE_LAYER && !HIGHEST_RESOLUTION) {
-		//tileMaskX = tileMaskX >> mipLevel;
-		//tileMaskY = tileMaskY >> mipLevel;
-		tileMaskX = shr_test(tileMaskX, mipLevel);
-		tileMaskY = shr_test(tileMaskY, mipLevel);
-	}
-stateName = U"Getting eight pixel offsets C.\n";
-	if (!MIP_INSIDE) {
-		// If the mip level index might be higher than what is used in the texture, make sure that the tile masks have at least enough bits for the lowest texture resolution.
-		tileMaskX = tileMaskX | texture.impl_minWidthOrMask;
-		if (!SQUARE) {
-			tileMaskY = tileMaskY | texture.impl_minHeightOrMask;
-		}
-	}
-stateName = U"Getting eight pixel offsets D.\n";
-	U log2PixelStride = U(texture.impl_log2width);
-	if (!SINGLE_LAYER && !HIGHEST_RESOLUTION) {
-stateName = U"Getting eight pixel offsets E.\n";
-		log2PixelStride = log2PixelStride - mipLevel;
-	}
-stateName = U"Getting untiled coordinates.\n";
-	U tiledX = x;
-	U tiledY = y;
-stateName = U"Getting eight pixel offsets F.\n";
-	if (!XY_INSIDE) {
-		tiledX = tiledX & tileMaskX;
-stateName = U"Getting eight pixel offsets G.\n";
-		if (SQUARE) {
-			// Apply the same mask to both for square images, so that the other mask can be optimized away.
-			tiledY = tiledY & tileMaskX;
-		} else {
-			// Apply a separate mask for Y coordinates when the texture might not be square.
-			tiledY = tiledY & tileMaskY;
-		}
-	}
-stateName = U"Getting eight pixel offsets H.\n";
-	U coordinateOffset = ((tiledY << log2PixelStride) | tiledX);
-stateName = U"Getting eight pixel offsets I.\n";
-	#ifndef NDEBUG
-		// In debug mode, wrong use of optimization arguments will throw errors.
-		if (SQUARE) {
-			if (texture.impl_log2width != texture.impl_log2height) {
-				throwError(U"texture_getPixelOffset was told that the texture would have square dimensions using SQUARE, but ", texture_getMaxWidth(texture), U"x", texture_getMaxHeight(texture), U" is not square!\n");
-			}
-		}
-		if (SINGLE_LAYER) {
-			if (texture_getSmallestMipLevel(texture) > 0) {
-				throwError(U"texture_getPixelOffset was told that the texture would only have a single layer using SINGLE_LAYER, but it has ", texture_getSmallestMipLevel(texture) + 1, U" layers!\n");
-			}
-		}
-		if (XY_INSIDE) {
-			if (!(allLanesEqual(x & ~tileMaskX, U(0)) && allLanesEqual(y & ~tileMaskY, U(0)))) {
-				throwError(U"texture_getPixelOffset was told that the pixel coordinates would stay inside using XY_INSIDE, but the coordinate (", x, U", ", y, U") is not within", texture_getMaxWidth(texture), U"x", texture_getMaxHeight(texture), U" pixels!\n");
-			}
-		}
-		if (!SINGLE_LAYER && !HIGHEST_RESOLUTION) {
-			if (!allLanesLesserOrEqual(mipLevel, U(15u))) {
-				throwError(U"texture_getPixelOffset got mip level ", mipLevel, U", which is not within the fixed range of 0..15!\n");
-			}
-			if (MIP_INSIDE) {
-				if (!allLanesLesserOrEqual(mipLevel, U(texture_getSmallestMipLevel(texture)))) {
-					throwError(U"texture_getPixelOffset was told that the mip level would stay within valid indices using MIP_INSIDE, but mip level ", mipLevel, U" is not within 0..", texture_getSmallestMipLevel(texture), U"!\n");
-				}
-			}
-		}
-	#endif
-stateName = U"Getting eight pixel offsets J.\n";
-	if (SINGLE_LAYER) {
-		return coordinateOffset;
-	} else {
-		U startOffset = texture_getPixelOffsetToLayer<HIGHEST_RESOLUTION, U>(texture, mipLevel);
-stateName = U"Getting eight pixel offsets K.\n";
-		return startOffset + coordinateOffset;
-	}
-}
-
 START_TEST(Texture)
 	{
 		// Linear blending of colors using unsigned integers.
@@ -146,20 +20,6 @@ START_TEST(Texture)
 	{
 		// 1x1, 2x2, 4x4, 8x8, 16x16
 		TextureRgbaU8 texture = TextureRgbaU8(4, 4);
-		{
-			stateName = U"Getting eight pixel offsets TEST.\n";
-			U32x8 pixelOffsets = texture_getPixelOffset_test(texture, U32x8(0u, 1u, 2u, 3u, 0u, 1u, 2u, 3u), U32x8(0u, 0u, 0u, 0u, 1u, 1u, 1u, 1u), U32x8(0u));
-			stateName = U"Comparing eight pixel offsets.\n";
-			ASSERT_EQUAL_SIMD(pixelOffsets, U32x8(85u, 86u, 87u, 88u, 101u, 102u, 103u, 104u));
-		}
-		/*
-		{
-			stateName = U"Getting eight pixel offsets.\n";
-			U32x8 pixelOffsets = texture_getPixelOffset(texture, U32x8(0u, 1u, 2u, 3u, 0u, 1u, 2u, 3u), U32x8(0u, 0u, 0u, 0u, 1u, 1u, 1u, 1u), U32x8(0u));
-			stateName = U"Comparing eight pixel offsets.\n";
-			ASSERT_EQUAL_SIMD(pixelOffsets, U32x8(85u, 86u, 87u, 88u, 101u, 102u, 103u, 104u));
-		}
-		*/
 		ASSERT(texture_hasPyramid(texture));
 		ASSERT_EQUAL(texture_getMaxWidth(texture), 16);
 		ASSERT_EQUAL(texture_getMaxHeight(texture), 16);
@@ -303,7 +163,6 @@ START_TEST(Texture)
 				result = texture_getPixelOffset<false, true, false, false>(texture, 0u, 0u, 0u);
 			END_CRASH
 		#endif
-
 		ASSERT_EQUAL_SIMD(texture_getPixelOffset(texture, U32x4(0u, 0u, 0u, 0u), U32x4(0u, 0u, 0u, 0u), U32x4(0u, 1u, 2u, 3u)), U32x4(85u, 21u, 5u, 1u));
 		ASSERT_EQUAL_SIMD(texture_getPixelOffset(texture, U32x4(0u, 1u, 0u, 1u), U32x4(0u, 0u, 1u, 1u), U32x4(3u, 3u, 3u, 3u)), U32x4(1u, 2u, 3u, 4u));
 		ASSERT_EQUAL_SIMD(texture_getPixelOffset(texture, U32x4(2u, 3u, 0u, 1u), U32x4(0u, 0u, 1u, 1u), U32x4(0u)), U32x4(87u, 88u, 101u, 102u));
