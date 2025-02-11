@@ -124,8 +124,13 @@ void dsrMain(List<String> args) { \
 	stateName = string_combine(U"After evaluating condition ", #CONDITION, U"\n");
 
 #define ASSERT_COMP(A, B, OP, OP_NAME) \
-	stateName = string_combine(U"While evaluating comparison ", #A, " ", OP_NAME, U" ", #B, U"\n"); \
-	if (OP(A, B)) { \
+{ \
+	stateName = string_combine(U"While evaluating ", #A, U"\n"); \
+	auto lhs = A; \
+	stateName = string_combine(U"While evaluating ", #B, U"\n"); \
+	auto rhs = B; \
+	stateName = string_combine(U"While comparing ", #A, " ", OP_NAME, U" ", #B, U"\n"); \
+	if (OP(lhs, rhs)) { \
 		printText(U"*"); \
 	} else { \
 	stateName = string_combine(U"While reporting failure for comparison ", #A, " ", OP_NAME, U" ", #B, U"\n"); \
@@ -138,7 +143,8 @@ void dsrMain(List<String> args) { \
 			U"____________________________________________________________________\n" \
 		); \
 	} \
-	stateName = string_combine(U"After evaluating comparison ", #A, " ", OP_NAME, U" ", #B, U"\n");
+	stateName = string_combine(U"After evaluating comparison ", #A, " ", OP_NAME, U" ", #B, U"\n"); \
+}
 #define ASSERT_EQUAL(A, B) ASSERT_COMP(A, B, OP_EQUALS, "==")
 #define ASSERT_NOT_EQUAL(A, B) ASSERT_COMP(A, B, OP_NOT_EQUALS, "!=")
 #define ASSERT_LESSER(A, B) ASSERT_COMP(A, B, OP_LESSER, "<")

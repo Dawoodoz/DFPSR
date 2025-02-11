@@ -4,10 +4,17 @@ CompilerFlag "-std=c++14"
 # Use all locally available SIMD extensions.
 CompilerFlag "-march=native"
 
+# Enable debug information
+CompilerFlag "-g"
+
 Debug = 1
 Supressed = 1
 Graphics = 0
 Sound = 0
+# Turning off optimization will cause AVX2 to crash in GNU's g++!
+#   Because there is no way to create a U32x8 vector without getting an unaligned __m256i temp
+#   generated and moved by the broken compiler and they have refused to fix the bug since 2009.
+#Optimization = 0
 Import "../DFPSR/DFPSR.DsrHead"
 
 # Compile and run each source file ending with Test.cpp in tests as its own project.
