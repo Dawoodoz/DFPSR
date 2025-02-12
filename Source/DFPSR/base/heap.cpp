@@ -59,7 +59,7 @@ namespace dsr {
 	// There is no point in using a heap alignment smaller than the allocation heads, so we align to at least 64 bytes.
 	static const uintptr_t minimumHeapAlignment = 64;
 	#if defined(USE_LINUX)
-		static int32_t getCacheLineSizeFromIndices(int32_t cpuIndex, int32_t cacheLevel) {
+		static uintptr_t getCacheLineSizeFromIndices(uintptr_t cpuIndex, uintptr_t cacheLevel) {
 			char path[256];
 			snprintf(path, sizeof(path), "/sys/devices/system/cpu/cpu%i/cache/index%i/coherency_line_size", (int)cpuIndex, (int)cacheLevel);
 			FILE *file = fopen(path, "r");
@@ -71,14 +71,14 @@ namespace dsr {
 				cacheLineSize = -1;
 			}
 			fclose(file);
-			return int32_t(cacheLineSize);
+			return uintptr_t(cacheLineSize);
 		}
-		static int32_t getCacheLineSize() {
-			int32_t result = 0;
-			int32_t cpuIndex = 0;
-			int32_t cacheLevel = 0;
+		static uintptr_t getCacheLineSize() {
+			uintptr_t result = 0;
+			uintptr_t cpuIndex = 0;
+			uintptr_t cacheLevel = 0;
 			while (true) {
-				int32_t newSize = getCacheLineSizeFromIndices(cpuIndex, cacheLevel);
+				uintptr_t newSize = getCacheLineSizeFromIndices(cpuIndex, cacheLevel);
 				if (newSize == -1) {
 					if (cacheLevel == 0) {
 						// CPU does not exist, so we are done.
@@ -105,8 +105,8 @@ namespace dsr {
 			return result;
 		}
 	#elif defined(USE_MACOS)
-		static int32_t getCacheLineSize() {
-			int32_t result = 0;
+		static uintptr_t getCacheLineSize() {
+			uintptr_t result = 0;
 			int cacheLine;
 			size_t size = sizeof(cacheLine);
 			int mib[2] = {CTL_HW, HW_CACHELINE};
@@ -116,36 +116,47 @@ namespace dsr {
 				#ifdef DSR_PRINT_CACHE_LINE_SIZE
 					printf("Detected a cache line width of %i bytes on MacOS by asking for HW_CACHELINE with sysctl.\n", (int)result);
 				#endif
-			} else if(error == EFAULT) {
-				printf("WARNING! Failed to read HW_CACHELINE on MacOS because of a bad address error. The application might not be thread-safe.\n");
-			} else if(error == EINVAL) {
-				printf("WARNING! Failed to read HW_CACHELINE on MacOS because of a bad argument error. The application might not be thread-safe.\n");
-			} else if(error == ENOMEM) {
-				printf("WARNING! Failed to read HW_CACHELINE on MacOS because of an out of memory error. The application might not be thread-safe.\n");
-			} else if(error == ENOTDIR) {
-				printf("WARNING! Failed to read HW_CACHELINE on MacOS because of a not a directory error. The application might not be thread-safe.\n");
-			} else if(error == EISDIR) {
-				printf("WARNING! Failed to read HW_CACHELINE on MacOS because of a directory error. The application might not be thread-safe.\n");
-			} else if(error == EPERM) {
-				printf("WARNING! Failed to read HW_CACHELINE on MacOS because of a permission error. The application might not be thread-safe.\n");
 			} else {
 				result = defaultCacheLineSize;
-				printf("WARNING! Failed to read HW_CACHELINE on MacOS with an unknown error. The application might not be thread-safe.\n");
+				printf("WARNING! Failed to read HW_CACHELINE on MacOS. The application might not be thread-safe.\n");
 			}
 			return result;
 		}
-	/*
 	#elif defined(USE_MICROSOFT_WINDOWS)
-		static int32_t getCacheLineSize() {
-			int32_t result = ?; // TODO: Implement
-			return result;
-		}*/
-	#else
-		static int32_t getCacheLineSize() {
-			int32_t result = 0;
+		static uintptr_t getCacheLineSize() {
+			DWORD bufferSize = 0;
+			GetLogicalProcessorInformation(nullptr, &bufferSize);
+			SYSTEM_LOGICAL_PROCESSOR_INFORMATION *buffer = (SYSTEM_LOGICAL_PROCESSOR_INFORMATION *)malloc(bufferSize);
+			uintptr_t result = 0;
+			if (buffer == nullptr) {
 				result = defaultCacheLineSize;
-				printf("WARNING! The target platform does not have a method for detecting cache line width in DFPSR/base/heap.cpp.\n");
+				printf("WARNING! Failed to allocate buffer for the call to GetLogicalProcessorInformation on MS-Windows. The application might not be thread-safe.\n");
+			} else if (GetLogicalProcessorInformation(buffer, &bufferSize)) {
+				SYSTEM_LOGICAL_PROCESSOR_INFORMATION *entry = buffer;
+				SYSTEM_LOGICAL_PROCESSOR_INFORMATION *lastEntry = buffer + (bufferSize / sizeof(SYSTEM_LOGICAL_PROCESSOR_INFORMATION)) - 1;
+				while (entry <= lastEntry) {
+					if (entry->Relationship == RelationCache) {
+						uintptr_t currentLineSize = entry->Cache.LineSize;
+						if (currentLineSize > result) {
+							result = currentLineSize;
+						}
+					}
+					entry++;
+				}
+				#ifdef DSR_PRINT_CACHE_LINE_SIZE
+					printf("Detected a cache line width of %i bytes on MS-Windows by checking each RelationCache with GetLogicalProcessorInformation.\n", (int)result);
+				#endif
+			} else {
+				result = defaultCacheLineSize;
+				printf("WARNING! The call to GetLogicalProcessorInformation failed to get the cache line size on MS-Windows. The application might not be thread-safe.\n");
+			}
+			free(buffer);
 			return result;
+		}
+	#else
+		static uintptr_t getCacheLineSize() {
+			printf("WARNING! The target platform does not have a method for detecting cache line width in DFPSR/base/heap.cpp.\n");
+			return defaultCacheLineSize;
 		}
 	#endif
 
@@ -317,14 +328,6 @@ namespace dsr {
 		};
 		HeapDestructor destructor;
 		uintptr_t useCount = 0; // How many handles that point to the data.
-		// TODO: Allow placing a pointer to a singleton in another heap allocation, which will simply be freed using heap_free when the owner is freed.
-		//       This allow accessing any amount of additional information shared between all handles to the same payload.
-		//       Useful when you in hindsight realize that you need more information attached to something that is already created and shared, like a value allocated image needing a texture.
-		//       Check if it already exists. If it does not exist, lock the allocation mutex and check again if it still does not exist, before allocating the singleton.
-		//         Then there will only be a mutex overhead for accessing the singleton when accessed for the first time.
-		//         Once created, it can not go away until the allocation that knows about it is gone.
-		//       If using the reference counting, the singleton could also be reused between different allocations.
-		// void *singleton = nullptr;
 		// TODO: Allow the caller to access custom bit flags in allocations.
 		// uint32_t userFlags = 0;
 		HeapFlag flags = 0; // Flags use the heapFlag_ prefix.
