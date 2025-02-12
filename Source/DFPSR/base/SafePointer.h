@@ -143,14 +143,20 @@ public:
 	}
 	inline T& operator*() const {
 		#ifdef SAFE_POINTER_CHECKS
-		assertInside("operator*");
+		assertInside("operator *");
 		#endif
 		return *(this->data);
+	}
+	inline T* operator ->() const {
+		#ifdef SAFE_POINTER_CHECKS
+		assertInside("operator ->");
+		#endif
+		return this->data;
 	}
 	inline T& operator[] (intptr_t index) const {
 		T* address = this->data + index;
 		#ifdef SAFE_POINTER_CHECKS
-		assertInside("operator[]", address);
+		assertInside("operator []", address);
 		#endif
 		return *address;
 	}
