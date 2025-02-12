@@ -25,65 +25,6 @@
 // Everything stored directly in the image types is immutable to allow value types to behave like reference types using the data that they point to.
 // Image types can not be dynamically casted, because the inheritance is entirely static without any virtual functions.
 
-// TODO: Create a fast way to generate masks from an exponential scale floating mip level taken from sampling distances.
-// float samplingDistance (input expressed as some kind of distance in the uv coordinates between two adjacent pixels)
-// uint32_t tileXYMask (tiling should be applied to X and Y using the same mask after limiting to 16 bit integers)
-// uint32_t maxLevelMask
-// So how do we get the weights without shifting bits by the actual bit offset?
-//   Maybe add one to the mask to get a single bit and then multiply.
-/*
-	TODO: Try to handle negative texture coordinates and let positive UV be an optimization flag to enable when known to be valid.
-	      Convert to int32_t with less range and convert to unsigned correctly in modulo of 24 bits.
-
-	// Use leading zeroes to create a mask, which can be turned into a power of two by adding one.
-	// 0001000000000000 -> 0001111111111111
-	// 0001011001000100 -> 0001111111111111
-	// 0001111111111111 -> 0001111111111111
-	// 0000010000000000 -> 0000011111111111
-	// 0000010110010001 -> 0000011111111111
-	// 0000011111111111 -> 0000011111111111
-	// 0000000000100000 -> 0000000000111111
-	// 0000000000101100 -> 0000000000111111
-	// 0000000000111111 -> 0000000000111111
-	uint16_t maskFromLeadingZeroes(uint16_t value) {
-		// Turning 10 into 11
-		uint16_t result = value | (value >> 1);
-		// Turning 1100 into 1111
-		result = result | (result >> 2);
-		// Turning 11110000 into 11111111
-		result = result | (result >> 4);
-		// Turning 1111111100000000 into 1111111111111111
-		result = result | (result >> 8);
-	}
-
-	Generate masks for sampling a specific texture at a specific mip level.
-	  They can then be reused for multiple samples.
-	Pre-condition:
-	  0.0f < samplingDistance
-	  Use min, max, absm et cetera to create a positive sampling distance.
-	void createMasks(float samplingDistance) {
-		uint32_t density = truncateToU32(reciprocal(samplingDistance));
-		// Intel SSE2 does not have dynamic offset bit shifts, because it can only shift by constant bit offsets or dynamic byte offsets.
-		// SSE2, AVX2 and NEON have low 16-bit unsigned multiplication.
-		//   _mm_mullo_epi16, _mm256_mullo_epi16 and vmulq_u16
-		//   Using lower bits might however not be enough and might take more time than simply shifting with scalar operations.
-		//   Then we might as well use SIMD comparisons and make bit masks the way to implement it on all platforms.
-		//     Because returning 1 can be used to return a mask as a fallback.
-		//     And one can also create many overloads for direct selection without the mask in between for future optimization.
-		//   Let textures created from images have 4 mip levels by default, and allow increasing the maximum depth with an optional argument.
-		//     Then make three comparisons to select a mip level.
-		uint16_t mask = maskFromLeadingZeroes(density);
-		// scale is a power of two 16-bit integer used to multiply uv coordinates.
-		//   But SSE2 also does not have 32-bit integer multiplication, so stay in 16 bits or use bit shifts!
-		//   Split into whole pixels and weights before the multiplication somehow.
-		uint16_t scale = mask + 1;
-		// Cast directly to uint16_t with saturation.
-		tileXMask = texture.minimumWidth * scale;
-		tileYMask = texture.minimumHeight * scale;
-		startOffset = texture.startOffsetMask * scale * scale;
-	}
-*/
-
 #ifndef DFPSR_API_TEXTURE
 #define DFPSR_API_TEXTURE
 

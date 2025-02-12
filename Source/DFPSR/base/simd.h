@@ -2284,6 +2284,152 @@
 			IMPL_SCALAR_REFERENCE_INFIX_4_LANES(left, right, U32x4, uint32_t, *)
 		#endif
 	}
+
+	// Bitwise and
+	inline U16x8 operator&(const U16x8& left, const U16x8& right) {
+		#if defined(USE_SSE2)
+			return U16x8(_mm_and_si128(left.v, right.v));
+		#elif defined(USE_NEON)
+			return U16x8(vandq_u16(left.v, right.v));
+		#else
+			IMPL_SCALAR_REFERENCE_INFIX_8_LANES(left, right, U16x8, uint16_t, &)
+		#endif
+	}
+	// Bitwise or
+	inline U16x8 operator|(const U16x8& left, const U16x8& right) {
+		#if defined(USE_SSE2)
+			return U16x8(_mm_or_si128(left.v, right.v));
+		#elif defined(USE_NEON)
+			return U16x8(vorrq_u16(left.v, right.v));
+		#else
+			IMPL_SCALAR_REFERENCE_INFIX_8_LANES(left, right, U16x8, uint16_t, |)
+		#endif
+	}
+	// Bitwise xor
+	inline U16x8 operator^(const U16x8& left, const U16x8& right) {
+		#if defined(USE_SSE2)
+			return U16x8(_mm_xor_si128(left.v, right.v));
+		#elif defined(USE_NEON)
+			return U16x8(veorq_u16(left.v, right.v));
+		#else
+			IMPL_SCALAR_REFERENCE_INFIX_8_LANES(left, right, U16x8, uint16_t, ^)
+		#endif
+	}
+	// Bitwise negation
+	inline U16x8 operator~(const U16x8& value) {
+		#if defined(USE_NEON)
+			return U16x8(vmvnq_u16(value.v));
+		#elif defined(USE_BASIC_SIMD)
+			// Fall back on xor against all ones.
+			return value ^ U16x8(~uint16_t(0));
+		#else
+			// TODO: Generate automatically using a macro.
+			return U16x8(~value.scalars[0], ~value.scalars[1], ~value.scalars[2], ~value.scalars[3]);
+		#endif
+	}
+	inline U16x8 operator<<(const U16x8& left, const U16x8 &bitOffsets) {
+		#ifdef SAFE_POINTER_CHECKS
+			if(!allLanesLesser(bitOffsets, U16x8(16u))) {
+				throwError(U"Tried to shift ", left, U" by bit offsets ", bitOffsets, U", which is non-deterministic from being out of bound 0..15!\n");
+			}
+		#endif
+		#if defined(USE_SSE2)
+			IMPL_SCALAR_FALLBACK_INFIX_8_LANES(left, bitOffsets, U16x8, uint16_t, <<)
+		#elif defined(USE_NEON)
+			return U16x8(vshlq_u16(left.v, vreinterpretq_s16_u16(bitOffsets.v)));
+		#else
+			IMPL_SCALAR_REFERENCE_INFIX_8_LANES(left, bitOffsets, U16x8, uint16_t, <<)
+		#endif
+	}
+	inline U16x8 operator>>(const U16x8& left, const U16x8 &bitOffsets) {
+		#ifdef SAFE_POINTER_CHECKS
+			if(!allLanesLesser(bitOffsets, U16x8(16u))) {
+				throwError(U"Tried to shift ", left, U" by bit offsets ", bitOffsets, U", which is non-deterministic from being out of bound 0..15!\n");
+			}
+		#endif
+		#if defined(USE_SSE2)
+			IMPL_SCALAR_FALLBACK_INFIX_8_LANES(left, bitOffsets, U16x8, uint16_t, >>)
+		#elif defined(USE_NEON)
+			//return U16x8(vshrq_u16(left.v, vreinterpretq_s16_u16(bitOffsets.v)));
+			return U16x8(vshlq_u16(left.v, vnegq_s16(vreinterpretq_s16_u16(bitOffsets.v))));
+		#else
+			IMPL_SCALAR_REFERENCE_INFIX_8_LANES(left, bitOffsets, U16x8, uint16_t, >>)
+		#endif
+	}
+	inline U16x8 operator<<(const U16x8& left, const uint32_t &bitOffset) {
+		#if defined(USE_SSE2)
+			#ifdef SAFE_POINTER_CHECKS
+				if(bitOffset >= 16u) {
+					throwError(U"Tried to shift ", left, U" by bit offset ", bitOffset, U", which is non-deterministic from being out of bound 0..16!\n");
+				}
+			#endif
+			// Write the content to aligned stack memory.
+			ALIGN16 __m128i values;
+			left.writeAlignedUnsafe((uint16_t*)&values);
+			// Cast a pointer to the data into two 64-bit elements.
+			uint64_t *largeLanes = (uint64_t*)&values;
+			// Shift the 128 bits as two 64-bit values.
+			largeLanes[0] = largeLanes[0] << bitOffset;
+			largeLanes[1] = largeLanes[1] << bitOffset;
+			// Create a mask.
+			U16x8 mask = U16x8(uint16_t(~0u) << bitOffset);
+			// Return the shifted 64-bit elements masked to remove spill across lanes.
+			return U16x8::readAlignedUnsafe((uint16_t*)&values) & mask;
+		#else
+			return left << U16x8(bitOffset);
+		#endif
+	}
+	inline U16x8 operator>>(const U16x8& left, const uint32_t &bitOffset) {
+		#if defined(USE_SSE2)
+			#ifdef SAFE_POINTER_CHECKS
+				if(bitOffset >= 16u) {
+					throwError(U"Tried to shift ", left, U" by bit offset ", bitOffset, U", which is non-deterministic from being out of bound 0..16!\n");
+				}
+			#endif
+			// Write the content to aligned stack memory.
+			ALIGN16 __m128i values;
+			left.writeAlignedUnsafe((uint16_t*)&values);
+			// Cast a pointer to the data into two 64-bit elements.
+			uint64_t *largeLanes = (uint64_t*)&values;
+			// Shift the 128 bits as two 64-bit values.
+			largeLanes[0] = largeLanes[0] >> bitOffset;
+			largeLanes[1] = largeLanes[1] >> bitOffset;
+			// Create a mask.
+			U16x8 mask = U16x8(uint16_t(~0u) >> bitOffset);
+			// Return the shifted 64-bit elements masked to remove spill across lanes.
+			return U16x8::readAlignedUnsafe((uint16_t*)&values) & mask;
+		#else
+			return left >> U16x8(bitOffset);
+		#endif
+	}
+	// bitOffset must be an immediate constant, so a template argument is used.
+	template <uint32_t bitOffset>
+	inline U16x8 bitShiftLeftImmediate(const U16x8& left) {
+		static_assert(bitOffset < 16u, "Immediate left shift of 16-bit values may not shift more than 15 bits!");
+		#if defined(USE_SSE2)
+			return U16x8(_mm_slli_epi16(left.v, bitOffset));
+		#elif defined(USE_NEON)
+			return U16x8(vshlq_u32(left.v, vdupq_n_s16(bitOffset)));
+		#else
+			U16x8 bitOffsets = U16x8(bitOffset);
+			IMPL_SCALAR_REFERENCE_INFIX_8_LANES(left, bitOffsets, U16x8, uint16_t, <<)
+		#endif
+	}
+	// bitOffset must be an immediate constant.
+	template <uint32_t bitOffset>
+	inline U16x8 bitShiftRightImmediate(const U16x8& left) {
+		static_assert(bitOffset < 16u, "Immediate right shift of 16-bit values may not shift more than 15 bits!");
+		#if defined(USE_SSE2)
+			return U16x8(_mm_srli_epi16(left.v, bitOffset));
+		#elif defined(USE_NEON)
+			//return U16x8(vshrq_u16(left.v, vdupq_n_s16(bitOffset)));
+			return U16x8(vshlq_u16(left.v, vdupq_n_s16(-(int32_t)bitOffset)));
+		#else
+			U16x8 bitOffsets = U16x8(bitOffset);
+			IMPL_SCALAR_REFERENCE_INFIX_8_LANES(left, bitOffsets, U16x8, uint16_t, >>)
+		#endif
+	}
+
 	// Bitwise and
 	inline U32x4 operator&(const U32x4& left, const U32x4& right) {
 		#if defined(USE_BASIC_SIMD)
@@ -2297,7 +2443,7 @@
 		#if defined(USE_BASIC_SIMD)
 			return U32x4(BITWISE_OR_U32_SIMD(left.v, right.v));
 		#else
-			IMPL_SCALAR_REFERENCE_INFIX(left, right, U32x4, uint32_t, 4, |)
+			IMPL_SCALAR_REFERENCE_INFIX_4_LANES(left, right, U32x4, uint32_t, |)
 		#endif
 	}
 	// Bitwise xor
@@ -2305,7 +2451,7 @@
 		#if defined(USE_BASIC_SIMD)
 			return U32x4(BITWISE_XOR_U32_SIMD(left.v, right.v));
 		#else
-			IMPL_SCALAR_REFERENCE_INFIX(left, right, U32x4, uint32_t, 4, ^)
+			IMPL_SCALAR_REFERENCE_INFIX_4_LANES(left, right, U32x4, uint32_t, ^)
 		#endif
 	}
 	// Bitwise negation
@@ -2350,6 +2496,52 @@
 			IMPL_SCALAR_REFERENCE_INFIX_4_LANES(left, bitOffsets, U32x4, uint32_t, >>)
 		#endif
 	}
+	inline U32x4 operator<<(const U32x4& left, const uint32_t &bitOffset) {
+		#if defined(USE_SSE2)
+			#ifdef SAFE_POINTER_CHECKS
+				if(bitOffset >= 32u) {
+					throwError(U"Tried to shift ", left, U" by bit offset ", bitOffset, U", which is non-deterministic from being out of bound 0..31!\n");
+				}
+			#endif
+			// Write the content to aligned stack memory.
+			ALIGN16 __m128i values;
+			left.writeAlignedUnsafe((uint32_t*)&values);
+			// Cast a pointer to the data into two 64-bit elements.
+			uint64_t *largeLanes = (uint64_t*)&values;
+			// Shift the 128 bits as two 64-bit values.
+			largeLanes[0] = largeLanes[0] << bitOffset;
+			largeLanes[1] = largeLanes[1] << bitOffset;
+			// Create a mask.
+			U32x4 mask = U32x4(uint32_t(~0u) << bitOffset);
+			// Return the shifted 64-bit elements masked to remove spill across lanes.
+			return U32x4::readAlignedUnsafe((uint32_t*)&values) & mask;
+		#else
+			return left << U32x4(bitOffset);
+		#endif
+	}
+	inline U32x4 operator>>(const U32x4& left, const uint32_t &bitOffset) {
+		#if defined(USE_SSE2)
+			#ifdef SAFE_POINTER_CHECKS
+				if(bitOffset >= 32u) {
+					throwError(U"Tried to shift ", left, U" by bit offset ", bitOffset, U", which is non-deterministic from being out of bound 0..31!\n");
+				}
+			#endif
+			// Write the content to aligned stack memory.
+			ALIGN16 __m128i values;
+			left.writeAlignedUnsafe((uint32_t*)&values);
+			// Cast a pointer to the data into two 64-bit elements.
+			uint64_t *largeLanes = (uint64_t*)&values;
+			// Shift the 128 bits as two 64-bit values.
+			largeLanes[0] = largeLanes[0] >> bitOffset;
+			largeLanes[1] = largeLanes[1] >> bitOffset;
+			// Create a mask.
+			U32x4 mask = U32x4(uint32_t(~0u) >> bitOffset);
+			// Return the shifted 64-bit elements masked to remove spill across lanes.
+			return U32x4::readAlignedUnsafe((uint32_t*)&values) & mask;
+		#else
+			return left >> U32x4(bitOffset);
+		#endif
+	}
 	// bitOffset must be an immediate constant, so a template argument is used.
 	template <uint32_t bitOffset>
 	inline U32x4 bitShiftLeftImmediate(const U32x4& left) {
@@ -2376,63 +2568,6 @@
 		#else
 			U32x4 bitOffsets = U32x4(bitOffset);
 			IMPL_SCALAR_REFERENCE_INFIX_4_LANES(left, bitOffsets, U32x4, uint32_t, >>)
-		#endif
-	}
-
-	inline U16x8 operator<<(const U16x8& left, const U16x8 &bitOffsets) {
-		#ifdef SAFE_POINTER_CHECKS
-			if(!allLanesLesser(bitOffsets, U16x8(16u))) {
-				throwError(U"Tried to shift ", left, U" by bit offsets ", bitOffsets, U", which is non-deterministic from being out of bound 0..15!\n");
-			}
-		#endif
-		#if defined(USE_SSE2)
-			IMPL_SCALAR_FALLBACK_INFIX_8_LANES(left, bitOffsets, U16x8, uint16_t, <<)
-		#elif defined(USE_NEON)
-			return U16x8(vshlq_u16(left.v, vreinterpretq_s16_u16(bitOffsets.v)));
-		#else
-			IMPL_SCALAR_REFERENCE_INFIX_8_LANES(left, bitOffsets, U16x8, uint16_t, <<)
-		#endif
-	}
-	inline U16x8 operator>>(const U16x8& left, const U16x8 &bitOffsets) {
-		#ifdef SAFE_POINTER_CHECKS
-			if(!allLanesLesser(bitOffsets, U16x8(16u))) {
-				throwError(U"Tried to shift ", left, U" by bit offsets ", bitOffsets, U", which is non-deterministic from being out of bound 0..15!\n");
-			}
-		#endif
-		#if defined(USE_SSE2)
-			IMPL_SCALAR_FALLBACK_INFIX_8_LANES(left, bitOffsets, U16x8, uint16_t, >>)
-		#elif defined(USE_NEON)
-			//return U16x8(vshrq_u16(left.v, vreinterpretq_s16_u16(bitOffsets.v)));
-			return U16x8(vshlq_u16(left.v, vnegq_s16(vreinterpretq_s16_u16(bitOffsets.v))));
-		#else
-			IMPL_SCALAR_REFERENCE_INFIX_8_LANES(left, bitOffsets, U16x8, uint16_t, >>)
-		#endif
-	}
-	// bitOffset must be an immediate constant, so a template argument is used.
-	template <uint32_t bitOffset>
-	inline U16x8 bitShiftLeftImmediate(const U16x8& left) {
-		static_assert(bitOffset < 16u, "Immediate left shift of 16-bit values may not shift more than 15 bits!");
-		#if defined(USE_SSE2)
-			return U16x8(_mm_slli_epi16(left.v, bitOffset));
-		#elif defined(USE_NEON)
-			return U16x8(vshlq_u32(left.v, vdupq_n_s16(bitOffset)));
-		#else
-			U16x8 bitOffsets = U16x8(bitOffset);
-			IMPL_SCALAR_REFERENCE_INFIX_8_LANES(left, bitOffsets, U16x8, uint16_t, <<)
-		#endif
-	}
-	// bitOffset must be an immediate constant.
-	template <uint32_t bitOffset>
-	inline U16x8 bitShiftRightImmediate(const U16x8& left) {
-		static_assert(bitOffset < 16u, "Immediate right shift of 16-bit values may not shift more than 15 bits!");
-		#if defined(USE_SSE2)
-			return U16x8(_mm_srli_epi16(left.v, bitOffset));
-		#elif defined(USE_NEON)
-			//return U16x8(vshrq_u16(left.v, vdupq_n_s16(bitOffset)));
-			return U16x8(vshlq_u16(left.v, vdupq_n_s16(-(int32_t)bitOffset)));
-		#else
-			U16x8 bitOffsets = U16x8(bitOffset);
-			IMPL_SCALAR_REFERENCE_INFIX_8_LANES(left, bitOffsets, U16x8, uint16_t, >>)
 		#endif
 	}
 
@@ -3004,7 +3139,55 @@
 		#endif
 	}
 
-	// ARM NEON does not support 256-bit vectors and Intel's AVX2 does not support variable shifting.
+	// TODO: Implement bit shifts with non-immediate uniform offsets.
+
+	inline U16x16 operator<<(const U16x16& left, const U16x16 &bitOffsets) {
+		#ifdef SAFE_POINTER_CHECKS
+			if(!allLanesLesser(bitOffsets, U16x16(16u))) {
+				throwError(U"Tried to shift ", left, U" by bit offsets ", bitOffsets, U", which is non-deterministic from being out of bound 0..15!\n");
+			}
+		#endif
+		#if defined(USE_AVX2)
+			IMPL_SCALAR_FALLBACK_INFIX_16_LANES(left, bitOffsets, U16x16, uint16_t, <<)
+		#else
+			IMPL_SCALAR_REFERENCE_INFIX_16_LANES(left, bitOffsets, U16x16, uint16_t, <<)
+		#endif
+	}
+	inline U16x16 operator>>(const U16x16& left, const U16x16 &bitOffsets) {
+		#ifdef SAFE_POINTER_CHECKS
+			if(!allLanesLesser(bitOffsets, U16x16(16u))) {
+				throwError(U"Tried to shift ", left, U" by bit offsets ", bitOffsets, U", which is non-deterministic from being out of bound 0..15!\n");
+			}
+		#endif
+		#if defined(USE_AVX2)
+			IMPL_SCALAR_FALLBACK_INFIX_16_LANES(left, bitOffsets, U16x16, uint16_t, >>)
+		#else
+			IMPL_SCALAR_REFERENCE_INFIX_16_LANES(left, bitOffsets, U16x16, uint16_t, >>)
+		#endif
+	}
+	// bitOffset must be an immediate constant from 0 to 31, so a template argument is used.
+	template <uint32_t bitOffset>
+	inline U16x16 bitShiftLeftImmediate(const U16x16& left) {
+		static_assert(bitOffset < 16u, "Immediate left shift of 16-bit values may not shift more than 15 bits!");
+		#if defined(USE_AVX2)
+			return U16x16(_mm256_slli_epi16(left.v, bitOffset));
+		#else
+			U16x16 bitOffsets = U16x16(bitOffset);
+			IMPL_SCALAR_REFERENCE_INFIX_16_LANES(left, bitOffsets, U16x16, uint16_t, <<)
+		#endif
+	}
+	// bitOffset must be an immediate constant from 0 to 31, so a template argument is used.
+	template <uint32_t bitOffset>
+	inline U16x16 bitShiftRightImmediate(const U16x16& left) {
+		static_assert(bitOffset < 16u, "Immediate right shift of 16-bit values may not shift more than 15 bits!");
+		#if defined(USE_AVX2)
+			return U16x16(_mm256_srli_epi16(left.v, bitOffset));
+		#else
+			U16x16 bitOffsets = U16x16(bitOffset);
+			IMPL_SCALAR_REFERENCE_INFIX_16_LANES(left, bitOffsets, U16x16, uint16_t, <<)
+		#endif
+	}
+
 	inline U32x8 operator<<(const U32x8& left, const U32x8 &bitOffsets) {
 		assert((uintptr_t(&left) & 31u) == 0);
 		#ifdef SAFE_POINTER_CHECKS
@@ -3053,53 +3236,6 @@
 		#else
 			U32x8 bitOffsets = U32x8(bitOffset);
 			IMPL_SCALAR_REFERENCE_INFIX_8_LANES(left, bitOffsets, U32x8, uint32_t, >>)
-		#endif
-	}
-
-	inline U16x16 operator<<(const U16x16& left, const U16x16 &bitOffsets) {
-		#ifdef SAFE_POINTER_CHECKS
-			if(!allLanesLesser(bitOffsets, U16x16(16u))) {
-				throwError(U"Tried to shift ", left, U" by bit offsets ", bitOffsets, U", which is non-deterministic from being out of bound 0..15!\n");
-			}
-		#endif
-		#if defined(USE_AVX2)
-			IMPL_SCALAR_FALLBACK_INFIX_16_LANES(left, bitOffsets, U16x16, uint16_t, <<)
-		#else
-			IMPL_SCALAR_REFERENCE_INFIX_16_LANES(left, bitOffsets, U16x16, uint16_t, <<)
-		#endif
-	}
-	inline U16x16 operator>>(const U16x16& left, const U16x16 &bitOffsets) {
-		#ifdef SAFE_POINTER_CHECKS
-			if(!allLanesLesser(bitOffsets, U16x16(16u))) {
-				throwError(U"Tried to shift ", left, U" by bit offsets ", bitOffsets, U", which is non-deterministic from being out of bound 0..15!\n");
-			}
-		#endif
-		#if defined(USE_AVX2)
-			IMPL_SCALAR_FALLBACK_INFIX_16_LANES(left, bitOffsets, U16x16, uint16_t, >>)
-		#else
-			IMPL_SCALAR_REFERENCE_INFIX_16_LANES(left, bitOffsets, U16x16, uint16_t, >>)
-		#endif
-	}
-	// bitOffset must be an immediate constant from 0 to 31, so a template argument is used.
-	template <uint32_t bitOffset>
-	inline U16x16 bitShiftLeftImmediate(const U16x16& left) {
-		static_assert(bitOffset < 16u, "Immediate left shift of 16-bit values may not shift more than 15 bits!");
-		#if defined(USE_AVX2)
-			return U16x16(_mm256_slli_epi16(left.v, bitOffset));
-		#else
-			U16x16 bitOffsets = U16x16(bitOffset);
-			IMPL_SCALAR_REFERENCE_INFIX_16_LANES(left, bitOffsets, U16x16, uint16_t, <<)
-		#endif
-	}
-	// bitOffset must be an immediate constant from 0 to 31, so a template argument is used.
-	template <uint32_t bitOffset>
-	inline U16x16 bitShiftRightImmediate(const U16x16& left) {
-		static_assert(bitOffset < 16u, "Immediate right shift of 16-bit values may not shift more than 15 bits!");
-		#if defined(USE_AVX2)
-			return U16x16(_mm256_srli_epi16(left.v, bitOffset));
-		#else
-			U16x16 bitOffsets = U16x16(bitOffset);
-			IMPL_SCALAR_REFERENCE_INFIX_16_LANES(left, bitOffsets, U16x16, uint16_t, <<)
 		#endif
 	}
 
