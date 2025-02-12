@@ -3138,8 +3138,39 @@
 			);
 		#endif
 	}
-
-	// TODO: Implement bit shifts with non-immediate uniform offsets.
+	inline U16x16 operator&(const U16x16& left, const U16x16& right) {
+		#if defined(USE_AVX2)
+			return U16x16(_mm256_and_si256(left.v, right.v));
+		#else
+			IMPL_SCALAR_REFERENCE_INFIX_8_LANES(left, right, U16x16, uint16_t, &)
+		#endif
+	}
+	// Bitwise or
+	inline U16x16 operator|(const U16x16& left, const U16x16& right) {
+		#if defined(USE_AVX2)
+			return U16x16(_mm256_or_si256(left.v, right.v));
+		#else
+			IMPL_SCALAR_REFERENCE_INFIX_8_LANES(left, right, U16x16, uint16_t, |)
+		#endif
+	}
+	// Bitwise xor
+	inline U16x16 operator^(const U16x16& left, const U16x16& right) {
+		#if defined(USE_AVX2)
+			return U16x16(_mm256_xor_si256(left.v, right.v));
+		#else
+			IMPL_SCALAR_REFERENCE_INFIX_8_LANES(left, right, U16x16, uint16_t, ^)
+		#endif
+	}
+	// Bitwise negation
+	inline U16x16 operator~(const U16x16& value) {
+		#if defined(USE_AVX2)
+			// Fall back on xor against all ones.
+			return value ^ U16x16(~uint16_t(0));
+		#else
+			// TODO: Perform using 64-bit integers.
+			return U16x16(~value.scalars[0], ~value.scalars[1], ~value.scalars[2], ~value.scalars[3], ~value.scalars[4], ~value.scalars[5], ~value.scalars[6], ~value.scalars[7], ~value.scalars[8], ~value.scalars[9], ~value.scalars[10], ~value.scalars[11], ~value.scalars[12], ~value.scalars[13], ~value.scalars[14], ~value.scalars[15]);
+		#endif
+	}
 
 	inline U16x16 operator<<(const U16x16& left, const U16x16 &bitOffsets) {
 		#ifdef SAFE_POINTER_CHECKS
@@ -3163,6 +3194,56 @@
 			IMPL_SCALAR_FALLBACK_INFIX_16_LANES(left, bitOffsets, U16x16, uint16_t, >>)
 		#else
 			IMPL_SCALAR_REFERENCE_INFIX_16_LANES(left, bitOffsets, U16x16, uint16_t, >>)
+		#endif
+	}
+	inline U16x16 operator<<(const U16x16& left, const uint32_t &bitOffset) {
+		#if defined(USE_AVX2)
+			#ifdef SAFE_POINTER_CHECKS
+				if(bitOffset >= 16u) {
+					throwError(U"Tried to shift ", left, U" by bit offset ", bitOffset, U", which is non-deterministic from being out of bound 0..16!\n");
+				}
+			#endif
+			// Write the content to aligned stack memory.
+			ALIGN32 __m256i values;
+			left.writeAlignedUnsafe((uint16_t*)&values);
+			// Cast a pointer to the data into four 64-bit elements.
+			uint64_t *largeLanes = (uint64_t*)&values;
+			// Shift the 128 bits as two 64-bit values.
+			largeLanes[0] = largeLanes[0] << bitOffset;
+			largeLanes[1] = largeLanes[1] << bitOffset;
+			largeLanes[2] = largeLanes[2] << bitOffset;
+			largeLanes[3] = largeLanes[3] << bitOffset;
+			// Create a mask.
+			U16x16 mask = U16x16(uint16_t(~0u) << bitOffset);
+			// Return the shifted 64-bit elements masked to remove spill across lanes.
+			return U16x16::readAlignedUnsafe((uint16_t*)&values) & mask;
+		#else
+			return left << U16x16(bitOffset);
+		#endif
+	}
+	inline U16x16 operator>>(const U16x16& left, const uint32_t &bitOffset) {
+		#if defined(USE_AVX2)
+			#ifdef SAFE_POINTER_CHECKS
+				if(bitOffset >= 16u) {
+					throwError(U"Tried to shift ", left, U" by bit offset ", bitOffset, U", which is non-deterministic from being out of bound 0..16!\n");
+				}
+			#endif
+			// Write the content to aligned stack memory.
+			ALIGN32 __m256i values;
+			left.writeAlignedUnsafe((uint16_t*)&values);
+			// Cast a pointer to the data into four 64-bit elements.
+			uint64_t *largeLanes = (uint64_t*)&values;
+			// Shift the 128 bits as two 64-bit values.
+			largeLanes[0] = largeLanes[0] >> bitOffset;
+			largeLanes[1] = largeLanes[1] >> bitOffset;
+			largeLanes[2] = largeLanes[2] >> bitOffset;
+			largeLanes[3] = largeLanes[3] >> bitOffset;
+			// Create a mask.
+			U16x16 mask = U16x16(uint16_t(~0u) >> bitOffset);
+			// Return the shifted 64-bit elements masked to remove spill across lanes.
+			return U16x16::readAlignedUnsafe((uint16_t*)&values) & mask;
+		#else
+			return left >> U16x16(bitOffset);
 		#endif
 	}
 	// bitOffset must be an immediate constant from 0 to 31, so a template argument is used.
@@ -3212,6 +3293,56 @@
 			IMPL_SCALAR_FALLBACK_INFIX_8_LANES(left, bitOffsets, U32x8, uint32_t, >>)
 		#else
 			IMPL_SCALAR_REFERENCE_INFIX_8_LANES(left, bitOffsets, U32x8, uint32_t, >>)
+		#endif
+	}
+	inline U32x8 operator<<(const U32x8& left, const uint32_t &bitOffset) {
+		#if defined(USE_AVX2)
+			#ifdef SAFE_POINTER_CHECKS
+				if(bitOffset >= 32u) {
+					throwError(U"Tried to shift ", left, U" by bit offset ", bitOffset, U", which is non-deterministic from being out of bound 0..31!\n");
+				}
+			#endif
+			// Write the content to aligned stack memory.
+			ALIGN32 __m256i values;
+			left.writeAlignedUnsafe((uint32_t*)&values);
+			// Cast a pointer to the data into two 64-bit elements.
+			uint64_t *largeLanes = (uint64_t*)&values;
+			// Shift the 128 bits as two 64-bit values.
+			largeLanes[0] = largeLanes[0] << bitOffset;
+			largeLanes[1] = largeLanes[1] << bitOffset;
+			largeLanes[2] = largeLanes[2] << bitOffset;
+			largeLanes[3] = largeLanes[3] << bitOffset;
+			// Create a mask.
+			U32x8 mask = U32x8(uint32_t(~0u) << bitOffset);
+			// Return the shifted 64-bit elements masked to remove spill across lanes.
+			return U32x8::readAlignedUnsafe((uint32_t*)&values) & mask;
+		#else
+			return left << U32x8(bitOffset);
+		#endif
+	}
+	inline U32x8 operator>>(const U32x8& left, const uint32_t &bitOffset) {
+		#if defined(USE_AVX2)
+			#ifdef SAFE_POINTER_CHECKS
+				if(bitOffset >= 32u) {
+					throwError(U"Tried to shift ", left, U" by bit offset ", bitOffset, U", which is non-deterministic from being out of bound 0..31!\n");
+				}
+			#endif
+			// Write the content to aligned stack memory.
+			ALIGN32 __m256i values;
+			left.writeAlignedUnsafe((uint32_t*)&values);
+			// Cast a pointer to the data into two 64-bit elements.
+			uint64_t *largeLanes = (uint64_t*)&values;
+			// Shift the 128 bits as two 64-bit values.
+			largeLanes[0] = largeLanes[0] >> bitOffset;
+			largeLanes[1] = largeLanes[1] >> bitOffset;
+			largeLanes[2] = largeLanes[2] >> bitOffset;
+			largeLanes[3] = largeLanes[3] >> bitOffset;
+			// Create a mask.
+			U32x8 mask = U32x8(uint32_t(~0u) >> bitOffset);
+			// Return the shifted 64-bit elements masked to remove spill across lanes.
+			return U32x8::readAlignedUnsafe((uint32_t*)&values) & mask;
+		#else
+			return left >> U32x8(bitOffset);
 		#endif
 	}
 	// bitOffset must be an immediate constant from 0 to 31, so a template argument is used.
