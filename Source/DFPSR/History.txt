@@ -46,10 +46,6 @@ Changes from version 0.2.0 to version 0.3.0 (Performance, safety and template im
 			Replace any << or >> operator that takes a constant offset with the new functions to prevent slowing down.
 				Replace a << 3 with bitShiftLeftImmediate<3>(a).
 				Replace a >> 5 with bitShiftRightImmediate<5>(a).
-			To get dynamic offset, cast the bit offset into a SIMD vector of unsigned integers with the same number of lanes.
-				Replace a << b with a << U32x4(b), a << U16x8(b), a << U8x16(b), a << U32x8(b), a << U16x16(b), a << U8x32(b), a << U32xX(b), a << U16xX(b) or a << U8xX(b).
-				Replace a >> b with a >> U32x4(b), a >> U16x8(b), a >> U8x16(b), a >> U32x8(b), a >> U16x16(b), a >> U8x32(b), a >> U32xX(b), a >> U16xX(b) or a >> U8xX(b).
-				The more lanes you use, the slower it becomes when not available in SIMD hardware, so try to use at least 32-bit integers for faster fallback implementations.
 		* clamp, clampLower and clampUpper are global methods instead of member methods, to work the same for scalar operations in template functions.
 			Replace myVector.clamp(min, max) with clamp(VectorType(min), myVector, VectorType(max)).
 			Replace myVector.clampLower(min) with clampLower(VectorType(min), myVector).
