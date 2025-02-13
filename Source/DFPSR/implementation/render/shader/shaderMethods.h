@@ -67,18 +67,18 @@ namespace shaderMethods {
 	inline U32x4 sample_U32(const TextureRgbaU8 *source, const F32x4 &u, const F32x4 &v) {
 		if (INTERPOLATION == Interpolation::NN) {
 			if (HIGHEST_RESOLUTION) {
-				return texture_sample_nearest<SQUARE, SINGLE_LAYER, MIP_INSIDE, HIGHEST_RESOLUTION, U32x4, F32x4>(*source, u, v, U32x4(0u));
+				return texture_sample_nearest<SQUARE, SINGLE_LAYER, MIP_INSIDE, HIGHEST_RESOLUTION>(*source, u, v, 0u);
 			} else {
 				// TODO: Calculate MIP levels using a separate rendering stage with sparse resolution writing results into thread-local memory.
 				uint32_t mipLevel = texture_getMipLevelIndex<F32x4>(*source, u, v);
-				return texture_sample_nearest<SQUARE, SINGLE_LAYER, MIP_INSIDE, HIGHEST_RESOLUTION, U32x4, F32x4>(*source, u, v, U32x4(mipLevel));
+				return texture_sample_nearest<SQUARE, SINGLE_LAYER, MIP_INSIDE, HIGHEST_RESOLUTION>(*source, u, v, mipLevel);
 			}
 		} else {
 			if (HIGHEST_RESOLUTION) {
-				return texture_sample_bilinear<SQUARE, SINGLE_LAYER, MIP_INSIDE, HIGHEST_RESOLUTION, U32x4, U16x8, F32x4>(*source, u, v, U32x4(0u));
+				return texture_sample_bilinear<SQUARE, SINGLE_LAYER, MIP_INSIDE, HIGHEST_RESOLUTION>(*source, u, v, 0u);
 			} else {
 				uint32_t mipLevel = texture_getMipLevelIndex<F32x4>(*source, u, v);
-				return texture_sample_bilinear<SQUARE, SINGLE_LAYER, MIP_INSIDE, HIGHEST_RESOLUTION, U32x4, U16x8, F32x4>(*source, u, v, U32x4(mipLevel));
+				return texture_sample_bilinear<SQUARE, SINGLE_LAYER, MIP_INSIDE, HIGHEST_RESOLUTION>(*source, u, v, mipLevel);
 			}
 		}
 	}

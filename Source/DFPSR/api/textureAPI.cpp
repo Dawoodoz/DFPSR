@@ -118,7 +118,7 @@ ImageRgbaU8 texture_getMipLevelImage(const TextureRgbaU8& texture, int32_t mipLe
 		throwError(U"");
 		return ImageRgbaU8();
 	} else {
-		return ImageRgbaU8(texture.impl_buffer, texture_getPixelOffsetToLayer<false, uint32_t>(texture, mipLevel), texture_getWidth(texture, mipLevel), texture_getHeight(texture, mipLevel), texture_getWidth(texture, mipLevel), PackOrderIndex::RGBA);
+		return ImageRgbaU8(texture.impl_buffer, texture_getPixelOffsetToLayer<false, uint32_t, uint32_t>(texture, mipLevel), texture_getWidth(texture, mipLevel), texture_getHeight(texture, mipLevel), texture_getWidth(texture, mipLevel), PackOrderIndex::RGBA);
 	}
 }
 
