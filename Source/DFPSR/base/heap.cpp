@@ -64,11 +64,11 @@ namespace dsr {
 			snprintf(path, sizeof(path), "/sys/devices/system/cpu/cpu%i/cache/index%i/coherency_line_size", (int)cpuIndex, (int)cacheLevel);
 			FILE *file = fopen(path, "r");
 			if (file == nullptr) {
-				return -1;
+				return 0;
 			}
 			int cacheLineSize;
 			if (fscanf(file, "%i", &cacheLineSize) != 1) {
-				cacheLineSize = -1;
+				cacheLineSize = 0;
 			}
 			fclose(file);
 			return uintptr_t(cacheLineSize);
@@ -79,7 +79,7 @@ namespace dsr {
 			uintptr_t cacheLevel = 0;
 			while (true) {
 				uintptr_t newSize = getCacheLineSizeFromIndices(cpuIndex, cacheLevel);
-				if (newSize == -1) {
+				if (newSize == 0) {
 					if (cacheLevel == 0) {
 						// CPU does not exist, so we are done.
 						break;
