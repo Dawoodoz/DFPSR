@@ -20,17 +20,23 @@ static bool beginsWith(const ReadableString &message, const ReadableString &pref
 
 static thread_local String ExpectedErrorPrefix;
 
-inline bool nearValue(float a, float b) {
-	return fabs(a - b) < 0.0001f;
+#define OP_EQUALS(A, B) ((A) == (B))
+#define OP_NOT_EQUALS(A, B) ((A) != (B))
+#define OP_LESSER(A, B) ((A) < (B))
+#define OP_LESSER_OR_EQUAL(A, B) ((A) <= (B))
+#define OP_GREATER(A, B) ((A) > (B))
+#define OP_GREATER_OR_EQUAL(A, B) ((A) >= (B))
+inline bool OP_NEAR(float a, float b) {
+	return a > b - 0.0001f && a < b + 0.0001f;
 }
-inline bool nearValue(const FVector2D& a, const FVector2D& b) {
-	return nearValue(a.x, b.x) && nearValue(a.y, b.y);
+inline bool OP_NEAR(const FVector2D& a, const FVector2D& b) {
+	return OP_NEAR(a.x, b.x) && OP_NEAR(a.y, b.y);
 }
-inline bool nearValue(const FVector3D& a, const FVector3D& b) {
-	return nearValue(a.x, b.x) && nearValue(a.y, b.y) && nearValue(a.z, b.z);
+inline bool OP_NEAR(const FVector3D& a, const FVector3D& b) {
+	return OP_NEAR(a.x, b.x) && OP_NEAR(a.y, b.y) && OP_NEAR(a.z, b.z);
 }
-inline bool nearValue(const FVector4D& a, const FVector4D& b) {
-	return nearValue(a.x, b.x) && nearValue(a.y, b.y) && nearValue(a.z, b.z) && nearValue(a.w, b.w);
+inline bool OP_NEAR(const FVector4D& a, const FVector4D& b) {
+	return OP_NEAR(a.x, b.x) && OP_NEAR(a.y, b.y) && OP_NEAR(a.z, b.z) && OP_NEAR(a.w, b.w);
 }
 
 static void messageHandler(const ReadableString &message, MessageType type) {
@@ -85,13 +91,6 @@ void dsrMain(List<String> args) { \
 	stateName = U"After test end\n"; \
 }
 
-#define OP_EQUALS(A, B) ((A) == (B))
-#define OP_NOT_EQUALS(A, B) ((A) != (B))
-#define OP_LESSER(A, B) ((A) < (B))
-#define OP_LESSER_OR_EQUAL(A, B) ((A) <= (B))
-#define OP_GREATER(A, B) ((A) > (B))
-#define OP_GREATER_OR_EQUAL(A, B) ((A) >= (B))
-
 // These can be used instead of ASSERT_CRASH to handle multiple template arguments that are not enclosed within ().
 #define BEGIN_CRASH(PREFIX) \
 	ExpectedErrorPrefix = PREFIX; \
@@ -112,7 +111,6 @@ void dsrMain(List<String> args) { \
 	if (CONDITION) { \
 		printText(U"*"); \
 	} else { \
-		stateName = string_combine(U"While reporting failure for condition ", #CONDITION, U"\n"); \
 		throwError( \
 			U"\n\n", \
 			U"_______________________________ FAIL _______________________________\n", \
@@ -121,29 +119,24 @@ void dsrMain(List<String> args) { \
 			U"____________________________________________________________________\n" \
 		); \
 	} \
-	stateName = string_combine(U"After evaluating condition ", #CONDITION, U"\n");
 
 #define ASSERT_COMP(A, B, OP, OP_NAME) \
 { \
-	stateName = string_combine(U"While evaluating ", #A, U"\n"); \
+	stateName = string_combine(U"While evaluating condition ", #A, " ", OP_NAME, U" ", #B, U"\n"); \
 	auto lhs = A; \
-	stateName = string_combine(U"While evaluating ", #B, U"\n"); \
 	auto rhs = B; \
-	stateName = string_combine(U"While comparing ", #A, " ", OP_NAME, U" ", #B, U"\n"); \
 	if (OP(lhs, rhs)) { \
 		printText(U"*"); \
 	} else { \
-	stateName = string_combine(U"While reporting failure for comparison ", #A, " ", OP_NAME, U" ", #B, U"\n"); \
 		throwError( \
 			U"\n\n", \
 			U"_______________________________ FAIL _______________________________\n", \
 			U"\n", \
 			U"Condition: ", #A, " ", OP_NAME, U" ", #B, U"\n", \
-			(A), " ", OP_NAME, " ", (B), U" is false.\n", \
+			lhs, " ", OP_NAME, " ", rhs, U" is false.\n", \
 			U"____________________________________________________________________\n" \
 		); \
 	} \
-	stateName = string_combine(U"After evaluating comparison ", #A, " ", OP_NAME, U" ", #B, U"\n"); \
 }
 #define ASSERT_EQUAL(A, B) ASSERT_COMP(A, B, OP_EQUALS, "==")
 #define ASSERT_NOT_EQUAL(A, B) ASSERT_COMP(A, B, OP_NOT_EQUALS, "!=")
@@ -151,22 +144,7 @@ void dsrMain(List<String> args) { \
 #define ASSERT_LESSER_OR_EQUAL(A, B) ASSERT_COMP(A, B, OP_LESSER_OR_EQUAL, "<=")
 #define ASSERT_GREATER(A, B) ASSERT_COMP(A, B, OP_GREATER, ">")
 #define ASSERT_GREATER_OR_EQUAL(A, B) ASSERT_COMP(A, B, OP_GREATER_OR_EQUAL, ">=")
-#define ASSERT_NEAR(A, B) \
-	stateName = string_combine(U"While evaluating approximate comparison between ", #A, " and ", #B, U"\n"); \
-	if (nearValue(A, B)) { \
-		printText(U"*"); \
-	} else { \
-		stateName = string_combine(U"While reporting failure for approximate comparison between ", #A, " and ", #B, U"\n"); \
-		throwError( \
-			U"\n\n", \
-			U"_______________________________ FAIL _______________________________\n", \
-			U"\n", \
-			U"Condition: ", #A, U" = ", #B, U"\n", \
-			(A), " is not close enough to ", (B), U"\n", \
-			U"____________________________________________________________________\n" \
-		); \
-	} \
-	stateName = string_combine(U"After evaluating approximate comparison between ", #A, " and ", #B, U"\n");
+#define ASSERT_NEAR(A, B) ASSERT_COMP(A, B, OP_NEAR, "==")
 
 const dsr::String inputPath = dsr::string_combine(U"test", file_separator(), U"input", file_separator());
 const dsr::String expectedPath = dsr::string_combine(U"test", file_separator(), U"expected", file_separator());
