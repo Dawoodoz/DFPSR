@@ -74,13 +74,13 @@ namespace dsr {
 	//   Always returns 0 when there is only one mip level available.
 	template<
 	  bool HIGHEST_RESOLUTION = false,
-	  typename U, // uint32_t, U32x4, U32x8, U32xX
-	  DSR_ENABLE_IF(DSR_CHECK_PROPERTY(DsrTrait_Any_U32, U))>
-	inline U texture_getPixelOffsetToLayer(const TextureRgbaU8 &texture, const U &mipLevel) {
+	  typename M, // uint32_t, U32x4, U32x8, U32xX
+	  DSR_ENABLE_IF(DSR_CHECK_PROPERTY(DsrTrait_Any_U32, M))>
+	inline M texture_getPixelOffsetToLayer(const TextureRgbaU8 &texture, const M &mipLevel) {
 		if (HIGHEST_RESOLUTION) {
-			return U(texture.impl_startOffset);
+			return M(texture.impl_startOffset);
 		} else {
-			return U(texture.impl_startOffset) & (U(texture.impl_maxLevelMask) >> bitShiftLeftImmediate<1>(mipLevel));
+			return M(texture.impl_startOffset) & (M(texture.impl_maxLevelMask) >> bitShiftLeftImmediate<1>(mipLevel));
 		}
 	}
 
@@ -106,11 +106,12 @@ namespace dsr {
 	  bool MIP_INSIDE = false,         // Mip level may not go outside of existing layer indices.
 	  bool HIGHEST_RESOLUTION = false, // Ignoring any lower layers.
 	  typename U, // uint32_t, U32x4, U32x8, U32xX
-	  DSR_ENABLE_IF(DSR_CHECK_PROPERTY(DsrTrait_Any_U32, U))>
-	U texture_getPixelOffset(const TextureRgbaU8 &texture, const U &x, const U &y, const U &mipLevel) {
+	  typename M, // uint32_t or the same type as U (TODO: Constrain M to this condition)
+	  DSR_ENABLE_IF(DSR_CHECK_PROPERTY(DsrTrait_Any_U32, U) && DSR_CHECK_PROPERTY(DsrTrait_Any_U32, M))>
+	U texture_getPixelOffset(const TextureRgbaU8 &texture, const U &x, const U &y, const M &mipLevel) {
 		// Clamp the mip-level using bitwise operations in a logarithmic scale, by masking out excess bits with zeroes and filling missing bits with ones.
-		U tileMaskX = U(texture.impl_maxWidthAndMask );
-		U tileMaskY = U(texture.impl_maxHeightAndMask);
+		M tileMaskX = M(texture.impl_maxWidthAndMask );
+		M tileMaskY = M(texture.impl_maxHeightAndMask);
 		if (!SINGLE_LAYER && !HIGHEST_RESOLUTION) {
 			tileMaskX = tileMaskX >> mipLevel;
 			tileMaskY = tileMaskY >> mipLevel;
@@ -122,7 +123,7 @@ namespace dsr {
 				tileMaskY = tileMaskY | texture.impl_minHeightOrMask;
 			}
 		}
-		U log2PixelStride = U(texture.impl_log2width);
+		M log2PixelStride = M(texture.impl_log2width);
 		if (!SINGLE_LAYER && !HIGHEST_RESOLUTION) {
 			log2PixelStride = log2PixelStride - mipLevel;
 		}
@@ -157,11 +158,11 @@ namespace dsr {
 				}
 			}
 			if (!SINGLE_LAYER && !HIGHEST_RESOLUTION) {
-				if (!allLanesLesserOrEqual(mipLevel, U(15u))) {
+				if (!allLanesLesserOrEqual(mipLevel, M(15u))) {
 					throwError(U"texture_getPixelOffset got mip level ", mipLevel, U", which is not within the fixed range of 0..15!\n");
 				}
 				if (MIP_INSIDE) {
-					if (!allLanesLesserOrEqual(mipLevel, U(texture_getSmallestMipLevel(texture)))) {
+					if (!allLanesLesserOrEqual(mipLevel, M(texture_getSmallestMipLevel(texture)))) {
 						throwError(U"texture_getPixelOffset was told that the mip level would stay within valid indices using MIP_INSIDE, but mip level ", mipLevel, U" is not within 0..", texture_getSmallestMipLevel(texture), U"!\n");
 					}
 				}
@@ -170,7 +171,7 @@ namespace dsr {
 		if (SINGLE_LAYER) {
 			return coordinateOffset;
 		} else {
-			U startOffset = texture_getPixelOffsetToLayer<HIGHEST_RESOLUTION, U>(texture, mipLevel);
+			U startOffset = U(texture_getPixelOffsetToLayer<HIGHEST_RESOLUTION>(texture, mipLevel));
 			return startOffset + coordinateOffset;
 		}
 	}
@@ -182,14 +183,15 @@ namespace dsr {
 	  bool MIP_INSIDE = false,
 	  bool HIGHEST_RESOLUTION = false,
 	  typename U, // uint32_t, U32x4, U32x8, U32xX
-	  DSR_ENABLE_IF(DSR_CHECK_PROPERTY(DsrTrait_Any_U32, U))>
-	inline U texture_readPixel(const TextureRgbaU8 &texture, const U &x, const U &y, const U &mipLevel) {
+	  typename M, // uint32_t or the same type as U (TODO: Constrain M to this condition)
+	  DSR_ENABLE_IF(DSR_CHECK_PROPERTY(DsrTrait_Any_U32, U) && DSR_CHECK_PROPERTY(DsrTrait_Any_U32, M))>
+	inline U texture_readPixel(const TextureRgbaU8 &texture, const U &x, const U &y, const M &mipLevel) {
 		#ifndef NDEBUG
 			if (!texture_exists(texture)) {
 				throwError(U"Tried to read pixels from a texture that does not exist!\n");
 			}
 			if (!HIGHEST_RESOLUTION) {
-				if (!allLanesLesserOrEqual(mipLevel, U(15u))) {
+				if (!allLanesLesserOrEqual(mipLevel, M(15u))) {
 					throwError(U"Tried to read pixels from mip level ", mipLevel, U", which is outside of the allowed 4-bit range 0..4!\n");
 				}
 			}
@@ -224,19 +226,19 @@ namespace dsr {
 	  bool SINGLE_LAYER = false,
 	  bool MIP_INSIDE = false,
 	  bool HIGHEST_RESOLUTION = false,
-	  typename U, // uint32_t, U32x4, U32x8, U32xX
 	  typename F, // float, F32x4, F32x8, F32xX, F32xF
-	  DSR_ENABLE_IF(DSR_CHECK_PROPERTY(DsrTrait_Any_U32, U) && DSR_CHECK_PROPERTY(DsrTrait_Any_F32, F))>
-	inline U texture_sample_nearest(const TextureRgbaU8 &texture, const F &u, const F &v, const U &mipLevel) {
-		U scaleU = U(1u) << U(texture.impl_log2width );
-		U scaleV = U(1u) << U(texture.impl_log2height);
+	  typename M, // uint32_t or a SIMD vector of 32-bit unsigned integers with the same number of lanes of u and v
+	  DSR_ENABLE_IF(DSR_CHECK_PROPERTY(DsrTrait_Any_F32, F) && DSR_CHECK_PROPERTY(DsrTrait_Any_U32, M))>
+	inline auto texture_sample_nearest(const TextureRgbaU8 &texture, const F &u, const F &v, const M &mipLevel) {
+		uint32_t scaleU = 1u << texture.impl_log2width;
+		uint32_t scaleV = 1u << texture.impl_log2height;
 		if (!HIGHEST_RESOLUTION) {
 			scaleU = scaleU >> mipLevel;
 			scaleV = scaleV >> mipLevel;
 		}
-		U xPixel = truncateToU32(u * floatFromU32(scaleU));
-		U yPixel = truncateToU32(v * floatFromU32(scaleV));
-		return texture_readPixel<SQUARE, SINGLE_LAYER, false, MIP_INSIDE, HIGHEST_RESOLUTION, U>(texture, xPixel, yPixel, mipLevel);
+		auto xPixel = truncateToU32(u * floatFromU32(scaleU));
+		auto yPixel = truncateToU32(v * floatFromU32(scaleV));
+		return texture_readPixel<SQUARE, SINGLE_LAYER, false, MIP_INSIDE, HIGHEST_RESOLUTION>(texture, xPixel, yPixel, mipLevel);
 	}
 
 	// Internal helper function, not a part of the API!
@@ -288,10 +290,10 @@ namespace dsr {
 	template <typename U32, typename U16>
 	inline U32 texture_interpolate_color_linear(const U32 &colorA, const U32 &colorB, const U32 &weight) {
 		// Get inverse weights
-		U16 weightB = repeatAs16Bits(weight);
-		U16 weightA = invertWeight(weightB);
+		auto weightB = repeatAs16Bits(weight);
+		auto weightA = invertWeight(weightB);
 		// Multiply
-		return weightColors<U32, U16>(colorA, weightA, colorB, weightB);
+		return weightColors(colorA, weightA, colorB, weightB);
 	}
 
 	// TODO: Implement a scalar version for easy sampling of colors in reference implementations.
@@ -310,15 +312,15 @@ namespace dsr {
 	// texture_interpolate_color_bilinear(a, b, c, d,   0, 256) = c
 	// texture_interpolate_color_bilinear(a, b, c, d, 256, 256) = d
 	// texture_interpolate_color_bilinear(a, b, c, d, 128, 128) = floor((a + b + c + d) / 4)
-	template <typename U32, typename U16>
+	template <typename U32>
 	inline U32 texture_interpolate_color_bilinear(const U32 &colorA, const U32 &colorB, const U32 &colorC, const U32 &colorD, const U32 &weightX, const U32 &weightY) {
 		// Get inverse weights
-		U16 weightXR = repeatAs16Bits<U32>(weightX);
-		U16 weightYB = repeatAs16Bits<U32>(weightY);
-		U16 weightXL = invertWeight<U16>(weightXR);
-		U16 weightYT = invertWeight<U16>(weightYB);
+		auto weightXR = repeatAs16Bits(weightX);
+		auto weightYB = repeatAs16Bits(weightY);
+		auto weightXL = invertWeight(weightXR);
+		auto weightYT = invertWeight(weightYB);
 		// Multiply
-		return weightColors<U32, U16>(weightColors(colorA, weightXL, colorB, weightXR), weightYT, weightColors(colorC, weightXL, colorD, weightXR), weightYB);
+		return weightColors(weightColors(colorA, weightXL, colorB, weightXR), weightYT, weightColors(colorC, weightXL, colorD, weightXR), weightYB);
 	}
 
 	template<
@@ -326,36 +328,34 @@ namespace dsr {
 	  bool SINGLE_LAYER = false,
 	  bool MIP_INSIDE = false,
 	  bool HIGHEST_RESOLUTION = false,
-	  typename U32, // uint32_t, U32x4, U32x8, U32xX
-	  typename U16, // uint32_t, U32x4, U32x8, U32xX
 	  typename F32, // float, F32x4, F32x8, F32xX, F32xF
+	  typename M, // uint32_t or the same type as U (TODO: Constrain M to this condition)
 	  DSR_ENABLE_IF(
-	    DSR_CHECK_PROPERTY(DsrTrait_Any_U32, U32) &&
-	    DSR_CHECK_PROPERTY(DsrTrait_Any_U16, U16) &&
-	    DSR_CHECK_PROPERTY(DsrTrait_Any_F32, F32)
+	    DSR_CHECK_PROPERTY(DsrTrait_Any_F32, F32) &&
+	    DSR_CHECK_PROPERTY(DsrTrait_Any_U32, M)
 	  )>
-	inline U32 texture_sample_bilinear(const TextureRgbaU8 &texture, const F32 &u, const F32 &v, const U32 &mipLevel) {
-		U32 scaleU = U32(256u) << U32(texture.impl_log2width );
-		U32 scaleV = U32(256u) << U32(texture.impl_log2height);
+	inline auto texture_sample_bilinear(const TextureRgbaU8 &texture, const F32 &u, const F32 &v, const M &mipLevel) {
+		M scaleU = M(256u << texture.impl_log2width);
+		M scaleV = M(256u << texture.impl_log2height);
 		if (!HIGHEST_RESOLUTION) {
 			scaleU = scaleU >> mipLevel;
 			scaleV = scaleV >> mipLevel;
 		}
 		// Convert from the normalized 0..1 scale to a 0..size*256 scale for 8 bits of sub-pixel precision.
 		//   Half a pixel is subtracted so that the seam between bi-linear patches end up at the center of texels.
-		U32 subCenterX = truncateToU32(u * floatFromU32(scaleU)) - U32(128);
-		U32 subCenterY = truncateToU32(v * floatFromU32(scaleV)) - U32(128);
+		auto subCenterX = truncateToU32(u * floatFromU32(scaleU)) - 128u;
+		auto subCenterY = truncateToU32(v * floatFromU32(scaleV)) - 128u;
 		// Get the remainders as interpolation weights.
-		U32 weightX = subCenterX & 0xFF;
-		U32 weightY = subCenterY & 0xFF;
+		auto weightX = subCenterX & 0xFF;
+		auto weightY = subCenterY & 0xFF;
 		// Divide and truncate sub-pixel coordinates to get whole pixel coordinates.
-		U32 pixelLeft = bitShiftRightImmediate<8>(subCenterX);
-		U32 pixelTop = bitShiftRightImmediate<8>(subCenterY);
-		U32 pixelRight = pixelLeft + 1;
-		U32 pixelBottom = pixelTop + 1;
+		auto pixelLeft = bitShiftRightImmediate<8>(subCenterX);
+		auto pixelTop = bitShiftRightImmediate<8>(subCenterY);
+		auto pixelRight = pixelLeft + 1;
+		auto pixelBottom = pixelTop + 1;
 		// Generate pixel tiling masks.
-		U32 tileMaskX = U32(texture.impl_maxWidthAndMask );
-		U32 tileMaskY = U32(texture.impl_maxHeightAndMask);
+		decltype(subCenterX) tileMaskX(texture.impl_maxWidthAndMask );
+		decltype(subCenterY) tileMaskY(texture.impl_maxHeightAndMask);
 		if (!HIGHEST_RESOLUTION) {
 			tileMaskX = tileMaskX >> mipLevel;
 			tileMaskY = tileMaskY >> mipLevel;
@@ -367,7 +367,7 @@ namespace dsr {
 			}
 		}
 		// Get the stride.
-		U32 log2PixelStride = U32(texture.impl_log2width);
+		M log2PixelStride = M(texture.impl_log2width);
 		if (!HIGHEST_RESOLUTION) {
 			log2PixelStride = log2PixelStride - mipLevel;
 		}
@@ -392,35 +392,35 @@ namespace dsr {
 				throwError(U"texture_getPixelOffset was told that the texture would only have a single layer using SINGLE_LAYER, but it has ", texture_getSmallestMipLevel(texture) + 1, U" layers!\n");
 			}
 			if (!HIGHEST_RESOLUTION) {
-				if (!allLanesLesserOrEqual(mipLevel, U32(15u))) {
+				if (!allLanesLesserOrEqual(mipLevel, M(15u))) {
 					throwError(U"texture_getPixelOffset got mip level ", mipLevel, U", which is not within the fixed range of 0..15!\n");
 				}
 				if (MIP_INSIDE) {
-					if (!allLanesLesserOrEqual(mipLevel, U32(texture_getSmallestMipLevel(texture)))) {
+					if (!allLanesLesserOrEqual(mipLevel, M(texture_getSmallestMipLevel(texture)))) {
 						throwError(U"texture_getPixelOffset was told that the mip level would stay within valid indices using MIP_INSIDE, but mip level ", mipLevel, U" is not within 0..", texture_getSmallestMipLevel(texture), U"!\n");
 					}
 				}
 			}
 		#endif
-		U32 upperOffset       = pixelTop    << log2PixelStride;
-		U32 bottomOffset      = pixelBottom << log2PixelStride;
-		U32 upperLeftOffset   = upperOffset  | pixelLeft;
-		U32 upperRightOffset  = upperOffset  | pixelRight;
-		U32 bottomLeftOffset  = bottomOffset | pixelLeft;
-		U32 bottomRightOffset = bottomOffset | pixelRight;
+		auto upperOffset       = pixelTop    << log2PixelStride;
+		auto bottomOffset      = pixelBottom << log2PixelStride;
+		auto upperLeftOffset   = upperOffset  | pixelLeft;
+		auto upperRightOffset  = upperOffset  | pixelRight;
+		auto bottomLeftOffset  = bottomOffset | pixelLeft;
+		auto bottomRightOffset = bottomOffset | pixelRight;
 		if (!SINGLE_LAYER) {
-			U32 layerStartOffset = texture_getPixelOffsetToLayer<HIGHEST_RESOLUTION, U32>(texture, mipLevel);
+			auto layerStartOffset(texture_getPixelOffsetToLayer<HIGHEST_RESOLUTION>(texture, mipLevel));
 			upperLeftOffset  = upperLeftOffset  + layerStartOffset;
 			upperRightOffset = upperRightOffset + layerStartOffset;
 			bottomLeftOffset  = bottomLeftOffset  + layerStartOffset;
 			bottomRightOffset = bottomRightOffset + layerStartOffset;
 		}
 		SafePointer<uint32_t> data = texture.impl_buffer.getSafe<uint32_t>("RgbaU8 pyramid pixel buffer for bi-linear pixel sampling");
-		U32 upperLeftColor   = gather_U32(data, upperLeftOffset  );
-		U32 upperRightColor  = gather_U32(data, upperRightOffset );
-		U32 bottomLeftColor  = gather_U32(data, bottomLeftOffset );
-		U32 bottomRightColor = gather_U32(data, bottomRightOffset);
-		return texture_interpolate_color_bilinear<U32, U16>(upperLeftColor, upperRightColor, bottomLeftColor, bottomRightColor, weightX, weightY);
+		auto upperLeftColor   = gather_U32(data, upperLeftOffset  );
+		auto upperRightColor  = gather_U32(data, upperRightOffset );
+		auto bottomLeftColor  = gather_U32(data, bottomLeftOffset );
+		auto bottomRightColor = gather_U32(data, bottomRightOffset);
+		return texture_interpolate_color_bilinear(upperLeftColor, upperRightColor, bottomLeftColor, bottomRightColor, weightX, weightY);
 	}
 
 	// resolutions is the maximum number of resolutions to create.
