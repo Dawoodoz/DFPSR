@@ -419,9 +419,29 @@ namespace dsr {
 		}
 	#endif
 
+	uintptr_t heap_getAllocationSize(AllocationHeader const * const header) {
+		uintptr_t result = 0;
+		if (header != nullptr) {
+			result = getBinSize(((HeapHeader *)header)->binIndex);
+		}
+		return result;
+	}
+
 	uintptr_t heap_getAllocationSize(void const * const allocation) {
-		HeapHeader *header = headerFromAllocation(allocation);
-		return getBinSize(header->binIndex);
+		uintptr_t result = 0;
+		if (allocation != nullptr) {
+			HeapHeader *header = headerFromAllocation(allocation);
+			result = getBinSize(header->binIndex);
+		}
+		return result;
+	}
+
+	uintptr_t heap_getUsedSize(AllocationHeader const * const header) {
+		uintptr_t result = 0;
+		if (header != nullptr) {
+			result = ((HeapHeader *)header)->getUsedSize();
+		}
+		return result;
 	}
 
 	uintptr_t heap_getUsedSize(void const * const allocation) {
@@ -429,6 +449,14 @@ namespace dsr {
 		if (allocation != nullptr) {
 			HeapHeader *header = headerFromAllocation(allocation);
 			result = header->getUsedSize();
+		}
+		return result;
+	}
+
+	uintptr_t heap_setUsedSize(AllocationHeader * const header, uintptr_t size) {
+		uintptr_t result = 0;
+		if (header != nullptr) {
+			result = ((HeapHeader *)header)->setUsedSize(size);
 		}
 		return result;
 	}
@@ -442,6 +470,14 @@ namespace dsr {
 		return result;
 	}
 
+	void heap_increaseUseCount(AllocationHeader const * const header) {
+		if (header != nullptr) {
+			lockMemory();
+			((HeapHeader *)header)->useCount++;
+			unlockMemory();
+		}
+	}
+
 	void heap_increaseUseCount(void const * const allocation) {
 		if (allocation != nullptr) {
 			HeapHeader *header = headerFromAllocation(allocation);
@@ -451,15 +487,30 @@ namespace dsr {
 		}
 	}
 
+	void heap_decreaseUseCount(AllocationHeader const * const header) {
+		if (header != nullptr) {
+			lockMemory();
+			if (((HeapHeader *)header)->useCount == 0) {
+				printf("Heap error: Decreasing a count that is already zero!\n");
+			} else {
+				((HeapHeader *)header)->useCount--;
+				if (((HeapHeader *)header)->useCount == 0) {
+					heap_free(allocationFromHeader((HeapHeader *)header));
+				}
+			}
+			unlockMemory();
+		}
+	}
+
 	void heap_decreaseUseCount(void const * const allocation) {
 		if (allocation != nullptr) {
 			HeapHeader *header = headerFromAllocation(allocation);
 			lockMemory();
-			if (header->useCount == 0) {
+			if (((HeapHeader *)header)->useCount == 0) {
 				printf("Heap error: Decreasing a count that is already zero!\n");
 			} else {
-				header->useCount--;
-				if (header->useCount == 0) {
+				((HeapHeader *)header)->useCount--;
+				if (((HeapHeader *)header)->useCount == 0) {
 					heap_free((void*)allocation);
 				}
 			}
@@ -467,8 +518,20 @@ namespace dsr {
 		}
 	}
 
+	uintptr_t heap_getUseCount(AllocationHeader * const header) {
+		if (header == nullptr) {
+			return 0;
+		} else {
+			return ((HeapHeader *)header)->useCount;
+		}
+	}
+
 	uintptr_t heap_getUseCount(void const * const allocation) {
-		return headerFromAllocation(allocation)->useCount;
+		if (allocation == nullptr) {
+			return 0;
+		} else {
+			return headerFromAllocation(allocation)->useCount;
+		}
 	}
 
 	// A block of memory where heap data can be allocated.

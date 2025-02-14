@@ -78,6 +78,7 @@
 
 		// Checking types.
 		#define DSR_SAME_TYPE(TYPE_A, TYPE_B) DsrTrait_SameType<TYPE_A, TYPE_B>::value
+		#define DSR_CONVERTIBLE_TO(FROM, TO) std::is_convertible<FROM, TO>::value
 		#define DSR_UTF32_LITERAL(TYPE) std::is_convertible<TYPE, const char32_t*>::value
 		#define DSR_ASCII_LITERAL(TYPE) std::is_convertible<TYPE, const char*>::value
 		#define DSR_INHERITS_FROM(DERIVED, BASE) std::is_base_of<BASE, DERIVED>::value
