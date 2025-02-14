@@ -245,7 +245,7 @@ BeamLocation TextBox::findBeamLocation(const LVector2D &pixelLocation) {
 	return BeamLocation(rowIndex, this->findBeamLocationInLine(rowIndex, pixelLocation.x));
 }
 
-static int64_t findBeamRow(List<LineIndex> lines, int64_t beamLocation) {
+static int64_t findBeamRow(const List<LineIndex>& lines, int64_t beamLocation) {
 	int64_t result = 0;
 	for (int64_t row = 0; row < lines.length(); row++) {
 		int64_t startIndex = lines[row].lineStartIndex;
@@ -258,7 +258,7 @@ static int64_t findBeamRow(List<LineIndex> lines, int64_t beamLocation) {
 }
 
 // Returns the beam's pixel offset relative to the origin.
-static int64_t getBeamPixelOffset(const ReadableString &text, const RasterFont &font, List<LineIndex> lines, const BeamLocation &beam) {
+static int64_t getBeamPixelOffset(const ReadableString &text, const RasterFont &font, const List<LineIndex>& lines, const BeamLocation &beam) {
 	int64_t result = 0;
 	int64_t lineStartIndex = lines[beam.rowIndex].lineStartIndex;
 	int64_t lineEndIndex = lines[beam.rowIndex].lineEndIndex;

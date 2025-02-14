@@ -107,6 +107,7 @@ void dsrMain(List<String> args) { \
 	stateName = string_combine(U"After expected crash starting with ", PREFIX, U"\n");
 
 #define ASSERT(CONDITION) \
+{ \
 	stateName = string_combine(U"While evaluating condition ", #CONDITION, U"\n"); \
 	if (CONDITION) { \
 		printText(U"*"); \
@@ -119,6 +120,7 @@ void dsrMain(List<String> args) { \
 			U"____________________________________________________________________\n" \
 		); \
 	} \
+}
 
 #define ASSERT_COMP(A, B, OP, OP_NAME) \
 { \

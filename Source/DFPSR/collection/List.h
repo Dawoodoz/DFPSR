@@ -1,7 +1,7 @@
 ﻿
 // zlib open source license
 //
-// Copyright (c) 2018 to 2019 David Forsgren Piuva
+// Copyright (c) 2018 to 2025 David Forsgren Piuva
 // 
 // This software is provided 'as-is', without any express or implied
 // warranty. In no event will the authors be held liable for any damages
@@ -26,115 +26,200 @@
 #define DFPSR_COLLECTION_LIST
 
 #include "collections.h"
+#include "../base/Handle.h"
+#include "../base/DsrTraits.h"
 #include <cstdint>
-#include <vector>
-#include <algorithm>
+#include <utility>
 
 namespace dsr {
 
-// TODO: Remove the std::vector dependency by reimplementing the basic features.
+// TODO:
+// * Allow storing names of lists in debug mode for better error messages, using the same setName method as used in Handle.
+// * Allow getting a SafePointer to all elements for faster loops without bound checks in release mode.
 
-// A wrapper over std::vector to improve safety, readability and performance.
-//   Technically, there's nothing wrong with the internals of std::vector, but its interface is horrible.
-//     * std::vector will create too many small allocations unless manually told how to reserve memory in advance.
-//     * Forced use of iterators for cloning and element removal is both overly complex and bloating the code.
-//       Most people joining your project won't be able to read the code if using std::iterator.
-//       Safer to access elements by index, or an iterating high-level function performing a lambda for each element.
-//       If performance is important, then use Buffer and SafePointer instead,
-//       so that you get memory bound and alignment checks for SIMD vectors.
-//     * Unsigned indices will either force dangerous casting from signed, or prevent
-//       the ability to loop backwards without crashing when the x < 0u criteria cannot be met.
-//   Unlike Buffer, List is a value type, so be careful not to pass it by value unless you intend to clone its content.
+// Because elements are returned by reference, the list can not know when an element is modified.
+//   Therefore it must clone the entire content when assigned by value for consistent behavior during reallocation.
+//   When cloning on assignment, const can be inherited from the outside for passing read only lists as const references.
 template <typename T>
 class List {
 private:
-	std::vector<T> backend;
-	List(const std::vector<T>& backend) : backend(backend) {}
+	T *impl_elements = nullptr;
+	intptr_t impl_length = 0;
+	intptr_t impl_buffer_length = 0;
+	// Makes sure that there is memory available for storing at least minimumAllocatedLength elements.
+	void impl_reserve(intptr_t minimumAllocatedLength) {
+		if (minimumAllocatedLength > this->impl_buffer_length) {
+			// Create a new memory allocation.
+			UnsafeAllocation newAllocation = (heap_allocate(minimumAllocatedLength * sizeof(T), true));
+			T *newElements = (T*)(newAllocation.data);
+			heap_increaseUseCount(newAllocation.header);
+			// Use all available space.
+			uintptr_t availableSize = heap_getAllocationSize(newAllocation.header);
+			heap_setUsedSize(newAllocation.header, availableSize);
+			// To work with element types that do not follow the rule of three, we can copy the data directly to prevent leaking memory from calling a copy constructor instead of a move constructor.
+			memcpy((void*)newElements, (void*)this->impl_elements, this->impl_buffer_length * sizeof(T));
+			//for (intptr_t e = 0; e < this->impl_buffer_length; e++) {
+			//	new (newElements + e) T(std::move(this->impl_elements[e]));
+			//}
+			// Transfer ownership to the new allocation.
+			heap_decreaseUseCount(this->impl_elements);
+			this->impl_elements = newElements;
+			this->impl_buffer_length = availableSize / sizeof(T);
+		}
+	}
+	void impl_setLength(intptr_t newLength) {
+		if (newLength < this->impl_length) {
+			for (intptr_t e = newLength; e < this->impl_length; e++) {
+				// In-place descruction.
+				this->impl_elements[e].~T();
+			}
+		} else {
+			this->impl_reserve(newLength);
+		}
+		this->impl_length = newLength;
+	}
+	template<typename... ARGS>
+	void impl_setElements(ARGS&&... args) {
+		intptr_t elementCount = sizeof...(args);
+		this->impl_reserve(elementCount);
+		this->impl_length = elementCount;
+		std::initializer_list<T> otherArguments = { T(args)... };
+		for (intptr_t e = 0; e < elementCount; e++) {
+			new (this->impl_elements + e) T(otherArguments.begin()[e]);
+		}
+	}
 public:
-	// Constructor
+	// Copy constructor
+	List(const List<T>& source) {
+		this->impl_setLength(source.length());
+		for (intptr_t e = 0; e < source.length(); e++) {
+			new (this->impl_elements + e) T(source.impl_elements[e]);
+		}
+	}
+	// Move constructor
+	List(List<T>&& source) noexcept {
+		// No pre-existing content when move constructing.
+		this->impl_elements = source.impl_elements;
+		this->impl_length = source.impl_length;
+		this->impl_buffer_length = source.impl_buffer_length;
+		source.impl_elements = nullptr;
+		source.impl_length = 0;
+		source.impl_buffer_length = 0;
+	}
+	// Copy assignment operator
+	List& operator = (const List<T>& source) {
+		if (this != &source) {
+			// Delete any pre-existing content.
+			this->impl_setLength(0);
+			// Clone the content.
+			this->impl_setLength(source.length());
+			for (intptr_t e = 0; e < source.length(); e++) {
+				new (this->impl_elements + e) T(source.impl_elements[e]);
+			}
+		}
+		return *this;
+	}
+	// Move assignment operator
+	List& operator = (List<T>&& source) {
+		if (this != &source) {
+			// Delete any pre-existing content when move assigning.
+			this->impl_setLength(0);
+			heap_decreaseUseCount(this->impl_elements);
+			// Move the content.
+			this->impl_elements = source.impl_elements;
+			this->impl_length = source.impl_length;
+			this->impl_buffer_length = source.impl_buffer_length;
+			source.impl_elements = nullptr;
+			source.impl_length = 0;
+			source.impl_buffer_length = 0;
+		}
+		return *this;
+	}
+	// Constructors
 	List() {}
-	// Clonable by default!
-	//   Be very careful not to accidentally pass a List by value instead of reference,
-	//   otherwise your side-effects might write to a temporary copy
-	//   or time is wasted to clone a List every time you look something up.
-	List(const List& source) : backend(std::vector<T>(source.backend.begin(), source.backend.end())) {}
-	// Construct using one argument per element.
-	template<typename... ELEMENTS>
-	List(ELEMENTS... elements)
-	: backend({elements...}) {}
-	// Post-condition: Returns the number of elements in the array list.
-	int64_t length() const {
-		return (int64_t)this->backend.size();
+	template<
+	  typename FIRST,
+	  typename... OTHERS,
+	  DSR_ENABLE_IF(DSR_CONVERTIBLE_TO(FIRST, T))
+	>
+	List(FIRST first, OTHERS... others) {
+		this->impl_setElements(first, others...);
+	}
+	~List() {
+		// Destroy all elements.
+		this->impl_setLength(0);
+		// Free the allocation.
+		heap_decreaseUseCount(this->impl_elements);
+		this->impl_elements = nullptr;
+		this->impl_buffer_length = 0;
 	}
 	// Post-condition: Returns the element at index from the range 0..length-1.
-	T& operator[] (int64_t index) {
-		impl_baseZeroBoundCheck(index, this->length(), "List index");
-		return this->backend[index];
+	T& operator[] (intptr_t index) {
+		impl_baseZeroBoundCheck(index, this->impl_length, "List index");
+		return this->impl_elements[index];
 	}
-	// Post-condition: Returns the write-protected element at index from the range 0..length-1.
-	const T& operator[] (int64_t index) const {
-		impl_baseZeroBoundCheck(index, this->length(), "List index");
-		return this->backend[index];
+	const T& operator[] (intptr_t index) const {
+		impl_baseZeroBoundCheck(index, this->impl_length, "List index");
+		return this->impl_elements[index];
 	}
-	// Post-condition: Returns an index to the first element, which is always zero.
-	// Can be used for improving readability when used together with lastIndex.
-	int64_t firstIndex() const { return 0; }
-	// Post-condition: Returns an index to the last element.
-	int64_t lastIndex() const { return this->length() - 1; }
-	// Post-condition: Returns a reference to the first element.
-	T& first() {
-		impl_nonZeroLengthCheck(this->length(), "Length");
-		return this->backend[0];
-	}
-	// Post-condition: Returns a reference to the first element from a write protected array list.
-	const T& first() const {
-		impl_nonZeroLengthCheck(this->length(), "Length");
-		return this->backend[0];
-	}
-	// Post-condition: Returns a reference to the last element.
-	T& last() {
-		impl_nonZeroLengthCheck(this->length(), "Length");
-		return this->backend[this->lastIndex()];
-	}
-	// Post-condition: Returns a reference to the last element from a write protected array list.
-	const T& last() const {
-		impl_nonZeroLengthCheck(this->length(), "Length");
-		return this->backend[this->lastIndex()];
-	}
-	// Side-effect: Removes all elements by setting the count to zero.
-	void clear() {
-		this->backend.clear();
+	// Post-condition: Returns the number of elements in the array list.
+	inline intptr_t length() const {
+		return this->impl_length;
 	}
 	// Side-effect: Makes sure that the buffer have room for at least minimumLength elements.
 	//   Warning! Reallocation may invalidate old pointers and references to elements in the replaced buffer.
-	void reserve(int64_t minimumLength) {
-		this->backend.reserve(minimumLength);
+	void reserve(intptr_t minimumLength) {
+		impl_reserve(minimumLength);
+	}
+	// Post-condition: Returns an index to the first element, which is always zero.
+	// Can be used for improving readability when used together with lastIndex.
+	intptr_t firstIndex() const { return 0; }
+	// Post-condition: Returns an index to the last element.
+	intptr_t lastIndex() const { return this->impl_length - 1; }
+	// Post-condition: Returns a reference to the first element.
+	T& first() {
+		impl_nonZeroLengthCheck(this->impl_length, "Length");
+		return this->impl_elements[0];
+	}
+	// Post-condition: Returns a reference to the first element.
+	const T& first() const {
+		impl_nonZeroLengthCheck(this->impl_length, "Length");
+		return this->impl_elements[0];
+	}
+	// Post-condition: Returns a reference to the last element.
+	T& last() {
+		impl_nonZeroLengthCheck(this->impl_length, "Length");
+		return this->impl_elements[this->lastIndex()];
+	}
+	// Post-condition: Returns a reference to the last element.
+	const T& last() const {
+		impl_nonZeroLengthCheck(this->impl_length, "Length");
+		return this->impl_elements[this->lastIndex()];
+	}
+	// Side-effect: Removes all elements by setting the count to zero.
+	void clear() {
+		this->impl_setLength(0);
 	}
 	// Side-effect: Swap the order of two elements.
 	//   Useful for moving and sorting elements.
-	void swap(int64_t indexA, int64_t indexB) {
-		impl_baseZeroBoundCheck(indexA, this->length(), "Swap index A");
-		impl_baseZeroBoundCheck(indexB, this->length(), "Swap index B");
-		std::swap(this->backend[indexA], this->backend[indexB]);
+	void swap(intptr_t indexA, intptr_t indexB) {
+		impl_baseZeroBoundCheck(indexA, this->impl_length, "Swap index A");
+		impl_baseZeroBoundCheck(indexB, this->impl_length, "Swap index B");
+		std::swap(this->impl_elements[indexA], this->impl_elements[indexB]);
 	}
-	// Side-effect: Pushes a new element at the end.
-	//   Warning! Reallocation may invalidate old pointers and references to elements in the replaced buffer.
-	// Post-condition: Returns a reference to the new element in the list.
 	T& push(const T& newValue) {
-		// Optimize for speed by assuming that we have enough memory.
-		if (this->length() == 0) {
-			this->backend.reserve(32);
-		} else if (this->length() >= (int64_t)this->backend.capacity()) {
-			this->backend.reserve((int64_t)this->backend.capacity() * 4);
-		}
-		this->backend.push_back(newValue);
+		this->impl_setLength(this->impl_length + 1);
+		// Copy construction.
+		new (&(this->last())) T(newValue);
 		return this->last();
 	}
 	// Side-effect: Pushes a new element at the end.
 	//   Warning! Reallocation may invalidate old pointers and references to elements in the replaced buffer.
 	// Post-condition: Returns an index to the new element in the list.
-	int64_t pushGetIndex(const T& newValue) {
-		this->push(newValue);
+	intptr_t pushGetIndex(const T& newValue) {
+		this->impl_setLength(this->impl_length + 1);
+		// Copy construction.
+		new (&(this->last())) T(newValue);
 		return this->lastIndex();
 	}
 	// Side-effect: Pushes a new element constructed using the given arguments.
@@ -142,31 +227,46 @@ public:
 	// Post-condition: Returns a reference to the new element in the list.
 	template<typename... ARGS>
 	T& pushConstruct(ARGS&&... args) {
-		// Optimize for speed by assuming that we have enough memory.
-		if (this->length() == 0) {
-			this->backend.reserve(32);
-		} else if (this->length() >= (int64_t)this->backend.capacity()) {
-			this->backend.reserve((int64_t)this->backend.capacity() * 4);
-		}
-		this->backend.emplace_back(args...);
+		this->impl_setLength(this->impl_length + 1);
+		// Copy construction.
+		new (&(this->last())) T(std::forward<ARGS>(args)...);
 		return this->last();
 	}
 	// Side-effect: Pushes a new element constructed using the given arguments.
 	//   Warning! Reallocation may invalidate old pointers and references to elements in the replaced buffer.
 	// Post-condition: Returns an index to the new element in the list.
 	template<typename... ARGS>
-	int64_t pushConstructGetIndex(ARGS&&... args) {
-		pushConstruct(args...);
+	intptr_t pushConstructGetIndex(ARGS&&... args) {
+		this->impl_setLength(this->impl_length + 1);
+		new (&(this->last())) T(std::forward<ARGS>(args)...);
 		return this->lastIndex();
 	}
-	// Side-effect: Deletes the element at removedIndex.
-	//   We can assume that the order is stable in the STD implementation, because ListTest.cpp would catch alternative interpretations.
-	void remove(int64_t removedIndex) {
-		this->backend.erase(this->backend.begin() + removedIndex);
+	// TODO: Implement constant time remove with swap for not preserving any order.
+	// Side-effect: Deletes the element at removedIndex without changing the order of other elements.
+	// Pre-condition: Returns true on success and false on failure.
+	bool remove(intptr_t removedIndex) {
+		if (0 <= removedIndex && removedIndex < this->impl_length) {
+			// Shift all following elements without cloning, which will call the destructor for the removed element.
+			for (intptr_t e = removedIndex; e < this->impl_length - 1; e++) {
+				// Move assignment.
+				this->impl_elements[e] = std::move(this->impl_elements[e + 1]);
+			}
+			this->impl_length--;
+			return true;
+		} else {
+			return false;
+		}
 	}
 	// Side-effect: Deletes the last element.
-	void pop() {
-		this->backend.pop_back();
+	// Pre-condition: Returns true on success and false on failure.
+	bool pop() {
+		if (this->impl_length > 0) {
+			//impl_elements[this->impl_length - 1].~T();
+			this->impl_setLength(this->impl_length - 1);
+			return true;
+		} else {
+			return false;
+		}
 	}
 };
 

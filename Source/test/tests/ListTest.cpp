@@ -1,7 +1,69 @@
 ﻿
 #include "../testTools.h"
 
+static void targetByReference(List<int32_t> &target, int32_t value) {
+	target.push(value);
+}
+
 START_TEST(List)
+	{
+		// Populate
+		List<int32_t> integers;
+		ASSERT_EQUAL(integers.length(), 0);
+		targetByReference(integers, 5);
+		ASSERT_EQUAL(integers.length(), 1);
+		ASSERT_EQUAL(integers[0], 5);
+		targetByReference(integers, 86);
+		ASSERT_EQUAL(integers.length(), 2);
+		ASSERT_EQUAL(integers[0], 5);
+		ASSERT_EQUAL(integers[1], 86);
+		std::function<void(int32_t value)> method = [&integers](int32_t value) {
+			integers.push(value);
+		};
+		method(24);
+		ASSERT_EQUAL(integers.length(), 3);
+		ASSERT_EQUAL(integers[0], 5);
+		ASSERT_EQUAL(integers[1], 86);
+		ASSERT_EQUAL(integers[2], 24);
+		integers.pushConstruct(123);
+		ASSERT_EQUAL(integers.length(), 4);
+		ASSERT_EQUAL(integers[0], 5);
+		ASSERT_EQUAL(integers[1], 86);
+		ASSERT_EQUAL(integers[2], 24);
+		ASSERT_EQUAL(integers[3], 123);
+		// Copy
+		List<int32_t> copied = List<int32_t>(integers);
+		ASSERT_EQUAL(integers.length(), 4);
+		ASSERT_EQUAL(integers[0], 5);
+		ASSERT_EQUAL(integers[1], 86);
+		ASSERT_EQUAL(integers[2], 24);
+		ASSERT_EQUAL(integers[3], 123);
+		ASSERT_EQUAL(copied.length(), 4);
+		ASSERT_EQUAL(copied[0], 5);
+		ASSERT_EQUAL(copied[1], 86);
+		ASSERT_EQUAL(copied[2], 24);
+		ASSERT_EQUAL(copied[3], 123);
+		// Assign
+		List<int32_t> assigned = integers;
+		ASSERT_EQUAL(integers.length(), 4);
+		ASSERT_EQUAL(integers[0], 5);
+		ASSERT_EQUAL(integers[1], 86);
+		ASSERT_EQUAL(integers[2], 24);
+		ASSERT_EQUAL(integers[3], 123);
+		ASSERT_EQUAL(assigned.length(), 4);
+		ASSERT_EQUAL(assigned[0], 5);
+		ASSERT_EQUAL(assigned[1], 86);
+		ASSERT_EQUAL(assigned[2], 24);
+		ASSERT_EQUAL(assigned[3], 123);
+		// Move
+		List<int32_t> moved = std::move(integers);
+		ASSERT_EQUAL(integers.length(), 0);
+		ASSERT_EQUAL(moved.length(), 4);
+		ASSERT_EQUAL(moved[0], 5);
+		ASSERT_EQUAL(moved[1], 86);
+		ASSERT_EQUAL(moved[2], 24);
+		ASSERT_EQUAL(moved[3], 123);
+	}
 	{ // Fixed size elements
 		List<int> myIntegers;
 		ASSERT_EQUAL(myIntegers.length(), 0);
@@ -66,4 +128,5 @@ START_TEST(List)
 		myOtherStrings.clear();
 		ASSERT_EQUAL(myOtherStrings.length(), 0);
 	}
+	// TODO: Test lists of objects that can not be cloned.
 END_TEST

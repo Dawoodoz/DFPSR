@@ -81,10 +81,12 @@ namespace dsr {
 	// Increase the use count of an allocation.
 	//   Does nothing if the allocation is nullptr.
 	void heap_increaseUseCount(void const * const allocation);
+	void heap_increaseUseCount(AllocationHeader const * const header);
 
 	// Decrease the use count of an allocation and recycle it when reaching zero.
 	//   Does nothing if the allocation is nullptr.
 	void heap_decreaseUseCount(void const * const allocation);
+	void heap_decreaseUseCount(AllocationHeader const * const header);
 
 	// Pre-condition:
 	//   allocation points to memory allocated as heap_allocate(...).data because this feature is specific to this allocator.
@@ -92,6 +94,7 @@ namespace dsr {
 	//   Returns the number of bytes in the allocation that are actually used, which is used for tight bound checks and knowing how large a buffer is.
 	//   Returns 0 if allocation is nullptr.
 	uintptr_t heap_getUsedSize(void const * const allocation);
+	uintptr_t heap_getUsedSize(AllocationHeader const * const header);
 
 	// Side-effect:
 	//   Assigns a new used size to allocation.
@@ -103,6 +106,7 @@ namespace dsr {
 	// Post-condition:
 	//   Returns the assigned size, which is the given size, an exceeded allocation size, or zero for an allocation that does not exist.
 	uintptr_t heap_setUsedSize(void * const allocation, uintptr_t size);
+	uintptr_t heap_setUsedSize(AllocationHeader * const header, uintptr_t size);
 
 	// A function pointer for destructors.
 	using HeapDestructorPointer = void(*)(void *toDestroy, void *externalResource);
@@ -122,13 +126,14 @@ namespace dsr {
 
 	// Get the use count outside of transactions without locking.
 	uintptr_t heap_getUseCount(void const * const allocation);
+	uintptr_t heap_getUseCount(AllocationHeader const * const header);
 
 	// Pre-condition: The allocation pointer must point to the start of a payload allocated using heap_allocate, no offsets nor other allocators allowed.
 	// Post-condition: Returns the number of available bytes in the allocation.
-	//                 You may not read a single byte outside of it, because it might include padding that ends at uneven addresses.
-	//                 To use more memory than requested, you must round it down to whole elements.
-	//                 If the element's size is a power of two, you can pre-compute a bit mask using memory_createAlignmentAndMask for rounding down.
 	uintptr_t heap_getAllocationSize(void const * const allocation);
+	// Pre-condition: The header pointer must point to the allocation head, as returned from heap_allocate or heap_getHeader.
+	// Post-condition: Returns the number of available bytes in the allocation.
+	uintptr_t heap_getAllocationSize(AllocationHeader const * const header);
 
 	// Get the alignment of the heap, which depends on the largest cache line size.
 	uintptr_t heap_getHeapAlignment();
