@@ -123,8 +123,6 @@ public:
 	: characters(characters), view(view) {}
 	// Create from String by sharing the buffer
 	ReadableString(const String& source);
-	// Destructor
-	~ReadableString() {} // Do not override the non-virtual destructor.
 };
 
 // A safe and simple string type
@@ -143,7 +141,6 @@ public:
 	String(const char* source);
 	String(const DsrChar* source);
 	String(const ReadableString& source);
-	String(const String& source);
 };
 
 // Used as format tags around numbers passed to string_append or string_combine
