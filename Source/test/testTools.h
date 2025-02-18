@@ -3,6 +3,7 @@
 
 // TODO: Make it faster to crawl source by only including what is needed by the test.
 #include "../DFPSR/includeFramework.h"
+#include <cstdlib>
 #include <csignal>
 
 using namespace dsr;
@@ -73,22 +74,27 @@ static void handleArguments(const List<String> &args) {
 
 static thread_local String testName = U"Uninitialized test\n";
 static thread_local String stateName = U"New thread\n";
+static bool failed = false;
 
 #define START_TEST(NAME) \
 DSR_MAIN_CALLER(dsrMain) \
 void dsrMain(List<String> args) { \
 	testName = #NAME; \
 	stateName = U"While Assigning message handler"; \
-	std::signal(SIGSEGV, [](int signal) { throwError(U"Segmentation fault from ", testName, U"! ", stateName); }); \
+	std::signal(SIGSEGV, [](int signal) { failed = true; throwError(U"Segmentation fault from ", testName, U"! ", stateName); }); \
 	string_assignMessageHandler(&messageHandler); \
 	stateName = U"While handling arguments\n"; \
 	handleArguments(args); \
 	stateName = U"Test start\n"; \
-	printText(U"Running test \"", #NAME, "\": ");
+	printText(U"Running test \"", #NAME, "\":\n ");
 
 #define END_TEST \
 	printText(U" (done)\n"); \
 	stateName = U"After test end\n"; \
+	if (failed) { \
+		heap_terminatingApplication(); \
+		exit(1); \
+	} \
 }
 
 // These can be used instead of ASSERT_CRASH to handle multiple template arguments that are not enclosed within ().
@@ -112,13 +118,14 @@ void dsrMain(List<String> args) { \
 	if (CONDITION) { \
 		printText(U"*"); \
 	} else { \
-		throwError( \
+		printText( \
 			U"\n\n", \
 			U"_______________________________ FAIL _______________________________\n", \
 			U"\n", \
 			U"Failed assertion!\nCondition: ", #CONDITION, U"\n", \
 			U"____________________________________________________________________\n" \
 		); \
+		failed = true; \
 	} \
 }
 
@@ -130,7 +137,7 @@ void dsrMain(List<String> args) { \
 	if (OP(lhs, rhs)) { \
 		printText(U"*"); \
 	} else { \
-		throwError( \
+		printText( \
 			U"\n\n", \
 			U"_______________________________ FAIL _______________________________\n", \
 			U"\n", \
@@ -138,6 +145,7 @@ void dsrMain(List<String> args) { \
 			lhs, " ", OP_NAME, " ", rhs, U" is false.\n", \
 			U"____________________________________________________________________\n" \
 		); \
+		failed = true; \
 	} \
 }
 #define ASSERT_EQUAL(A, B) ASSERT_COMP(A, B, OP_EQUALS, "==")
