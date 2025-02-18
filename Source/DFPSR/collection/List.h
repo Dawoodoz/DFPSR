@@ -56,11 +56,19 @@ private:
 			// Use all available space.
 			uintptr_t availableSize = heap_getAllocationSize(newAllocation.header);
 			heap_setUsedSize(newAllocation.header, availableSize);
-			// To work with element types that do not follow the rule of three, we can copy the data directly to prevent leaking memory from calling a copy constructor instead of a move constructor.
-			memcpy((void*)newElements, (void*)this->impl_elements, this->impl_buffer_length * sizeof(T));
-			//for (intptr_t e = 0; e < this->impl_buffer_length; e++) {
-			//	new (newElements + e) T(std::move(this->impl_elements[e]));
-			//}
+			// Move the data from the old allocation to the new allocation.
+			if (std::is_move_constructible<T>::value) {
+				// If T is move constructible, we do not have to clone the elements.
+				for (intptr_t e = 0; e < this->impl_buffer_length; e++) {
+					new (newElements + e) T(std::move(this->impl_elements[e]));
+				}
+			} else {
+				// If T is not move constructible, we have to create a copy and then destroy the original.
+				for (intptr_t e = 0; e < this->impl_buffer_length; e++) {
+					new (newElements + e) T(this->impl_elements[e]);
+					this->impl_elements[e].~T();
+				}
+			}
 			// Transfer ownership to the new allocation.
 			heap_decreaseUseCount(this->impl_elements);
 			this->impl_elements = newElements;
