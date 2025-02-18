@@ -73,8 +73,6 @@ ReadableString::ReadableString(const String& source)
 String::String() {}
 String::String(const char* source) { atomic_append_ascii(*this, source); }
 String::String(const DsrChar* source) { atomic_append_utf32(*this, source); }
-String::String(const String& source)
-: ReadableString(source.characters, source.view){}
 String::String(const ReadableString& source)
 : ReadableString(source.characters, source.view) {}
 
