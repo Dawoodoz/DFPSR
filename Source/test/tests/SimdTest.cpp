@@ -1,6 +1,7 @@
 ﻿
 #include "../testTools.h"
 #include "../../DFPSR/base/simd.h"
+#include "../../DFPSR/base/endian.h"
 
 // TODO: Test: allLanesNotEqual, allLanesLesser, allLanesGreater, allLanesLesserOrEqual, allLanesGreaterOrEqual, operand ~, smaller bit shifts.
 // TODO: Test that truncateToU32 saturates to minimum and maximum values.

@@ -1,5 +1,6 @@
 ﻿
 #include "../testTools.h"
+#include "../../DFPSR/collection/Field.h"
 
 START_TEST(Field)
 	{

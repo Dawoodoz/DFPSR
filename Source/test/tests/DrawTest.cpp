@@ -1,5 +1,7 @@
 ﻿
 #include "../testTools.h"
+#include "../../DFPSR/api/imageAPI.h"
+#include "../../DFPSR/api/drawAPI.h"
 
 START_TEST(Draw)
 	// Resources

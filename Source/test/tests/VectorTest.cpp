@@ -1,5 +1,9 @@
 ﻿
 #include "../testTools.h"
+#include "../../DFPSR/math/UVector.h"
+#include "../../DFPSR/math/IVector.h"
+#include "../../DFPSR/math/LVector.h"
+#include "../../DFPSR/math/FVector.h"
 
 START_TEST(Vector)
 	// Comparisons

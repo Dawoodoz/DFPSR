@@ -1,5 +1,6 @@
 ﻿
 #include "../testTools.h"
+#include "../../DFPSR/collection/Array.h"
 
 START_TEST(Array)
 	{

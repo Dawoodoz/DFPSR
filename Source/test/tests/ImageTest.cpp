@@ -1,5 +1,6 @@
 ﻿
 #include "../testTools.h"
+#include "../../DFPSR/api/imageAPI.h"
 
 START_TEST(Image)
 	{ // ImageU8

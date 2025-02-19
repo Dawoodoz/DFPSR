@@ -1,5 +1,6 @@
 ﻿
 #include "../testTools.h"
+#include "../../DFPSR/base/SafePointer.h"
 
 START_TEST(SafePointer)
 	// Simulate unaligned memory

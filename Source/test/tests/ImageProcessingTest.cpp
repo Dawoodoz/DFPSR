@@ -1,5 +1,7 @@
 ﻿
 #include "../testTools.h"
+#include "../../DFPSR/api/imageAPI.h"
+#include "../../DFPSR/api/filterAPI.h"
 #include "../../DFPSR/base/simd.h"
 
 AlignedImageU8 addImages_generate(ImageU8 imageA, ImageU8 imageB) {

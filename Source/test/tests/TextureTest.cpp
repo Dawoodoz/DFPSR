@@ -2,6 +2,7 @@
 #include "../testTools.h"
 #include "../../DFPSR/base/simd.h"
 #include "../../DFPSR/implementation/image/PackOrder.h"
+#include "../../DFPSR/api/textureAPI.h"
 
 #define ASSERT_EQUAL_SIMD(A, B) ASSERT_COMP(A, B, allLanesEqual, "==")
 #define ASSERT_NOTEQUAL_SIMD(A, B) ASSERT_COMP(A, B, !allLanesEqual, "!=")
