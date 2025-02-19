@@ -1,8 +1,9 @@
 ﻿#ifndef TEST_TOOLS
 #define TEST_TOOLS
 
-// TODO: Make it faster to crawl source by only including what is needed by the test.
-#include "../DFPSR/includeFramework.h"
+#include "../DFPSR/includeEssentials.h"
+#include "../DFPSR/api/algorithmAPI.h"
+#include "../DFPSR/math/FVector.h"
 #include <cstdlib>
 #include <csignal>
 

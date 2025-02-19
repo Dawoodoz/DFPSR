@@ -1,6 +1,7 @@
 ﻿
 #define NO_IMPLICIT_PATH_SYNTAX
 #include "../testTools.h"
+#include "../../DFPSR/api/fileAPI.h"
 
 START_TEST(File)
 	{ // Combining paths

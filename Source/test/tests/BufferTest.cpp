@@ -1,5 +1,6 @@
 ﻿
 #include "../testTools.h"
+#include "../../DFPSR/api/bufferAPI.h"
 
 START_TEST(Buffer)
 	{

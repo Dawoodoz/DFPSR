@@ -1,9 +1,7 @@
 ﻿
 #include "../testTools.h"
+#include "../../DFPSR/api/stringAPI.h"
 
-// TODO: Cannot use casting to parent type at the same time as automatic conversion from const char*
-//       Cover everything using a single dsr::String type?
-//       Use "" operand as only constructor?
 void fooInPlace(dsr::String& target, const dsr::ReadableString& a, const dsr::ReadableString& b) {
 	string_clear(target);
 	string_append(target, U"Foo(");

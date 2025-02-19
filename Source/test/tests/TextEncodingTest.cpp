@@ -1,5 +1,6 @@
 ﻿
 #include "../testTools.h"
+#include "../../DFPSR/api/stringAPI.h"
 
 // These tests will fail if the source code document or stored files change their encoding of line breaks.
 
