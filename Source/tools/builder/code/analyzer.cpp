@@ -152,7 +152,7 @@ static void tokenize(List<String> &target, ReadableString line) {
 
 #ifdef CACHED_ANALYSIS
 	// Remembering previous results from analyzing the same files.
-	List<Dependency> analysisCache;
+	static List<Dependency> analysisCache;
 #endif
 
 void analyzeFile(Dependency &result, ReadableString absolutePath, Extension extension) {
@@ -211,6 +211,9 @@ void analyzeFile(Dependency &result, ReadableString absolutePath, Extension exte
 			tokens.clear();
 		}
 	});
+	#ifdef CACHED_ANALYSIS
+		analysisCache.push(result);
+	#endif
 }
 
 void analyzeFromFile(ProjectContext &context, ReadableString absolutePath) {
