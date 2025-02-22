@@ -6,6 +6,7 @@
 #include "../DFPSR/math/FVector.h"
 #include <cstdlib>
 #include <csignal>
+#include <stdio.h>
 
 using namespace dsr;
 
@@ -79,24 +80,31 @@ static bool failed = false;
 
 #define START_TEST(NAME) \
 DSR_MAIN_CALLER(dsrMain) \
-void dsrMain(List<String> args) { \
-	testName = #NAME; \
-	stateName = U"While Assigning message handler"; \
-	std::signal(SIGSEGV, [](int signal) { failed = true; throwError(U"Segmentation fault from ", testName, U"! ", stateName); }); \
-	string_assignMessageHandler(&messageHandler); \
-	stateName = U"While handling arguments\n"; \
-	handleArguments(args); \
-	stateName = U"Test start\n"; \
-	printText(U"Running test \"", #NAME, "\":\n ");
+void dsrMain(List<String> args) \
+	{ \
+		testName = #NAME; \
+		stateName = U"While Assigning message handler"; \
+		std::signal(SIGSEGV, [](int signal) { failed = true; throwError(U"Segmentation fault from ", testName, U"! ", stateName); }); \
+		string_assignMessageHandler(&messageHandler); \
+		stateName = U"While handling arguments\n"; \
+		handleArguments(args); \
+		stateName = U"Test start\n"; \
+		printText(U"Running test \"", #NAME, "\":\n "); \
+		intptr_t startAllocationCount = heap_getAllocationCount(); \
+		heap_forAllHeapAllocations([](AllocationHeader * header, void * allocation) { \
+			heap_setAllocationCustomFlags(header, 1u); \
+		}); \
+		{
 
 #define END_TEST \
-	printText(U" (done)\n"); \
-	stateName = U"After test end\n"; \
-	if (failed) { \
-		heap_terminatingApplication(); \
-		exit(1); \
-	} \
-}
+		} \
+		printText(U" (done)\n"); \
+		stateName = U"After test end\n"; \
+		if (failed) { \
+			heap_terminatingApplication(); \
+			exit(1); \
+		} \
+	}
 
 // These can be used instead of ASSERT_CRASH to handle multiple template arguments that are not enclosed within ().
 #define BEGIN_CRASH(PREFIX) \
@@ -156,6 +164,21 @@ void dsrMain(List<String> args) { \
 #define ASSERT_GREATER(A, B) ASSERT_COMP(A, B, OP_GREATER, ">")
 #define ASSERT_GREATER_OR_EQUAL(A, B) ASSERT_COMP(A, B, OP_GREATER_OR_EQUAL, ">=")
 #define ASSERT_NEAR(A, B) ASSERT_COMP(A, B, OP_NEAR, "==")
+
+#define ASSERT_HEAP_DEPTH(DEPTH) { \
+	intptr_t currentAllocationCount = heap_getAllocationCount(); \
+	intptr_t expectedAllocationCount = startAllocationCount + (DEPTH); \
+	if (currentAllocationCount != expectedAllocationCount) { \
+		printf( \
+			"\n\n" \
+			"_______________________________ FAIL _______________________________\n" \
+			"\n" \
+			"Expected allocation count %i but found %i allocations instead.\n" \
+			"____________________________________________________________________\n" \
+		, (int)expectedAllocationCount, (int)currentAllocationCount); \
+		failed = true; \
+	} \
+}
 
 const dsr::String inputPath = dsr::string_combine(U"test", file_separator(), U"input", file_separator());
 const dsr::String expectedPath = dsr::string_combine(U"test", file_separator(), U"expected", file_separator());

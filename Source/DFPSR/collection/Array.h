@@ -1,7 +1,7 @@
 ﻿
 // zlib open source license
 //
-// Copyright (c) 2018 to 2019 David Forsgren Piuva
+// Copyright (c) 2018 to 2025 David Forsgren Piuva
 // 
 // This software is provided 'as-is', without any express or implied
 // warranty. In no event will the authors be held liable for any damages
@@ -29,67 +29,126 @@
 
 namespace dsr {
 
-// A fixed size collection of elements initialized to the same default value.
+// A fixed size collection of impl_elements initialized to the same default value.
 //   Unlike Buffer, Array is a value type, so be careful not to pass it by value unless you intend to clone its content.
 template <typename T>
 class Array {
 private:
-	int64_t elementCount = 0;
-	T *elements = nullptr;
-public:
-	// Constructor
-	Array(const int64_t newLength, const T& defaultValue)
-	  : elementCount(newLength) {
-  		impl_nonZeroLengthCheck(newLength, "New array length");
-		this->elements = new T[newLength];
-		for (int64_t index = 0; index < newLength; index++) {
-			this->elements[index] = defaultValue;
+	intptr_t impl_elementCount = 0;
+	T *impl_elements = nullptr;
+	void impl_free() {
+		if (this->impl_elements != nullptr) {
+			heap_decreaseUseCount(this->impl_elements);
+			this->impl_elements = nullptr;
 		}
 	}
-	// Clonable by default!
-	//   Be very careful not to accidentally pass an Array by value instead of reference,
-	//   otherwise your side-effects might write to a temporary copy
-	//   or time is wasted to clone an Array every time you look something up.
+	// Pre-condition: this->impl_elements == nullptr
+	void impl_allocate(intptr_t elementCount) {
+		this->impl_elementCount = elementCount;
+		UnsafeAllocation newAllocation = heap_allocate(elementCount * sizeof(T), false);
+		#ifdef SAFE_POINTER_CHECKS
+			heap_setAllocationName(newAllocation.data, "Array allocation");
+		#endif
+		this->impl_elements = (T*)(newAllocation.data);
+		heap_increaseUseCount(newAllocation.header);
+	}
+	void impl_reallocate(intptr_t elementCount) {
+		// Check how much space is available in the target.
+		uintptr_t allocationSize = heap_getAllocationSize(this->impl_elements);
+		uintptr_t neededSize = elementCount * sizeof(T);
+		if (neededSize > allocationSize) {
+			// Need to replace the old allocation.
+			this->impl_free();
+			this->impl_allocate(elementCount);
+		} else {
+			// Resize the allocation within the available space.
+			heap_setUsedSize(this->impl_elements, neededSize);
+			this->impl_elementCount = elementCount;
+		}
+	}
+	void impl_destroy() {
+		for (intptr_t index = 0; index < this->impl_elementCount; index++) {
+			this->impl_elements[index].~T();
+		}
+	}
+public:
+	// Constructors.
+	Array() : impl_elementCount(0), impl_elements(nullptr) {}
+	Array(const intptr_t newLength, const T& defaultValue) {
+		if (newLength > 0) {
+			this->impl_allocate(newLength);
+			for (intptr_t index = 0; index < newLength; index++) {
+				new (this->impl_elements + index) T(defaultValue);
+			}
+		} else {
+			this->impl_elementCount = 0;
+		}
+	}
+	// Copy constructor.
 	Array(const Array<T>& source) {
-		// Allocate to the same size as source.
-		this->elements = new T[source.elementCount];
-		this->elementCount = source.elementCount;
-		// Copy elements from source.
-		for (int64_t e = 0; e < this->elementCount; e++) {
-			// Assign one element at a time, so that objects can be copy constructed.
-			//   If the element type T is trivial and does not require calling constructors, using safeMemoryCopy with SafePointer will be much faster than using Array<T>.
-			this->elements[e] = source.elements[e];
+		this->impl_allocate(source.impl_elementCount);
+		for (intptr_t e = 0; e < this->impl_elementCount; e++) {
+			new (this->impl_elements + e) T(source.impl_elements[e]);
 		}
 	};
-	// When assigning to the array, memory can be reused when the size is the same.
-	Array& operator=(const Array<T>& source) {
-		// Reallocate to the same size as source if needed.
-		if (this->elementCount != source.elementCount) {
-			if (this->elements) delete[] this->elements;
-			this->elements = new T[source.elementCount];
-		}
-		this->elementCount = source.elementCount;
-		// Copy elements from source.
-		for (int64_t e = 0; e < this->elementCount; e++) {
-			// Assign one element at a time, so that objects can be copy constructed.
-			//   If the element type T is trivial and does not require calling constructors, using safeMemoryCopy with SafePointer will be much faster than using Array<T>.
-			this->elements[e] = source.elements[e];
+	// Move constructor.
+	Array(Array<T> &&source) noexcept
+	: impl_elementCount(source.impl_elementCount), impl_elements(source.impl_elements) {
+		source.impl_elementCount = 0;
+		source.impl_elements = nullptr;
+	}
+	// Copy assignment.
+	Array<T>& operator = (const Array<T>& source) {
+		if (this != &source) {
+			this->impl_destroy();
+			this->impl_reallocate(source.impl_elementCount);
+			// Copy impl_elements from source.
+			for (intptr_t e = 0; e < this->impl_elementCount; e++) {
+				new (this->impl_elements + e) T(source.impl_elements[e]);
+			}
 		}
 		return *this;
 	};
+	// Move assignment.
+	Array<T>& operator = (Array<T> &&source) {
+		if (this != &source) {
+			this->impl_destroy();
+			this->impl_free();
+			this->impl_elementCount = source.impl_elementCount;
+			this->impl_elements = source.impl_elements;
+			source.impl_elementCount = 0;
+			source.impl_elements = nullptr;
+		}
+		return *this;
+	}
 	// Destructor
-	~Array() { if (this->elements) delete[] this->elements; }
+	~Array() {
+		this->impl_destroy();
+		this->impl_free();
+	}
+	// Bound check
+	inline bool inside(intptr_t index) const {
+		return 0 <= index && index < this->impl_elementCount;
+	}
+	inline T& unsafe_writeAccess(intptr_t index) {
+		assert(this->inside(index));
+		return this->impl_elements[index];
+	}
+	inline const T& unsafe_readAccess(intptr_t index) const {
+		assert(this->inside(index));
+		return this->impl_elements[index];
+	}
 	// Element access
-	T& operator[] (const int64_t index) {
+	T& operator[] (const intptr_t index) {
 		impl_baseZeroBoundCheck(index, this->length(), "Array index");
-		return this->elements[index];
+		return this->impl_elements[index];
 	}
-	const T& operator[] (const int64_t index) const {
+	const T& operator[] (const intptr_t index) const {
 		impl_baseZeroBoundCheck(index, this->length(), "Array index");
-		return this->elements[index];
+		return this->impl_elements[index];
 	}
-	int64_t length() const {
-		return this->elementCount;
+	inline intptr_t length() const {
+		return this->impl_elementCount;
 	}
 };
 
