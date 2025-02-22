@@ -51,6 +51,9 @@ private:
 		if (minimumAllocatedLength > this->impl_buffer_length) {
 			// Create a new memory allocation.
 			UnsafeAllocation newAllocation = (heap_allocate(minimumAllocatedLength * sizeof(T), true));
+			#ifdef SAFE_POINTER_CHECKS
+				heap_setAllocationName(newAllocation.data, "List allocation");
+			#endif
 			T *newElements = (T*)(newAllocation.data);
 			heap_increaseUseCount(newAllocation.header);
 			// Use all available space.

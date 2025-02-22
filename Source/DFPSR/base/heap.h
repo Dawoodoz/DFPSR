@@ -56,16 +56,19 @@
 #include <functional>
 
 namespace dsr {
-	// TODO: Replace with a lambda printing the name from capture and optional serialized content, because memory efficiency is not required in debug mode.
 	#ifdef SAFE_POINTER_CHECKS
 		// Assign a debug name to the allocation.
 		//   Does nothing if allocation is nullptr.
 		//   Only assign constant ascii string literals.
-		void heap_setAllocationName(void * const allocation, const char *name);
+		void heap_setAllocationName(void const * const allocation, const char *name);
 		// Get the ascii name of allocation, or "none" if allocation is nullptr.
-		const char * heap_getAllocationName(void * const allocation);
+		const char * heap_getAllocationName(void const * const allocation);
 		// Gets the size padded out to whole blocks of heap alignment, for constructing a SafePointer.
 		uintptr_t heap_getPaddedSize(void const * const allocation);
+		// Set the serialization function for a certain allocation, so that going through memory allocations will display its content when debugging memory leaks.
+		void setAllocationSerialization(void const * const allocation, AllocationSerialization method);
+		// Get the function used to interpret the allocation's content.
+		AllocationSerialization getAllocationSerialization(void const * const allocation);
 	#endif
 
 	// TODO: Allow allocating fixed size allocations using a typename and pre-calculate the bin index in compile time.
@@ -146,6 +149,11 @@ namespace dsr {
 	//   Recycled allocations are not included.
 	void heap_forAllHeapAllocations(std::function<void(AllocationHeader * header, void * allocation)> callback);
 
+	// Prints the allocation to the terminal.
+	void heap_debugPrintAllocation(void const * const allocation, uintptr_t maxLength = 128u);
+	// Prints a list of allocations to the terminal, without creating new memory allocations.
+	void heap_debugPrintAllocations(uintptr_t maxLength = 128u);
+
 	// Called by DSR_MAIN_CALLER when the program starts.
 	void heap_startingApplication();
 
@@ -154,6 +162,18 @@ namespace dsr {
 
 	// If terminating the program using std::exit, you can call this first to free all heap memory in the allocator, leaked or not.
 	void heap_hardExitCleaning();
+
+	// Used to find the origin of memory leaks in single-threaded tests.
+	intptr_t heap_getAllocationCount();
+
+	// Store application defined custom flags, which can be used for debugging memory leaks.
+	//   The flags do not take any additional memory, because an allocation head can not allocate less than a whole cache line.
+	uint32_t heap_getAllocationCustomFlags(void const * const allocation);
+	uint32_t heap_getAllocationCustomFlags(AllocationHeader * header);
+	void heap_setAllocationCustomFlags(void const * const allocation, uint32_t customFlags);
+	void heap_setAllocationCustomFlags(AllocationHeader * header, uint32_t customFlags);
+
+	// TODO: Allow storing custom information in allocation heads for debugging memory.
 
 	// Helper methods to prevent cyclic dependencies between strings and buffers when handles must be inlined for performance. Do not call these yourself.
 	void impl_throwAllocationFailure();

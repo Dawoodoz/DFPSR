@@ -32,6 +32,12 @@
 #include <cstdint>
 
 namespace dsr {
+	#ifdef SAFE_POINTER_CHECKS
+		// Methods for slowly serializing the content of allocations without buffering with any dynamic memory.
+		using PrintCharacter = void(*)(char32_t character);
+		using AllocationSerialization = void(*)(PrintCharacter target, void const * const allocation, uintptr_t maxLength);
+	#endif
+
 	// A header that is placed next to memory allocations.
 	struct AllocationHeader {
 		uintptr_t totalSize; // Size of both header and payload.
@@ -42,6 +48,8 @@ namespace dsr {
 			const char *name = nullptr; // Debug name of the allocation.
 			uint64_t threadHash; // Hash of the owning thread identity for thread local memory, 0 for shared memory.
 			uint64_t allocationIdentity; // Rotating identity of the allocation, to know if the memory has been freed and reused within a memory allocator.
+			// A function for serialization.
+			AllocationSerialization serializationMethod = nullptr;
 		#endif
 		// Header for freed memory.
 		AllocationHeader();

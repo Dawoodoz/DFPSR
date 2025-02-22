@@ -23,6 +23,7 @@
 
 // TODO: Apply thread safety to more memory operations.
 //       heap_getUsedSize and heap_setUsedSize are often used together, forming a transaction without any mutex.
+//       But because of potential false sharing of cache lines, writing should be considered a transaction even if it is atomic.
 
 #include "../settings.h"
 #if defined(USE_MICROSOFT_WINDOWS)	
@@ -328,8 +329,7 @@ namespace dsr {
 		};
 		HeapDestructor destructor;
 		uintptr_t useCount = 0; // How many handles that point to the data.
-		// TODO: Allow the caller to access custom bit flags in allocations.
-		// uint32_t userFlags = 0;
+		uint32_t customFlags = 0; // Application defined allocation flags.
 		HeapFlag flags = 0; // Flags use the heapFlag_ prefix.
 		BinIndex binIndex = 0; // Recycling bin index to use when freeing the allocation.
 		HeapHeader(uintptr_t totalSize)
@@ -393,14 +393,14 @@ namespace dsr {
 	}
 
 	#ifdef SAFE_POINTER_CHECKS
-		void heap_setAllocationName(void * const allocation, const char *name) {
+		void heap_setAllocationName(void const * const allocation, const char *name) {
 			if (allocation != nullptr) {
 				HeapHeader *header = headerFromAllocation(allocation);
 				header->name = name;
 			}
 		}
 
-		const char * heap_getAllocationName(void * const allocation) {
+		const char * heap_getAllocationName(void const * const allocation) {
 			if (allocation == nullptr) {
 				return "none";
 			} else {
@@ -417,7 +417,82 @@ namespace dsr {
 				return memory_getPaddedSize_usingAndMask(header->getUsedSize(), heap_getHeapAlignmentAndMask());
 			}
 		}
+
+		void setAllocationSerialization(void const * const allocation, AllocationSerialization method) {
+			if (allocation != nullptr) {
+				HeapHeader *header = headerFromAllocation(allocation);
+				header->serializationMethod = method;
+			}
+		}
+		static void serializeUnknownData(PrintCharacter target, void const * const allocation, uintptr_t maxLength) {
+			uintptr_t byteCount = heap_getUsedSize(allocation);
+			target(U'{');
+			for (uintptr_t c = 0; c < byteCount; c++) {
+				uint8_t byteValue = ((uint8_t *)allocation)[c];
+				uint8_t firstHexValue = (byteValue >> 4) & 15;
+				uint8_t secondHexValue = byteValue       & 15;
+				if (c == maxLength) {
+					target(U'}');
+					target(U'.');
+					target(U'.');
+					target(U'.');
+					return;
+				}
+				if (c > 0) {
+					target(U' ');
+				}
+				if (firstHexValue < 10u) {
+					target(U'0' + (char32_t)firstHexValue);
+				} else {
+					target((U'A' - 10) + (char32_t)firstHexValue);
+				}
+				if (secondHexValue < 10u) {
+					target(U'0' + (char32_t)secondHexValue);
+				} else {
+					target((U'A' - 10) + (char32_t)secondHexValue);
+				}
+			}
+			target(U'}');
+		}
+		AllocationSerialization getAllocationSerialization(void const * const allocation) {
+			if (allocation == nullptr) {
+				return &serializeUnknownData;
+			} else {
+				HeapHeader *header = headerFromAllocation(allocation);
+				return header->serializationMethod != nullptr ? header->serializationMethod : &serializeUnknownData;
+			}
+		}
 	#endif
+
+	uint32_t heap_getAllocationCustomFlags(void const * const allocation) {
+		uint32_t result = 0;
+		if (allocation != nullptr) {
+			HeapHeader *header = headerFromAllocation(allocation);
+			result = ((HeapHeader *)header)->customFlags;
+		}
+		return result;
+	}
+
+	uint32_t heap_getAllocationCustomFlags(AllocationHeader * header) {
+		uint32_t result = 0;
+		if (header != nullptr) {
+			result = ((HeapHeader *)header)->customFlags;
+		}
+		return result;
+	}
+
+	void heap_setAllocationCustomFlags(void const * const allocation, uint32_t customFlags) {
+		if (allocation != nullptr) {
+			HeapHeader *header = headerFromAllocation(allocation);
+			((HeapHeader *)header)->customFlags = customFlags;
+		}
+	}
+
+	void heap_setAllocationCustomFlags(AllocationHeader * header, uint32_t customFlags) {
+		if (header != nullptr) {
+			((HeapHeader *)header)->customFlags = customFlags;
+		}
+	}
 
 	uintptr_t heap_getAllocationSize(AllocationHeader const * const header) {
 		uintptr_t result = 0;
@@ -559,12 +634,14 @@ namespace dsr {
 	struct HeapPool {
 		HeapMemory *lastHeap = nullptr;
 		HeapHeader *recyclingBin[MAX_BIN_COUNT] = {};
-		void cleanUp() {
+		void cleanUp(bool noLeaks) {
 			// If memory safety checks are enabled, then we should indicate that everything is fine with the memory once cleaning up.
 			//   There is however no way to distinguish between leaking memory and not yet having terminated everything, so there is no leak warning to print.
 			#ifdef DSR_PRINT_NO_MEMORY_LEAK
 				// Can't allocate more memory after freeing all memory.
-				printf("All heap memory was freed without leaks.\n");
+				if (noLeaks) {
+					printf("All heap memory was freed without leaks.\n");
+				}
 			#endif
 			HeapMemory *nextHeap = this->lastHeap;
 			while (nextHeap != nullptr) {
@@ -708,7 +785,7 @@ namespace dsr {
 			allocationCount--;
 			// If the heap has been told to terminate and we reached zero allocations, we can tell it to clean up.
 			if (programState == ProgramState::Terminating && allocationCount == 0) {
-				defaultHeap.cleanUp();
+				defaultHeap.cleanUp(true);
 			}
 		unlockMemory();
 	}
@@ -740,7 +817,41 @@ namespace dsr {
 		// Then the arenas can safely be deallocated without looking at individual allocations again.
 		allocationCount = 0;
 		programState = ProgramState::Terminating;
-		defaultHeap.cleanUp();
+		defaultHeap.cleanUp(false);
+	}
+
+	static void printCharacter(char32_t character) {
+		if (character < 32) {
+			putchar(' ');
+		} else if (character > 127) {
+			putchar('?');
+		} else {
+			putchar((char)character);
+		}
+	}
+
+	// TODO: Can whole pointers be displayed using printf?
+	void heap_debugPrintAllocation(void const * const allocation, uintptr_t maxLength) {
+		uintptr_t size = (int)heap_getUsedSize(allocation);
+		#ifdef SAFE_POINTER_CHECKS
+			printf("* %s of %i bytes of use count %i at %p\n", heap_getAllocationName(allocation), (int)size, (int)heap_getUseCount(allocation), allocation);
+			printf("\t");
+			getAllocationSerialization(allocation)(printCharacter, allocation, maxLength);
+			printf("\n");
+		#else
+			printf("* Allocation of %i bytes of use count %i at %p\n", (int)size, (int)heap_getUseCount(allocation), allocation);
+		#endif
+	}
+
+	void heap_debugPrintAllocations(uintptr_t maxLength) {
+		printf("\nAllocations:\n");
+		heap_forAllHeapAllocations([maxLength](AllocationHeader * header, void * allocation) {
+			heap_debugPrintAllocation(allocation, maxLength);
+		});
+	}
+
+	intptr_t heap_getAllocationCount() {
+		return allocationCount;
 	}
 
 	void impl_throwAllocationFailure() {

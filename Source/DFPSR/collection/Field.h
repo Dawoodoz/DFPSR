@@ -1,7 +1,7 @@
 ﻿
 // zlib open source license
 //
-// Copyright (c) 2018 to 2019 David Forsgren Piuva
+// Copyright (c) 2018 to 2025 David Forsgren Piuva
 // 
 // This software is provided 'as-is', without any express or implied
 // warranty. In no event will the authors be held liable for any damages
@@ -39,77 +39,79 @@ namespace dsr {
 template <typename T>
 class Field {
 private:
-	int64_t elementWidth = 0;
-	int64_t elementHeight = 0;
-	T *elements = nullptr;
+	Array<T> impl_elements;
+	intptr_t impl_elementWidth = 0;
+	intptr_t impl_elementHeight = 0;
 public:
-	// Constructor
-	Field(const int64_t width, const int64_t height, const T& defaultValue)
-	  : elementWidth(width), elementHeight(height) {
-		impl_nonZeroLengthCheck(width, "New array width");
-  		impl_nonZeroLengthCheck(height, "New array height");
-		int64_t size = width * height;
-		this->elements = new T[size];
-		for (int64_t index = 0; index < size; index++) {
-			this->elements[index] = defaultValue;
+	// Constructors
+	Field()
+	  : impl_elements(), impl_elementWidth(0), impl_elementHeight(0) {
+	}
+	Field(const intptr_t width, const intptr_t height, const T& defaultValue) {
+		if (width > 0 && height > 0) {
+			this->impl_elements = Array<T>(width * height, defaultValue);
+			this->impl_elementWidth = width;
+			this->impl_elementHeight = height;
 		}
 	}
 	// Bound check
-	bool inside(int64_t x, int64_t y) const {
-		return x >= 0 && x < this->elementWidth && y >= 0 && y < this->elementHeight;
+	inline bool inside(intptr_t x, intptr_t y) const {
+		return x >= 0 && x < this->impl_elementWidth && y >= 0 && y < this->impl_elementHeight;
 	}
 	// Direct memory access where bound checks are only applied in debug mode, so access out of bound will crash.
 	// Precondition: this->inside(x, y)
-	T& unsafe_writeAccess(int64_t x, int64_t y) {
+	inline T& unsafe_writeAccess(intptr_t x, intptr_t y) {
 		assert(this->inside(x, y));
-		return this->elements[x + y * this->elementWidth];
+		return this->impl_elements.unsafe_writeAccess(x + y * this->impl_elementWidth);
 	}
 	// Precondition: this->inside(x, y)
-	const T& unsafe_readAccess(int64_t x, int64_t y) const {
+	inline const T& unsafe_readAccess(intptr_t x, intptr_t y) const {
 		assert(this->inside(x, y));
-		return this->elements[x + y * this->elementWidth];
+		return this->impl_elements.unsafe_readAccess(x + y * this->impl_elementWidth);
 	}
+	/*
 	// Clonable by default!
 	//   Be very careful not to accidentally pass a Field by value instead of reference,
 	//   otherwise your side-effects might write to a temporary copy
 	//   or time is wasted to clone an Field every time you look something up.
 	Field(const Field<T>& source) {
 		// Allocate to the same size as source.
-		int64_t newSize = source.elementWidth * source.elementHeight;
-		this->elements = new T[newSize];
-		this->elementWidth = source.elementWidth;
-		this->elementHeight = source.elementHeight;
+		intptr_t newSize = source.impl_elementWidth * source.impl_elementHeight;
+		this->impl_elements = new T[newSize];
+		this->impl_elementWidth = source.impl_elementWidth;
+		this->impl_elementHeight = source.impl_elementHeight;
 		// Copy elements from source.
-		for (int64_t e = 0; e < newSize; e++) {
+		for (intptr_t e = 0; e < newSize; e++) {
 			// Assign one element at a time, so that objects can be copy constructed.
 			//   If the element type T is trivial and does not require calling constructors, using safeMemoryCopy with SafePointer will be much faster than using Array<T>.
-			this->elements[e] = source.elements[e];
+			this->impl_elements[e] = source.impl_elements[e];
 		}
 	};
 	// When assigning to the field, memory can be reused when the number of elements is the same.
 	Field& operator=(const Field<T>& source) {
-		int64_t oldSize = this->elementWidth * this->elementHeight;
-		int64_t newSize = source.elementWidth * source.elementHeight;
+		intptr_t oldSize = this->impl_elementWidth * this->impl_elementHeight;
+		intptr_t newSize = source.impl_elementWidth * source.impl_elementHeight;
 		// Reallocate to the same size as source if needed.
 		if (oldSize != newSize) {
-			if (this->elements) delete[] this->elements;
-			this->elements = new T[newSize];
+			if (this->impl_elements) delete[] this->impl_elements;
+			this->impl_elements = new T[newSize];
 		}
 		// Update dimensions, even if the combined allocation size is the same.
-		this->elementWidth = source.elementWidth;
-		this->elementHeight = source.elementHeight;
+		this->impl_elementWidth = source.impl_elementWidth;
+		this->impl_elementHeight = source.impl_elementHeight;
 		// Copy elements from source.
-		for (int64_t e = 0; e < newSize; e++) {
+		for (intptr_t e = 0; e < newSize; e++) {
 			// Assign one element at a time, so that objects can be copy constructed.
 			//   If the element type T is trivial and does not require calling constructors, using safeMemoryCopy with SafePointer will be much faster than using Array<T>.
-			this->elements[e] = source.elements[e];
+			this->impl_elements[e] = source.impl_elements[e];
 		}
 		return *this;
 	};
+	*/
 	// Destructor
-	~Field() { if (this->elements) delete[] this->elements; }
+	//~Field() { if (this->impl_elements) delete[] this->impl_elements; }
 	// Get the element at (x, y) or the outside value when (x, y) is out-of-bound.
-	T read_border(int64_t x, int64_t y, const T& outside) const {
+	T read_border(intptr_t x, intptr_t y, const T& outside) const {
 		if (this->inside(x, y)) {
 			return this->unsafe_readAccess(x, y);
 		} else {
@@ -117,24 +119,24 @@ public:
 		}
 	}
 	// Get the element closest to (x, y), by clamping the coordinate to valid bounds.
-	T read_clamp(int64_t x, int64_t y) const {
+	T read_clamp(intptr_t x, intptr_t y) const {
 		if (x < 0) x = 0;
-		if (x >= this->elementWidth) x = this->elementWidth - 1;
+		if (x >= this->impl_elementWidth) x = this->impl_elementWidth - 1;
 		if (y < 0) y = 0;
-		if (y >= this->elementHeight) y = this->elementHeight - 1;
+		if (y >= this->impl_elementHeight) y = this->impl_elementHeight - 1;
 		return this->unsafe_readAccess(x, y);
 	}
 	// Write value to the element at (x, y) when inside of the bounds, ignoring the operation silently when outside.
-	void write_ignore(int64_t x, int64_t y, const T& value) {
+	void write_ignore(intptr_t x, intptr_t y, const T& value) {
 		if (this->inside(x, y)) {
 			this->unsafe_writeAccess(x, y) = value;
 		}
 	}
-	int64_t width() const {
-		return this->elementWidth;
+	inline intptr_t width() const {
+		return this->impl_elementWidth;
 	}
-	int64_t height() const {
-		return this->elementHeight;
+	inline intptr_t height() const {
+		return this->impl_elementHeight;
 	}
 
 	// Wrappers for access using UVector instead of separate (x, y) coordinates.

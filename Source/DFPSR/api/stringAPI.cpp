@@ -67,14 +67,9 @@ static char toAscii(DsrChar c) {
 ReadableString::ReadableString(const DsrChar *content)
 : view(content, strlen_utf32(content)) {}
 
-ReadableString::ReadableString(const String& source)
-: characters(source.characters), view(source.view) {}
-
 String::String() {}
 String::String(const char* source) { atomic_append_ascii(*this, source); }
 String::String(const DsrChar* source) { atomic_append_utf32(*this, source); }
-String::String(const ReadableString& source)
-: ReadableString(source.characters, source.view) {}
 
 String& Printable::toStream(String& target) const {
 	return this->toStreamIndented(target, U"");
@@ -730,9 +725,30 @@ static uintptr_t getStartOffset(const ReadableString &source) {
 	return (start - origin) / sizeof(DsrChar);
 }
 
+#ifdef SAFE_POINTER_CHECKS
+	static void serializeCharacterBuffer(PrintCharacter target, void const * const allocation, uintptr_t maxLength) {
+		uintptr_t characterCount = heap_getUsedSize(allocation) / sizeof(DsrChar);
+		target(U'\"');
+		for (uintptr_t c = 0; c < characterCount; c++) {
+			if (c == maxLength) {
+				target(U'\"');
+				target(U'.');
+				target(U'.');
+				target(U'.');
+				return;
+			}
+			target(((DsrChar *)allocation)[c]);
+		}
+		target(U'\"');
+	}
+#endif
+
 static Handle<DsrChar> allocateCharacters(intptr_t minimumLength) {
 	// Allocate memory.
-	Handle<DsrChar> result = handle_createArray<DsrChar>(AllocationInitialization::Uninitialized, minimumLength);
+	Handle<DsrChar> result = handle_createArray<DsrChar>(AllocationInitialization::Uninitialized, minimumLength).setName("String characters");
+	#ifdef SAFE_POINTER_CHECKS
+		setAllocationSerialization(result.getUnsafe(), &serializeCharacterBuffer);
+	#endif
 	// Check how much space we got.
 	uintptr_t availableSpace = heap_getAllocationSize(result.getUnsafe());
 	// Expand to use all available memory in the allocation.

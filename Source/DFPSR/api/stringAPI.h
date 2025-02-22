@@ -104,12 +104,7 @@ IMPL_ACCESS:
 	Handle<DsrChar> characters;
 	// Pointing to a subset of the buffer or memory that is not shared.
 	Impl_CharacterView view;
-	// TODO: Merge the pointer and length into a new View type for unified bound checks. Then remove the writer pointer.
-	//SafePointer<const DsrChar> reader;
-	//intptr_t length = 0;
 public:
-	// TODO: Inline the [] operator for faster reading of characters.
-	//       Use the padded read internally, because the old version was hard-coded for buffers padded to default alignment.
 	// Returning the character by value prevents writing to memory that might be a constant literal or shared with other strings
 	inline DsrChar operator[] (intptr_t index) const {
 		return this->view[index];
@@ -121,8 +116,35 @@ public:
 	ReadableString(const DsrChar *content);
 	ReadableString(Handle<DsrChar> characters, Impl_CharacterView view)
 	: characters(characters), view(view) {}
-	// Create from String by sharing the buffer
-	ReadableString(const String& source);
+	// Destructor.
+	~ReadableString() {}
+	// Copy constructor.
+	ReadableString(const ReadableString& source)
+	: characters(source.characters), view(source.view) {}
+	// Move constructor.
+	ReadableString(ReadableString &&source) noexcept
+	: characters(source.characters), view(source.view) {
+		source.characters = Handle<DsrChar>();
+		source.view = Impl_CharacterView();
+	}
+	// Copy assignment.
+	ReadableString& operator = (const ReadableString& source) {
+		if (this != &source) {
+			this->characters = source.characters;
+			this->view = source.view;
+		}
+		return *this;
+	};
+	// Move assignment.
+	ReadableString& operator = (ReadableString &&source) {
+		if (this != &source) {
+			this->characters = source.characters;
+			this->view = source.view;
+			source.characters = Handle<DsrChar>();
+			source.view = Impl_CharacterView();
+		}
+		return *this;
+	}
 };
 
 // A safe and simple string type
@@ -132,15 +154,37 @@ public:
 //     Endianness is native
 //     No combined characters allowed, use precomposed instead, so that the strings can guarantee a fixed character size
 class String : public ReadableString {
-//IMPL_ACCESS:
-	// TODO: Have a single pointer to the data in ReadableString and let the API be responsible for type safety.
-	//SafePointer<DsrChar> writer;
 public:
-	// Constructors
+	// Constructors.
 	String();
 	String(const char* source);
 	String(const DsrChar* source);
-	String(const ReadableString& source);
+	// Destructor.
+	~String() {}
+	// Copy constructor.
+	String(const ReadableString& source) : ReadableString(source) {}
+	String(const String& source) : ReadableString(source) {}
+	// Move constructor.
+	String(ReadableString &&source) noexcept : ReadableString(std::move(source)) {}
+	String(String &&source) noexcept : ReadableString(std::move(source)) {}
+	// Copy assignment.
+	String& operator = (const String& source) {
+		if (this != &source) {
+			this->characters = source.characters;
+			this->view = source.view;
+		}
+		return *this;
+	};
+	// Move assignment.
+	String& operator = (String &&source) {
+		if (this != &source) {
+			this->characters = source.characters;
+			this->view = source.view;
+			source.characters = Handle<DsrChar>();
+			source.view = Impl_CharacterView();
+		}
+		return *this;
+	}
 };
 
 // Used as format tags around numbers passed to string_append or string_combine
