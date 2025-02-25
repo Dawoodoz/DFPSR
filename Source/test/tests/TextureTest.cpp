@@ -10,7 +10,7 @@
 START_TEST(Texture)
 	{
 		// Linear blending of colors using unsigned integers.
-		U32x4 mixedColor = texture_interpolate_color_linear<U32x4, U16x8>(
+		U32x4 mixedColor = texture_interpolate_color_linear<U32x4>(
 		    packOrder_packBytes(U32x4(255, 175, 253,  95), U32x4(255,  84, 255, 210), U32x4(  0, 253, 172, 100), U32x4(  0, 150, 241,  61)),
 		    packOrder_packBytes(U32x4(  0, 215,  62, 127), U32x4(255, 162, 152,  93), U32x4(255,  71,  62, 200), U32x4(  0, 139, 180, 124)),
 		    U32x4(  0, 128, 256, 256)

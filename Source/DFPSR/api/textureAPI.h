@@ -287,7 +287,7 @@ namespace dsr {
 	// texture_interpolate_color_linear(a, b, 0) = a
 	// texture_interpolate_color_linear(a, b, 128) = floor((a + b) / 2)
 	// texture_interpolate_color_linear(a, b, 256) = b
-	template <typename U32, typename U16>
+	template <typename U32>
 	inline U32 texture_interpolate_color_linear(const U32 &colorA, const U32 &colorB, const U32 &weight) {
 		// Get inverse weights
 		auto weightB = repeatAs16Bits(weight);
