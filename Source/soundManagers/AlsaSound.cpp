@@ -3,24 +3,21 @@
 //   Install on Arch: sudo pacman -S libasound-dev
 //   Install on Debian: sudo apt-get install libasound-dev
 
-#include "soundManagers.h"
-#include <alsa/asoundlib.h>
+#include "../DFPSR/api/soundAPI.h"
 #include "../DFPSR/base/simd.h"
+#include <alsa/asoundlib.h>
 
-using namespace dsr;
+namespace dsr {
 
-snd_pcm_t *pcm = nullptr;
+static snd_pcm_t *pcm = nullptr;
 static int bufferElements = 0;
 static Buffer outputBuffer, floatBuffer;
 static SafePointer<int16_t> outputData;
 static SafePointer<float> floatData;
 
-// Aligning memory to allow using the widest available floating-point SIMD vector.
-static const int soundBufferAlignment = DSR_FLOAT_ALIGNMENT;
-
 static void allocateBuffers(int neededElements) {
-	outputBuffer = buffer_create(neededElements * sizeof(int16_t), soundBufferAlignment);
-	floatBuffer = buffer_create(neededElements * sizeof(float), soundBufferAlignment);
+	outputBuffer = buffer_create(neededElements * sizeof(int16_t));
+	floatBuffer = buffer_create(neededElements * sizeof(float));
 	outputData = buffer_getSafeData<int16_t>(outputBuffer, "Output data");
 	floatData = buffer_getSafeData<float>(floatBuffer, "Output data");
 	bufferElements = neededElements;
@@ -120,4 +117,6 @@ bool sound_streamToSpeakers(int channels, int sampleRate, std::function<bool(Saf
 	}
 	terminateSound();
 	return true;
+}
+
 }

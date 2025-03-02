@@ -1,13 +1,13 @@
 ﻿
 // Use -lwinmm for linking to the winmm library in GCC/G++
 
-#include "soundManagers.h"
+#include "../DFPSR/api/soundAPI.h"
 #include <windows.h>
 #include <mmsystem.h>
 #include "../DFPSR/implementation/math/scalar.h"
 #include "../DFPSR/base/simd.h"
 
-using namespace dsr;
+namespace dsr {
 
 static const int samplesPerChannel = 2048;
 
@@ -135,4 +135,6 @@ bool sound_streamToSpeakers(int channels, int sampleRate, std::function<bool(Saf
 	}
 	terminateSound();
 	return true;
+}
+
 }

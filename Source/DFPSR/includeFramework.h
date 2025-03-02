@@ -21,6 +21,8 @@
 	#include "api/guiAPI.h" // Handling windows, interfaces and components
 	#include "api/mediaMachineAPI.h" // A machine for running image functions
 	#include "api/fontAPI.h" // Printing text to images
+	// Sound API
+	#include "api/soundAPI.h" // Processing buffers and playing sounds
 	// Convenient API
 	#include "api/algorithmAPI.h" // Functions for performing operations on whole collections
 	#include "api/timeAPI.h" // Methods for time and delays
