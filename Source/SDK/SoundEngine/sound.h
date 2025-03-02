@@ -3,16 +3,16 @@
 #define MODULE_SOUND
 
 #include "../../DFPSR/includeFramework.h"
+#include "../../DFPSR/api/soundAPI.h"
 
-static const int soundFormat_I16 = 0; // Hi-fi bit-depth
-static const int soundFormat_F32 = 1; // Studio bit-depth
+namespace dsr {
 
 void sound_initialize();
 void sound_terminate();
 
 // Creates a single-channel sound using the generator function
 // generator takes the time in seconds as input and returns a value from -1.0 to 1.0
-int generateMonoSoundBuffer(const dsr::ReadableString &name, int sampleCount, int sampleRate, int soundFormat, std::function<double(double time)> generator);
+int generateMonoSoundBuffer(const dsr::ReadableString &name, int sampleCount, int sampleRate, std::function<float(double time)> generator);
 int getSoundBufferCount();
 
 int loadWaveSoundFromBuffer(const dsr::ReadableString &name, dsr::Buffer bufferconst);
@@ -35,5 +35,11 @@ void releaseSound(int64_t playerID);
 void stopSound(int64_t playerID);
 // Stop all sounds at once
 void stopAllSounds();
+
+// Visualization
+void drawEnvelope(dsr::ImageRgbaU8 target, const dsr::IRect &region, const EnvelopeSettings &envelopeSettings, double releaseTime, double viewTime);
+void drawSound(dsr::ImageRgbaU8 target, const dsr::IRect &region, int soundIndex, bool selected);
+
+}
 
 #endif

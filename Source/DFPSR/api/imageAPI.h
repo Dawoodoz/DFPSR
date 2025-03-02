@@ -341,7 +341,7 @@ namespace dsr {
 	// Load an image from a file by giving the filename including folder path and extension.
 	// If mustExist is true, an exception will be raised on failure.
 	// If mustExist is false, failure will return an empty handle.
-	OrderedImageRgbaU8 image_load_RgbaU8(const String& filename, bool mustExist = true);
+	OrderedImageRgbaU8 image_load_RgbaU8(const ReadableString& filename, bool mustExist = true);
 	// Load an image from a memory buffer, which can be loaded with file_loadBuffer to get the same result as loading directly from the file.
 	// A convenient way of loading compressed images from larger files.
 	// Failure will return an empty handle.
@@ -362,7 +362,7 @@ namespace dsr {
 	// If mustWork is true, an exception will be raised on failure.
 	// If mustWork is false, failure will return false.
 	// The optional quality setting goes from 1% to 100% and is at the maximum by default.
-	bool image_save(const ImageRgbaU8 &image, const String& filename, bool mustWork = true, int quality = 100);
+	bool image_save(const ImageRgbaU8 &image, const ReadableString& filename, bool mustWork = true, int quality = 100);
 	// Save the image to a memory buffer.
 	// Post-condition: Returns a buffer with the encoded image format as it would be saved to a file, or empty on failure.
 	//                 No exceptions will be raised on failure, because an error message without a filename would not explain much.

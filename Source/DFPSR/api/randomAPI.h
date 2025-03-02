@@ -51,6 +51,7 @@ RandomGenerator random_createGenerator(uint64_t seed);
 
 // Pre-condition: minimum <= maximum
 int32_t random_generate_range(RandomGenerator &generator, int32_t minimum, int32_t maximum);
+float random_generate_range(RandomGenerator &generator, float minimum, float maximum);
 
 // Returns true for roughly perCentProbability times in a hundred.
 bool random_generate_probability(RandomGenerator &generator, int32_t perCentProbability);

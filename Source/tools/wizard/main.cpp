@@ -9,7 +9,7 @@
 //         Can let frames have a caption for when used within a container.
 
 #include "../../DFPSR/includeFramework.h"
-#include "sound.h"
+#include "../../SDK/SoundEngine/sound.h"
 
 using namespace dsr;
 
@@ -210,7 +210,8 @@ void dsrMain(List<String> args) {
 					arguments.push(U"three");
 					arguments.push(U"Four");
 				}
-				// Launch the application.
+				// Launch the application from the project's folder.
+				file_setCurrentPath(file_getAbsoluteParentFolder(projects[projectIndex].executableFilePath));
 				projects[projectIndex].programHandle = process_execute(projects[projectIndex].executableFilePath, arguments);
 				updateInterface(true);
 			}

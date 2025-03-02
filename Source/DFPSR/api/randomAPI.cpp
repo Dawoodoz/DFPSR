@@ -120,6 +120,11 @@ int32_t random_generate_range(RandomGenerator &generator, int32_t minimum, int32
 	return minimum + int32_t(random_generate_U64(generator) % (uint64_t(maximum) - uint64_t(minimum) + 1u));
 }
 
+float random_generate_range(RandomGenerator &generator, float minimum, float maximum) {
+	double normalized = double(random_generate_U64(generator)) * (1.0 / 18446744073709551615.0);
+	return (normalized * (maximum - minimum)) + minimum;
+}
+
 bool random_generate_probability(RandomGenerator &generator, int32_t perCentProbability) {
 	return int32_t(random_generate_U64(generator) % 100u) < perCentProbability;
 }

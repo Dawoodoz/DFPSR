@@ -95,7 +95,7 @@ OrderedImageRgbaU8 image_decode_RgbaU8(const Buffer& fileContent) {
 	return image_decode_RgbaU8(buffer_getSafeData<uint8_t>(fileContent, "image file buffer"), buffer_getSize(fileContent));
 }
 // Loading from file
-OrderedImageRgbaU8 image_load_RgbaU8(const String& filename, bool mustExist) {
+OrderedImageRgbaU8 image_load_RgbaU8(const ReadableString& filename, bool mustExist) {
 	OrderedImageRgbaU8 result;
 	Buffer fileContent = file_loadBuffer(filename, mustExist);
 	if (buffer_exists(fileContent)) {
@@ -129,11 +129,11 @@ Buffer image_encode(const ImageRgbaU8 &image, ImageFileFormat format, int qualit
 	}
 }
 
-static ImageFileFormat detectImageFileExtension(const String& filename) {
+static ImageFileFormat detectImageFileExtension(const ReadableString& filename) {
 	ImageFileFormat result = ImageFileFormat::Unknown;
 	int lastDotIndex = string_findLast(filename, U'.');
 	if (lastDotIndex != -1) {
-		ReadableString extension = string_upperCase(file_getExtension(filename));
+		String extension = string_upperCase(file_getExtension(filename));
 		if (string_match(extension, U"JPG") || string_match(extension, U"JPEG")) {
 			result = ImageFileFormat::JPG;
 		} else if (string_match(extension, U"PNG")) {
@@ -147,7 +147,7 @@ static ImageFileFormat detectImageFileExtension(const String& filename) {
 	return result;
 }
 
-bool image_save(const ImageRgbaU8 &image, const String& filename, bool mustWork, int quality) {
+bool image_save(const ImageRgbaU8 &image, const ReadableString& filename, bool mustWork, int quality) {
 	ImageFileFormat extension = detectImageFileExtension(filename);
 	Buffer buffer;
 	if (extension == ImageFileFormat::Unknown) {
