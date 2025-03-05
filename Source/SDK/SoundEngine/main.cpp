@@ -95,7 +95,8 @@ void dsrMain(List<String> args) {
 			} else if (key == DsrKey_A) {
 				playSound(testSound, false, 1.0, 0.0, 1.0);
 			} else if (key == DsrKey_S) {
-				playSound(testSound, false, 1.0, 1.0, 1.0);
+				//playSound(testSound, false, 1.0, 1.0, 1.0);
+				playSound_simple(testSound, false);
 			} else if (key == DsrKey_D) {
 				playSound(testSound, false, 0.0, 1.0, 1.0);
 			} else if (key == DsrKey_UpArrow) {

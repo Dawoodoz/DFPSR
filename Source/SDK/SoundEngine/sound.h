@@ -2,8 +2,8 @@
 #ifndef MODULE_SOUND
 #define MODULE_SOUND
 
-#include "../../DFPSR/includeFramework.h"
 #include "../../DFPSR/api/soundAPI.h"
+#include "../../DFPSR/api/imageAPI.h"
 
 namespace dsr {
 
@@ -26,6 +26,12 @@ struct EnvelopeSettings {
 	EnvelopeSettings();
 	EnvelopeSettings(double attack, double decay, double sustain, double release, double hold = 0.0, double rise = 0.0, double sustainedSmooth = 0.0, double releasedSmooth = 0.0);
 };
+
+// TODO: Create getters for the ouput buffer settings for converting sounds with the wrong sample rate, merging too many channels, or repeating looped sounds that are shorter than the output buffer.
+// Pre-conditions:
+//   The sound at soundIndex must have the same sample rate as the engine's output buffer
+//     and may not contain more channels than the engine's output buffer.
+int playSound_simple(int soundIndex, bool repeat);
 
 int playSound(int soundIndex, bool repeat, double volumeLeft, double volumeRight, double speed);
 int playSound(int soundIndex, bool repeat, double volumeLeft, double volumeRight, double speed, const EnvelopeSettings &envelopeSettings);

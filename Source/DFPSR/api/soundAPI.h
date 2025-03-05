@@ -18,7 +18,7 @@ namespace dsr {
 	//     The backend is supposed to padd the SafePointer's range to at least be divisible by DSR_FLOAT_ALIGNMENT, which allow using both X vectors and F vectors.
 	//       The F vector can be larger than the X vector if building for a SIMD extension that only supports the widest vector length for floating-point operations.
 	//     Padding elements will not add to the time passed in the sound engine, for only played elements increment time.
-	//   length: The number of ticks per channel. The total number of elements to write into data is channels * length.
+	//   length: The number of samples per channel. The total number of elements to write into data is channels * length.
 	// How to use:
 	//   Call sound_streamToSpeakers with desired channels and sampleRate from a separate thread.
 	//   Handle callbacks to soundOutput by feeding the next packed sound samples and letting it return false when done.

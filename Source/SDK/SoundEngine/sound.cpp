@@ -1,12 +1,19 @@
 ﻿
 #include "sound.h"
 #include "../../DFPSR/api/soundAPI.h"
+#include "../../DFPSR/api/drawAPI.h"
+#include "../../DFPSR/api/fileAPI.h"
+#include "../../DFPSR/api/fontAPI.h"
+#include "../../DFPSR/base/virtualStack.h"
+#include "../../DFPSR/base/simd.h"
+#include "Player.h"
 
 #include <future>
 #include <atomic>
 
 namespace dsr {
 
+static const int maxChannels = 2;
 static const int outputChannels = 2;
 static const int outputSampleRate = 44100;
 double outputSoundStep = 1.0 / (double)outputSampleRate;
@@ -91,7 +98,7 @@ int loadSoundFromFile(const ReadableString &filename, bool mustExist) {
 			return s;
 		}
 	}
-	return sounds.pushConstructGetIndex(Sound(sound_decode_RiffWave(file_loadBuffer(filename, mustExist)), filename, true));
+	return sounds.pushConstructGetIndex(sound_load(filename, mustExist), filename, true);
 }
 
 int getSoundBufferCount() {
@@ -215,6 +222,7 @@ struct Player {
 	: playerID(playerID), soundIndex(soundIndex), envelope(envelopeSettings), repeat(repeat), leftVolume(leftVolume), rightVolume(rightVolume), speed(speed) {}
 };
 List<Player> players;
+List<FixedSoundPlayer> fixedPlayers;
 int64_t nextPlayerID = 0;
 int playSound(int soundIndex, bool repeat, double leftVolume, double rightVolume, double speed, const EnvelopeSettings &envelopeSettings) {
 	int result;
@@ -228,9 +236,40 @@ int playSound(int soundIndex, bool repeat, double leftVolume, double rightVolume
 int playSound(int soundIndex, bool repeat, double leftVolume, double rightVolume, double speed) {
 	return playSound(soundIndex, repeat, leftVolume, rightVolume, speed, EnvelopeSettings());
 }
-static int findSound(int64_t playerID) {
+int playSound_simple(int soundIndex, bool repeat) {
+	int result;
+	Sound *sound = &(sounds[soundIndex]);
+	if (!sound_exists(sound->buffer)) {
+		// Nothing to play.
+		return -1;
+	}
+	int soundSampleRate = sound_getSampleRate(sound->buffer);
+	if (soundSampleRate != outputSampleRate) {
+		throwError(U"playSound_simple: The sound ", sound->name, U" has ", soundSampleRate, U" samples per second in each channel, but the sound engine samples output at ", outputSampleRate, U" samples per second!\n");
+	}
+	int soundChannel = sound_getChannelCount(sound->buffer);
+	if (soundChannel > maxChannels) {
+		throwError(U"playSound_simple: The sound ", sound->name, U" has ", soundChannel, U" channels, but the sound engine can not play more than ", maxChannels, U"channels!\n");
+	}
+	soundMutex.lock();
+		result = nextPlayerID;
+		fixedPlayers.pushConstruct(sounds[soundIndex].buffer, nextPlayerID, repeat);
+		nextPlayerID++;
+	soundMutex.unlock();
+	return result;
+}
+
+static int findDynamicPlayer(int64_t playerID) {
 	for (int p = 0; p < players.length(); p++) {
 		if (players[p].playerID == playerID) {
+			return p;
+		}
+	}
+	return -1;
+}
+static int findFixedPlayer(int64_t playerID) {
+	for (int p = 0; p < fixedPlayers.length(); p++) {
+		if (fixedPlayers[p].playerID == playerID) {
 			return p;
 		}
 	}
@@ -239,19 +278,32 @@ static int findSound(int64_t playerID) {
 void releaseSound(int64_t playerID) {
 	if (playerID != -1) {
 		soundMutex.lock();
-			int index = findSound(playerID);
+			int index = findDynamicPlayer(playerID);
 			if (index > -1) {
 				players[index].sustained = false;;
 			}
+			// TODO: Allow using envelopes without interpolating samples.
+			/* else {
+				index = findFixedPlayer(playerID);
+				if (index > -1) {
+					fixedPlayers[index].sustained = false;
+				}
+			}
+			*/
 		soundMutex.unlock();
 	}
 }
 void stopSound(int64_t playerID) {
 	if (playerID != -1) {
 		soundMutex.lock();
-			int index = findSound(playerID);
+			int index = findDynamicPlayer(playerID);
 			if (index > -1) {
 				players.remove(index);
+			} else {
+				index = findFixedPlayer(playerID);
+				if (index > -1) {
+					fixedPlayers.remove(index);
+				}
 			}
 		soundMutex.unlock();
 	}
@@ -259,6 +311,7 @@ void stopSound(int64_t playerID) {
 void stopAllSounds() {
 	soundMutex.lock();
 		players.clear();
+		fixedPlayers.clear();
 	soundMutex.unlock();
 }
 
@@ -287,7 +340,8 @@ void stopAllSounds() {
 void sound_initialize() {
 	// Start a worker thread mixing sounds in realtime
 	std::function<void()> task = []() {
-		sound_streamToSpeakers(outputChannels, outputSampleRate, [](SafePointer<float> target, int requestedSamples) -> bool {
+		sound_streamToSpeakers(outputChannels, outputSampleRate, [](SafePointer<float> target, int requestedSamplesPerChannel) -> bool {
+			// TODO: Create a thread-safe swap chain or input queue, so that the main thread and sound thread can work at the same time.
 			// Anyone wanting to change the played sounds from another thread will have to wait until this section has finished processing
 			soundMutex.lock();
 				// TODO: Create a graph of filters for different instruments
@@ -300,7 +354,7 @@ void sound_initialize() {
 					double sampleStep = player->speed * sound_getSampleRate(sound->buffer) * outputSoundStep;
 					if (player->repeat) {
 						if (sound_getChannelCount(sound->buffer) == 1) { // Mono source
-							for (int t = 0; t < requestedSamples; t++) {
+							for (int t = 0; t < requestedSamplesPerChannel; t++) {
 								PREPARE_SAMPLE
 								float monoSource = sound->sampleLinear_cyclic(player->location, 0) * envelope;
 								target[t * outputChannels + 0] += monoSource * player->leftVolume;
@@ -308,7 +362,7 @@ void sound_initialize() {
 								NEXT_SAMPLE_CYCLIC
 							}
 						} else if (sound_getChannelCount(sound->buffer) == 2) { // Stereo source
-							for (int t = 0; t < requestedSamples; t++) {
+							for (int t = 0; t < requestedSamplesPerChannel; t++) {
 								PREPARE_SAMPLE
 								target[t * outputChannels + 0] += sound->sampleLinear_cyclic(player->location, 0) * envelope * player->leftVolume;
 								target[t * outputChannels + 1] += sound->sampleLinear_cyclic(player->location, 1) * envelope * player->rightVolume;
@@ -317,7 +371,7 @@ void sound_initialize() {
 						}
 					} else {
 						if (sound_getChannelCount(sound->buffer) == 1) { // Mono source
-							for (int t = 0; t < requestedSamples; t++) {
+							for (int t = 0; t < requestedSamplesPerChannel; t++) {
 								PREPARE_SAMPLE
 								float monoSource = sound->sampleLinear_clamped(player->location, 0) * envelope;
 								target[t * outputChannels + 0] += monoSource * player->leftVolume;
@@ -325,13 +379,58 @@ void sound_initialize() {
 								NEXT_SAMPLE_ONCE
 							}
 						} else if (sound_getChannelCount(sound->buffer) == 2) { // Stereo source
-							for (int t = 0; t < requestedSamples; t++) {
+							for (int t = 0; t < requestedSamplesPerChannel; t++) {
 								PREPARE_SAMPLE
 								target[t * outputChannels + 0] += sound->sampleLinear_clamped(player->location, 0) * envelope * player->leftVolume;
 								target[t * outputChannels + 1] += sound->sampleLinear_clamped(player->location, 1) * envelope * player->rightVolume;
 								NEXT_SAMPLE_ONCE
 							}
 						}
+					}
+				}
+				VirtualStackAllocation<float> playerBuffer(2048 * maxChannels, "Sound target buffer", memory_createAlignmentAndMask(sizeof(DSR_FLOAT_VECTOR_SIZE)));
+				for (int p = fixedPlayers.length() - 1; p >= 0; p--) {
+					FixedSoundPlayer *player = &(fixedPlayers[p]);
+					SoundBuffer *sound = &(player->soundBuffer);
+					// Get samples from the player.
+					player_getNextSamples(playerBuffer, *player, requestedSamplesPerChannel);
+					// TODO: Use a swap chain to update volumes for sound players without stalling.
+					// TODO: Fade volume transitions by assigning soft targets to slowly move towards.
+					// Apply any volume scaling.
+					//if (player->leftVolume < 0.999f || player->leftVolume > 1.001f || player->rightVolume < 0.999f || player->rightVolume > 1.001f) {
+					//	
+					//}
+					if (sound_getChannelCount(*sound) == 1) { // Mono source to stereo target
+						// TODO: Use a zip/shuffle operation for duplicating channels when available in hardware.
+						SafePointer<float> sourceBlock = playerBuffer;
+						SafePointer<float> targetBlock = target;
+						for (int t = 0; t < requestedSamplesPerChannel; t++) {
+							float value = *sourceBlock;
+							targetBlock[0] += value;
+							targetBlock[1] += value;
+							sourceBlock += 1;
+							targetBlock += 2;
+						}
+					} else if (sound_getChannelCount(*sound) == 2) { // Stereo source to stereo target
+						// TODO: Create a reusable and tested collection of vectorized sound operations in the sound API.
+						// Accumulating sound samples with the same number of channels in and out.
+						SafePointer<const float> sourceBlock = playerBuffer;
+						SafePointer<float> targetBlock = target;
+						for (int t = 0; t < requestedSamplesPerChannel * outputChannels; t += laneCountF) {
+							F32xF packedSamples = F32xF::readAligned(sourceBlock, "Reading stereo sound samples");
+							F32xF oldTarget = F32xF::readAligned(targetBlock, "Reading stereo sound samples");
+							F32xF result = oldTarget + packedSamples;
+							result.writeAligned(targetBlock, "Incrementing stereo samples");
+							// Move pointers to the next block of input and output data.
+							sourceBlock.increaseBytes(DSR_FLOAT_VECTOR_SIZE);
+							targetBlock.increaseBytes(DSR_FLOAT_VECTOR_SIZE);
+						}
+					} else {
+						// TODO: How should more input than output channels be handled?
+					}
+					// Remove players that are done.
+					if (!(player->playing)) {
+						fixedPlayers.remove(p);
 					}
 				}
 			soundMutex.unlock();

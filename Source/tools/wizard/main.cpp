@@ -218,7 +218,7 @@ void dsrMain(List<String> args) {
 		}
 	});
 	component_setSelectEvent(projectList, [](int64_t index) {
-		playSound(boomSound, false, 0.5, 0.5, 0.5);
+		playSound_simple(boomSound, false);
 		selectProject(index);
 	});
 	window_setCloseEvent(window, []() {

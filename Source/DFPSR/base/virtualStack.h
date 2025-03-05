@@ -40,11 +40,11 @@ namespace dsr {
 	// Pre-condition:
 	//   sizeof(T) % alignof(T) == 0
 	template <typename T>
-	SafePointer<T> virtualStack_push(uint64_t elementCount, const char *name = "Nameless virtual stack allocation") {
+	SafePointer<T> virtualStack_push(uint64_t elementCount, const char *name = "Nameless virtual stack allocation", uintptr_t alignmentAndMask = ~uintptr_t(0u)) {
 		// Calculate element size and multiply by element count to get the total size.
 		uint64_t paddedSize = sizeof(T) * elementCount;
 		// Allocate the data with the amount of alignment requested by the element type T.
-		UnsafeAllocation result = virtualStack_push(paddedSize, memory_createAlignmentAndMask((uintptr_t)alignof(T)), name);
+		UnsafeAllocation result = virtualStack_push(paddedSize, alignmentAndMask & memory_createAlignmentAndMask((uintptr_t)alignof(T)), name);
 		// Return a safe pointer to the allocated data.
 		#ifdef SAFE_POINTER_CHECKS
 			return SafePointer<T>(result.header, result.header->allocationIdentity, name, (T*)(result.data), (intptr_t)paddedSize);
@@ -62,8 +62,8 @@ namespace dsr {
 	template <typename T>
 	class VirtualStackAllocation : public SafePointer<T> {
 	public:
-		VirtualStackAllocation(uint64_t elementCount, const char *name = "Nameless virtual stack allocation")
-		: SafePointer<T>(virtualStack_push<T>(elementCount, name)) {}
+		VirtualStackAllocation(uint64_t elementCount, const char *name = "Nameless virtual stack allocation", uintptr_t alignmentAndMask = ~uintptr_t(0u))
+		: SafePointer<T>(virtualStack_push<T>(elementCount, name, alignmentAndMask)) {}
 		~VirtualStackAllocation() {
 			virtualStack_pop();
 		}
