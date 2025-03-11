@@ -77,3 +77,5 @@ Changes from version 0.2.0 to version 0.3.0 (Performance, safety and template im
 		Replace 'tools/buildAndRun.sh' with 'tools/buildScripts/buildAndRun.sh'.
 		Replace 'tools/buildLibrary.sh' with 'tools/buildScripts/buildLibrary.sh'.
 		Replace 'tools/clean.sh' with 'tools/buildScripts/clean.sh'.
+	* sound_streamToSpeakers uses int32_t instead of int.
+		Replace 'int' with 'int32_t' in your sound engine's callback.

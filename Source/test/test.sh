@@ -21,6 +21,18 @@ TEMP_SUB=$(echo $TEMP_SUB | tr "+" "p")
 TEMP_SUB=$(echo $TEMP_SUB | tr -d " =-")
 TEMP_DIR=${TEMP_ROOT}/${TEMP_SUB}
 
+# Build empty backends to prevent getting linker errors
+g++ ${CPP_VERSION} ${MODE} ${DEBUGGER} ${SIMD} -c ${ROOT_PATH}/windowManagers/NoWindow.cpp -o ${TEMP_DIR}/NoWindow.o;
+if [ $? -ne 0 ]
+then
+	exit 1
+fi
+g++ ${CPP_VERSION} ${MODE} ${DEBUGGER} ${SIMD} -c ${ROOT_PATH}/soundManagers/NoSound.cpp -o ${TEMP_DIR}/NoSound.o;
+if [ $? -ne 0 ]
+then
+	exit 1
+fi
+
 for file in ./tests/*.cpp; do
 	[ -e $file ] || continue
 	# Get name without path

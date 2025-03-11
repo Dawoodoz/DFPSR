@@ -53,7 +53,7 @@ static void terminateSound() {
 	}
 }
 
-bool sound_streamToSpeakers(int channels, int sampleRate, std::function<bool(SafePointer<float> data, int length)> soundOutput) {
+bool sound_streamToSpeakers(int32_t channels, int32_t sampleRate, std::function<bool(SafePointer<float> data, int32_t length)> soundOutput) {
 	bufferEndEvent = CreateEvent(0, FALSE, FALSE, 0);
 	if (bufferEndEvent == 0) {
 		terminateSound();
