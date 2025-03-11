@@ -327,7 +327,7 @@ inline String& string_toStreamIndented(String& target, const T &value, const Rea
 	} else if (DSR_SAME_TYPE(T, long)) {
 		impl_toStreamIndented_int64(target, (int64_t)unsafeCast<long>(value), indentation);
 	} else if (DSR_SAME_TYPE(T, long long)) {
-		static_assert(sizeof(long long) == 8, U"You need to implement integer printing for integers larger than 64 bits, or printing long long will be truncated!");
+		static_assert(sizeof(long long) == 8, "You need to implement integer printing for integers larger than 64 bits, or printing long long will be truncated!");
 		impl_toStreamIndented_int64(target, (int64_t)unsafeCast<long long>(value), indentation);
 	} else if (DSR_SAME_TYPE(T, unsigned short)) {
 		impl_toStreamIndented_int64(target, (int64_t)unsafeCast<unsigned short>(value), indentation);
@@ -336,8 +336,8 @@ inline String& string_toStreamIndented(String& target, const T &value, const Rea
 	} else if (DSR_SAME_TYPE(T, unsigned long)) {
 		impl_toStreamIndented_int64(target, (int64_t)unsafeCast<unsigned long>(value), indentation);
 	} else if (DSR_SAME_TYPE(T, unsigned long long)) {
-		static_assert(sizeof(unsigned long long) == 8, U"You need to implement integer printing for integers larger than 64 bits, or printing unsigned long long will be truncated!");
-		impl_toStreamIndented_int64(target, (int64_t)unsafeCast<unsigned long long>(value), indentation);
+		static_assert(sizeof(unsigned long long) == 8, "You need to implement integer printing for integers larger than 64 bits, or printing unsigned long long will be truncated!");
+		impl_toStreamIndented_int64(target, (uint64_t)unsafeCast<unsigned long long>(value), indentation);
 	}
 	return target;
 }

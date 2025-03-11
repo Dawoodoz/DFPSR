@@ -9,6 +9,48 @@ namespace dsr {
 
 // See the Source/soundManagers folder for implementations of sound_streamToSpeakers for different operating systems.
 
+bool sound_streamToSpeakers_fixed(int32_t channels, int32_t sampleRate, int32_t periodSamplesPerChannel, std::function<bool(SafePointer<float> fixedTarget)> soundOutput) {
+	int32_t bufferSamplesPerChannel = periodSamplesPerChannel * 2;
+	int32_t blockBytes = channels * sizeof(float);
+	Buffer fixedBuffer = buffer_create(bufferSamplesPerChannel * blockBytes);
+	SafePointer<float> bufferPointer = buffer_getSafeData<float>(fixedBuffer, "Fixed size output sound buffer");
+	int32_t writeLocation = 0;
+	int32_t readLocation = 0;
+	return sound_streamToSpeakers(channels, sampleRate, [&](SafePointer<float> dynamicTarget, int32_t requestedSamplesPerChannel) -> bool {
+		// TODO: Allow having a fixed period smaller than what the hardware requests, by delaying buffer allocation.
+		if (requestedSamplesPerChannel > periodSamplesPerChannel) {
+			throwError(U"The fixed period length was smaller than the requested period!\n");
+		}
+		int32_t availableSamplesPerChannel = writeLocation - readLocation;
+		if (availableSamplesPerChannel < 0) availableSamplesPerChannel += bufferSamplesPerChannel;
+		while (availableSamplesPerChannel < requestedSamplesPerChannel) {
+			safeMemorySet(bufferPointer + (writeLocation * channels), 0, periodSamplesPerChannel * blockBytes);
+			if (!soundOutput(bufferPointer + (writeLocation * channels))) {
+				return false;
+			}
+			availableSamplesPerChannel += periodSamplesPerChannel;
+			writeLocation += periodSamplesPerChannel;
+			while (writeLocation >= bufferSamplesPerChannel) writeLocation -= bufferSamplesPerChannel;
+		}
+		int32_t readEndLocation = readLocation + requestedSamplesPerChannel;
+		if (readEndLocation <= bufferSamplesPerChannel) {
+			// Continuous memory.
+			safeMemoryCopy(dynamicTarget, bufferPointer + (readLocation * channels), requestedSamplesPerChannel * blockBytes);
+		} else {
+			// Wraps around the fixed buffer's end.
+			int32_t firstLength = bufferSamplesPerChannel - readLocation;
+			int32_t secondLength = requestedSamplesPerChannel - firstLength;
+			int32_t firstSize = firstLength * blockBytes;
+			int32_t secondSize = secondLength * blockBytes;
+			safeMemoryCopy(dynamicTarget, bufferPointer + (readLocation * channels), firstSize);
+			safeMemoryCopy(dynamicTarget + (firstLength * channels), bufferPointer, secondSize);
+		}
+		readLocation = readEndLocation;
+		while (readLocation >= bufferSamplesPerChannel) readLocation -= bufferSamplesPerChannel;
+		return true;
+	});
+}
+
 SoundBuffer::SoundBuffer(uint32_t samplesPerChannel, uint32_t channelCount, uint32_t sampleRate) {
 	this->impl_samplesPerChannel = samplesPerChannel;
 	if (this->impl_samplesPerChannel < 1) this->impl_samplesPerChannel = 1;
@@ -237,7 +279,6 @@ SoundBuffer sound_decode_RiffWave(const Buffer &fileBuffer) {
 	bool hasData = false;
 	SafePointer<uint8_t> bufferStart = buffer_getSafeData<uint8_t>(fileBuffer, "File buffer");
 	getRiffChunks(fileBuffer, [&bufferStart, &fmtChunk, &hasFmt, &dataChunk, &hasData](const ReadableString &name, const Chunk &chunk) {
-		intptr_t byteOffset = intptr_t(chunk.chunkStart.getUnchecked()) - intptr_t(bufferStart.getUnchecked());
 		if (string_match(name, U"fmt ")) {
 			fmtChunk = chunk;
 			hasFmt = true;
@@ -262,7 +303,7 @@ SoundBuffer sound_decode_RiffWave(const Buffer &fileBuffer) {
 	uintptr_t audioFormat      = format_readU16_LE(fmtChunk.chunkStart + fmtOffset_audioFormat);
 	uintptr_t channelCount     = format_readU16_LE(fmtChunk.chunkStart + fmtOffset_channelCount);
 	uintptr_t sampleRate       = format_readU32_LE(fmtChunk.chunkStart + fmtOffset_sampleRate);
-	uintptr_t bytesPerSecond = format_readU32_LE(fmtChunk.chunkStart + fmtOffset_bytesPerSecond);
+	//uintptr_t bytesPerSecond = format_readU32_LE(fmtChunk.chunkStart + fmtOffset_bytesPerSecond);
 	uintptr_t blockAlign       = format_readU16_LE(fmtChunk.chunkStart + fmtOffset_blockAlign);
 	uintptr_t bitsPerSample    = format_readU16_LE(fmtChunk.chunkStart + fmtOffset_bitsPerSample);
 	uintptr_t bytesPerSample   = bitsPerSample / 8;
@@ -340,7 +381,7 @@ enum class SoundFileFormat {
 
 static SoundFileFormat detectSoundFileExtension(const ReadableString& filename) {
 	SoundFileFormat result = SoundFileFormat::Unknown;
-	int lastDotIndex = string_findLast(filename, U'.');
+	intptr_t lastDotIndex = string_findLast(filename, U'.');
 	if (lastDotIndex != -1) {
 		String extension = string_upperCase(file_getExtension(filename));
 		if (string_match(extension, U"WAV")) {
@@ -390,6 +431,22 @@ bool sound_save_RiffWave(const ReadableString& filename, const SoundBuffer &soun
 		}
 		return false;
 	}
+}
+
+SoundBuffer sound_generate_function(uint32_t samplesPerChannel, uint32_t channelCount, uint32_t sampleRate, std::function<float(double time, uint32_t channelIndex)> generator) {
+	SoundBuffer result = sound_create(samplesPerChannel, channelCount, sampleRate);
+	SafePointer<float> target = sound_getSafePointer(result);
+	double time = 0.0;
+	double step = 1.0 / sampleRate;
+	for (uintptr_t b = 0u; b < samplesPerChannel; b++) {
+		for (uintptr_t c = 0u; c < channelCount; c++) {
+			*target = generator(time, c);
+			target += 1;
+		}
+		time += step;
+	}
+	return result;
+
 }
 
 }

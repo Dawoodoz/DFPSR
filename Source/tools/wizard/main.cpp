@@ -9,7 +9,7 @@
 //         Can let frames have a caption for when used within a container.
 
 #include "../../DFPSR/includeFramework.h"
-#include "../../SDK/SoundEngine/sound.h"
+#include "../../SDK/SoundEngine/soundEngine.h"
 
 using namespace dsr;
 
@@ -154,8 +154,8 @@ void dsrMain(List<String> args) {
 	String mediaFolder = file_combinePaths(applicationFolder, U"media");
 
 	// Start sound.
-	sound_initialize();
-	boomSound = loadSoundFromFile(file_combinePaths(mediaFolder, U"Boom.wav"));
+	soundEngine_initialize();
+	boomSound = soundEngine_loadSoundFromFile(file_combinePaths(mediaFolder, U"Boom.wav"));
 
 	// Create a window.
 	window = window_create(U"DFPSR wizard application", 800, 600);
@@ -192,8 +192,7 @@ void dsrMain(List<String> args) {
 		}
 	});
 	component_setPressedEvent(launchButton, []() {
-		// TODO: Implement building and running of the selected project.
-		playSound(boomSound, false, 1.0, 1.0, 0.7);
+		soundEngine_playSound(boomSound, false);
 		int projectIndex = component_getProperty_integer(projectList, U"SelectedIndex", true);
 		//Application name from project name?
 		if (projectIndex >= 0 && projectIndex < projects.length()) {
@@ -218,7 +217,7 @@ void dsrMain(List<String> args) {
 		}
 	});
 	component_setSelectEvent(projectList, [](int64_t index) {
-		playSound(boomSound, false, 0.5, 0.5, 0.5);
+		soundEngine_playSound(boomSound, false);
 		selectProject(index);
 	});
 	window_setCloseEvent(window, []() {
@@ -226,7 +225,7 @@ void dsrMain(List<String> args) {
 	});
 
 	// Execute.
-	playSound(boomSound, false, 1.0, 1.0, 0.25);
+	soundEngine_playSound(boomSound, false);
 	while(running) {
 		// Wait for actions so that we don't render until an action has been recieved.
 		// This will save battery on laptops for applications that don't require animation.
@@ -243,5 +242,5 @@ void dsrMain(List<String> args) {
 	}
 
 	// Close sound.
-	sound_terminate();
+	soundEngine_terminate();
 }

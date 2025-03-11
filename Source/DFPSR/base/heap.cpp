@@ -820,15 +820,17 @@ namespace dsr {
 		defaultHeap.cleanUp(false);
 	}
 
-	static void printCharacter(char32_t character) {
-		if (character < 32) {
-			putchar(' ');
-		} else if (character > 127) {
-			putchar('?');
-		} else {
-			putchar((char)character);
+	#ifdef SAFE_POINTER_CHECKS
+		static void printCharacter(char32_t character) {
+			if (character < 32) {
+				putchar(' ');
+			} else if (character > 127) {
+				putchar('?');
+			} else {
+				putchar((char)character);
+			}
 		}
-	}
+	#endif
 
 	// TODO: Can whole pointers be displayed using printf?
 	void heap_debugPrintAllocation(void const * const allocation, uintptr_t maxLength) {
