@@ -99,6 +99,12 @@ This is the easiest way to install GNU's C++ compiler g++ on Windows, but CodeBl
 
 </P><P>
 <IMG SRC="Images/SmallDot.png">
+Open sysdm.cpl - Advanced - System variables - Path.
+Append your path to the folder containing g++.exe so that writing g++ in cmd.exe finds g++.exe.
+If you for example installed it at C:\CodeBlocks\MinGW\bin\g++.exe, you add C:\CodeBlocks\MinGW\bin; after the previous ; at the end of Path.
+
+</P><P>
+<IMG SRC="Images/SmallDot.png">
 Open CMD.exe, go to the Source\tools\wizard folder and execute build_windows.bat from the same folder.
 This makes sure that the build system can be found using relative paths.
 
