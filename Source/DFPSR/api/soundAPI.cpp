@@ -10,16 +10,23 @@ namespace dsr {
 // See the Source/soundManagers folder for implementations of sound_streamToSpeakers for different operating systems.
 
 bool sound_streamToSpeakers_fixed(int32_t channels, int32_t sampleRate, int32_t periodSamplesPerChannel, std::function<bool(SafePointer<float> fixedTarget)> soundOutput) {
-	int32_t bufferSamplesPerChannel = periodSamplesPerChannel * 2;
+	int32_t bufferSamplesPerChannel = 0;
 	int32_t blockBytes = channels * sizeof(float);
-	Buffer fixedBuffer = buffer_create(bufferSamplesPerChannel * blockBytes);
-	SafePointer<float> bufferPointer = buffer_getSafeData<float>(fixedBuffer, "Fixed size output sound buffer");
+	Buffer fixedBuffer;
+	SafePointer<float> bufferPointer;
 	int32_t writeLocation = 0;
 	int32_t readLocation = 0;
 	return sound_streamToSpeakers(channels, sampleRate, [&](SafePointer<float> dynamicTarget, int32_t requestedSamplesPerChannel) -> bool {
-		// TODO: Allow having a fixed period smaller than what the hardware requests, by delaying buffer allocation.
-		if (requestedSamplesPerChannel > periodSamplesPerChannel) {
-			throwError(U"The fixed period length was smaller than the requested period!\n");
+		// When running for the first time, a buffer large enough for both input and output will be allocated.
+		if (bufferSamplesPerChannel == 0) {
+			// Calculate how much space we need as a minimum.
+			int32_t minimumBufferSize = max(requestedSamplesPerChannel, periodSamplesPerChannel) * 2;
+			// Find a large enough power of two buffer size.
+			bufferSamplesPerChannel = 8192;
+			while (bufferSamplesPerChannel < minimumBufferSize) bufferSamplesPerChannel *= 2;
+			// Allocate the buffer and point to it.
+			fixedBuffer = buffer_create(bufferSamplesPerChannel * blockBytes);
+			bufferPointer = buffer_getSafeData<float>(fixedBuffer, "Fixed size output sound buffer");
 		}
 		int32_t availableSamplesPerChannel = writeLocation - readLocation;
 		if (availableSamplesPerChannel < 0) availableSamplesPerChannel += bufferSamplesPerChannel;

@@ -29,6 +29,7 @@ namespace dsr {
 	//   The target elements should be filled for indices 0 to (periodSamplesPerChannel * channels) - 1
 	// This allow using SIMD vectorization with a perfectly aligned period size without wasting any padding, even if the hardware's period size is an odd number.
 	// A fixed period can also be used for perfect timing when playing music.
+	// Pre-condition: periodSamplesPerChannel must be a power of two.
 	bool sound_streamToSpeakers_fixed(int32_t channels, int32_t sampleRate, int32_t periodSamplesPerChannel, std::function<bool(dsr::SafePointer<float> target)> soundOutput);
 
 	// A sound buffer with packed channels of 32-bit floats.
