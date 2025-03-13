@@ -38,6 +38,12 @@ if Graphics
 		Link "X11"
 		WindowManager = "../windowManagers/X11Window.cpp"
 	end if
+	if MacOS
+		# TODO: Replace with a native backend.
+		Message "  Using X11\n"
+		Link "X11"
+		WindowManager = "../windowManagers/X11Window.cpp"
+	end if
 	if Windows
 		Message "  Using Win32\n"
 		Link "gdi32"
