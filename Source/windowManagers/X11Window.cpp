@@ -193,11 +193,9 @@ dsr::PackOrderIndex X11Window::getColorFormat_locked() {
 		visualRequest.depth = 32;
 		visualRequest.c_class = TrueColor;
 		int visualCount;
-		XVisualInfo *formatList = XGetVisualInfo(this->display, VisualScreenMask | VisualDepthMask | VisualClassMask, &visualRequest, &visualCount);
 		dsr::PackOrderIndex result = dsr::PackOrderIndex::RGBA;
-		if (formatList == nullptr) {
-			dsr::throwError(U"Error! The display does not support truecolor formats.\n");
-		} else {
+		XVisualInfo *formatList = XGetVisualInfo(this->display, VisualScreenMask | VisualDepthMask | VisualClassMask, &visualRequest, &visualCount);
+		if (formatList != nullptr) {
 			for (int i = 0; i < visualCount; i++) {
 				if (formatList[i].bits_per_rgb == 8) {
 					const uint32_t red = formatList[i].red_mask;
@@ -216,12 +214,38 @@ dsr::PackOrderIndex X11Window::getColorFormat_locked() {
 					} else if (blue == second && green == third && red == fourth) {
 						result = dsr::PackOrderIndex::ABGR;
 					} else {
-						dsr::throwError(U"Error! Unhandled color format. Only RGBA, ARGB, BGRA and ABGR are currently supported.\n");
+						dsr::throwError(U"Error! Unhandled 32-bit color format. Only RGBA, ARGB, BGRA and ABGR are currently supported.\n");
 					}
 					break;
 				}
 			}
 			XFree(formatList);
+		} else {
+			visualRequest.depth = 24;
+			XVisualInfo *formatList = XGetVisualInfo(this->display, VisualScreenMask | VisualDepthMask | VisualClassMask, &visualRequest, &visualCount);
+			if (formatList != nullptr) {
+				for (int i = 0; i < visualCount; i++) {
+					if (formatList[i].bits_per_rgb == 8) {
+						const uint32_t red = formatList[i].red_mask;
+						const uint32_t green = formatList[i].green_mask;
+						const uint32_t blue = formatList[i].blue_mask;
+						const uint32_t first = 255u;
+						const uint32_t second = 255u << 8u;
+						const uint32_t third = 255u << 16u;
+						if (red == first && green == second && blue == third) {
+							result = dsr::PackOrderIndex::RGBA; // RGB
+						} else if (blue == first && green == second && red == third) {
+							result = dsr::PackOrderIndex::BGRA; // BGR
+						} else {
+							dsr::throwError(U"Error! Unhandled 24-bit color format. Only RGB and BGR are currently supported.\n");
+						}
+						break;
+					}
+				}
+				XFree(formatList);
+			} else {
+				dsr::throwError(U"Error! The display does not support any known 24 truecolor formats.\n");
+			}
 		}
 	unlockWindow();
 	return result;
