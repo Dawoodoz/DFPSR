@@ -27,6 +27,7 @@
 #ifndef DFPSR_COLLECTIONS
 #define DFPSR_COLLECTIONS
 
+#include "../base/heap.h"
 #include <cstdint>
 
 namespace dsr {
