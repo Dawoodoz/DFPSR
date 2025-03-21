@@ -69,45 +69,6 @@ public:
 		assert(this->inside(x, y));
 		return this->impl_elements.unsafe_readAccess(x + y * this->impl_elementWidth);
 	}
-	/*
-	// Clonable by default!
-	//   Be very careful not to accidentally pass a Field by value instead of reference,
-	//   otherwise your side-effects might write to a temporary copy
-	//   or time is wasted to clone an Field every time you look something up.
-	Field(const Field<T>& source) {
-		// Allocate to the same size as source.
-		intptr_t newSize = source.impl_elementWidth * source.impl_elementHeight;
-		this->impl_elements = new T[newSize];
-		this->impl_elementWidth = source.impl_elementWidth;
-		this->impl_elementHeight = source.impl_elementHeight;
-		// Copy elements from source.
-		for (intptr_t e = 0; e < newSize; e++) {
-			// Assign one element at a time, so that objects can be copy constructed.
-			//   If the element type T is trivial and does not require calling constructors, using safeMemoryCopy with SafePointer will be much faster than using Array<T>.
-			this->impl_elements[e] = source.impl_elements[e];
-		}
-	};
-	// When assigning to the field, memory can be reused when the number of elements is the same.
-	Field& operator=(const Field<T>& source) {
-		intptr_t oldSize = this->impl_elementWidth * this->impl_elementHeight;
-		intptr_t newSize = source.impl_elementWidth * source.impl_elementHeight;
-		// Reallocate to the same size as source if needed.
-		if (oldSize != newSize) {
-			if (this->impl_elements) delete[] this->impl_elements;
-			this->impl_elements = new T[newSize];
-		}
-		// Update dimensions, even if the combined allocation size is the same.
-		this->impl_elementWidth = source.impl_elementWidth;
-		this->impl_elementHeight = source.impl_elementHeight;
-		// Copy elements from source.
-		for (intptr_t e = 0; e < newSize; e++) {
-			// Assign one element at a time, so that objects can be copy constructed.
-			//   If the element type T is trivial and does not require calling constructors, using safeMemoryCopy with SafePointer will be much faster than using Array<T>.
-			this->impl_elements[e] = source.impl_elements[e];
-		}
-		return *this;
-	};
-	*/
 	// Destructor
 	//~Field() { if (this->impl_elements) delete[] this->impl_elements; }
 	// Get the element at (x, y) or the outside value when (x, y) is out-of-bound.
