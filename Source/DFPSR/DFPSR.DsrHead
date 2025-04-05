@@ -1,4 +1,4 @@
-﻿# A project header for using the DFPSR library.
+# A project header for using the DFPSR library.
 #   Backends:
 #     * Give the Graphics flag if the application should be able to create a window.
 #     * Give the Sound flag if the application should be able to generate sounds.
@@ -62,6 +62,16 @@ if Sound
 		Message "  Using Alsa\n"
 		Link "asound"
 		SoundManager = "../soundManagers/AlsaSound.cpp"
+	end if
+	if MacOS
+		Message "  Using CoreAudio\n"
+		# -framework and CoreAudio must be sent as individual arguments to Clang.
+		#TODO: Modify the build system to allow sending multiple arguments as groups to the compiler.
+		#LinkerFlag "-framework"
+		#  LinkerFlag "CoreAudio"
+		LinkerFlag "-framework"
+		  LinkerFlag "AudioUnit"
+		SoundManager = "../soundManagers/CoreAudioSound.cpp"
 	end if
 	if Windows
 		Message "  Using WinMM\n"
