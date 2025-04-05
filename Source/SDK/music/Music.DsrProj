@@ -16,3 +16,5 @@ StaticRuntime
 # Uncomment to enable debug mode, which is slower
 Debug
 CompilerFlag "-g"
+
+ListDependencies
