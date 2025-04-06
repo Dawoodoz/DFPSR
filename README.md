@@ -78,7 +78,7 @@ Currently supporting X11 and Wayland is planned for future versions.
 * **Microsoft Windows**, but slower than on Linux because Windows has lots of background processes and slower threading and memory management.
 
 ## Partial support for:
-* MacOS can pass the regression tests, but has no native integration for sound or creating a window yet. MacOS does not have a symbolic link to the binary of the running process, so it would fall back on the current directory when asking for the application folder.
+* MacOS has software rendering and a CoreAudio sound backend working, but still needs to replace X11 with a native port.
 
 ## Might also work on:
 * BSD and Solaris have code targeting the platforms in fileAPI.cpp for getting the application folder, but there are likely some applications missing for running the build script.
