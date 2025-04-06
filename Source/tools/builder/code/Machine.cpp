@@ -42,6 +42,9 @@ void printSettings(const Machine &settings) {
 	for (int64_t i = 0; i < settings.linkerFlags.length(); i++) {
 		printText(U"    Linker flag ", settings.linkerFlags[i], U"\n");
 	}
+	for (int64_t i = 0; i < settings.frameworks.length(); i++) {
+		printText(U"    Framework ", settings.frameworks[i], U"\n");
+	}
 	for (int64_t i = 0; i < settings.variables.length(); i++) {
 		printText(U"    Variable ", settings.variables[i].key, U" = ", settings.variables[i].value, U"\n");
 	}
@@ -57,6 +60,11 @@ void validateSettings(const Machine &settings, const dsr::ReadableString &eventD
 		printText(U"Duplicate linker flags:\n");
 		printSettings(settings);
 		throwError(U"Found duplicate linker flags ", eventDescription, U"!\n");
+	};
+	if (!isUnique(settings.frameworks)) {
+		printText(U"Duplicate frameworks:\n");
+		printSettings(settings);
+		throwError(U"Found duplicate frameworks ", eventDescription, U"!\n");
 	};
 	if (!isUnique(settings.variables)) {
 		printText(U"Duplicate variables:\n");
@@ -130,14 +138,17 @@ void cloneMachine(Machine &child, const Machine &parent) {
 	for (int64_t v = 0; v < parent.variables.length(); v++) {
 		child.variables.push(parent.variables[v]);
 	}
-	for (int64_t v = 0; v < parent.compilerFlags.length(); v++) {
-		child.compilerFlags.push(parent.compilerFlags[v]);
+	for (int64_t c = 0; c < parent.compilerFlags.length(); c++) {
+		child.compilerFlags.push(parent.compilerFlags[c]);
 	}
-	for (int64_t v = 0; v < parent.linkerFlags.length(); v++) {
-		child.linkerFlags.push(parent.linkerFlags[v]);
+	for (int64_t l = 0; l < parent.linkerFlags.length(); l++) {
+		child.linkerFlags.push(parent.linkerFlags[l]);
 	}
-	for (int64_t v = 0; v < parent.crawlOrigins.length(); v++) {
-		child.crawlOrigins.push(parent.crawlOrigins[v]);
+	for (int64_t f = 0; f < parent.frameworks.length(); f++) {
+		child.linkerFlags.push(parent.frameworks[f]);
+	}
+	for (int64_t o = 0; o < parent.crawlOrigins.length(); o++) {
+		child.crawlOrigins.push(parent.crawlOrigins[o]);
 	}
 }
 
@@ -317,15 +328,21 @@ static void interpretLine(Machine &target, const List<String> &tokens, int64_t s
 				// Only the library name itself is needed, because the -l prefix can be added automatically.
 				String libraryName = STRING_EXPR(startTokenIndex + 1, endTokenIndex);
 				if (libraryName[0] == U'-' && (libraryName[1] == U'l' || libraryName[1] == U'L')) {
+					// Avoid duplicating -l when it has already been included by accident.
 					target.linkerFlags.push(libraryName);
 				} else {
+					// Insert the library name after -l when used correctly.
 					target.linkerFlags.push(string_combine(U"-l", libraryName));
 				}
-				validateSettings(target, U"in target after adding a linker flag\n");
+				validateSettings(target, U"in target after adding a library\n");
 			} else if (string_caseInsensitiveMatch(first, U"linkerflag")) {
-				// For linker flags that are not used to
+				// For linker flags that are not used to link with a library.
 				target.linkerFlags.push(STRING_EXPR(startTokenIndex + 1, endTokenIndex));
 				validateSettings(target, U"in target after adding a linker flag\n");
+			} else if (string_caseInsensitiveMatch(first, U"framework")) {
+				// For linking with a framework. (MacOS feature in Clang where the name follows a separate -framework argument)
+				target.frameworks.push(STRING_EXPR(startTokenIndex + 1, endTokenIndex));
+				validateSettings(target, U"in target after adding a framework\n");
 			} else if (string_caseInsensitiveMatch(first, U"compilerflag")) {
 				target.compilerFlags.push(STRING_EXPR(startTokenIndex + 1, endTokenIndex));
 				validateSettings(target, U"in target after adding a compiler flag\n");

@@ -49,9 +49,11 @@ Project files:
 				CompilerFlag -DMACRO
 		Settings for linking:
 			* Add a linker flag as is for direct control
-				LinkerFlag -lLibrary
+				LinkerFlag -lsomeLibrary
 			* Add a linker flag with automatic prefix for future proofing
-				Link Library
+				Link someLibrary
+			* Add a MacOS framework
+				Framework someFramework
 		Building other projects at the same time:
 			* Build all projects in myFolder with the SkipIfBinaryExists flag in arbitrary order before continuing with compilation
 				Build "../myFolder" SkipIfBinaryExists
