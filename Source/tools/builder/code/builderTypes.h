@@ -43,10 +43,12 @@ struct Machine {
 
 enum class Extension {
 	Unknown,
-	H,
-	Hpp,
-	C,
-	Cpp
+	H,   // C/C++ header
+	Hpp, // C++ header
+	C,   // C
+	Cpp, // C++
+	M,   // Objective-C
+	Mm   // Objective-C++
 };
 
 enum class ScriptLanguage {

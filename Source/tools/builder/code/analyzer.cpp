@@ -16,6 +16,10 @@ static Extension extensionFromString(ReadableString extensionName) {
 		result = Extension::C;
 	} else if (string_match(upperName, U"CPP")) {
 		result = Extension::Cpp;
+	} else if (string_match(upperName, U"M")) {
+		result = Extension::M;
+	} else if (string_match(upperName, U"MM")) {
+		result = Extension::Mm;
 	}
 	return result;
 }
@@ -102,15 +106,24 @@ void resolveDependencies(ProjectContext &context) {
 	}
 }
 
-static String findSourceFile(ReadableString headerPath, bool acceptC, bool acceptCpp) {
+static String findSourceFile(ReadableString headerPath, Extension headerExtension) {
 	if (file_hasExtension(headerPath)) {
 		ReadableString extensionlessPath = file_getExtensionless(headerPath);
+		bool acceptAny = (headerExtension == Extension::H);
 		String cPath = extensionlessPath + U".c";
 		String cppPath = extensionlessPath + U".cpp";
-		if (acceptC && file_getEntryType(cPath) == EntryType::File) {
-			return cPath;
-		} else if (acceptCpp && file_getEntryType(cppPath) == EntryType::File) {
+		String objCPath = extensionlessPath + U".m";
+		String objCppPath = extensionlessPath + U".mm";
+		if (file_getEntryType(cppPath) == EntryType::File) {
 			return cppPath;
+		} else if (acceptAny) {
+			if (file_getEntryType(cPath) == EntryType::File) {
+				return cPath;
+			} else if (file_getEntryType(objCPath) == EntryType::File) {
+				return objCPath;
+			} else if (file_getEntryType(objCppPath) == EntryType::File) {
+				return objCppPath;
+			}
 		}
 	}
 	return U"";
@@ -172,7 +185,7 @@ void analyzeFile(Dependency &result, ReadableString absolutePath, Extension exte
 	result.contentChecksum = checksum(fileBuffer);
 	if (extension == Extension::H || extension == Extension::Hpp) {
 		// The current file is a header, so look for an implementation with the corresponding name.
-		String sourcePath = findSourceFile(absolutePath, extension == Extension::H, true);
+		String sourcePath = findSourceFile(absolutePath, extension);
 		// If found:
 		if (string_length(sourcePath) > 0) {
 			// Remember that anything using the header will have to link with the implementation.
@@ -180,12 +193,14 @@ void analyzeFile(Dependency &result, ReadableString absolutePath, Extension exte
 		}
 	}
 	// Interpret the file's content.
+	bool objective = ((extension == Extension::M) || (extension == Extension::Mm));
+	String includeToken = objective ? U"import" : U"include";
 	String sourceCode = string_loadFromMemory(fileBuffer);
 	String parentFolder = file_getRelativeParentFolder(absolutePath);
 	List<String> tokens;
 	bool continuingLine = false;
 	int64_t lineNumber = 0;
-	string_split_callback(sourceCode, U'\n', true, [&result, &parentFolder, &tokens, &continuingLine, &absolutePath, &lineNumber](ReadableString line) {
+	string_split_callback(sourceCode, U'\n', true, [&](ReadableString line) {
 		lineNumber++;
 		if (line[0] == U'#' || continuingLine) {
 			tokenize(tokens, line);
@@ -196,7 +211,7 @@ void analyzeFile(Dependency &result, ReadableString absolutePath, Extension exte
 		}
 		if (!continuingLine && tokens.length() > 0) {
 			if (tokens.length() >= 3) {
-				if (string_match(tokens[1], U"include")) {
+				if (string_match(tokens[1], includeToken)) {
 					if (tokens[2][0] == U'\"') {
 						String relativePath = string_unmangleQuote(tokens[2]);
 						String absoluteHeaderPath = file_getTheoreticalAbsolutePath(relativePath, parentFolder, LOCAL_PATH_SYNTAX);
@@ -211,6 +226,7 @@ void analyzeFile(Dependency &result, ReadableString absolutePath, Extension exte
 			tokens.clear();
 		}
 	});
+
 	#ifdef CACHED_ANALYSIS
 		analysisCache.push(result);
 	#endif
@@ -371,7 +387,7 @@ void gatherBuildInstructions(SessionContext &output, ProjectContext &context, Ma
 	bool hasSourceCode = false;
 	for (int64_t d = 0; d < context.dependencies.length(); d++) {
 		Extension extension = context.dependencies[d].extension;
-		if (extension == Extension::C || extension == Extension::Cpp) {
+		if (extension == Extension::C || extension == Extension::Cpp || extension == Extension::M || extension == Extension::Mm) {
 			// Dependency paths are already absolute from the recursive search.
 			String sourcePath = context.dependencies[d].path;
 			String identity = string_combine(sourcePath, generatedCompilerFlags);
