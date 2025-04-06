@@ -1,4 +1,4 @@
-# A project header for using the DFPSR library.
+﻿# A project header for using the DFPSR library.
 #   Backends:
 #     * Give the Graphics flag if the application should be able to create a window.
 #     * Give the Sound flag if the application should be able to generate sounds.
@@ -32,7 +32,7 @@ Link "pthread"
 #   so we use .. to leave the Source/DFPSR folder and then go into the windowManagers folder.
 WindowManager = "../windowManagers/NoWindow.cpp"
 if Graphics
-	Message "Building with graphics enabled"
+	Message "Building with graphics enabled\n"
 	if Linux
 		Message "  Using X11\n"
 		Link "X11"
@@ -57,7 +57,7 @@ Crawl WindowManager
 
 SoundManager = "../soundManagers/NoSound.cpp"
 if Sound
-	Message "Building with sound enabled"
+	Message "Building with sound enabled\n"
 	if Linux
 		Message "  Using Alsa\n"
 		Link "asound"
@@ -65,12 +65,8 @@ if Sound
 	end if
 	if MacOS
 		Message "  Using CoreAudio\n"
-		# -framework and CoreAudio must be sent as individual arguments to Clang.
-		#TODO: Modify the build system to allow sending multiple arguments as groups to the compiler.
-		#LinkerFlag "-framework"
-		#  LinkerFlag "CoreAudio"
-		LinkerFlag "-framework"
-		  LinkerFlag "AudioUnit"
+		#Linking to AudioUnit, which is a part of CoreAudio.
+		Framework "AudioUnit"
 		SoundManager = "../soundManagers/CoreAudioSound.cpp"
 	end if
 	if Windows

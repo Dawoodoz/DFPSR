@@ -24,6 +24,8 @@ struct Machine {
 	List<String> compilerFlags;
 	// The flags to give the linker.
 	List<String> linkerFlags;
+	// The frameworks to give the linker.
+	List<String> frameworks;
 	// A list of implementation files to start crawling from, usually main.cpp or a disconnected backend implementation.
 	List<String> crawlOrigins;
 	// Paths to look for other projects in.
@@ -90,11 +92,12 @@ struct SourceObject {
 
 struct LinkingStep {
 	String compilerName, compileFrom, binaryName;
-	List<String> linkerFlags;
+	List<String> linkerFlags; // Linker flags are given as separate arguments to the linker.
+	List<String> frameworks; // Frameworks are like static libraries to link with, but uses -framework as a separate argument to the compiler before the framework's name.
 	List<int64_t> sourceObjectIndices;
 	bool executeResult;
-	LinkingStep(const ReadableString &compilerName, const ReadableString &compileFrom, const ReadableString &binaryName, const List<String> &linkerFlags, const List<int64_t> &sourceObjectIndices, bool executeResult)
-	: compilerName(compilerName), compileFrom(compileFrom), binaryName(binaryName), linkerFlags(linkerFlags), sourceObjectIndices(sourceObjectIndices), executeResult(executeResult) {}
+	LinkingStep(const ReadableString &compilerName, const ReadableString &compileFrom, const ReadableString &binaryName, const List<String> &linkerFlags, const List<String> &frameworks, const List<int64_t> &sourceObjectIndices, bool executeResult)
+	: compilerName(compilerName), compileFrom(compileFrom), binaryName(binaryName), linkerFlags(linkerFlags), frameworks(frameworks), sourceObjectIndices(sourceObjectIndices), executeResult(executeResult) {}
 };
 
 struct SessionContext {

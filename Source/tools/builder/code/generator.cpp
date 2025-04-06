@@ -194,7 +194,14 @@ void produce(SessionContext &input, const ReadableString &scriptPath, ScriptLang
 			String linkerFlag = linkingStep->linkerFlags[l];
 			string_append(linkerFlags, U" ", linkerFlag);
 			linkerArguments.push(linkerFlag);
-			printText(U"\t\t* ", linkerFlag, U" library\n");
+			printText(U"\t\t* ", linkerFlag, U"\n");
+		}
+		for (int64_t f = 0; f < linkingStep->frameworks.length(); f++) {
+			String framework = linkingStep->frameworks[f];
+			string_append(linkerFlags, U" -framework ", framework);
+			linkerArguments.push(U"-framework");
+			linkerArguments.push(framework);
+			printText(U"\t\t* -framework ", framework, U"\n");
 		}
 		linkerArguments.push(U"-o");
 		linkerArguments.push(programPath);

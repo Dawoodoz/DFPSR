@@ -341,17 +341,23 @@ void gatherBuildInstructions(SessionContext &output, ProjectContext &context, Ma
 	//       This would allow calling the compiler directly when given a folder path for temporary files instead of a script path.
 	String generatedCompilerFlags;
 	for (int64_t i = 0; i < settings.compilerFlags.length(); i++) {
-		printText(U"Build script gave compiler flag:", settings.compilerFlags[i], U"\n");
+		printText(U"Build script gave compiler flag: ", settings.compilerFlags[i], U"\n");
 		string_append(generatedCompilerFlags, U" ", settings.compilerFlags[i]);
 	}
 	String linkerFlags;
 	for (int64_t i = 0; i < settings.linkerFlags.length(); i++) {
-		printText(U"Build script gave linker flag:", settings.linkerFlags[i], U"\n");
-		string_append(linkerFlags, settings.linkerFlags[i]);
+		printText(U"Build script gave linker flag: ", settings.linkerFlags[i], U"\n");
+		string_append(linkerFlags, U" ", settings.linkerFlags[i]);
+	}
+	String frameworks;
+	for (int64_t i = 0; i < settings.frameworks.length(); i++) {
+		printText(U"Build script gave framework: ", settings.frameworks[i], U"\n");
+		string_append(frameworks, U" ", settings.frameworks[i]);
 	}
 	printText(U"Generating build instructions for ", programPath, U" using settings:\n");
 	printText(U"  Compiler flags:", generatedCompilerFlags, U"\n");
 	printText(U"  Linker flags:", linkerFlags, U"\n");
+	printText(U"  Frameworks:", frameworks, U"\n");
 	for (int64_t v = 0; v < settings.variables.length(); v++) {
 		printText(U"  * ", settings.variables[v].key, U" = ", settings.variables[v].value);
 		if (settings.variables[v].inherited) {
@@ -388,7 +394,7 @@ void gatherBuildInstructions(SessionContext &output, ProjectContext &context, Ma
 	if (hasSourceCode) {
 		printText(U"Listing target executable ", programPath, U" in the current session.\n");
 		bool executeResult = getFlagAsInteger(settings, U"Supressed") == 0;
-		output.linkerSteps.pushConstruct(compilerName, compileFrom, programPath, settings.linkerFlags, sourceObjectIndices, executeResult);
+		output.linkerSteps.pushConstruct(compilerName, compileFrom, programPath, settings.linkerFlags, settings.frameworks, sourceObjectIndices, executeResult);
 	} else {
 		printText(U"Failed to find any source code to compile when building ", programPath, U".\n");
 	}
