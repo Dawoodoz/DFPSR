@@ -1,16 +1,11 @@
-﻿# A project header for using the DFPSR library.
+# A project header for using the DFPSR library.
 #   Backends:
 #     * Give the Graphics flag if the application should be able to create a window.
 #     * Give the Sound flag if the application should be able to generate sounds.
 #   Systems:
 #     * Give the Linux flag when compiling on Linux or similar Posix systems having the same dependencies installed.
+#     * Give the MacOS flag when compiling on MacOS.
 #     * Give the Windows flag when compiling on Microsoft Windows.
-#   Features:
-#     * Give the ReuseMemory flag to enable memory recycling using allocator.cpp.
-#       This can cause crashes if you have more than one memory recycler linked,
-#       because you don't want one implementation allocating and another freeing.
-#   Strings use a subset of the C standard for mangling, so \\ is used to write \.
-#     You can also use / and let the file abstraction layer convert it into \ automatically when running on Windows.
 
 if Linux
 	Message "Building for Linux\n"
@@ -25,9 +20,9 @@ end if
 # Standard math library
 Link "m"
 
-# Standard threading library
+# Posix threading library on all platforms for consistent behavior
 Link "pthread"
-
+                                                                                                                                                                                                                                                   
 # Paths are relative to the current script, even if imported somewhere else
 #   so we use .. to leave the Source/DFPSR folder and then go into the windowManagers folder.
 WindowManager = "../windowManagers/NoWindow.cpp"
@@ -39,10 +34,9 @@ if Graphics
 		WindowManager = "../windowManagers/X11Window.cpp"
 	end if
 	if MacOS
-		# TODO: Replace with a native backend.
-		Message "  Using X11\n"
-		Link "X11"
-		WindowManager = "../windowManagers/X11Window.cpp"
+		Message "  Using Cocoa\n"
+		Framework "Cocoa"
+		WindowManager = "../windowManagers/CocoaWindow.mm"
 	end if
 	if Windows
 		Message "  Using Win32\n"
