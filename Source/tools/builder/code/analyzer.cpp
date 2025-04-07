@@ -193,8 +193,6 @@ void analyzeFile(Dependency &result, ReadableString absolutePath, Extension exte
 		}
 	}
 	// Interpret the file's content.
-	bool objective = ((extension == Extension::M) || (extension == Extension::Mm));
-	String includeToken = objective ? U"import" : U"include";
 	String sourceCode = string_loadFromMemory(fileBuffer);
 	String parentFolder = file_getRelativeParentFolder(absolutePath);
 	List<String> tokens;
@@ -211,7 +209,8 @@ void analyzeFile(Dependency &result, ReadableString absolutePath, Extension exte
 		}
 		if (!continuingLine && tokens.length() > 0) {
 			if (tokens.length() >= 3) {
-				if (string_match(tokens[1], includeToken)) {
+				// Because Objective-C++ allow using both include and import syntax, we might as well just look for both in all languages.
+				if (string_match(tokens[1], U"include") || string_match(tokens[1], U"import")) {
 					if (tokens[2][0] == U'\"') {
 						String relativePath = string_unmangleQuote(tokens[2]);
 						String absoluteHeaderPath = file_getTheoreticalAbsolutePath(relativePath, parentFolder, LOCAL_PATH_SYNTAX);
