@@ -113,7 +113,7 @@ public:
 	dsr::String textToClipboard;
 	void listContentInClipboard();
 	void initializeClipboard();
-	void terminateClipboard();		
+	void terminateClipboard();
 	dsr::ReadableString loadFromClipboard(double timeoutInSeconds) override;
 	void saveToClipboard(const dsr::ReadableString &text, double timeoutInSeconds) override;
 };
