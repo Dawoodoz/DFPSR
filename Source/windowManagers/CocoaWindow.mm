@@ -23,8 +23,10 @@ class CocoaWindow : public dsr::BackendWindow {
 private:
 	// Handle to the Cocoa window
 	NSWindow *window = nullptr;
-	// Handle to the Cocoa view
-	//NSView *view = nullptr;
+	// Last modifiers to allow converting NSEventTypeFlagsChanged into up and down key press events.
+	bool pressedControlCommand = false;
+	bool pressedShift = false;
+	bool pressedAltOption = false;
 
 	// Double buffering to allow drawing to a canvas while displaying the previous one
 	// The image which can be drawn to, sharing memory with the Cocoa image
@@ -132,10 +134,6 @@ CocoaWindow::CocoaWindow(const dsr::String& title, int width, int height) {
 	[window center];
 	[window makeKeyAndOrderFront:nil];
 	[window makeFirstResponder:nil];
-	if (![window isKeyWindow]) {
-		// TODO: Why does the window never become key despite being visible and active?
-		dsr::sendWarning(U"Failed to make the Cocoa window key!\n");
-	}
 }
 
 // Also locked, but cannot change the name when overriding
@@ -198,16 +196,36 @@ void CocoaWindow::prefetchEvents() {
 				// TODO: Make sure that the window catches keyboard events instead of corrupting terminal input.
 				if ([event type] == NSEventTypeKeyDown) {
 					if (!(event.isARepeat)) {
-						dsr::printText(U"KeyDown\n");
+						dsr::printText(U"KeyDown: keyCode = ", event.keyCode, U"\n");
 					}
 					dsr::printText(U"KeyType\n");
 				} else if ([event type] == NSEventTypeKeyUp) {
-					dsr::printText(U"KeyUp\n");
+					dsr::printText(U"KeyUp: keyCode = ", event.keyCode, U"\n");
 				} else if ([event type] == NSEventTypeFlagsChanged) {
 					dsr::printText(U"FlagsChanged\n");
+					NSEventModifierFlags newModifierFlags = [event modifierFlags];
+					bool newControlCommand = (newModifierFlags & (NSEventModifierFlagControl | NSEventModifierFlagCommand)) != 0u;
+					bool newShift = (newModifierFlags & NSEventModifierFlagShift) != 0u;
+					bool newAltOption = (newModifierFlags & NSEventModifierFlagOption) != 0u;
+					if (newControlCommand && !pressedControlCommand) {
+						dsr::printText(U"KeyDown: Control\n");
+					} else if (!newControlCommand && pressedControlCommand) {
+						dsr::printText(U"KeyUp: Control\n");
+					}
+					if (newShift && !pressedShift) {
+						dsr::printText(U"KeyDown: Shift\n");
+					} else if (!newShift && pressedShift) {
+						dsr::printText(U"KeyUp: Shift\n");
+					}
+					if (newAltOption && !pressedAltOption) {
+						dsr::printText(U"KeyDown: Alt\n");
+					} else if (!newAltOption && pressedAltOption) {
+						dsr::printText(U"KeyUp: Alt\n");
+					}
+					pressedControlCommand = newControlCommand;
+					pressedShift = newShift;
+					pressedAltOption = newAltOption;
 				}
-				dsr::printText(U"keyCode = ", event.keyCode, U"\n");
-				
 			}
 			[application sendEvent:event];
 			[application updateWindows];
