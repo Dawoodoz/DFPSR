@@ -45,6 +45,12 @@ enum class KeyboardEventType { KeyDown, KeyUp, KeyType };
 // Characters are case insensitive, because DsrKey refers to the physical key.
 //   Use the decoded Unicode value in DsrChar if you want to distinguish between upper and lower case or use special characters.
 // Control, shift and alt combines left and right sides, because sometimes the system does not say if the key is left or right.
+// On MacOS:
+//   * Both command and control buttons are mapped to DsrKey_Control.
+//   * Option and alt is the same DsrKey_Alt button on Macintosh keyboards.
+//   * Function keys F1 to F12 must be mapped to applications and removed from system shortcuts before they are sent to applications.
+//   * F13 becomes DsrKey_Pause.
+//   * F16 becomes DsrKey_Insert.
 enum DsrKey {
 	DsrKey_LeftArrow, DsrKey_RightArrow, DsrKey_UpArrow, DsrKey_DownArrow, DsrKey_PageUp, DsrKey_PageDown,
 	DsrKey_Control, DsrKey_Shift, DsrKey_Alt, DsrKey_Escape, DsrKey_Pause, DsrKey_Space, DsrKey_Tab,
@@ -53,7 +59,6 @@ enum DsrKey {
 	DsrKey_F1, DsrKey_F2, DsrKey_F3, DsrKey_F4, DsrKey_F5, DsrKey_F6, DsrKey_F7, DsrKey_F8, DsrKey_F9, DsrKey_F10, DsrKey_F11, DsrKey_F12,
 	DsrKey_A, DsrKey_B, DsrKey_C, DsrKey_D, DsrKey_E, DsrKey_F, DsrKey_G, DsrKey_H, DsrKey_I, DsrKey_J, DsrKey_K, DsrKey_L, DsrKey_M,
 	DsrKey_N, DsrKey_O, DsrKey_P, DsrKey_Q, DsrKey_R, DsrKey_S, DsrKey_T, DsrKey_U, DsrKey_V, DsrKey_W, DsrKey_X, DsrKey_Y, DsrKey_Z,
-	// TODO: Add any missing essential keys.
 	DsrKey_Unhandled
 };
 

@@ -136,6 +136,140 @@ CocoaWindow::CocoaWindow(const dsr::String& title, int width, int height) {
 	[window makeFirstResponder:nil];
 }
 
+static dsr::DsrKey getDsrKey(uint16_t keyCode) {
+	dsr::DsrKey result = dsr::DsrKey_Unhandled;
+	if (keyCode == 53) {
+		result = dsr::DsrKey_Escape;
+	} else if (keyCode == 122) {
+		result = dsr::DsrKey_F1;
+	} else if (keyCode == 120) {
+		result = dsr::DsrKey_F2;
+	} else if (keyCode == 99) {
+		result = dsr::DsrKey_F3;
+	} else if (keyCode == 118) {
+		result = dsr::DsrKey_F4;
+	} else if (keyCode == 96) {
+		result = dsr::DsrKey_F5;
+	} else if (keyCode == 97) {
+		result = dsr::DsrKey_F6;
+	} else if (keyCode == 98) {
+		result = dsr::DsrKey_F7;
+	} else if (keyCode == 100) {
+		result = dsr::DsrKey_F8;
+	} else if (keyCode == 101) {
+		result = dsr::DsrKey_F9;
+	} else if (keyCode == 109) {
+		result = dsr::DsrKey_F10;
+	} else if (keyCode == 103) {
+		result = dsr::DsrKey_F11;
+	} else if (keyCode == 111) {
+		result = dsr::DsrKey_F12;
+	} else if (keyCode == 105) { // F13 replaces the pause key that does not even have a keycode on MacOS.
+		result = dsr::DsrKey_Pause;
+	} else if (keyCode == 49) {
+		result = dsr::DsrKey_Space;
+	} else if (keyCode == 48) {
+		result = dsr::DsrKey_Tab;
+	} else if (keyCode == 36) {
+		result = dsr::DsrKey_Return;
+	} else if (keyCode == 51) {
+		result = dsr::DsrKey_BackSpace;
+	} else if (keyCode == 117) {
+		result = dsr::DsrKey_Delete;
+	} else if (keyCode == 123) {
+		result = dsr::DsrKey_LeftArrow;
+	} else if (keyCode == 124) {
+		result = dsr::DsrKey_RightArrow;
+	} else if (keyCode == 126) {
+		result = dsr::DsrKey_UpArrow;
+	} else if (keyCode == 125) {
+		result = dsr::DsrKey_DownArrow;
+	} else if (keyCode == 29) {
+		result = dsr::DsrKey_0;
+	} else if (keyCode == 18) {
+		result = dsr::DsrKey_1;
+	} else if (keyCode == 19) {
+		result = dsr::DsrKey_2;
+	} else if (keyCode == 20) {
+		result = dsr::DsrKey_3;
+	} else if (keyCode == 21) {
+		result = dsr::DsrKey_4;
+	} else if (keyCode == 23) {
+		result = dsr::DsrKey_5;
+	} else if (keyCode == 22) {
+		result = dsr::DsrKey_6;
+	} else if (keyCode == 26) {
+		result = dsr::DsrKey_7;
+	} else if (keyCode == 28) {
+		result = dsr::DsrKey_8;
+	} else if (keyCode == 25) {
+		result = dsr::DsrKey_9;
+	} else if (keyCode == 0) {
+		result = dsr::DsrKey_A;
+	} else if (keyCode == 11) {
+		result = dsr::DsrKey_B;
+	} else if (keyCode == 8) {
+		result = dsr::DsrKey_C;
+	} else if (keyCode == 2) {
+		result = dsr::DsrKey_D;
+	} else if (keyCode == 14) {
+		result = dsr::DsrKey_E;
+	} else if (keyCode == 3) {
+		result = dsr::DsrKey_F;
+	} else if (keyCode == 5) {
+		result = dsr::DsrKey_G;
+	} else if (keyCode == 4) {
+		result = dsr::DsrKey_H;
+	} else if (keyCode == 34) {
+		result = dsr::DsrKey_I;
+	} else if (keyCode == 38) {
+		result = dsr::DsrKey_J;
+	} else if (keyCode == 40) {
+		result = dsr::DsrKey_K;
+	} else if (keyCode == 37) {
+		result = dsr::DsrKey_L;
+	} else if (keyCode == 46) {
+		result = dsr::DsrKey_M;
+	} else if (keyCode == 45) {
+		result = dsr::DsrKey_N;
+	} else if (keyCode == 31) {
+		result = dsr::DsrKey_O;
+	} else if (keyCode == 35) {
+		result = dsr::DsrKey_P;
+	} else if (keyCode == 12) {
+		result = dsr::DsrKey_Q;
+	} else if (keyCode == 15) {
+		result = dsr::DsrKey_R;
+	} else if (keyCode == 1) {
+		result = dsr::DsrKey_S;
+	} else if (keyCode == 17) {
+		result = dsr::DsrKey_T;
+	} else if (keyCode == 32) {
+		result = dsr::DsrKey_U;
+	} else if (keyCode == 9) {
+		result = dsr::DsrKey_V;
+	} else if (keyCode == 13) {
+		result = dsr::DsrKey_W;
+	} else if (keyCode == 7) {
+		result = dsr::DsrKey_X;
+	} else if (keyCode == 16) {
+		result = dsr::DsrKey_Y;
+	} else if (keyCode == 6) {
+		result = dsr::DsrKey_Z;
+	} else if (keyCode == 114 || keyCode == 106) { // Insert on PC keyboard or F16 on Mac Keyboard.
+		result = dsr::DsrKey_Insert;
+	} else if (keyCode == 115) {
+		result = dsr::DsrKey_Home;
+	} else if (keyCode == 119) {
+		result = dsr::DsrKey_End;
+	} else if (keyCode == 116) {
+		result = dsr::DsrKey_PageUp;
+	} else if (keyCode == 121) {
+		result = dsr::DsrKey_PageDown;
+	}
+	return result;
+}
+
 // Also locked, but cannot change the name when overriding
 void CocoaWindow::prefetchEvents() {
 	@autoreleasepool {
@@ -164,43 +298,64 @@ void CocoaWindow::prefetchEvents() {
 				dsr::IVector2D mousePosition = dsr::IVector2D(int32_t(point.x), int32_t(canvasHeight - point.y));
 				if ([event type] == NSEventTypeLeftMouseDown) {
 					dsr::printText(U"LeftMouseDown at ", mousePosition, U"\n");
+					this->queueInputEvent(new dsr::MouseEvent(dsr::MouseEventType::MouseDown, dsr::MouseKeyEnum::Left, mousePosition));
 				} else if ([event type] == NSEventTypeLeftMouseDragged) {
 					dsr::printText(U"LeftMouseDragged at ", mousePosition, U"\n");
+					this->queueInputEvent(new dsr::MouseEvent(dsr::MouseEventType::MouseMove, dsr::MouseKeyEnum::NoKey, mousePosition));
 				} else if ([event type] == NSEventTypeLeftMouseUp) {
 					dsr::printText(U"LeftMouseUp at ", mousePosition, U"\n");
+					this->queueInputEvent(new dsr::MouseEvent(dsr::MouseEventType::MouseUp, dsr::MouseKeyEnum::Left, mousePosition));
 				} else if ([event type] == NSEventTypeRightMouseDown) {
 					dsr::printText(U"RightMouseDown at ", mousePosition, U"\n");
 				} else if ([event type] == NSEventTypeRightMouseDragged) {
 					dsr::printText(U"RightMouseDragged at ", mousePosition, U"\n");
+					this->queueInputEvent(new dsr::MouseEvent(dsr::MouseEventType::MouseMove, dsr::MouseKeyEnum::NoKey, mousePosition));
 				} else if ([event type] == NSEventTypeRightMouseUp) {
 					dsr::printText(U"RightMouseUp at ", mousePosition, U"\n");
 				} else if ([event type] == NSEventTypeOtherMouseDown) {
 					dsr::printText(U"OtherMouseDown at ", mousePosition, U"\n");
 				} else if ([event type] == NSEventTypeOtherMouseDragged) {
 					dsr::printText(U"OtherMouseDragged at ", mousePosition, U"\n");
+					this->queueInputEvent(new dsr::MouseEvent(dsr::MouseEventType::MouseMove, dsr::MouseKeyEnum::NoKey, mousePosition));
 				} else if ([event type] == NSEventTypeOtherMouseUp) {
 					dsr::printText(U"OtherMouseUp at ", mousePosition, U"\n");
 				} else if ([event type] == NSEventTypeMouseMoved) {
 					dsr::printText(U"MouseMoved at ", mousePosition, U"\n");
-				} else if ([event type] == NSEventTypeMouseEntered) {
-					dsr::printText(U"MouseEntered at ", mousePosition, U"\n");
-				} else if ([event type] == NSEventTypeMouseExited) {
-					dsr::printText(U"MouseExited at ", mousePosition, U"\n");
+					this->queueInputEvent(new dsr::MouseEvent(dsr::MouseEventType::MouseMove, dsr::MouseKeyEnum::NoKey, mousePosition));
+				//} else if ([event type] == NSEventTypeMouseEntered) {
+				//	dsr::printText(U"MouseEntered at ", mousePosition, U"\n");
+				//} else if ([event type] == NSEventTypeMouseExited) {
+				//	dsr::printText(U"MouseExited at ", mousePosition, U"\n");
 				} else if ([event type] == NSEventTypeScrollWheel) {
 					dsr::printText(U"ScrollWheel at ", mousePosition, U"\n");
+					// TODO: Which direction is considered up/down on MacOS when scroll wheels are inverted relative to PC?
+					if (event.scrollingDeltaY > 0.0) {
+						this->queueInputEvent(new dsr::MouseEvent(dsr::MouseEventType::Scroll, dsr::MouseKeyEnum::ScrollUp, mousePosition));
+					}
+					if (event.scrollingDeltaY < 0.0) {
+						this->queueInputEvent(new dsr::MouseEvent(dsr::MouseEventType::Scroll, dsr::MouseKeyEnum::ScrollDown, mousePosition));
+					}
 				}
 				[this->window makeKeyAndOrderFront:nil];
 			} else if ([event type] == NSEventTypeKeyDown
 			        || [event type] == NSEventTypeKeyUp
 			        || [event type] == NSEventTypeFlagsChanged) {
+				dsr::DsrKey code = getDsrKey(event.keyCode);
 				// TODO: Make sure that the window catches keyboard events instead of corrupting terminal input.
 				if ([event type] == NSEventTypeKeyDown) {
 					if (!(event.isARepeat)) {
-						dsr::printText(U"KeyDown: keyCode = ", event.keyCode, U"\n");
+						dsr::printText(U"KeyDown: keyCode ", event.keyCode, U" -> ", getName(code), U"\n");
+						// TODO: Get the character code.
+						this->queueInputEvent(new dsr::KeyboardEvent(dsr::KeyboardEventType::KeyDown, U'0', code));
 					}
-					dsr::printText(U"KeyType\n");
+					dsr::printText(U"KeyType: keyCode ", event.keyCode, U" -> ", getName(code), U"\n");
+					// TODO: Get the character code.
+					this->queueInputEvent(new dsr::KeyboardEvent(dsr::KeyboardEventType::KeyType, U'0', code));
 				} else if ([event type] == NSEventTypeKeyUp) {
-					dsr::printText(U"KeyUp: keyCode = ", event.keyCode, U"\n");
+					dsr::printText(U"KeyUp: keyCode ", event.keyCode, U" -> ", getName(code), U"\n");
+					// TODO: Get the character code.
+					this->queueInputEvent(new dsr::KeyboardEvent(dsr::KeyboardEventType::KeyUp, U'0', code));
+					
 				} else if ([event type] == NSEventTypeFlagsChanged) {
 					dsr::printText(U"FlagsChanged\n");
 					NSEventModifierFlags newModifierFlags = [event modifierFlags];
@@ -209,18 +364,24 @@ void CocoaWindow::prefetchEvents() {
 					bool newAltOption = (newModifierFlags & NSEventModifierFlagOption) != 0u;
 					if (newControlCommand && !pressedControlCommand) {
 						dsr::printText(U"KeyDown: Control\n");
+						this->queueInputEvent(new dsr::KeyboardEvent(dsr::KeyboardEventType::KeyDown, U'0', dsr::DsrKey_Control));
 					} else if (!newControlCommand && pressedControlCommand) {
 						dsr::printText(U"KeyUp: Control\n");
+						this->queueInputEvent(new dsr::KeyboardEvent(dsr::KeyboardEventType::KeyUp, U'0', dsr::DsrKey_Control));
 					}
 					if (newShift && !pressedShift) {
 						dsr::printText(U"KeyDown: Shift\n");
+						this->queueInputEvent(new dsr::KeyboardEvent(dsr::KeyboardEventType::KeyDown, U'0', dsr::DsrKey_Shift));
 					} else if (!newShift && pressedShift) {
 						dsr::printText(U"KeyUp: Shift\n");
+						this->queueInputEvent(new dsr::KeyboardEvent(dsr::KeyboardEventType::KeyUp, U'0', dsr::DsrKey_Shift));
 					}
 					if (newAltOption && !pressedAltOption) {
 						dsr::printText(U"KeyDown: Alt\n");
+						this->queueInputEvent(new dsr::KeyboardEvent(dsr::KeyboardEventType::KeyDown, U'0', dsr::DsrKey_Alt));
 					} else if (!newAltOption && pressedAltOption) {
 						dsr::printText(U"KeyUp: Alt\n");
+						this->queueInputEvent(new dsr::KeyboardEvent(dsr::KeyboardEventType::KeyUp, U'0', dsr::DsrKey_Alt));
 					}
 					pressedControlCommand = newControlCommand;
 					pressedShift = newShift;
