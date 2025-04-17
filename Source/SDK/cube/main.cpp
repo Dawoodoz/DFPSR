@@ -117,8 +117,8 @@ void dsrMain(List<String> args) {
 		window_executeEvents(window);
 
 		// Request buffers after executing the events, to get newly allocated buffers after resize events
-		auto colorBuffer = window_getCanvas(window);
-		auto depthBuffer = window_getDepthBuffer(window);
+		ImageRgbaU8 colorBuffer = window_getCanvas(window);
+		ImageF32 depthBuffer = window_getDepthBuffer(window);
 
 		// Get target size
 		int targetWidth = image_getWidth(colorBuffer);

@@ -10,10 +10,6 @@
 
 #include "../DFPSR/settings.h"
 
-// Cocoa can only be called from the main thread.
-//   So it is not even possible to have a dedicated background thread for managing the window.
-//   No multi-threading at all can be used for Cocoa.
-
 static const int bufferCount = 2;
 
 static bool applicationInitialized = false;
@@ -32,7 +28,7 @@ private:
 	// The image which can be drawn to, sharing memory with the Cocoa image
 	dsr::AlignedImageRgbaU8 canvas[bufferCount];
 	// An Cocoa image wrapped around the canvas pixel data
-	//????Image *canvasX[bufferCount] = {};
+	//NSImage *canvasNS[bufferCount] = {};
 	int drawIndex = 0 % bufferCount;
 	int showIndex = 1 % bufferCount;
 
@@ -50,10 +46,6 @@ private:
 
 	// Place the cursor within the window
 	void setCursorPosition(int x, int y) override;
-
-	// Color format
-	dsr::PackOrderIndex packOrderIndex = dsr::PackOrderIndex::RGBA;
-	dsr::PackOrderIndex getColorFormat();
 	*/
 private:
 	// Helper methods specific to calling XLib
@@ -130,6 +122,8 @@ CocoaWindow::CocoaWindow(const dsr::String& title, int width, int height) {
 
 	// Set the title
 	this->setTitle(title);
+	// Allocate a canvas
+	this->resizeCanvas(width, height);
 	// Show the window.
 	[window center];
 	[window makeKeyAndOrderFront:nil];
@@ -270,9 +264,12 @@ static dsr::DsrKey getDsrKey(uint16_t keyCode) {
 	return result;
 }
 
-// Also locked, but cannot change the name when overriding
 void CocoaWindow::prefetchEvents() {
 	@autoreleasepool {
+		// TODO: Send resize events to the program and resize the canvas when the canvas size has changed.
+		NSView *view = [window contentView];
+		CGFloat canvasWidth = NSWidth(view.bounds);
+		CGFloat canvasHeight = NSHeight(view.bounds);
 		// Process events
 		while (true) {
 			NSEvent *event = [application nextEventMatchingMask:NSEventMaskAny untilDate:nil inMode:NSDefaultRunLoopMode dequeue:YES];
@@ -290,8 +287,6 @@ void CocoaWindow::prefetchEvents() {
 			 || [event type] == NSEventTypeMouseEntered
 			 || [event type] == NSEventTypeMouseExited
 			 || [event type] == NSEventTypeScrollWheel) {
-				NSView *view = [window contentView];
-				CGFloat canvasHeight = NSHeight(view.bounds);
 				NSPoint point = [view convertPoint:[event locationInWindow] fromView:nil];
 				// This nasty hack combines an old mouse event with a canvas size that may have changed since the mouse event was created.
 				// TODO: Find a way to get the canvas height from when the mouse event was actually created, so that lagging while resizing a window can not place click events at the wrong coordiates.
@@ -345,15 +340,20 @@ void CocoaWindow::prefetchEvents() {
 				if ([event type] == NSEventTypeKeyDown) {
 					if (!(event.isARepeat)) {
 						dsr::printText(U"KeyDown: keyCode ", event.keyCode, U" -> ", getName(code), U"\n");
-						// TODO: Get the character code.
+						// TODO: Should up and down events require valid character codes from the system?
+						//       An API for sending event to a window can be used to document this and remove arguments where not needed.
 						this->queueInputEvent(new dsr::KeyboardEvent(dsr::KeyboardEventType::KeyDown, U'0', code));
 					}
+					
+					// TODO: Check if the event's character is printable and only enter printable characters.
 					dsr::printText(U"KeyType: keyCode ", event.keyCode, U" -> ", getName(code), U"\n");
 					// TODO: Get the character code.
 					this->queueInputEvent(new dsr::KeyboardEvent(dsr::KeyboardEventType::KeyType, U'0', code));
+					
 				} else if ([event type] == NSEventTypeKeyUp) {
 					dsr::printText(U"KeyUp: keyCode ", event.keyCode, U" -> ", getName(code), U"\n");
-					// TODO: Get the character code.
+					
+					// TODO: Should up and down events require valid character codes from the system?
 					this->queueInputEvent(new dsr::KeyboardEvent(dsr::KeyboardEventType::KeyUp, U'0', code));
 					
 				} else if ([event type] == NSEventTypeFlagsChanged) {
@@ -391,12 +391,36 @@ void CocoaWindow::prefetchEvents() {
 			[application sendEvent:event];
 			[application updateWindows];
 		}
+		// Handle changes to the canvas size.
+		int32_t wholeCanvasWidth = int32_t(canvasWidth);
+		int32_t wholeCanvasHeight = int32_t(canvasHeight);
+		this->resizeCanvas(wholeCanvasWidth, wholeCanvasHeight);
+		if (this->windowWidth != wholeCanvasWidth || this->windowHeight != wholeCanvasHeight) {
+			this->windowWidth = wholeCanvasWidth;
+			this->windowHeight = wholeCanvasHeight;
+			// Make a request to resize the canvas
+			this->receivedWindowResize(wholeCanvasWidth, wholeCanvasHeight);
+		}
 	}
 }
 
-// Locked because it overrides
+static const dsr::PackOrderIndex MacOSPackOrder = dsr::PackOrderIndex::ABGR;
+
 void CocoaWindow::resizeCanvas(int width, int height) {
-	// TODO: Resize.
+	for (int b = 0; b < bufferCount; b++) {
+		if (image_exists(this->canvas[b])) {
+			if (image_getWidth(this->canvas[b]) == width && image_getHeight(this->canvas[b]) == height) {
+				// The canvas already has the requested resolution.
+				return;
+			} else {
+				// TODO: Preserve the pre-existing image?
+				this->canvas[b] = image_create_RgbaU8_native(width, height, MacOSPackOrder);
+			}
+		} else {
+			// Allocate a new image.
+			this->canvas[b] = image_create_RgbaU8_native(width, height, MacOSPackOrder);
+		}
+	}
 }
 
 CocoaWindow::~CocoaWindow() {
@@ -405,7 +429,50 @@ CocoaWindow::~CocoaWindow() {
 }
 
 void CocoaWindow::showCanvas() {
-	// TODO: Implement
+	@autoreleasepool {
+		// Update buffer indices.
+		this->drawIndex = (this->drawIndex + 1) % bufferCount;
+		this->showIndex = (this->showIndex + 1) % bufferCount;
+		this->prefetchEvents();
+		int displayIndex = this->showIndex;
+		NSView *view = [window contentView];
+		if (view != nullptr) {
+			int32_t width = dsr::image_getWidth(this->canvas[displayIndex]);
+			int32_t height = dsr::image_getHeight(this->canvas[displayIndex]);
+			int32_t stride = dsr::image_getStride(this->canvas[displayIndex]);
+			uint8_t *pixelData = dsr::image_dangerous_getData(this->canvas[displayIndex]);
+			CGColorSpaceRef colorSpace = CGColorSpaceCreateWithName(kCGColorSpaceGenericRGB);
+			if (!colorSpace) {
+				dsr::throwError(U"Could not create a Core Graphics color space!\n");
+				return;
+			}
+			CGContextRef context = CGBitmapContextCreate(pixelData,
+				width,
+				height,
+				8,
+				stride,
+				colorSpace,
+				kCGBitmapByteOrder32Little | kCGImageAlphaNoneSkipLast);
+			CGColorSpaceRelease(colorSpace);
+			if (context == nullptr) {
+				dsr::throwError(U"Could not create a Core Graphics bitmap context!\n");
+				return;
+			}
+			// TODO: Store images in the window instead of creating and destroying every time it is used.
+			CGImageRef temporaryImage = CGBitmapContextCreateImage(context);
+			CGContextRelease(context);
+			if (temporaryImage == nullptr) {
+				dsr::throwError(U"Could not create a Core Graphics image!\n");
+				return;
+			}
+			NSBitmapImageRep *bitmap = [[NSBitmapImageRep alloc] initWithCGImage:temporaryImage];
+			CGImageRelease(temporaryImage);
+			NSImage *image = [[NSImage alloc] initWithSize:NSMakeSize(width, height)];
+			[image addRepresentation:bitmap];
+			view.wantsLayer = YES;
+			view.layer.contents = image;
+		}
+	}
 }
 
 dsr::Handle<dsr::BackendWindow> createBackendWindow(const dsr::String& title, int width, int height) {
