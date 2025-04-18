@@ -19,6 +19,8 @@ class CocoaWindow : public dsr::BackendWindow {
 private:
 	// Handle to the Cocoa window
 	NSWindow *window = nullptr;
+	// The Core Graphics color space
+	CGColorSpace *colorSpace = nullptr;
 	// Last modifiers to allow converting NSEventTypeFlagsChanged into up and down key press events.
 	bool pressedControlCommand = false;
 	bool pressedShift = false;
@@ -119,7 +121,11 @@ CocoaWindow::CocoaWindow(const dsr::String& title, int width, int height) {
 		  backing: NSBackingStoreBuffered
 		  defer: NO];
 	}
-
+	// Create a color space
+	this->colorSpace = CGColorSpaceCreateWithName(kCGColorSpaceGenericRGB);
+	if (this->colorSpace == nullptr) {
+		dsr::throwError(U"Could not create a Core Graphics color space!\n");
+	}
 	// Set the title
 	this->setTitle(title);
 	// Allocate a canvas
@@ -413,8 +419,10 @@ void CocoaWindow::resizeCanvas(int width, int height) {
 				// The canvas already has the requested resolution.
 				return;
 			} else {
-				// TODO: Preserve the pre-existing image?
-				this->canvas[b] = image_create_RgbaU8_native(width, height, MacOSPackOrder);
+				// Preserve the pre-existing image.
+				dsr::AlignedImageRgbaU8 newImage = image_create_RgbaU8_native(width, height, MacOSPackOrder);
+				dsr::draw_copy(newImage, this->canvas[b]);
+				this->canvas[b] = newImage;
 			}
 		} else {
 			// Allocate a new image.
@@ -424,13 +432,15 @@ void CocoaWindow::resizeCanvas(int width, int height) {
 }
 
 CocoaWindow::~CocoaWindow() {
+	if (this->colorSpace != nullptr) {
+		CGColorSpaceRelease(this->colorSpace);
+	}
 	[this->window close];
 	window = nullptr;
 }
 
 void CocoaWindow::showCanvas() {
 	@autoreleasepool {
-		// Update buffer indices.
 		this->drawIndex = (this->drawIndex + 1) % bufferCount;
 		this->showIndex = (this->showIndex + 1) % bufferCount;
 		this->prefetchEvents();
@@ -441,36 +451,16 @@ void CocoaWindow::showCanvas() {
 			int32_t height = dsr::image_getHeight(this->canvas[displayIndex]);
 			int32_t stride = dsr::image_getStride(this->canvas[displayIndex]);
 			uint8_t *pixelData = dsr::image_dangerous_getData(this->canvas[displayIndex]);
-			CGColorSpaceRef colorSpace = CGColorSpaceCreateWithName(kCGColorSpaceGenericRGB);
-			if (!colorSpace) {
-				dsr::throwError(U"Could not create a Core Graphics color space!\n");
-				return;
-			}
-			CGContextRef context = CGBitmapContextCreate(pixelData,
-				width,
-				height,
-				8,
-				stride,
-				colorSpace,
-				kCGBitmapByteOrder32Little | kCGImageAlphaNoneSkipLast);
-			CGColorSpaceRelease(colorSpace);
-			if (context == nullptr) {
-				dsr::throwError(U"Could not create a Core Graphics bitmap context!\n");
-				return;
-			}
-			// TODO: Store images in the window instead of creating and destroying every time it is used.
-			CGImageRef temporaryImage = CGBitmapContextCreateImage(context);
-			CGContextRelease(context);
-			if (temporaryImage == nullptr) {
+			CGDataProvider *provider = CGDataProviderCreateWithData(nullptr, pixelData, stride * height, nullptr);
+			CGImage *image = CGImageCreate(width, height, 8, 32, stride, this->colorSpace, kCGBitmapByteOrder32Little | kCGImageAlphaNoneSkipLast, provider, nullptr, false, kCGRenderingIntentDefault);
+			CGDataProviderRelease(provider);
+			if (image == nullptr) {
 				dsr::throwError(U"Could not create a Core Graphics image!\n");
 				return;
 			}
-			NSBitmapImageRep *bitmap = [[NSBitmapImageRep alloc] initWithCGImage:temporaryImage];
-			CGImageRelease(temporaryImage);
-			NSImage *image = [[NSImage alloc] initWithSize:NSMakeSize(width, height)];
-			[image addRepresentation:bitmap];
 			view.wantsLayer = YES;
-			view.layer.contents = image;
+			view.layer.contents = (__bridge id)image;
+			CGImageRelease(image);
 		}
 	}
 }
