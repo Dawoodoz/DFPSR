@@ -1,4 +1,16 @@
 ﻿
+// Early alpha version!
+//   Do not use in released applications.
+// Missing features:
+//   * Handling cursor locations outside of the canvas.
+//   * Typing text.
+//   * Copy and paste with clipboard.
+//   * Minimizing the window.
+//   * Toggling full-screen from the application and when starting with fullscreen requested.
+//   * Synchronization of canvas upload.
+//   * Setting cursor position and visibility
+//   ...
+
 #import <Cocoa/Cocoa.h>
 
 #include "../DFPSR/api/imageAPI.h"
@@ -397,15 +409,21 @@ void CocoaWindow::prefetchEvents() {
 			[application sendEvent:event];
 			[application updateWindows];
 		}
-		// Handle changes to the canvas size.
-		int32_t wholeCanvasWidth = int32_t(canvasWidth);
-		int32_t wholeCanvasHeight = int32_t(canvasHeight);
-		this->resizeCanvas(wholeCanvasWidth, wholeCanvasHeight);
-		if (this->windowWidth != wholeCanvasWidth || this->windowHeight != wholeCanvasHeight) {
-			this->windowWidth = wholeCanvasWidth;
-			this->windowHeight = wholeCanvasHeight;
-			// Make a request to resize the canvas
-			this->receivedWindowResize(wholeCanvasWidth, wholeCanvasHeight);
+		// Handle changes to the window.
+		if ([window isVisible]) {
+			// The window is still visible, so check if it needs to resize the canvas.
+			int32_t wholeCanvasWidth = int32_t(canvasWidth);
+			int32_t wholeCanvasHeight = int32_t(canvasHeight);
+			this->resizeCanvas(wholeCanvasWidth, wholeCanvasHeight);
+			if (this->windowWidth != wholeCanvasWidth || this->windowHeight != wholeCanvasHeight) {
+				this->windowWidth = wholeCanvasWidth;
+				this->windowHeight = wholeCanvasHeight;
+				// Make a request to resize the canvas
+				this->receivedWindowResize(wholeCanvasWidth, wholeCanvasHeight);
+			}
+		} else {
+			// The window is no longer visible, so send a close event to the application.
+			this->receivedWindowCloseEvent();
 		}
 	}
 }
