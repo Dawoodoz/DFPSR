@@ -109,9 +109,8 @@ enum class WindowEventType { Close, Redraw };
 class WindowEvent : public InputEvent {
 public:
 	WindowEventType windowEventType;
-	int width, height;
-	WindowEvent(WindowEventType windowEventType, int width, int height)
-	: windowEventType(windowEventType), width(width), height(height) {}
+	WindowEvent(WindowEventType windowEventType)
+	: windowEventType(windowEventType) {}
 };
 
 // A macro for declaring a virtual callback from the base method.
