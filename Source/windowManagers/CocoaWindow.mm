@@ -3,6 +3,7 @@
 //   Do not use in released applications.
 // Missing features:
 //   * Handling cursor locations outside of the canvas.
+//     Needs to remove the title and button decorations in full screen mode, so that the cursor location does not become corrupted at the top.
 //   * Typing text.
 //   * Copy and paste with clipboard.
 //   * Minimizing the window.
