@@ -628,7 +628,7 @@ void X11Window::prefetchEvents() {
 				}
 				if (currentEvent.type == Expose && currentEvent.xexpose.count == 0) {
 					// Redraw
-					this->queueInputEvent(new dsr::WindowEvent(dsr::WindowEventType::Redraw, this->windowWidth, this->windowHeight));
+					this->receivedWindowRedrawEvent();
 				} else if (currentEvent.type == KeyPress || currentEvent.type == KeyRelease) {
 					// Key down/up
 					dsr::DsrChar character = getCharacterCode(currentEvent);
@@ -641,18 +641,18 @@ void X11Window::prefetchEvents() {
 					 && currentEvent.xkey.time == nextEvent.xkey.time
 					 && nativeKey == nextNativeKey) {
 						// Repeated typing
-						this->queueInputEvent(new dsr::KeyboardEvent(dsr::KeyboardEventType::KeyType, character, dsrKey));
+						this->receivedKeyboardEvent(dsr::KeyboardEventType::KeyType, character, dsrKey);
 						// Skip next event
 						XNextEvent(this->display, &currentEvent);
 					} else {
 						if (currentEvent.type == KeyPress) {
 							// Physical key down
-							this->queueInputEvent(new dsr::KeyboardEvent(dsr::KeyboardEventType::KeyDown, character, dsrKey));
+							this->receivedKeyboardEvent(dsr::KeyboardEventType::KeyDown, character, dsrKey);
 							// First press typing
-							this->queueInputEvent(new dsr::KeyboardEvent(dsr::KeyboardEventType::KeyType, character, dsrKey));
+							this->receivedKeyboardEvent(dsr::KeyboardEventType::KeyType, character, dsrKey);
 						} else { // currentEvent.type == KeyRelease
 							// Physical key up
-							this->queueInputEvent(new dsr::KeyboardEvent(dsr::KeyboardEventType::KeyUp, character, dsrKey));
+							this->receivedKeyboardEvent(dsr::KeyboardEventType::KeyUp, character, dsrKey);
 						}
 					}
 				} else if (currentEvent.type == ButtonPress || currentEvent.type == ButtonRelease) {
@@ -660,20 +660,20 @@ void X11Window::prefetchEvents() {
 					if (isVerticalScrollKey(key)) {
 						// Scroll down/up
 						if (!hasScrolled) {
-							this->queueInputEvent(new dsr::MouseEvent(dsr::MouseEventType::Scroll, key, dsr::IVector2D(currentEvent.xbutton.x, currentEvent.xbutton.y)));
+							this->receivedMouseEvent(dsr::MouseEventType::Scroll, key, dsr::IVector2D(currentEvent.xbutton.x, currentEvent.xbutton.y));
 						}
 						hasScrolled = true;
 					} else {
 						// Mouse down/up
-						this->queueInputEvent(new dsr::MouseEvent(currentEvent.type == ButtonPress ? dsr::MouseEventType::MouseDown : dsr::MouseEventType::MouseUp, key, dsr::IVector2D(currentEvent.xbutton.x, currentEvent.xbutton.y)));
+						this->receivedMouseEvent(currentEvent.type == ButtonPress ? dsr::MouseEventType::MouseDown : dsr::MouseEventType::MouseUp, key, dsr::IVector2D(currentEvent.xbutton.x, currentEvent.xbutton.y));
 					}
 				} else if (currentEvent.type == MotionNotify) {
 					// Mouse move
-					this->queueInputEvent(new dsr::MouseEvent(dsr::MouseEventType::MouseMove, dsr::MouseKeyEnum::NoKey, dsr::IVector2D(currentEvent.xmotion.x, currentEvent.xmotion.y)));
+					this->receivedMouseEvent(dsr::MouseEventType::MouseMove, dsr::MouseKeyEnum::NoKey, dsr::IVector2D(currentEvent.xmotion.x, currentEvent.xmotion.y));
 				} else if (currentEvent.type == ClientMessage) {
 					// Close
 					//   Assume WM_DELETE_WINDOW since it is the only registered client message
-					this->queueInputEvent(new dsr::WindowEvent(dsr::WindowEventType::Close, this->windowWidth, this->windowHeight));
+					this->receivedWindowCloseEvent();
 				} else if (currentEvent.type == ConfigureNotify) {
 					XConfigureEvent xce = currentEvent.xconfigure;
 					if (this->windowWidth != xce.width || this->windowHeight != xce.height) {

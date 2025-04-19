@@ -522,29 +522,29 @@ static LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT message, WPARAM wParam, 
 		PostQuitMessage(wParam);
 		break;
 	case WM_CLOSE:
-		parent->queueInputEvent(new dsr::WindowEvent(dsr::WindowEventType::Close, parent->windowWidth, parent->windowHeight));
+		parent->receivedWindowCloseEvent();
 		DestroyWindow(hwnd);
 		break;
 	case WM_LBUTTONDOWN:
-		parent->queueInputEvent(new dsr::MouseEvent(dsr::MouseEventType::MouseDown, dsr::MouseKeyEnum::Left, parent->lastMousePos));
+		parent->receivedMouseEvent(dsr::MouseEventType::MouseDown, dsr::MouseKeyEnum::Left, parent->lastMousePos);
 		break;
 	case WM_LBUTTONUP:
-		parent->queueInputEvent(new dsr::MouseEvent(dsr::MouseEventType::MouseUp, dsr::MouseKeyEnum::Left, parent->lastMousePos));
+		parent->receivedMouseEvent(dsr::MouseEventType::MouseUp, dsr::MouseKeyEnum::Left, parent->lastMousePos);
 		break;
 	case WM_RBUTTONDOWN:
-		parent->queueInputEvent(new dsr::MouseEvent(dsr::MouseEventType::MouseDown, dsr::MouseKeyEnum::Right, parent->lastMousePos));
+		parent->receivedMouseEvent(dsr::MouseEventType::MouseDown, dsr::MouseKeyEnum::Right, parent->lastMousePos);
 		break;
 	case WM_RBUTTONUP:
-		parent->queueInputEvent(new dsr::MouseEvent(dsr::MouseEventType::MouseUp, dsr::MouseKeyEnum::Right, parent->lastMousePos));
+		parent->receivedMouseEvent(dsr::MouseEventType::MouseUp, dsr::MouseKeyEnum::Right, parent->lastMousePos);
 		break;
 	case WM_MBUTTONDOWN:
-		parent->queueInputEvent(new dsr::MouseEvent(dsr::MouseEventType::MouseDown, dsr::MouseKeyEnum::Middle, parent->lastMousePos));
+		parent->receivedMouseEvent(dsr::MouseEventType::MouseDown, dsr::MouseKeyEnum::Middle, parent->lastMousePos);
 		break;
 	case WM_MBUTTONUP:
-		parent->queueInputEvent(new dsr::MouseEvent(dsr::MouseEventType::MouseUp, dsr::MouseKeyEnum::Middle, parent->lastMousePos));
+		parent->receivedMouseEvent(dsr::MouseEventType::MouseUp, dsr::MouseKeyEnum::Middle, parent->lastMousePos);
 		break;
 	case WM_MOUSEMOVE:
-		parent->queueInputEvent(new dsr::MouseEvent(dsr::MouseEventType::MouseMove, dsr::MouseKeyEnum::NoKey, parent->lastMousePos));
+		parent->receivedMouseEvent(dsr::MouseEventType::MouseMove, dsr::MouseKeyEnum::NoKey, parent->lastMousePos);
 		break;
 	case WM_SETCURSOR:
 		if (LOWORD(lParam) == HTCLIENT) {
@@ -559,9 +559,9 @@ static LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT message, WPARAM wParam, 
 		{
 			int delta = GET_WHEEL_DELTA_WPARAM(wParam);
 			if (delta > 0) {
-				parent->queueInputEvent(new dsr::MouseEvent(dsr::MouseEventType::Scroll, dsr::MouseKeyEnum::ScrollUp, parent->lastMousePos));
+				parent->receivedMouseEvent(dsr::MouseEventType::Scroll, dsr::MouseKeyEnum::ScrollUp, parent->lastMousePos);
 			} else if (delta < 0) {
-				parent->queueInputEvent(new dsr::MouseEvent(dsr::MouseEventType::Scroll, dsr::MouseKeyEnum::ScrollDown, parent->lastMousePos));
+				parent->receivedMouseEvent(dsr::MouseEventType::Scroll, dsr::MouseKeyEnum::ScrollDown, parent->lastMousePos);
 			}
 		}
 		break;
@@ -584,18 +584,18 @@ static LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT message, WPARAM wParam, 
 				// If not repeated
 				if (!previouslyPressed) {
 					// Physical key down
-					parent->queueInputEvent(new dsr::KeyboardEvent(dsr::KeyboardEventType::KeyDown, character, dsrKey));
+					parent->receivedKeyboardEvent(dsr::KeyboardEventType::KeyDown, character, dsrKey);
 				}
 				// Press typing with repeat
-				parent->queueInputEvent(new dsr::KeyboardEvent(dsr::KeyboardEventType::KeyType, character, dsrKey));
+				parent->receivedKeyboardEvent(dsr::KeyboardEventType::KeyType, character, dsrKey);
 			} else { // message == WM_KEYUP || message == WM_SYSKEYUP
 				// Physical key up
-				parent->queueInputEvent(new dsr::KeyboardEvent(dsr::KeyboardEventType::KeyUp, character, dsrKey));
+				parent->receivedKeyboardEvent(dsr::KeyboardEventType::KeyUp, character, dsrKey);
 			}
 		}
 		break;
 	case WM_PAINT:
-		//parent->queueInputEvent(new dsr::WindowEvent(dsr::WindowEventType::Redraw, parent->windowWidth, parent->windowHeight));
+		//parent->receivedWindowRedrawEvent();
 		// BeginPaint and EndPaint must be called with the given hwnd to prevent having the redraw message sent again
 		parent->redraw(hwnd, false, false);
 		// Passing on the event to prevent flooding with more messages. This is only a temporary solution.

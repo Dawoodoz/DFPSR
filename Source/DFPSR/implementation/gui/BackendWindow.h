@@ -44,19 +44,28 @@ public:
 	String title;
 	// Events
 	List<InputEvent*> eventQueue;
-	void queueInputEvent(InputEvent* event) {
-		this->eventQueue.push(event);
-	}
 private:
 	int requestingResize = false;
 	int requestedWidth = 0;
 	int requestedHeight = 0;
 public:
+	inline void receivedMouseEvent(MouseEventType mouseEventType, MouseKeyEnum key, IVector2D position) {
+		this->eventQueue.push(new MouseEvent(mouseEventType, key, position));
+	}
+	inline void receivedKeyboardEvent(KeyboardEventType keyboardEventType, DsrChar character, DsrKey dsrKey) {
+		this->eventQueue.push(new KeyboardEvent(keyboardEventType, character, dsrKey));
+	}
+	inline void receivedWindowCloseEvent() {
+		this->eventQueue.push(new dsr::WindowEvent(dsr::WindowEventType::Close));
+	}
+	inline void receivedWindowRedrawEvent() {
+		this->eventQueue.push(new dsr::WindowEvent(dsr::WindowEventType::Redraw));
+	}
 	// Request to resize the window.
 	//   When the implementation receives a resize, call receiveWindowResize with the new dimensions.
 	//     If requestingResize is already true, it will just overwrite the old request.
 	//   Next call to executeEvents will then use it to resize the canvas.
-	void receivedWindowResize(int width, int height) {
+	inline void receivedWindowResize(int width, int height) {
 		this->requestingResize = true;
 		this->requestedWidth = width;
 		this->requestedHeight = height;

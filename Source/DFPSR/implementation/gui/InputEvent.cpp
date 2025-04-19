@@ -268,9 +268,6 @@ String& dsr::string_toStreamIndented(String& target, const MouseEvent& source, c
 String& dsr::string_toStreamIndented(String& target, const WindowEvent& source, const ReadableString& indentation) {
 	string_append(target, indentation, U"WindowEvent(");
 	string_append(target, U"windowEventType = ", source.windowEventType);
-	// TODO: Assert that width and height are zero when not used by the event type.
-	string_append(target, U", width = ", source.width);
-	string_append(target, U", height = ", source.height);
 	string_append(target, U")");
 	return target;
 }
