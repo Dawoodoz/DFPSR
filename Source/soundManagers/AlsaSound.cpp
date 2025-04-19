@@ -10,7 +10,6 @@
 namespace dsr {
 
 static snd_pcm_t *pcm = nullptr;
-static int bufferElements = 0;
 static Buffer outputBuffer, floatBuffer;
 static SafePointer<int16_t> outputData;
 static SafePointer<float> floatData;
@@ -20,7 +19,6 @@ static void allocateBuffers(int neededElements) {
 	floatBuffer = buffer_create(neededElements * sizeof(float));
 	outputData = buffer_getSafeData<int16_t>(outputBuffer, "Output data");
 	floatData = buffer_getSafeData<float>(floatBuffer, "Output data");
-	bufferElements = neededElements;
 }
 
 static void terminateSound() {
