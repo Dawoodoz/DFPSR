@@ -4,7 +4,6 @@
 // Missing features:
 //   * Handling cursor locations outside of the canvas.
 //     Needs to remove the title and button decorations in full screen mode, so that the cursor location does not become corrupted at the top.
-//   * Typing text.
 //   * Copy and paste with clipboard.
 //   * Minimizing the window.
 //   * Toggling full-screen from the application and when starting with fullscreen requested.
@@ -311,37 +310,41 @@ void CocoaWindow::prefetchEvents() {
 				// TODO: Find a way to get the canvas height from when the mouse event was actually created, so that lagging while resizing a window can not place click events at the wrong coordiates.
 				dsr::IVector2D mousePosition = dsr::IVector2D(int32_t(point.x), int32_t(canvasHeight - point.y));
 				if ([event type] == NSEventTypeLeftMouseDown) {
-					dsr::printText(U"LeftMouseDown at ", mousePosition, U"\n");
+					//dsr::printText(U"LeftMouseDown at ", mousePosition, U"\n");
 					this->receivedMouseEvent(dsr::MouseEventType::MouseDown, dsr::MouseKeyEnum::Left, mousePosition);
 				} else if ([event type] == NSEventTypeLeftMouseDragged) {
-					dsr::printText(U"LeftMouseDragged at ", mousePosition, U"\n");
+					//dsr::printText(U"LeftMouseDragged at ", mousePosition, U"\n");
 					this->receivedMouseEvent(dsr::MouseEventType::MouseMove, dsr::MouseKeyEnum::NoKey, mousePosition);
 				} else if ([event type] == NSEventTypeLeftMouseUp) {
-					dsr::printText(U"LeftMouseUp at ", mousePosition, U"\n");
+					//dsr::printText(U"LeftMouseUp at ", mousePosition, U"\n");
 					this->receivedMouseEvent(dsr::MouseEventType::MouseUp, dsr::MouseKeyEnum::Left, mousePosition);
 				} else if ([event type] == NSEventTypeRightMouseDown) {
-					dsr::printText(U"RightMouseDown at ", mousePosition, U"\n");
+					//dsr::printText(U"RightMouseDown at ", mousePosition, U"\n");
+					this->receivedMouseEvent(dsr::MouseEventType::MouseDown, dsr::MouseKeyEnum::Right, mousePosition);
 				} else if ([event type] == NSEventTypeRightMouseDragged) {
-					dsr::printText(U"RightMouseDragged at ", mousePosition, U"\n");
+					//dsr::printText(U"RightMouseDragged at ", mousePosition, U"\n");
 					this->receivedMouseEvent(dsr::MouseEventType::MouseMove, dsr::MouseKeyEnum::NoKey, mousePosition);
 				} else if ([event type] == NSEventTypeRightMouseUp) {
-					dsr::printText(U"RightMouseUp at ", mousePosition, U"\n");
+					//dsr::printText(U"RightMouseUp at ", mousePosition, U"\n");
+					this->receivedMouseEvent(dsr::MouseEventType::MouseUp, dsr::MouseKeyEnum::Right, mousePosition);
 				} else if ([event type] == NSEventTypeOtherMouseDown) {
-					dsr::printText(U"OtherMouseDown at ", mousePosition, U"\n");
+					//dsr::printText(U"OtherMouseDown at ", mousePosition, U"\n");
+					this->receivedMouseEvent(dsr::MouseEventType::MouseDown, dsr::MouseKeyEnum::Middle, mousePosition);
 				} else if ([event type] == NSEventTypeOtherMouseDragged) {
-					dsr::printText(U"OtherMouseDragged at ", mousePosition, U"\n");
+					//dsr::printText(U"OtherMouseDragged at ", mousePosition, U"\n");
 					this->receivedMouseEvent(dsr::MouseEventType::MouseMove, dsr::MouseKeyEnum::NoKey, mousePosition);
 				} else if ([event type] == NSEventTypeOtherMouseUp) {
-					dsr::printText(U"OtherMouseUp at ", mousePosition, U"\n");
+					//dsr::printText(U"OtherMouseUp at ", mousePosition, U"\n");
+					this->receivedMouseEvent(dsr::MouseEventType::MouseUp, dsr::MouseKeyEnum::Middle, mousePosition);
 				} else if ([event type] == NSEventTypeMouseMoved) {
-					dsr::printText(U"MouseMoved at ", mousePosition, U"\n");
+					//dsr::printText(U"MouseMoved at ", mousePosition, U"\n");
 					this->receivedMouseEvent(dsr::MouseEventType::MouseMove, dsr::MouseKeyEnum::NoKey, mousePosition);
 				//} else if ([event type] == NSEventTypeMouseEntered) {
 				//	dsr::printText(U"MouseEntered at ", mousePosition, U"\n");
 				//} else if ([event type] == NSEventTypeMouseExited) {
 				//	dsr::printText(U"MouseExited at ", mousePosition, U"\n");
 				} else if ([event type] == NSEventTypeScrollWheel) {
-					dsr::printText(U"ScrollWheel at ", mousePosition, U"\n");
+					//dsr::printText(U"ScrollWheel at ", mousePosition, U"\n");
 					// TODO: Which direction is considered up/down on MacOS when scroll wheels are inverted relative to PC?
 					if (event.scrollingDeltaY > 0.0) {
 						this->receivedMouseEvent(dsr::MouseEventType::Scroll, dsr::MouseKeyEnum::ScrollUp, mousePosition);
@@ -355,52 +358,54 @@ void CocoaWindow::prefetchEvents() {
 			        || [event type] == NSEventTypeKeyUp
 			        || [event type] == NSEventTypeFlagsChanged) {
 				dsr::DsrKey code = getDsrKey(event.keyCode);
-				// TODO: Make sure that the window catches keyboard events instead of corrupting terminal input.
 				if ([event type] == NSEventTypeKeyDown) {
 					if (!(event.isARepeat)) {
-						dsr::printText(U"KeyDown: keyCode ", event.keyCode, U" -> ", getName(code), U"\n");
-						// TODO: Should up and down events require valid character codes from the system?
-						//       An API for sending event to a window can be used to document this and remove arguments where not needed.
-						this->receivedKeyboardEvent(dsr::KeyboardEventType::KeyDown, U'0', code);
+						//dsr::printText(U"KeyDown: keyCode ", event.keyCode, U" -> ", getName(code), U"\n");
+						this->receivedKeyboardEvent(dsr::KeyboardEventType::KeyDown, U'\0', code);
 					}
-					
-					// TODO: Check if the event's character is printable and only enter printable characters.
-					dsr::printText(U"KeyType: keyCode ", event.keyCode, U" -> ", getName(code), U"\n");
-					// TODO: Get the character code.
-					this->receivedKeyboardEvent(dsr::KeyboardEventType::KeyType, U'0', code);
-					
+					// Get typed characters
+					if (event.characters != nullptr) {
+						// Convert to a standard text format.
+						const char *characters = [event.characters cStringUsingEncoding:NSUTF8StringEncoding];
+						if (characters != nullptr) {
+							// Convert to a DSR string.
+							dsr::String dsrCharacters = dsr::string_dangerous_decodeFromData(characters, dsr::CharacterEncoding::BOM_UTF8);
+							// Send one type event for each character.
+							for (intptr_t c = 0; c < string_length(dsrCharacters); c++) {
+								this->receivedKeyboardEvent(dsr::KeyboardEventType::KeyType, dsrCharacters[c], code);
+							}
+						}
+					}
+					//dsr::printText(U"KeyType: keyCode ", event.keyCode, U" -> ", getName(code), U"\n");
 				} else if ([event type] == NSEventTypeKeyUp) {
-					dsr::printText(U"KeyUp: keyCode ", event.keyCode, U" -> ", getName(code), U"\n");
-					
-					// TODO: Should up and down events require valid character codes from the system?
-					this->receivedKeyboardEvent(dsr::KeyboardEventType::KeyUp, U'0', code);
-					
+					//dsr::printText(U"KeyUp: keyCode ", event.keyCode, U" -> ", getName(code), U"\n");
+					this->receivedKeyboardEvent(dsr::KeyboardEventType::KeyUp, U'\0', code);
 				} else if ([event type] == NSEventTypeFlagsChanged) {
-					dsr::printText(U"FlagsChanged\n");
+					//dsr::printText(U"FlagsChanged\n");
 					NSEventModifierFlags newModifierFlags = [event modifierFlags];
 					bool newControlCommand = (newModifierFlags & (NSEventModifierFlagControl | NSEventModifierFlagCommand)) != 0u;
 					bool newShift = (newModifierFlags & NSEventModifierFlagShift) != 0u;
 					bool newAltOption = (newModifierFlags & NSEventModifierFlagOption) != 0u;
 					if (newControlCommand && !pressedControlCommand) {
-						dsr::printText(U"KeyDown: Control\n");
-						this->receivedKeyboardEvent(dsr::KeyboardEventType::KeyDown, U'0', dsr::DsrKey_Control);
+						//dsr::printText(U"KeyDown: Control\n");
+						this->receivedKeyboardEvent(dsr::KeyboardEventType::KeyDown, U'\0', dsr::DsrKey_Control);
 					} else if (!newControlCommand && pressedControlCommand) {
-						dsr::printText(U"KeyUp: Control\n");
-						this->receivedKeyboardEvent(dsr::KeyboardEventType::KeyUp, U'0', dsr::DsrKey_Control);
+						//dsr::printText(U"KeyUp: Control\n");
+						this->receivedKeyboardEvent(dsr::KeyboardEventType::KeyUp, U'\0', dsr::DsrKey_Control);
 					}
 					if (newShift && !pressedShift) {
-						dsr::printText(U"KeyDown: Shift\n");
-						this->receivedKeyboardEvent(dsr::KeyboardEventType::KeyDown, U'0', dsr::DsrKey_Shift);
+						//dsr::printText(U"KeyDown: Shift\n");
+						this->receivedKeyboardEvent(dsr::KeyboardEventType::KeyDown, U'\0', dsr::DsrKey_Shift);
 					} else if (!newShift && pressedShift) {
-						dsr::printText(U"KeyUp: Shift\n");
-						this->receivedKeyboardEvent(dsr::KeyboardEventType::KeyUp, U'0', dsr::DsrKey_Shift);
+						//dsr::printText(U"KeyUp: Shift\n");
+						this->receivedKeyboardEvent(dsr::KeyboardEventType::KeyUp, U'\0', dsr::DsrKey_Shift);
 					}
 					if (newAltOption && !pressedAltOption) {
-						dsr::printText(U"KeyDown: Alt\n");
-						this->receivedKeyboardEvent(dsr::KeyboardEventType::KeyDown, U'0', dsr::DsrKey_Alt);
+						//dsr::printText(U"KeyDown: Alt\n");
+						this->receivedKeyboardEvent(dsr::KeyboardEventType::KeyDown, U'\0', dsr::DsrKey_Alt);
 					} else if (!newAltOption && pressedAltOption) {
-						dsr::printText(U"KeyUp: Alt\n");
-						this->receivedKeyboardEvent(dsr::KeyboardEventType::KeyUp, U'0', dsr::DsrKey_Alt);
+						//dsr::printText(U"KeyUp: Alt\n");
+						this->receivedKeyboardEvent(dsr::KeyboardEventType::KeyUp, U'\0', dsr::DsrKey_Alt);
 					}
 					pressedControlCommand = newControlCommand;
 					pressedShift = newShift;
