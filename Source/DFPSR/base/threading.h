@@ -33,10 +33,15 @@ namespace dsr {
 // Get the number of threads available.
 int getThreadCount();
 
+// Calls the same job function with indices 0 to jobIndex - 1.
+//   This removes the need for capturing the same data over and over again when each task is identical with a different index.
+void threadedWorkByIndex(std::function<void(void *context, int jobIndex)> job, void *context, int jobCount, int maxThreadCount = 0);
+
 // Executes every function in the array of jobs from jobs[0] to jobs[jobCount - 1].
 //   The maxThreadCount argument is the maximum number of threads to use when enough threads are available.
 //     Letting maxThreadCount be 0 removes the limit and uses as many threads as possible, limited only by getThreadCount() - 1 and jobCount.
 //     Letting maxThreadCount be 1 forces single-threaded execution on the calling thread.
+//   Useful when each job to execute is different.
 void threadedWorkFromArray(SafePointer<std::function<void()>> jobs, int jobCount, int maxThreadCount = 0);
 void threadedWorkFromArray(std::function<void()>* jobs, int jobCount, int maxThreadCount = 0);
 

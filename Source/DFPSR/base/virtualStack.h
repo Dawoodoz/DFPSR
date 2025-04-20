@@ -68,6 +68,21 @@ namespace dsr {
 			virtualStack_pop();
 		}
 	};
+
+	template <typename T>
+	class DestructibleVirtualStackAllocation : public SafePointer<T> {
+	public:
+		uint64_t elementCount;
+		DestructibleVirtualStackAllocation(uint64_t elementCount, const char *name = "Nameless virtual stack allocation", uintptr_t alignmentAndMask = ~uintptr_t(0u))
+		: SafePointer<T>(virtualStack_push<T>(elementCount, name, alignmentAndMask)), elementCount(elementCount) {}
+		~DestructibleVirtualStackAllocation() {
+			// Call destructors.
+			for (uint64_t e = 0; e < elementCount; e++) {
+				(*this)[e].~T();
+			}
+			virtualStack_pop();
+		}
+	};
 }
 
 #endif

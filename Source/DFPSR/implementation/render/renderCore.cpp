@@ -436,7 +436,8 @@ void CommandQueue::execute(const IRect &clipBound, int jobCount) const {
 			}
 		}
 	} else {
-		VirtualStackAllocation<std::function<void()>> jobs(jobCount, "Triangle draw jobs in CommandQueue::execute");
+		// Split the target region for multiple threads, with one slice per job.
+		VirtualStackAllocation<IRect> regions(jobCount, "Multi-threaded target pixel regions in CommandQueue::execute");
 		int y1 = clipBound.top();
 		for (int j = 0; j < jobCount; j++) {
 			int y2 = clipBound.top() + ((clipBound.bottom() * (j + 1)) / jobCount);
@@ -445,18 +446,18 @@ void CommandQueue::execute(const IRect &clipBound, int jobCount) const {
 				y2 = (y2 / 2) * 2;
 			}
 			int height = y2 - y1;
-			IRect subBound = IRect(clipBound.left(), y1, clipBound.width(), height);
-			jobs[j] = [this, subBound]() {
-				//this->execute(subBound, 1);
-				for (int i = 0; i < this->buffer.length(); i++) {
-					if (!this->buffer[i].occluded) {
-						executeTriangleDrawing(this->buffer[i], subBound);
-					}
-				}
-			};
+			regions[j] = IRect(clipBound.left(), y1, clipBound.width(), height);
 			y1 = y2;
 		}
-		threadedWorkFromArray(jobs, jobCount);
+		std::function<void(void *context, int jobIndex)> job = [&regions](void *context, int jobIndex) {
+			CommandQueue *commandQueue = (CommandQueue*)context;
+			for (int i = 0; i < commandQueue->buffer.length(); i++) {
+				if (!commandQueue->buffer[i].occluded) {
+					executeTriangleDrawing(commandQueue->buffer[i], regions[jobIndex]);
+				}
+			}
+		};
+		threadedWorkByIndex(job, (void*)this, jobCount);
 	}
 }
 
