@@ -49,6 +49,70 @@ int getThreadCount() {
 	#endif
 }
 
+void threadedWorkByIndex(std::function<void(void *context, int jobIndex)> job, void *context, int jobCount, int maxThreadCount) {
+	#ifdef DISABLE_MULTI_THREADING
+		// Reference implementation
+		for (int i = 0; i < jobCount; i++) {
+			job(context, i);
+		}
+	#else
+		if (jobCount <= 0) {
+			return;
+		} else if (jobCount == 1) {
+			job(context, 0);
+		} else {
+			if (maxThreadCount <= 0) {
+				// No limit.
+				maxThreadCount = jobCount;
+			}
+			// When having more than one thread, one should be reserved for fast responses.
+			//   Otherwise one thread will keep the others waiting while struggling to manage interrupts with expensive context switches.
+			int availableThreads = max(getThreadCount() - 1, 1);
+			int workerCount = min(availableThreads, maxThreadCount, jobCount); // All used threads
+			int helperCount = workerCount - 1; // Excluding the main thread
+			// Multi-threaded work loop
+			if (workerCount == 1) {
+				// Run on the main thread if there is only one.
+				for (int i = 0; i < jobCount; i++) {
+					job(context, i);
+				}
+			} else {
+				// A shared counter protected by getTaskLock.
+				int nextJobIndex = 0;
+				DestructibleVirtualStackAllocation<std::function<void()>> workers(workerCount);
+				DestructibleVirtualStackAllocation<std::future<void>> helpers(helperCount);
+				for (int w = 0; w < workerCount; w++) {
+					workers[w] = [&nextJobIndex, context, job, jobCount]() {
+						while (true) {
+							getTaskLock.lock();
+							int taskIndex = nextJobIndex;
+							nextJobIndex++;
+							getTaskLock.unlock();
+							if (taskIndex < jobCount) {
+								job(context, taskIndex);
+							} else {
+								break;
+							}
+						}
+					};
+				}
+				// Start working in the helper threads
+				for (int h = 0; h < helperCount; h++) {
+					helpers[h] = std::async(std::launch::async, workers[h]);
+				}
+				// Perform the same work on the main thread
+				workers[workerCount - 1]();
+				// Wait for all helpers to complete their work once all tasks have been handed out
+				for (int h = 0; h < helperCount; h++) {
+					if (helpers[h].valid()) {
+						helpers[h].wait();
+					}
+				}
+			}
+		}
+	#endif
+}
+
 void threadedWorkFromArray(std::function<void()>* jobs, int jobCount, int maxThreadCount) {
 	#ifdef DISABLE_MULTI_THREADING
 		// Reference implementation
@@ -79,9 +143,8 @@ void threadedWorkFromArray(std::function<void()>* jobs, int jobCount, int maxThr
 			} else {
 				// A shared counter protected by getTaskLock.
 				int nextJobIndex = 0;
-
-				VirtualStackAllocation<std::function<void()>> workers(workerCount);
-				VirtualStackAllocation<std::future<void>> helpers(helperCount);
+				DestructibleVirtualStackAllocation<std::function<void()>> workers(workerCount);
+				DestructibleVirtualStackAllocation<std::future<void>> helpers(helperCount);
 				for (int w = 0; w < workerCount; w++) {
 					workers[w] = [&nextJobIndex, jobs, jobCount]() {
 						while (true) {
@@ -138,7 +201,7 @@ void threadedSplit(int startIndex, int stopIndex, std::function<void(int startIn
 		task(startIndex, stopIndex);
 	} else {
 		// Use multiple threads
-		VirtualStackAllocation<std::function<void()>> jobs(jobCount);
+		DestructibleVirtualStackAllocation<std::function<void()>> jobs(jobCount);
 		int givenRow = startIndex;
 		for (int s = 0; s < jobCount; s++) {
 			int remainingJobs = jobCount - s;
@@ -173,7 +236,7 @@ void threadedSplit(const IRect& bound, std::function<void(const IRect& bound)> t
 		task(bound);
 	} else {
 		// Use multiple threads
-		VirtualStackAllocation<std::function<void()>> jobs(jobCount);
+		DestructibleVirtualStackAllocation<std::function<void()>> jobs(jobCount);
 		int givenRow = bound.top();
 		for (int s = 0; s < jobCount; s++) {
 			int remainingJobs = jobCount - s;
