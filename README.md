@@ -62,14 +62,13 @@ If you are not redistributing the source code, then you do not have to tell anyo
 Theme, GUI, font and sound APIs are still under active development and may have significant changes before a stable version 1.0 is ready, because some code is just a primitive placeholder until the advanced implementation can replace it, and one must try to actually use the library before usability problems become obvious. Buffer, file, image, draw, filter, string and time APIs are however already quite version stable. You can choose to stick with a specific version for each new project, keep updated with the latest changes, or wait for stable version 1.0.
 
 ## How you can help
-* Port to Macintosh or Wayland using the same principles of minimal dependency.
 * Test this beta version and give feedback on the design before version 1.0 is released.
 * Create different types of game engines with open-source tools.
 
 ## Supported CPU hardware:
-* **Intel/AMD** using **SSE2** intrinsics and optional extensions.
+* **Intel/AMD** using **SSE2**, **AVX** and **AVX2** intrinsics and optional extensions.
 * **ARM** using **NEON** intrinsics.
-* Unknown CPU architectures, without SIMD vectorization as a fallback solution.
+* Unknown CPU architectures, by running the same vector operations without SIMD hardware acceleration. This is still faster than naive loops with one iteration per element, because multiple scalar operations in parallel are better at filling the processor's execution window.
 
 ## Platforms:
 * **Linux**, tested on Mint, Mate, Manjaro, Ubuntu, RaspberryPi OS, Raspbian (Buster or later).
@@ -78,7 +77,7 @@ Currently supporting X11 and Wayland is planned for future versions.
 * **Microsoft Windows**, but slower than on Linux because Windows has lots of background processes and slower threading and memory management.
 
 ## Partial support for:
-* MacOS has software rendering and a CoreAudio sound backend working, but still needs to replace X11 with a native port.
+* MacOS still has features missing in the Cocoa integration, but will soon be officially supported.
 
 ## Might also work on:
 * BSD and Solaris have code targeting the platforms in fileAPI.cpp for getting the application folder, but there are likely some applications missing for running the build script.
