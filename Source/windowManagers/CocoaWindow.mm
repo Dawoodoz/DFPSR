@@ -2,8 +2,7 @@
 // Early alpha version!
 //   Do not use in released applications.
 // Missing features:
-//   * Handling cursor locations outside of the canvas.
-//     Needs to remove the title and button decorations in full screen mode, so that the cursor location does not become corrupted at the top.
+//   * Needs to remove the title and button decorations when in full screen mode, so that the view covers the entire screen instead of getting corrupted mouse coordinates.
 //   * Copy and paste with clipboard.
 //   * Minimizing the window.
 //   * Toggling full-screen from the application and when starting with fullscreen requested.
@@ -33,6 +32,8 @@ private:
 	NSWindow *window = nullptr;
 	// The Core Graphics color space
 	CGColorSpace *colorSpace = nullptr;
+	SInt trackingNumber = 0;
+	bool cursorInside = false;
 	// Last modifiers to allow converting NSEventTypeFlagsChanged into up and down key press events.
 	bool pressedControlCommand = false;
 	bool pressedShift = false;
@@ -311,6 +312,7 @@ void CocoaWindow::prefetchEvents() {
 				dsr::IVector2D mousePosition = dsr::IVector2D(int32_t(point.x), int32_t(canvasHeight - point.y));
 				if ([event type] == NSEventTypeLeftMouseDown) {
 					//dsr::printText(U"LeftMouseDown at ", mousePosition, U"\n");
+					this->cursorInside = true; // In case that enter events are missing, any proof of being inside of the window should be used.
 					this->receivedMouseEvent(dsr::MouseEventType::MouseDown, dsr::MouseKeyEnum::Left, mousePosition);
 				} else if ([event type] == NSEventTypeLeftMouseDragged) {
 					//dsr::printText(U"LeftMouseDragged at ", mousePosition, U"\n");
@@ -319,6 +321,7 @@ void CocoaWindow::prefetchEvents() {
 					//dsr::printText(U"LeftMouseUp at ", mousePosition, U"\n");
 					this->receivedMouseEvent(dsr::MouseEventType::MouseUp, dsr::MouseKeyEnum::Left, mousePosition);
 				} else if ([event type] == NSEventTypeRightMouseDown) {
+					this->cursorInside = true; // In case that enter events are missing, any proof of being inside of the window should be used.
 					//dsr::printText(U"RightMouseDown at ", mousePosition, U"\n");
 					this->receivedMouseEvent(dsr::MouseEventType::MouseDown, dsr::MouseKeyEnum::Right, mousePosition);
 				} else if ([event type] == NSEventTypeRightMouseDragged) {
@@ -328,6 +331,7 @@ void CocoaWindow::prefetchEvents() {
 					//dsr::printText(U"RightMouseUp at ", mousePosition, U"\n");
 					this->receivedMouseEvent(dsr::MouseEventType::MouseUp, dsr::MouseKeyEnum::Right, mousePosition);
 				} else if ([event type] == NSEventTypeOtherMouseDown) {
+					this->cursorInside = true; // In case that enter events are missing, any proof of being inside of the window should be used.
 					//dsr::printText(U"OtherMouseDown at ", mousePosition, U"\n");
 					this->receivedMouseEvent(dsr::MouseEventType::MouseDown, dsr::MouseKeyEnum::Middle, mousePosition);
 				} else if ([event type] == NSEventTypeOtherMouseDragged) {
@@ -337,12 +341,26 @@ void CocoaWindow::prefetchEvents() {
 					//dsr::printText(U"OtherMouseUp at ", mousePosition, U"\n");
 					this->receivedMouseEvent(dsr::MouseEventType::MouseUp, dsr::MouseKeyEnum::Middle, mousePosition);
 				} else if ([event type] == NSEventTypeMouseMoved) {
-					//dsr::printText(U"MouseMoved at ", mousePosition, U"\n");
-					this->receivedMouseEvent(dsr::MouseEventType::MouseMove, dsr::MouseKeyEnum::NoKey, mousePosition);
-				//} else if ([event type] == NSEventTypeMouseEntered) {
-				//	dsr::printText(U"MouseEntered at ", mousePosition, U"\n");
-				//} else if ([event type] == NSEventTypeMouseExited) {
-				//	dsr::printText(U"MouseExited at ", mousePosition, U"\n");
+					//dsr::printText(U"cursorInside = ", this->cursorInside, U"\n");
+					// When not dragging, only allow move events inside of the view, to be consistent with other operating systems.
+					if (this->cursorInside && mousePosition.y >= 0) {
+						//dsr::printText(U"MouseMoved at ", mousePosition, U"\n");
+						this->receivedMouseEvent(dsr::MouseEventType::MouseMove, dsr::MouseKeyEnum::NoKey, mousePosition);
+					}
+				} else if ([event type] == NSEventTypeMouseEntered) {
+					// TODO: This hack assumes that the first entering event goes to our view, but it would be more robust to get the tracking number directly from view.
+					if (this->trackingNumber == 0) this->trackingNumber = event.trackingNumber;
+					// Only accept enter events to our view.
+					if (event.trackingNumber == this->trackingNumber) {
+						this->cursorInside = true;
+						//dsr::printText(U"MouseEntered at ", mousePosition, U" in ", event.trackingNumber, U"\n");
+					}
+				} else if ([event type] == NSEventTypeMouseExited) {
+					// Only accept exit events from our view.
+					if (event.trackingNumber == this->trackingNumber) {
+						this->cursorInside = false;
+						//dsr::printText(U"MouseExited at ", mousePosition, U" in ", event.trackingNumber, U"\n");
+					}
 				} else if ([event type] == NSEventTypeScrollWheel) {
 					//dsr::printText(U"ScrollWheel at ", mousePosition, U"\n");
 					// TODO: Which direction is considered up/down on MacOS when scroll wheels are inverted relative to PC?
