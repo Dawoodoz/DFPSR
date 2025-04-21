@@ -2,13 +2,18 @@
 // Early alpha version!
 //   Do not use in released applications.
 // Missing features:
-//   * Needs to remove the title and button decorations when in full screen mode, so that the view covers the entire screen instead of getting corrupted mouse coordinates.
 //   * Copy and paste with clipboard.
-//   * Minimizing the window.
-//   * Toggling full-screen from the application and when starting with fullscreen requested.
+//     Not yet implemented.
+//   * Minimizing the window
+//     It just bounces back instantly.
+//   * Toggling full-screen
+//     The window and view do not resize when entering or leaving full-screen.
+//     The application does not detect when the window has been maximized.
 //   * Synchronization of canvas upload.
-//   * Setting cursor position and visibility
-//   ...
+//     There is a temporary frame-rate limiting hack to hide the worst glitches.
+//   * Setting cursor position and visibility.
+//     Not yet implemented.
+//   See if anything more is missing...
 
 #import <Cocoa/Cocoa.h>
 
@@ -38,6 +43,9 @@ private:
 	bool pressedControlCommand = false;
 	bool pressedShift = false;
 	bool pressedAltOption = false;
+
+	// TODO: Replace frame-rate throttling with correct synchronization.
+	double lastDisplayTime = 0.0;
 
 	// Double buffering to allow drawing to a canvas while displaying the previous one
 	// The image which can be drawn to, sharing memory with the Cocoa image
@@ -85,7 +93,15 @@ public:
 	~CocoaWindow();
 	// Full-screen
 	void setFullScreen(bool enabled) override {
-		// TODO: Implement full-screen.
+		int newWindowState = enabled ? 2 : 1;
+		if (newWindowState != this->windowState) {
+			if (enabled) {
+				this->window.styleMask &= ~(NSWindowStyleMaskTitled | NSWindowStyleMaskClosable | NSWindowStyleMaskMiniaturizable | NSWindowStyleMaskResizable);
+			} else {
+				this->window.styleMask |= NSWindowStyleMaskTitled | NSWindowStyleMaskClosable | NSWindowStyleMaskMiniaturizable | NSWindowStyleMaskResizable;
+			}
+			this->windowState = newWindowState;
+		}
 	};
 	bool isFullScreen() override { return this->windowState == 2; }
 	// Showing the content
@@ -125,15 +141,13 @@ CocoaWindow::CocoaWindow(const dsr::String& title, int width, int height) {
 	@autoreleasepool {
 		this->window = [[NSWindow alloc]
 		  initWithContentRect:region
-		  styleMask: (
-			  NSWindowStyleMaskTitled
-			| NSWindowStyleMaskClosable
-			| NSWindowStyleMaskMiniaturizable
-			| NSWindowStyleMaskResizable
-		  )
+		  styleMask:0
 		  backing: NSBackingStoreBuffered
 		  defer: NO];
 	}
+
+	this->setFullScreen(fullScreen);
+
 	// Create a color space
 	this->colorSpace = CGColorSpaceCreateWithName(kCGColorSpaceGenericRGB);
 	if (this->colorSpace == nullptr) {
@@ -503,6 +517,14 @@ void CocoaWindow::showCanvas() {
 			view.wantsLayer = YES;
 			view.layer.contents = (__bridge id)image;
 			CGImageRelease(image);
+
+			// TODO: Replace frame-rate throttling with correct synchronization.
+			static const double minimumFrameTime = 1.0 / 120.0;
+			double newTime = dsr::time_getSeconds();
+			if (newTime < this->lastDisplayTime + minimumFrameTime) {
+				dsr::time_sleepSeconds(this->lastDisplayTime + minimumFrameTime - newTime);
+			}
+			this->lastDisplayTime = newTime;
 		}
 	}
 }
