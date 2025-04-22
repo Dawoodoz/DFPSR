@@ -2,18 +2,19 @@
 // Early alpha version!
 //   Do not use in released applications.
 // Missing features:
-//   * Copy and paste with clipboard.
-//     Not yet implemented.
-//   * Minimizing the window
-//     It just bounces back instantly.
 //   * Toggling full-screen
 //     The window and view do not resize when entering or leaving full-screen.
 //     The application does not detect when the window has been maximized.
-//   * Synchronization of canvas upload.
-//     There is a temporary frame-rate limiting hack to hide the worst glitches.
+//   * Minimizing the window
+//     It just bounces back instantly.
+//   * Copy and paste with clipboard.
+//     Not yet implemented.
 //   * Setting cursor position and visibility.
 //     Not yet implemented.
-//   See if anything more is missing...
+
+// Potential optimizations:
+// * Double buffering is disabled for safety by assigining bufferCount to 1 instead of 2 and copying presented pixel data to delayedCanvas.
+//   Find a way to wait for the previous image to be displayed before giving Cocoa the next image, so that a full copy is not needed.
 
 #import <Cocoa/Cocoa.h>
 
@@ -26,7 +27,7 @@
 
 #include "../DFPSR/settings.h"
 
-static const int bufferCount = 2;
+static const int bufferCount = 1;
 
 static bool applicationInitialized = false;
 static NSApplication *application;
@@ -53,12 +54,11 @@ private:
 	bool pressedShift = false;
 	bool pressedAltOption = false;
 
-	// TODO: Replace frame-rate throttling with correct synchronization.
-	double lastDisplayTime = 0.0;
-
 	// Double buffering to allow drawing to a canvas while displaying the previous one
 	// The image which can be drawn to, sharing memory with the Cocoa image
 	dsr::AlignedImageRgbaU8 canvas[bufferCount];
+	// To prevent seeing unfinished scenes when rendering faster than the results can be displayed, a third canvas takes a copy from the finished image.
+	dsr::Buffer delayedCanvas;
 	// An Cocoa image wrapped around the canvas pixel data
 	//NSImage *canvasNS[bufferCount] = {};
 	int drawIndex = 0 % bufferCount;
@@ -513,10 +513,13 @@ void CocoaWindow::showCanvas() {
 		int displayIndex = this->showIndex;
 		NSView *view = [window contentView];
 		if (view != nullptr) {
+			// Get image dimensions.
 			int32_t width = dsr::image_getWidth(this->canvas[displayIndex]);
 			int32_t height = dsr::image_getHeight(this->canvas[displayIndex]);
 			int32_t stride = dsr::image_getStride(this->canvas[displayIndex]);
-			uint8_t *pixelData = dsr::image_dangerous_getData(this->canvas[displayIndex]);
+			// Make a deep clone of the finished image before it gets overwritten by another frame.
+			this->delayedCanvas = dsr::buffer_clone(this->canvas[displayIndex].impl_buffer);
+			uint8_t *pixelData = dsr::buffer_dangerous_getUnsafeData(this->delayedCanvas);
 			CGDataProvider *provider = CGDataProviderCreateWithData(nullptr, pixelData, stride * height, nullptr);
 			CGImage *image = CGImageCreate(width, height, 8, 32, stride, this->colorSpace, kCGBitmapByteOrder32Little | kCGImageAlphaNoneSkipLast, provider, nullptr, false, kCGRenderingIntentDefault);
 			CGDataProviderRelease(provider);
@@ -527,14 +530,6 @@ void CocoaWindow::showCanvas() {
 			view.wantsLayer = YES;
 			view.layer.contents = (__bridge id)image;
 			CGImageRelease(image);
-
-			// TODO: Replace frame-rate throttling with correct synchronization.
-			static const double minimumFrameTime = 1.0 / 120.0;
-			double newTime = dsr::time_getSeconds();
-			if (newTime < this->lastDisplayTime + minimumFrameTime) {
-				dsr::time_sleepSeconds(this->lastDisplayTime + minimumFrameTime - newTime);
-			}
-			this->lastDisplayTime = newTime;
 		}
 	}
 }
