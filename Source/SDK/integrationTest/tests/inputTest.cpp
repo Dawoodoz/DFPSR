@@ -1,4 +1,6 @@
 
+// TODO: Include settings to adapt instructions for specific operating systems, such as control click and command click on MacOS and F keys for insert and pause.
+
 #include "inputTest.h"
 
 using namespace dsr;
@@ -121,11 +123,11 @@ void inputTests_populate(List<Test> &target, int buttonCount, bool relative, boo
 				if (TASK_IS(0)) {
 					font_printLine(canvas, font_getDefault(), U"Scroll in the direction used to reach the top of a document by moving content down.", IVector2D(40, 40), ColorRgbaI32(0, 0, 0, 255));
 				} else if (TASK_IS(1)) {
-					font_printLine(canvas, font_getDefault(), U"Click when you are down scrolling up.", IVector2D(40, 40), ColorRgbaI32(0, 0, 0, 255));
+					font_printLine(canvas, font_getDefault(), U"Click when you are done scrolling up.", IVector2D(40, 40), ColorRgbaI32(0, 0, 0, 255));
 				} else if (TASK_IS(2)) {
 					font_printLine(canvas, font_getDefault(), U"Scroll in the direction used to reach the bottom of a document by moving content up.", IVector2D(40, 40), ColorRgbaI32(0, 0, 0, 255));
 				} else if (TASK_IS(3)) {
-					font_printLine(canvas, font_getDefault(), U"Click when you are down scrolling down.", IVector2D(40, 40), ColorRgbaI32(0, 0, 0, 255));
+					font_printLine(canvas, font_getDefault(), U"Click when you are done scrolling down.", IVector2D(40, 40), ColorRgbaI32(0, 0, 0, 255));
 				}
 			}
 		,

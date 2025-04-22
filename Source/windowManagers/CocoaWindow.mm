@@ -37,9 +37,18 @@ private:
 	NSWindow *window = nullptr;
 	// The Core Graphics color space
 	CGColorSpace *colorSpace = nullptr;
+	// Identity to track enter and exit events for.
 	SInt trackingNumber = 0;
+	// Only accept non-drag move events when inside of the window.
 	bool cursorInside = false;
+	// Keeping track of control and command clicks.
+	// 0 for regular left click.
+	// 1 for control click converted to right mouse button.
+	// 2 for command click converted to middle mouse button.
+	int modifiedClick = 0;
 	// Last modifiers to allow converting NSEventTypeFlagsChanged into up and down key press events.
+	bool pressedControl = false;
+	bool pressedCommand = false;
 	bool pressedControlCommand = false;
 	bool pressedShift = false;
 	bool pressedAltOption = false;
@@ -327,13 +336,35 @@ void CocoaWindow::prefetchEvents() {
 				if ([event type] == NSEventTypeLeftMouseDown) {
 					//dsr::printText(U"LeftMouseDown at ", mousePosition, U"\n");
 					this->cursorInside = true; // In case that enter events are missing, any proof of being inside of the window should be used.
-					this->receivedMouseEvent(dsr::MouseEventType::MouseDown, dsr::MouseKeyEnum::Left, mousePosition);
+					if (this->pressedControl) {
+						// In case that control is released before the click is done, remember that the left click is a right click.
+						this->modifiedClick = 1;
+						this->receivedMouseEvent(dsr::MouseEventType::MouseDown, dsr::MouseKeyEnum::Right, mousePosition);
+					} else if (this->pressedCommand) {
+						// In case that control is released before the click is done, remember that the left click is a middle click.
+						this->modifiedClick = 2;
+						this->receivedMouseEvent(dsr::MouseEventType::MouseDown, dsr::MouseKeyEnum::Middle, mousePosition);
+					} else {
+						// Assume that the user only has one left mouse button, so that the state can be reset on each new left click.
+						this->modifiedClick = 0;
+						this->receivedMouseEvent(dsr::MouseEventType::MouseDown, dsr::MouseKeyEnum::Left, mousePosition);
+					}
 				} else if ([event type] == NSEventTypeLeftMouseDragged) {
 					//dsr::printText(U"LeftMouseDragged at ", mousePosition, U"\n");
 					this->receivedMouseEvent(dsr::MouseEventType::MouseMove, dsr::MouseKeyEnum::NoKey, mousePosition);
 				} else if ([event type] == NSEventTypeLeftMouseUp) {
 					//dsr::printText(U"LeftMouseUp at ", mousePosition, U"\n");
-					this->receivedMouseEvent(dsr::MouseEventType::MouseUp, dsr::MouseKeyEnum::Left, mousePosition);
+					if (this->modifiedClick == 1) {
+						// If the last left click was a control click, then the release should be treated as releasing the right mouse button.
+						this->receivedMouseEvent(dsr::MouseEventType::MouseUp, dsr::MouseKeyEnum::Right, mousePosition);
+						this->modifiedClick = 0;
+					} else if (this->modifiedClick == 2) {
+						// If the last left click was a command click, then the release should be treated as releasing the middle mouse button.
+						this->receivedMouseEvent(dsr::MouseEventType::MouseUp, dsr::MouseKeyEnum::Middle, mousePosition);
+						this->modifiedClick = 0;
+					} else {
+						this->receivedMouseEvent(dsr::MouseEventType::MouseUp, dsr::MouseKeyEnum::Left, mousePosition);
+					}
 				} else if ([event type] == NSEventTypeRightMouseDown) {
 					this->cursorInside = true; // In case that enter events are missing, any proof of being inside of the window should be used.
 					//dsr::printText(U"RightMouseDown at ", mousePosition, U"\n");
@@ -415,6 +446,8 @@ void CocoaWindow::prefetchEvents() {
 				} else if ([event type] == NSEventTypeFlagsChanged) {
 					//dsr::printText(U"FlagsChanged\n");
 					NSEventModifierFlags newModifierFlags = [event modifierFlags];
+					bool newControl = (newModifierFlags & NSEventModifierFlagControl) != 0u;
+					bool newCommand = (newModifierFlags & NSEventModifierFlagCommand) != 0u;
 					bool newControlCommand = (newModifierFlags & (NSEventModifierFlagControl | NSEventModifierFlagCommand)) != 0u;
 					bool newShift = (newModifierFlags & NSEventModifierFlagShift) != 0u;
 					bool newAltOption = (newModifierFlags & NSEventModifierFlagOption) != 0u;
@@ -439,9 +472,11 @@ void CocoaWindow::prefetchEvents() {
 						//dsr::printText(U"KeyUp: Alt\n");
 						this->receivedKeyboardEvent(dsr::KeyboardEventType::KeyUp, U'\0', dsr::DsrKey_Alt);
 					}
-					pressedControlCommand = newControlCommand;
-					pressedShift = newShift;
-					pressedAltOption = newAltOption;
+					this->pressedControl = newControl;
+					this->pressedCommand = newCommand;
+					this->pressedControlCommand = newControlCommand;
+					this->pressedShift = newShift;
+					this->pressedAltOption = newAltOption;
 				}
 			}
 			[application sendEvent:event];
