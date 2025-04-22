@@ -308,7 +308,6 @@ static dsr::DsrKey getDsrKey(uint16_t keyCode) {
 
 void CocoaWindow::prefetchEvents() {
 	@autoreleasepool {
-		// TODO: Send resize events to the program and resize the canvas when the canvas size has changed.
 		NSView *view = [window contentView];
 		CGFloat canvasWidth = NSWidth(view.bounds);
 		CGFloat canvasHeight = NSHeight(view.bounds);
@@ -350,10 +349,8 @@ void CocoaWindow::prefetchEvents() {
 						this->receivedMouseEvent(dsr::MouseEventType::MouseDown, dsr::MouseKeyEnum::Left, mousePosition);
 					}
 				} else if ([event type] == NSEventTypeLeftMouseDragged) {
-					//dsr::printText(U"LeftMouseDragged at ", mousePosition, U"\n");
 					this->receivedMouseEvent(dsr::MouseEventType::MouseMove, dsr::MouseKeyEnum::NoKey, mousePosition);
 				} else if ([event type] == NSEventTypeLeftMouseUp) {
-					//dsr::printText(U"LeftMouseUp at ", mousePosition, U"\n");
 					if (this->modifiedClick == 1) {
 						// If the last left click was a control click, then the release should be treated as releasing the right mouse button.
 						this->receivedMouseEvent(dsr::MouseEventType::MouseUp, dsr::MouseKeyEnum::Right, mousePosition);
@@ -367,29 +364,21 @@ void CocoaWindow::prefetchEvents() {
 					}
 				} else if ([event type] == NSEventTypeRightMouseDown) {
 					this->cursorInside = true; // In case that enter events are missing, any proof of being inside of the window should be used.
-					//dsr::printText(U"RightMouseDown at ", mousePosition, U"\n");
 					this->receivedMouseEvent(dsr::MouseEventType::MouseDown, dsr::MouseKeyEnum::Right, mousePosition);
 				} else if ([event type] == NSEventTypeRightMouseDragged) {
-					//dsr::printText(U"RightMouseDragged at ", mousePosition, U"\n");
 					this->receivedMouseEvent(dsr::MouseEventType::MouseMove, dsr::MouseKeyEnum::NoKey, mousePosition);
 				} else if ([event type] == NSEventTypeRightMouseUp) {
-					//dsr::printText(U"RightMouseUp at ", mousePosition, U"\n");
 					this->receivedMouseEvent(dsr::MouseEventType::MouseUp, dsr::MouseKeyEnum::Right, mousePosition);
 				} else if ([event type] == NSEventTypeOtherMouseDown) {
 					this->cursorInside = true; // In case that enter events are missing, any proof of being inside of the window should be used.
-					//dsr::printText(U"OtherMouseDown at ", mousePosition, U"\n");
 					this->receivedMouseEvent(dsr::MouseEventType::MouseDown, dsr::MouseKeyEnum::Middle, mousePosition);
 				} else if ([event type] == NSEventTypeOtherMouseDragged) {
-					//dsr::printText(U"OtherMouseDragged at ", mousePosition, U"\n");
 					this->receivedMouseEvent(dsr::MouseEventType::MouseMove, dsr::MouseKeyEnum::NoKey, mousePosition);
 				} else if ([event type] == NSEventTypeOtherMouseUp) {
-					//dsr::printText(U"OtherMouseUp at ", mousePosition, U"\n");
 					this->receivedMouseEvent(dsr::MouseEventType::MouseUp, dsr::MouseKeyEnum::Middle, mousePosition);
 				} else if ([event type] == NSEventTypeMouseMoved) {
-					//dsr::printText(U"cursorInside = ", this->cursorInside, U"\n");
 					// When not dragging, only allow move events inside of the view, to be consistent with other operating systems.
 					if (this->cursorInside && mousePosition.y >= 0) {
-						//dsr::printText(U"MouseMoved at ", mousePosition, U"\n");
 						this->receivedMouseEvent(dsr::MouseEventType::MouseMove, dsr::MouseKeyEnum::NoKey, mousePosition);
 					}
 				} else if ([event type] == NSEventTypeMouseEntered) {
@@ -398,17 +387,13 @@ void CocoaWindow::prefetchEvents() {
 					// Only accept enter events to our view.
 					if (event.trackingNumber == this->trackingNumber) {
 						this->cursorInside = true;
-						//dsr::printText(U"MouseEntered at ", mousePosition, U" in ", event.trackingNumber, U"\n");
 					}
 				} else if ([event type] == NSEventTypeMouseExited) {
 					// Only accept exit events from our view.
 					if (event.trackingNumber == this->trackingNumber) {
 						this->cursorInside = false;
-						//dsr::printText(U"MouseExited at ", mousePosition, U" in ", event.trackingNumber, U"\n");
 					}
 				} else if ([event type] == NSEventTypeScrollWheel) {
-					//dsr::printText(U"ScrollWheel at ", mousePosition, U"\n");
-					// TODO: Which direction is considered up/down on MacOS when scroll wheels are inverted relative to PC?
 					if (event.scrollingDeltaY > 0.0) {
 						this->receivedMouseEvent(dsr::MouseEventType::Scroll, dsr::MouseKeyEnum::ScrollUp, mousePosition);
 					}
@@ -423,7 +408,6 @@ void CocoaWindow::prefetchEvents() {
 				dsr::DsrKey code = getDsrKey(event.keyCode);
 				if ([event type] == NSEventTypeKeyDown) {
 					if (!(event.isARepeat)) {
-						//dsr::printText(U"KeyDown: keyCode ", event.keyCode, U" -> ", getName(code), U"\n");
 						this->receivedKeyboardEvent(dsr::KeyboardEventType::KeyDown, U'\0', code);
 					}
 					// Get typed characters
@@ -439,12 +423,9 @@ void CocoaWindow::prefetchEvents() {
 							}
 						}
 					}
-					//dsr::printText(U"KeyType: keyCode ", event.keyCode, U" -> ", getName(code), U"\n");
 				} else if ([event type] == NSEventTypeKeyUp) {
-					//dsr::printText(U"KeyUp: keyCode ", event.keyCode, U" -> ", getName(code), U"\n");
 					this->receivedKeyboardEvent(dsr::KeyboardEventType::KeyUp, U'\0', code);
 				} else if ([event type] == NSEventTypeFlagsChanged) {
-					//dsr::printText(U"FlagsChanged\n");
 					NSEventModifierFlags newModifierFlags = [event modifierFlags];
 					bool newControl = (newModifierFlags & NSEventModifierFlagControl) != 0u;
 					bool newCommand = (newModifierFlags & NSEventModifierFlagCommand) != 0u;
@@ -452,24 +433,18 @@ void CocoaWindow::prefetchEvents() {
 					bool newShift = (newModifierFlags & NSEventModifierFlagShift) != 0u;
 					bool newAltOption = (newModifierFlags & NSEventModifierFlagOption) != 0u;
 					if (newControlCommand && !pressedControlCommand) {
-						//dsr::printText(U"KeyDown: Control\n");
 						this->receivedKeyboardEvent(dsr::KeyboardEventType::KeyDown, U'\0', dsr::DsrKey_Control);
 					} else if (!newControlCommand && pressedControlCommand) {
-						//dsr::printText(U"KeyUp: Control\n");
 						this->receivedKeyboardEvent(dsr::KeyboardEventType::KeyUp, U'\0', dsr::DsrKey_Control);
 					}
 					if (newShift && !pressedShift) {
-						//dsr::printText(U"KeyDown: Shift\n");
 						this->receivedKeyboardEvent(dsr::KeyboardEventType::KeyDown, U'\0', dsr::DsrKey_Shift);
 					} else if (!newShift && pressedShift) {
-						//dsr::printText(U"KeyUp: Shift\n");
 						this->receivedKeyboardEvent(dsr::KeyboardEventType::KeyUp, U'\0', dsr::DsrKey_Shift);
 					}
 					if (newAltOption && !pressedAltOption) {
-						//dsr::printText(U"KeyDown: Alt\n");
 						this->receivedKeyboardEvent(dsr::KeyboardEventType::KeyDown, U'\0', dsr::DsrKey_Alt);
 					} else if (!newAltOption && pressedAltOption) {
-						//dsr::printText(U"KeyUp: Alt\n");
 						this->receivedKeyboardEvent(dsr::KeyboardEventType::KeyUp, U'\0', dsr::DsrKey_Alt);
 					}
 					this->pressedControl = newControl;

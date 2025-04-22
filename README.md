@@ -62,24 +62,22 @@ If you are not redistributing the source code, then you do not have to tell anyo
 Theme, GUI, font and sound APIs are still under active development and may have significant changes before a stable version 1.0 is ready, because some code is just a primitive placeholder until the advanced implementation can replace it, and one must try to actually use the library before usability problems become obvious. Buffer, file, image, draw, filter, string and time APIs are however already quite version stable. You can choose to stick with a specific version for each new project, keep updated with the latest changes, or wait for stable version 1.0.
 
 ## How you can help
-* Test this beta version and give feedback on the design before version 1.0 is released.
+* Test this beta version, report bugs and give feedback on the design before version 1.0 is released.
 * Create different types of game engines with open-source tools.
 
 ## Supported CPU hardware:
-* **Intel/AMD** using **SSE2**, **AVX** and **AVX2** intrinsics and optional extensions.
+* **Intel/AMD** using **SSE2**, **SSSE3**, **AVX** and **AVX2** intrinsics.
 * **ARM** using **NEON** intrinsics.
 * Unknown CPU architectures, by running the same vector operations without SIMD hardware acceleration. This is still faster than naive loops with one iteration per element, because multiple scalar operations in parallel are better at filling the processor's execution window.
+
+## Supported compilers:
+* g++ from the GCC toolchain.
+* clang++ from the Clang toolchain. Support for building with Objective-C and objective-C++ in projects.
 
 ## Platforms:
 * **Linux**, tested on Mint, Mate, Manjaro, Ubuntu, RaspberryPi OS, Raspbian (Buster or later).
 Linux Mint needs the compiler and X11 headers, so run "sudo apt install g++" and "sudo apt install libx11-dev" before compiling.
-Currently supporting X11 and Wayland is planned for future versions.
-* **Microsoft Windows**, but slower than on Linux because Windows has lots of background processes and slower threading and memory management.
-
-## Partial support for:
-* MacOS still has features missing in the Cocoa integration, but will soon be officially supported.
-
-## Might also work on:
-* BSD and Solaris have code targeting the platforms in fileAPI.cpp for getting the application folder, but there are likely some applications missing for running the build script.
-Future Posix compliant systems should only have a few quirks to sort out if it has an X11 server.
-* Big-Endian is supported in theory if enabling the DSR_BIG_ENDIAN macro globally, but this has never actually been tested due to difficulties with targeting such an old system with modern compilers.
+Currently supporting X11.
+Support for Wayland will have to wait until it is possible to create a window without relying on contemporary extensions tied to specific desktop environments that come and go every month.
+* **Microsoft Windows**, but slower than on Linux and MacOS because Windows has very bad scheduling of processes.
+* **MacOS** still has features missing in the Cocoa integration, but will soon be officially supported.
