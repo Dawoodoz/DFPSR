@@ -7,8 +7,6 @@
 //     The application does not detect when the window has been maximized.
 //   * Minimizing the window
 //     It just bounces back instantly.
-//   * Copy and paste with clipboard.
-//     Not yet implemented.
 //   * Setting cursor position and visibility.
 //     Not yet implemented.
 
@@ -115,17 +113,53 @@ public:
 	bool isFullScreen() override { return this->windowState == 2; }
 	// Showing the content
 	void showCanvas() override;
-
-	// TODO: Implement clipboard access.
-	//dsr::ReadableString loadFromClipboard(double timeoutInSeconds) override;
-	//void saveToClipboard(const dsr::ReadableString &text, double timeoutInSeconds) override;
+	// Clipboard access
+	dsr::ReadableString loadFromClipboard(double timeoutInSeconds) override;
+	void saveToClipboard(const dsr::ReadableString &text, double timeoutInSeconds) override;
 };
+
+static dsr::String nsToDsrString(const NSString *text) {
+	dsr::String result;
+	if (text != nullptr) {
+		// Convert to a UTF-8 C string.
+		const char *utf8text = [text cStringUsingEncoding:NSUTF8StringEncoding];
+		if (utf8text != nullptr) {
+			// Convert to a DSR string.
+			result = dsr::string_dangerous_decodeFromData(utf8text, dsr::CharacterEncoding::BOM_UTF8);
+		}
+	}
+	return result;
+}
+
+static NSString *dsrToNsString(const dsr::ReadableString &text) {
+	dsr::Buffer utf8buffer = dsr::string_saveToMemory(text, dsr::CharacterEncoding::BOM_UTF8, dsr::LineEncoding::Lf, false, true);
+	char *utf8text = (char *)dsr::buffer_dangerous_getUnsafeData(utf8buffer);
+	return [NSString stringWithUTF8String:utf8text];
+}
+
+dsr::ReadableString CocoaWindow::loadFromClipboard(double timeoutInSeconds) {
+	NSPasteboard *clipboard = [NSPasteboard generalPasteboard];
+	NSString *text = [clipboard stringForType:NSPasteboardTypeString];
+	if (text != nullptr) {
+		return nsToDsrString(text);
+	} else {
+		return U"";
+	}
+}
+
+void CocoaWindow::saveToClipboard(const dsr::ReadableString &text, double timeoutInSeconds) {
+	NSString *savedText = dsrToNsString(text);
+	NSPasteboard *clipboard = [NSPasteboard generalPasteboard];
+	[clipboard clearContents];
+	[clipboard setString:savedText forType:NSPasteboardTypeString];
+}
 
 void CocoaWindow::updateTitle() {
 	// Encode the title string as null terminated UFT-8.
-	dsr::Buffer utf8_title = dsr::string_saveToMemory(this->title, dsr::CharacterEncoding::BOM_UTF8, dsr::LineEncoding::Lf, false, true);
+	//dsr::Buffer utf8_title = dsr::string_saveToMemory(this->title, dsr::CharacterEncoding::BOM_UTF8, dsr::LineEncoding::Lf, false, true);
 	// Create a native string for MacOS.
-	NSString *windowTitle = [NSString stringWithUTF8String:(char *)(dsr::buffer_dangerous_getUnsafeData(utf8_title))];
+	//NSString *windowTitle = [NSString stringWithUTF8String:(char *)(dsr::buffer_dangerous_getUnsafeData(utf8_title))];
+	NSString *windowTitle = dsrToNsString(this->title);
 	// Set the window title.
 	[window setTitle:windowTitle];
 }
