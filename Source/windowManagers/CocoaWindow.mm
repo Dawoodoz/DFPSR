@@ -3,12 +3,15 @@
 //   Do not use in released applications.
 // Missing features:
 //   * Toggling full-screen
-//     The window and view do not resize when entering or leaving full-screen.
-//     The application does not detect when the window has been maximized.
+//     The menu and shortcuts are not hidden when entering fullscreen using the setFullScreen method.
+//       Real full screen should not make menus appear when hovering.
+//     Pressing the maximize button enters a full screen mode where you can not exit fullscreen without forcefully terminating the application.
+//       On MacOS, maximizing is only supposed to enter a partial fullscreen mode where you can hover at the top to access the menu and window decorations.
 //   * Minimizing the window
 //     It just bounces back instantly.
 //   * Setting cursor position and visibility.
 //     Not yet implemented.
+//   * Turn off the annoying system sounds that are triggered by every key press.
 
 // Potential optimizations:
 // * Double buffering is disabled for safety by assigining bufferCount to 1 instead of 2 and copying presented pixel data to delayedCanvas.
@@ -90,6 +93,7 @@ private:
 		this->updateTitle();
 	}
 	int windowState = 0; // 0=none, 1=windowed, 2=fullscreen
+	void setDecorations(bool decorated);
 public:
 	// Constructors
 	CocoaWindow(const CocoaWindow&) = delete; // Non-copyable because of pointer aliasing.
@@ -99,17 +103,7 @@ public:
 	// Destructor
 	~CocoaWindow();
 	// Full-screen
-	void setFullScreen(bool enabled) override {
-		int newWindowState = enabled ? 2 : 1;
-		if (newWindowState != this->windowState) {
-			if (enabled) {
-				this->window.styleMask &= ~(NSWindowStyleMaskTitled | NSWindowStyleMaskClosable | NSWindowStyleMaskMiniaturizable | NSWindowStyleMaskResizable);
-			} else {
-				this->window.styleMask |= NSWindowStyleMaskTitled | NSWindowStyleMaskClosable | NSWindowStyleMaskMiniaturizable | NSWindowStyleMaskResizable;
-			}
-			this->windowState = newWindowState;
-		}
-	};
+	void setFullScreen(bool enabled) override;
 	bool isFullScreen() override { return this->windowState == 2; }
 	// Showing the content
 	void showCanvas() override;
@@ -154,6 +148,42 @@ void CocoaWindow::saveToClipboard(const dsr::ReadableString &text, double timeou
 	[clipboard setString:savedText forType:NSPasteboardTypeString];
 }
 
+void CocoaWindow::setDecorations(bool decorated) {
+	// NSWindowStyleMaskFullScreen has to be preserved, because it may only be changed by full screen transitions.
+	static const SInt flags = NSWindowStyleMaskTitled | NSWindowStyleMaskClosable | NSWindowStyleMaskMiniaturizable | NSWindowStyleMaskResizable;
+	if (decorated) {
+		this->window.styleMask |= flags;
+	} else {
+		this->window.styleMask &= ~flags;
+	}
+}
+
+// TODO: Get real fullscreen somehow. No visible menu, no shortcuts, nothing appearing when hovering edges, et cetera...
+void CocoaWindow::setFullScreen(bool enabled) {
+	int newWindowState = enabled ? 2 : 1;
+	if (newWindowState != this->windowState) {
+		NSView *view = [window contentView];
+		if (enabled) {
+			// Entering full screen from the start or for an existing window.
+			this->setDecorations(false);
+			NSRect bounds = [[NSScreen mainScreen] frame];
+			[this->window setFrame:bounds display:YES animate:NO];
+			[this->window setCollectionBehavior:NSWindowCollectionBehaviorFullScreenPrimary];
+			this->windowState = 2;
+		} else {
+			if (this->windowState == 2) {
+				// Leaving full screen instead of initializing a new window.
+				[this->window setCollectionBehavior:NSWindowCollectionBehaviorDefault];
+				NSRect bounds = NSMakeRect(0, 0, 800, 600);
+				[this->window setFrame:bounds display:YES animate:NO];
+				[this->window center];
+			}
+			this->setDecorations(true);
+			this->windowState = 1;
+		}
+	}
+}
+
 void CocoaWindow::updateTitle() {
 	// Encode the title string as null terminated UFT-8.
 	//dsr::Buffer utf8_title = dsr::string_saveToMemory(this->title, dsr::CharacterEncoding::BOM_UTF8, dsr::LineEncoding::Lf, false, true);
@@ -180,6 +210,7 @@ CocoaWindow::CocoaWindow(const dsr::String& title, int width, int height) {
 	}
 
 	NSRect region = NSMakeRect(0, 0, width, height);
+
 	// Create a window
 	@autoreleasepool {
 		this->window = [[NSWindow alloc]
