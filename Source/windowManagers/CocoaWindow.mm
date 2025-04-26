@@ -9,7 +9,7 @@
 //       On MacOS, maximizing is only supposed to enter a partial fullscreen mode where you can hover at the top to access the menu and window decorations.
 //   * Minimizing the window
 //     It just bounces back instantly.
-//   * Setting cursor position and visibility.
+//   * Setting cursor position.
 //     Not yet implemented.
 //   * Turn off the annoying system sounds that are triggered by every key press.
 
@@ -72,14 +72,12 @@ private:
 	// Called before the application fetches events from the input queue
 	//   Closing the window, moving the mouse, pressing a key, et cetera
 	void prefetchEvents() override;
-	/*
+
 	// Called to change the cursor visibility and returning true on success
-	void applyCursorVisibility();
 	bool setCursorVisibility(bool visible) override;
 
 	// Place the cursor within the window
-	void setCursorPosition(int x, int y) override;
-	*/
+	//void setCursorPosition(int x, int y) override;
 private:
 	// Helper methods specific to calling XLib
 	void updateTitle();
@@ -146,6 +144,15 @@ void CocoaWindow::saveToClipboard(const dsr::ReadableString &text, double timeou
 	NSPasteboard *clipboard = [NSPasteboard generalPasteboard];
 	[clipboard clearContents];
 	[clipboard setString:savedText forType:NSPasteboardTypeString];
+}
+
+bool CocoaWindow::setCursorVisibility(bool visible) {
+	if (visible) {
+		[NSCursor unhide];
+	} else {
+		[NSCursor hide];
+	}
+	return true;
 }
 
 void CocoaWindow::setDecorations(bool decorated) {
