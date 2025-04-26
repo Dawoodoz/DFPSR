@@ -5,13 +5,13 @@
 //   * Toggling full-screen
 //     The menu and shortcuts are not hidden when entering fullscreen using the setFullScreen method.
 //       Real full screen should not make menus appear when hovering.
+//       The window is also partially outside of the screen by being pushed away by the shortcuts.
 //     Pressing the maximize button enters a full screen mode where you can not exit fullscreen without forcefully terminating the application.
 //       On MacOS, maximizing is only supposed to enter a partial fullscreen mode where you can hover at the top to access the menu and window decorations.
 //   * Minimizing the window
 //     It just bounces back instantly.
 //   * Setting cursor position.
 //     Not yet implemented.
-//   * Turn off the annoying system sounds that are triggered by every key press.
 
 // Potential optimizations:
 // * Double buffering is disabled for safety by assigining bufferCount to 1 instead of 2 and copying presented pixel data to delayedCanvas.
@@ -474,6 +474,7 @@ void CocoaWindow::prefetchEvents() {
 					}
 				}
 				[this->window makeKeyAndOrderFront:nil];
+				[application sendEvent:event];
 			} else if ([event type] == NSEventTypeKeyDown
 			        || [event type] == NSEventTypeKeyUp
 			        || [event type] == NSEventTypeFlagsChanged) {
@@ -525,8 +526,11 @@ void CocoaWindow::prefetchEvents() {
 					this->pressedShift = newShift;
 					this->pressedAltOption = newAltOption;
 				}
+				// TODO: Make sure that this does not break anything important.
+				// Supressing beeps by not forwarding key events to the system.
+			} else {
+				[application sendEvent:event];
 			}
-			[application sendEvent:event];
 			[application updateWindows];
 		}
 		// Handle changes to the window.
