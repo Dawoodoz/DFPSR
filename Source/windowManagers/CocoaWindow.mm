@@ -2,12 +2,7 @@
 // Early alpha version!
 //   Do not use in released applications.
 // Missing features:
-//   * Toggling full-screen
-//     The menu and shortcuts are not hidden when entering fullscreen using the setFullScreen method.
-//       Real full screen should not make menus appear when hovering.
-//       The window is also partially outside of the screen by being pushed away by the shortcuts.
-//     Pressing the maximize button enters a full screen mode where you can not exit fullscreen without forcefully terminating the application.
-//       On MacOS, maximizing is only supposed to enter a partial fullscreen mode where you can hover at the top to access the menu and window decorations.
+//   * Make sure that the manual full screen does not collide with programmatical triggering of full screen.
 //   * Minimizing the window
 //     It just bounces back instantly.
 //   * Setting cursor position.
@@ -37,6 +32,7 @@ class CocoaWindow : public dsr::BackendWindow {
 private:
 	// Handle to the Cocoa window
 	NSWindow *window = nullptr;
+	NSView *view = nullptr;
 	// The Core Graphics color space
 	CGColorSpace *colorSpace = nullptr;
 	// Identity to track enter and exit events for.
@@ -165,25 +161,18 @@ void CocoaWindow::setDecorations(bool decorated) {
 	}
 }
 
-// TODO: Get real fullscreen somehow. No visible menu, no shortcuts, nothing appearing when hovering edges, et cetera...
 void CocoaWindow::setFullScreen(bool enabled) {
 	int newWindowState = enabled ? 2 : 1;
 	if (newWindowState != this->windowState) {
-		NSView *view = [window contentView];
 		if (enabled) {
 			// Entering full screen from the start or for an existing window.
 			this->setDecorations(false);
-			NSRect bounds = [[NSScreen mainScreen] frame];
-			[this->window setFrame:bounds display:YES animate:NO];
-			[this->window setCollectionBehavior:NSWindowCollectionBehaviorFullScreenPrimary];
+			[this->view enterFullScreenMode:[NSScreen mainScreen] withOptions:nil];
 			this->windowState = 2;
 		} else {
 			if (this->windowState == 2) {
 				// Leaving full screen instead of initializing a new window.
-				[this->window setCollectionBehavior:NSWindowCollectionBehaviorDefault];
-				NSRect bounds = NSMakeRect(0, 0, 800, 600);
-				[this->window setFrame:bounds display:YES animate:NO];
-				[this->window center];
+				[this->view exitFullScreenModeWithOptions:nil];
 			}
 			this->setDecorations(true);
 			this->windowState = 1;
@@ -192,10 +181,7 @@ void CocoaWindow::setFullScreen(bool enabled) {
 }
 
 void CocoaWindow::updateTitle() {
-	// Encode the title string as null terminated UFT-8.
-	//dsr::Buffer utf8_title = dsr::string_saveToMemory(this->title, dsr::CharacterEncoding::BOM_UTF8, dsr::LineEncoding::Lf, false, true);
-	// Create a native string for MacOS.
-	//NSString *windowTitle = [NSString stringWithUTF8String:(char *)(dsr::buffer_dangerous_getUnsafeData(utf8_title))];
+	// Get the title and convert it into the native string type.
 	NSString *windowTitle = dsrToNsString(this->title);
 	// Set the window title.
 	[window setTitle:windowTitle];
@@ -226,6 +212,9 @@ CocoaWindow::CocoaWindow(const dsr::String& title, int width, int height) {
 		  backing: NSBackingStoreBuffered
 		  defer: NO];
 	}
+
+	// Get the view
+	this->view = [window contentView];
 
 	this->setFullScreen(fullScreen);
 
@@ -380,9 +369,8 @@ static dsr::DsrKey getDsrKey(uint16_t keyCode) {
 
 void CocoaWindow::prefetchEvents() {
 	@autoreleasepool {
-		NSView *view = [window contentView];
-		CGFloat canvasWidth = NSWidth(view.bounds);
-		CGFloat canvasHeight = NSHeight(view.bounds);
+		CGFloat canvasWidth = NSWidth(this->view.bounds);
+		CGFloat canvasHeight = NSHeight(this->view.bounds);
 		// Process events
 		while (true) {
 			NSEvent *event = [application nextEventMatchingMask:NSEventMaskAny untilDate:nil inMode:NSDefaultRunLoopMode dequeue:YES];
@@ -400,7 +388,7 @@ void CocoaWindow::prefetchEvents() {
 			 || [event type] == NSEventTypeMouseEntered
 			 || [event type] == NSEventTypeMouseExited
 			 || [event type] == NSEventTypeScrollWheel) {
-				NSPoint point = [view convertPoint:[event locationInWindow] fromView:nil];
+				NSPoint point = [this->view convertPoint:[event locationInWindow] fromView:nil];
 				// This nasty hack combines an old mouse event with a canvas size that may have changed since the mouse event was created.
 				// TODO: Find a way to get the canvas height from when the mouse event was actually created, so that lagging while resizing a window can not place click events at the wrong coordiates.
 				dsr::IVector2D mousePosition = dsr::IVector2D(int32_t(point.x), int32_t(canvasHeight - point.y));
@@ -450,7 +438,7 @@ void CocoaWindow::prefetchEvents() {
 					this->receivedMouseEvent(dsr::MouseEventType::MouseUp, dsr::MouseKeyEnum::Middle, mousePosition);
 				} else if ([event type] == NSEventTypeMouseMoved) {
 					// When not dragging, only allow move events inside of the view, to be consistent with other operating systems.
-					if (this->cursorInside && mousePosition.y >= 0) {
+					if ((this->cursorInside || this->windowState == 2) && mousePosition.y >= 0) {
 						this->receivedMouseEvent(dsr::MouseEventType::MouseMove, dsr::MouseKeyEnum::NoKey, mousePosition);
 					}
 				} else if ([event type] == NSEventTypeMouseEntered) {
@@ -587,8 +575,7 @@ void CocoaWindow::showCanvas() {
 		this->showIndex = (this->showIndex + 1) % bufferCount;
 		this->prefetchEvents();
 		int displayIndex = this->showIndex;
-		NSView *view = [window contentView];
-		if (view != nullptr) {
+		if (this->view != nullptr) {
 			// Get image dimensions.
 			int32_t width = dsr::image_getWidth(this->canvas[displayIndex]);
 			int32_t height = dsr::image_getHeight(this->canvas[displayIndex]);
@@ -603,8 +590,8 @@ void CocoaWindow::showCanvas() {
 				dsr::throwError(U"Could not create a Core Graphics image!\n");
 				return;
 			}
-			view.wantsLayer = YES;
-			view.layer.contents = (__bridge id)image;
+			this->view.wantsLayer = YES;
+			this->view.layer.contents = (__bridge id)image;
 			CGImageRelease(image);
 		}
 	}
