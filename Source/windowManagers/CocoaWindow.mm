@@ -5,8 +5,6 @@
 //   * Make sure that the manual full screen does not collide with programmatical triggering of full screen.
 //   * Minimizing the window
 //     It just bounces back instantly.
-//   * Setting cursor position.
-//     Not yet implemented.
 
 // Potential optimizations:
 // * Double buffering is disabled for safety by assigining bufferCount to 1 instead of 2 and copying presented pixel data to delayedCanvas.
@@ -73,7 +71,7 @@ private:
 	bool setCursorVisibility(bool visible) override;
 
 	// Place the cursor within the window
-	//void setCursorPosition(int x, int y) override;
+	bool setCursorPosition(int x, int y) override;
 private:
 	// Helper methods specific to calling XLib
 	void updateTitle();
@@ -149,6 +147,22 @@ bool CocoaWindow::setCursorVisibility(bool visible) {
 		[NSCursor hide];
 	}
 	return true;
+}
+
+bool CocoaWindow::setCursorPosition(int x, int y) {
+	if (this->windowState == 2) {
+		NSRect viewBounds = [this->view bounds];
+		NSRect viewInWindow = [this->view convertRect:viewBounds toView:nil];
+		CGWarpMouseCursorPosition(CGPointMake(viewInWindow.origin.x + x, viewInWindow.origin.y + y));
+		// Prevent stalling after the move.
+		CGAssociateMouseAndMouseCursorPosition(true);
+		// TODO: How can the mouse move event be sent in the correct order in case of already having move events waiting?
+		this->receivedMouseEvent(dsr::MouseEventType::MouseMove, dsr::MouseKeyEnum::NoKey, dsr::IVector2D(x, y));
+		return true;
+	} else {
+		// Setting the cursor position is not reliable in windowed mode, because the fetching the window location often returns outdated coordinates.
+		return false;
+	}
 }
 
 void CocoaWindow::setDecorations(bool decorated) {

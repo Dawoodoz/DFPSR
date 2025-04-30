@@ -69,7 +69,7 @@ private:
 	bool setCursorVisibility(bool visible) override;
 
 	// Place the cursor within the window
-	void setCursorPosition(int x, int y) override;
+	bool setCursorPosition(int x, int y) override;
 private:
 	// Helper methods specific to calling XLib
 	void updateTitle_locked();
@@ -168,12 +168,13 @@ void Win32Window::updateTitle_locked() {
 }
 
 // The method can be seen as locked, but it overrides a virtual method that is independent of threading.
-void Win32Window::setCursorPosition(int x, int y) {
+bool Win32Window::setCursorPosition(int x, int y) {
 	lockWindow();
 		POINT point; point.x = x; point.y = y;
 		ClientToScreen(this->hwnd, &point);
 		SetCursorPos(point.x, point.y);
 	unlockWindow();
+	return true;
 }
 
 bool Win32Window::setCursorVisibility(bool visible) {

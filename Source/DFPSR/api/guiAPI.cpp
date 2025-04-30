@@ -196,9 +196,10 @@ bool dsr::window_getCursorVisibility(const Window& window) {
 	return window->backend->visibleCursor;
 }
 
-void dsr::window_setCursorPosition(const Window& window, int x, int y) {
+bool dsr::window_setCursorPosition(const Window& window, int x, int y) {
 	MUST_EXIST(window, window_setCursorPosition);
-	window->backend->setCursorPosition(x, y);
+	int pixelScale = window->getPixelScale();
+	return window->backend->setCursorPosition(x * pixelScale, y * pixelScale);
 }
 
 void dsr::window_setFullScreen(const Window& window, bool enabled) {
