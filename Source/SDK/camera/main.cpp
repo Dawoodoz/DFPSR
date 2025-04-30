@@ -1,4 +1,7 @@
 ﻿
+// TODO:
+// Test with multiple displays and high DPI mode.
+
 #include "../../DFPSR/includeFramework.h"
 
 using namespace dsr;
@@ -89,9 +92,11 @@ void dsrMain(List<String> args) {
 		DsrKey key = event.dsrKey;
 		if (event.keyboardEventType == KeyboardEventType::KeyDown) {
 			if (key >= DsrKey_1 && key <= DsrKey_9) {
+				// TODO: Create a smooth transition between resolutions.
 				window_setPixelScale(window, key - DsrKey_0);
 			} else if (key == DsrKey_F11) {
 				window_setFullScreen(window, !window_isFullScreen(window));
+				window_setCursorVisibility(window, !window_isFullScreen(window));
 			} else if (key == DsrKey_Escape) {
 				running = false;
 			} else if (key == DsrKey_C) {
@@ -145,15 +150,17 @@ void dsrMain(List<String> args) {
 				cursorWasReset = false;
 			} else {
 				// TODO: Adjust mouse sensitivity somehow.
-				cameraYaw   += double(movement.x) * 0.005;
-				cameraPitch -= double(movement.y) * 0.005;
+				double radiansPerCanvasPixel = 0.005 * double(window_getPixelScale(window));
+				cameraYaw   += double(movement.x) * radiansPerCanvasPixel;
+				cameraPitch -= double(movement.y) * radiansPerCanvasPixel;
 				if (cameraPitch > maxPitch) cameraPitch = maxPitch;
 				if (cameraPitch < -maxPitch) cameraPitch = -maxPitch;
 				if (offset.x < -cursorLimitX || offset.y < -cursorLimitY || offset.x > cursorLimitX || offset.y > cursorLimitY) {
 					// The cursor traveled outside of the box, so it is moved to the center.
-					window_setCursorPosition(window, cursorOrigin.x, cursorOrigin.y);
-					// Remember that the cursor was reset, so that the next mouse move event going to the center can be ignored.
-					cursorWasReset = true;
+					if (window_setCursorPosition(window, cursorOrigin.x, cursorOrigin.y)) {
+						// If successful, remember that the cursor was reset, so that the next mouse move event going to the center can be ignored.
+						cursorWasReset = true;
+					}
 				}
 			}
 		}

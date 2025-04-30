@@ -70,7 +70,7 @@ private:
 	bool setCursorVisibility(bool visible) override;
 
 	// Place the cursor within the window
-	void setCursorPosition(int x, int y) override;
+	bool setCursorPosition(int x, int y) override;
 
 	// Color format
 	dsr::PackOrderIndex packOrderIndex = dsr::PackOrderIndex::RGBA;
@@ -153,10 +153,11 @@ void X11Window::saveToClipboard(const dsr::ReadableString &text, double timeoutI
 	this->listContentInClipboard();
 }
 
-void X11Window::setCursorPosition(int x, int y) {
+bool X11Window::setCursorPosition(int x, int y) {
 	lockWindow();
 		XWarpPointer(this->display, this->window, this->window, 0, 0, this->windowWidth, this->windowHeight, x, y);
 	unlockWindow();
+	return true;
 }
 
 void X11Window::applyCursorVisibility_locked() {

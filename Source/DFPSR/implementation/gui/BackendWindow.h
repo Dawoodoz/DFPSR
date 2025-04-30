@@ -92,7 +92,7 @@ public:
 	// Cursor interface
 	bool visibleCursor = true; // Written to by setCursorVisibility on success.
 	virtual bool setCursorVisibility(bool visible) { return false; } // Returns true on success.
-	virtual void setCursorPosition(int x, int y) {} // Does nothing unless implemented.
+	virtual bool setCursorPosition(int x, int y) { return false; } // Returns true on success.
 public:
 	// Clipboard interface
 	//   If none is replaced, both default implementations will use an internal variable.
