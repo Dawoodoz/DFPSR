@@ -173,6 +173,8 @@ bool Win32Window::setCursorPosition(int x, int y) {
 		POINT point; point.x = x; point.y = y;
 		ClientToScreen(this->hwnd, &point);
 		SetCursorPos(point.x, point.y);
+		// TODO: How can the mouse move event be sent in the correct order in case of already having move events waiting?
+		this->receivedMouseEvent(dsr::MouseEventType::MouseMove, dsr::MouseKeyEnum::NoKey, dsr::IVector2D(x, y));
 	unlockWindow();
 	return true;
 }
