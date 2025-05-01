@@ -219,8 +219,8 @@ namespace dsr {
 	// TODO: Can EXISTS be an argument to disable when non-existing images should be replaced with U(255u) for fast prototyping?
 	// Sample the nearest pixel in a normalized UV scale where one unit equals one lap around the image.
 	// Pre-condition:
-	//   0.0f <= u, 0.0f <= v
-	//   Negative texture coordinates are not allowed, because they are converted to unsigned integers for bitwise operations.
+	//   -256.0f <= u, -256.0f <= v
+	//   Negative texture coordinates may not go below -256, or else they will be stretched out on ARM NEON.
 	template<
 	  bool SQUARE = false,
 	  bool SINGLE_LAYER = false,
@@ -236,8 +236,10 @@ namespace dsr {
 			scaleU = scaleU >> mipLevel;
 			scaleV = scaleV >> mipLevel;
 		}
-		auto xPixel = truncateToU32(u * floatFromU32(scaleU));
-		auto yPixel = truncateToU32(v * floatFromU32(scaleV));
+		// A constant offset applied to texture coordinates to allow using negative coordinates.
+		static const float wrapOffset = 256.0f;
+		auto xPixel = truncateToU32((u + wrapOffset) * floatFromU32(scaleU));
+		auto yPixel = truncateToU32((v + wrapOffset) * floatFromU32(scaleV));
 		return texture_readPixel<SQUARE, SINGLE_LAYER, false, MIP_INSIDE, HIGHEST_RESOLUTION>(texture, xPixel, yPixel, mipLevel);
 	}
 
@@ -323,6 +325,9 @@ namespace dsr {
 		return weightColors(weightColors(colorA, weightXL, colorB, weightXR), weightYT, weightColors(colorC, weightXL, colorD, weightXR), weightYB);
 	}
 
+	// Pre-condition:
+	//   -256.0f <= u, -256.0f <= v
+	//   Negative texture coordinates may not go below -256, or else they will be stretched out on ARM NEON.
 	template<
 	  bool SQUARE = false,
 	  bool SINGLE_LAYER = false,
@@ -341,10 +346,12 @@ namespace dsr {
 			scaleU = scaleU >> mipLevel;
 			scaleV = scaleV >> mipLevel;
 		}
+		// A constant offset applied to texture coordinates to allow using negative coordinates.
+		static const float wrapOffset = 256.0f;
 		// Convert from the normalized 0..1 scale to a 0..size*256 scale for 8 bits of sub-pixel precision.
 		//   Half a pixel is subtracted so that the seam between bi-linear patches end up at the center of texels.
-		auto subCenterX = truncateToU32(u * floatFromU32(scaleU)) - 128u;
-		auto subCenterY = truncateToU32(v * floatFromU32(scaleV)) - 128u;
+		auto subCenterX = truncateToU32((u + wrapOffset) * floatFromU32(scaleU)) - 128u;
+		auto subCenterY = truncateToU32((v + wrapOffset) * floatFromU32(scaleV)) - 128u;
 		// Get the remainders as interpolation weights.
 		auto weightX = subCenterX & 0xFF;
 		auto weightY = subCenterY & 0xFF;

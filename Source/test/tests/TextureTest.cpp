@@ -455,6 +455,38 @@ START_TEST(Texture)
 		ASSERT_EQUAL(texture_sample_nearest(texture, 0.75f, 0.25f, 1u), 1101u);
 		ASSERT_EQUAL(texture_sample_nearest(texture, 0.25f, 0.75f, 1u), 1011u);
 		ASSERT_EQUAL(texture_sample_nearest(texture, 0.75f, 0.75f, 1u), 1111u);
+		ASSERT_EQUAL(texture_sample_nearest(texture, 0.01f, 0.01f, 1u), 1001u);
+		ASSERT_EQUAL(texture_sample_nearest(texture, 0.01f, 0.49f, 1u), 1001u);
+		ASSERT_EQUAL(texture_sample_nearest(texture, 0.49f, 0.01f, 1u), 1001u);
+		ASSERT_EQUAL(texture_sample_nearest(texture, 0.49f, 0.49f, 1u), 1001u);
+		ASSERT_EQUAL(texture_sample_nearest(texture, 0.51f, 0.01f, 1u), 1101u);
+		ASSERT_EQUAL(texture_sample_nearest(texture, 0.51f, 0.49f, 1u), 1101u);
+		ASSERT_EQUAL(texture_sample_nearest(texture, 0.99f, 0.01f, 1u), 1101u);
+		ASSERT_EQUAL(texture_sample_nearest(texture, 0.99f, 0.49f, 1u), 1101u);
+		ASSERT_EQUAL(texture_sample_nearest(texture, 0.01f, 0.51f, 1u), 1011u);
+		ASSERT_EQUAL(texture_sample_nearest(texture, 0.01f, 0.99f, 1u), 1011u);
+		ASSERT_EQUAL(texture_sample_nearest(texture, 0.49f, 0.51f, 1u), 1011u);
+		ASSERT_EQUAL(texture_sample_nearest(texture, 0.49f, 0.99f, 1u), 1011u);
+		ASSERT_EQUAL(texture_sample_nearest(texture, 0.51f, 0.51f, 1u), 1111u);
+		ASSERT_EQUAL(texture_sample_nearest(texture, 0.51f, 0.99f, 1u), 1111u);
+		ASSERT_EQUAL(texture_sample_nearest(texture, 0.99f, 0.51f, 1u), 1111u);
+		ASSERT_EQUAL(texture_sample_nearest(texture, 0.99f, 0.99f, 1u), 1111u);
+		ASSERT_EQUAL(texture_sample_nearest(texture, 0.01f - 256.0f, 0.01f - 256.0f, 1u), 1001u);
+		ASSERT_EQUAL(texture_sample_nearest(texture, 0.01f - 256.0f, 0.49f - 256.0f, 1u), 1001u);
+		ASSERT_EQUAL(texture_sample_nearest(texture, 0.49f - 256.0f, 0.01f - 256.0f, 1u), 1001u);
+		ASSERT_EQUAL(texture_sample_nearest(texture, 0.49f - 256.0f, 0.49f - 256.0f, 1u), 1001u);
+		ASSERT_EQUAL(texture_sample_nearest(texture, 0.51f - 256.0f, 0.01f - 256.0f, 1u), 1101u);
+		ASSERT_EQUAL(texture_sample_nearest(texture, 0.51f - 256.0f, 0.49f - 256.0f, 1u), 1101u);
+		ASSERT_EQUAL(texture_sample_nearest(texture, 0.99f - 256.0f, 0.01f - 256.0f, 1u), 1101u);
+		ASSERT_EQUAL(texture_sample_nearest(texture, 0.99f - 256.0f, 0.49f - 256.0f, 1u), 1101u);
+		ASSERT_EQUAL(texture_sample_nearest(texture, 0.01f - 256.0f, 0.51f - 256.0f, 1u), 1011u);
+		ASSERT_EQUAL(texture_sample_nearest(texture, 0.01f - 256.0f, 0.99f - 256.0f, 1u), 1011u);
+		ASSERT_EQUAL(texture_sample_nearest(texture, 0.49f - 256.0f, 0.51f - 256.0f, 1u), 1011u);
+		ASSERT_EQUAL(texture_sample_nearest(texture, 0.49f - 256.0f, 0.99f - 256.0f, 1u), 1011u);
+		ASSERT_EQUAL(texture_sample_nearest(texture, 0.51f - 256.0f, 0.51f - 256.0f, 1u), 1111u);
+		ASSERT_EQUAL(texture_sample_nearest(texture, 0.51f - 256.0f, 0.99f - 256.0f, 1u), 1111u);
+		ASSERT_EQUAL(texture_sample_nearest(texture, 0.99f - 256.0f, 0.51f - 256.0f, 1u), 1111u);
+		ASSERT_EQUAL(texture_sample_nearest(texture, 0.99f - 256.0f, 0.99f - 256.0f, 1u), 1111u);
 		ASSERT_EQUAL(texture_sample_nearest(texture, 0.5f / 4.0f, 0.5f / 4.0f, 0u), 1002u);
 		ASSERT_EQUAL(texture_sample_nearest(texture, 1.5f / 4.0f, 0.5f / 4.0f, 0u), 1102u);
 		ASSERT_EQUAL(texture_sample_nearest(texture, 2.5f / 4.0f, 0.5f / 4.0f, 0u), 1202u);
@@ -474,6 +506,9 @@ START_TEST(Texture)
 		ASSERT_EQUAL(texture_sample_nearest(texture, -53.0f, -17.0f,  2u), 1000u);
 		ASSERT_EQUAL(texture_sample_nearest(texture, -53.0f, -17.0f,  3u), 1000u);
 		ASSERT_EQUAL(texture_sample_nearest(texture, -53.0f, -17.0f, 15u), 1000u);
+		ASSERT_EQUAL(texture_sample_nearest(texture, -255.7f, -255.7f, 0u), 1112u);
+		ASSERT_EQUAL(texture_sample_nearest(texture, -100.7f, -64.7f, 0u), 1112u);
+		ASSERT_EQUAL(texture_sample_nearest(texture, -84.7f, 0.3f, 0u), 1112u);
 		// TODO: Test the optimization template flags.
 	}
 		// TODO: Test reading pixels from SafePointer with and without a specified row index.

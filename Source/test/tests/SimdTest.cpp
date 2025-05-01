@@ -3,9 +3,7 @@
 #include "../../DFPSR/base/simd.h"
 #include "../../DFPSR/base/endian.h"
 
-// TODO: Test: allLanesNotEqual, allLanesLesser, allLanesGreater, allLanesLesserOrEqual, allLanesGreaterOrEqual, operand ~, smaller bit shifts.
-// TODO: Test that truncateToU32 saturates to minimum and maximum values.
-// TODO: Test that truncateToI32 saturates to minimum and maximum values.
+// TODO: Test: allLanesNotEqual, allLanesLesser, allLanesGreater, allLanesLesserOrEqual, allLanesGreaterOrEqual, operand ~.
 // TODO: Set up a test where SIMD is disabled to force using the reference implementation.
 // TODO: Keep the reference implementation alongside the SIMD types during brute-force testing with millions of random inputs.
 
@@ -901,6 +899,16 @@ START_TEST(Simd)
 	ASSERT_EQUAL_SIMD(clamp(F32x8(-1.5f), F32x8(-35.1f, 1.0f, 2.0f, 45.7f, 0.0f, -1.0f, 2.1f, -1.9f), F32x8(1.5f)), F32x8(-1.5f, 1.0f, 1.5f, 1.5f, 0.0f, -1.0f, 1.5f, -1.5f));
 	ASSERT_EQUAL_SIMD(clampUpper(F32x8(-35.1f, 1.0f, 2.0f, 45.7f, 0.0f, -1.0f, 2.1f, -1.9f), F32x8(1.5f)), F32x8(-35.1f, 1.0f, 1.5f, 1.5f, 0.0f, -1.0f, 1.5f, -1.9f));
 	ASSERT_EQUAL_SIMD(clampLower(F32x8(-1.5f), F32x8(-35.1f, 1.0f, 2.0f, 45.7f, 0.0f, -1.0f, 2.1f, -1.9f)), F32x8(-1.5f, 1.0f, 2.0f, 45.7f, 0.0f, -1.0f, 2.1f, -1.5f));
+
+	// Float to integer conversions
+	// Underflow and overflow is undefined behavior, because NEON will clamp out of bound values while SSE will truncate away higher bits.
+	ASSERT_EQUAL_SIMD(truncateToU32(F32x4(0.01f, 0.99f, 1.01f, 1.99f)),U32x4(0, 0, 1, 1));
+	ASSERT_EQUAL_SIMD(truncateToI32(F32x4(0.01f, 0.99f, 1.01f, 1.99f)),I32x4(0, 0, 1, 1));
+	ASSERT_EQUAL_SIMD(truncateToI32(F32x4(-0.01f, -0.99f, -1.01f, -1.99f)),I32x4(0, 0, -1, -1));
+	ASSERT_EQUAL_SIMD(truncateToU32(F32x4(0.1f, 5.4f, 2.6f, 4.9f)),U32x4(0, 5, 2, 4));
+	ASSERT_EQUAL_SIMD(truncateToI32(F32x4(0.1f, 5.4f, 2.6f, 4.9f)),I32x4(0, 5, 2, 4));
+	ASSERT_EQUAL_SIMD(truncateToI32(F32x4(-1.1f, -0.9f, -0.1f, 0.1f)),I32x4(-1, 0, 0, 0));
+	ASSERT_EQUAL_SIMD(truncateToI32(F32x4(-1000.9f, -23.4f, 123456.7f, 846.999f)),I32x4(-1000, -23, 123456, 846));
 
 	// F32x4 operations
 	ASSERT_EQUAL_SIMD(F32x4(1.1f, -2.2f, 3.3f, 4.0f) + F32x4(2.2f, -4.4f, 6.6f, 8.0f), F32x4(3.3f, -6.6f, 9.9f, 12.0f));
