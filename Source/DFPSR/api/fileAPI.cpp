@@ -27,7 +27,7 @@
 #include "fileAPI.h"
 
 #ifdef USE_MICROSOFT_WINDOWS
-	// Headers for MS-Windows
+	// Headers for MS-Windows.
 	#include <windows.h>
 	#include <synchapi.h>
 #else
@@ -39,6 +39,10 @@
 	#include <dirent.h>
 	// The environment flags contain information such as username, language, color settings, which system shell and window manager is used...
 	extern char **environ;
+#endif
+#ifdef USE_MACOS
+	// Headers for MacOS.
+	#include <libproc.h>
 #endif
 #include <fstream>
 #include <cstdlib>
@@ -411,10 +415,26 @@ String file_followSymbolicLink(const ReadableString &path, bool mustExist) {
 }
 
 String file_getApplicationFolder(bool allowFallback) {
-	#ifdef USE_MICROSOFT_WINDOWS
+	#if defined(USE_MICROSOFT_WINDOWS)
 		NativeChar resultBuffer[maxLength + 1] = {0};
 		GetModuleFileNameW(nullptr, resultBuffer, maxLength);
 		return file_getRelativeParentFolder(fromNativeString(resultBuffer), LOCAL_PATH_SYNTAX);
+	#elif defined(USE_MACOS)
+		// Get the process identifier.
+		pid_t pid = getpid();
+		char pathbuf[PROC_PIDPATHINFO_MAXSIZE];
+		// Get the process file path.
+		size_t size = proc_pidpath(pid, pathbuf, sizeof(pathbuf));
+		if (size != 0) {
+			// If it worked, get its parent directory.
+			return file_getAbsoluteParentFolder(string_dangerous_decodeFromData(pathbuf, CharacterEncoding::BOM_UTF8));
+		} else if (allowFallback) {
+			// If it failed, use a fallback result if allowed by the caller.
+			return file_getCurrentPath();
+		} else {
+			throwError(U"file_getApplicationFolder failed and was not allowed to fall back on the current folder!\n");
+			return U"";
+		}
 	#else
 		NativeChar resultBuffer[maxLength + 1] = {0};
 		if (readlink("/proc/self/exe", resultBuffer, maxLength) != -1) {
