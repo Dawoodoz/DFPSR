@@ -96,7 +96,6 @@ void dsrMain(List<String> args) {
 				window_setPixelScale(window, key - DsrKey_0);
 			} else if (key == DsrKey_F11) {
 				window_setFullScreen(window, !window_isFullScreen(window));
-				window_setCursorVisibility(window, !window_isFullScreen(window));
 			} else if (key == DsrKey_Escape) {
 				running = false;
 			} else if (key == DsrKey_C) {
