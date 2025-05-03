@@ -151,19 +151,21 @@ bool CocoaWindow::setCursorVisibility(bool visible) {
 }
 
 bool CocoaWindow::setCursorPosition(int x, int y) {
-	if (this->windowState == 2) {
-		NSRect viewBounds = [this->view bounds];
-		NSRect viewInWindow = [this->view convertRect:viewBounds toView:nil];
-		CGWarpMouseCursorPosition(CGPointMake(viewInWindow.origin.x + x, viewInWindow.origin.y + y));
-		// Prevent stalling after the move.
-		CGAssociateMouseAndMouseCursorPosition(true);
-		// TODO: How can the mouse move event be sent in the correct order in case of already having move events waiting?
-		this->receivedMouseEvent(dsr::MouseEventType::MouseMove, dsr::MouseKeyEnum::NoKey, dsr::IVector2D(x, y));
-		return true;
-	} else {
-		// Setting the cursor position is not reliable in windowed mode, because the fetching the window location often returns outdated coordinates.
-		return false;
-	}
+	// Get the offset from window pixels to screen pixels.
+	NSWindow *window = [this->view window];
+	NSRect viewBounds = [this->view bounds];
+	NSRect viewRectInScreenCoords = [window convertRectToScreen:viewBounds];
+	CGPoint windowToScreenOffset = CGPointMake(
+	  viewRectInScreenCoords.origin.x,
+	  [[NSScreen mainScreen] frame].size.height - (viewRectInScreenCoords.origin.y + viewRectInScreenCoords.size.height)
+	);
+	// Set the cursor position using screen coordinates.
+	CGWarpMouseCursorPosition(CGPointMake(windowToScreenOffset.x + x, windowToScreenOffset.y + y));
+	// Prevent stalling after the move.
+	CGAssociateMouseAndMouseCursorPosition(true);
+	// TODO: How can the mouse move event be sent in the correct order in case of already having move events waiting?
+	this->receivedMouseEvent(dsr::MouseEventType::MouseMove, dsr::MouseKeyEnum::NoKey, dsr::IVector2D(x, y));
+	return true;
 }
 
 void CocoaWindow::setFullScreen(bool enabled) {
