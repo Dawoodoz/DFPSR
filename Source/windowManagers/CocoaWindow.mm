@@ -1,11 +1,15 @@
 ﻿
-// Early alpha version!
-//   Do not use in released applications.
 // Missing features:
 //   * Make sure that the manual full screen does not collide with programmatical triggering of full screen.
 //     Override the button's action to use a lesser type of full screen where hovering the top allow leaving it without using the keyboard.
 
 // Potential optimizations:
+// * Let the MacOS compositor handle the up-scaling of pixels.
+//   The compositor in MacOS is already rendering the uploaded canvas using bi-linear interpolation when the canvas is smaller than the window.
+//   So changing the interpolation mode and adjusting the frame size to canvas size times pixel scale should give the same result.
+//   It might reduce the amount of data sent to the compositor without depending directly on Metal.
+//   CocoaWindow can then override a canvas upload from the original canvas resolution to reduce the amount of data sent to the compositor.
+//   Then one can get thousands of frames per second, just like when changing the desktop resolution manually, but without getting blurry pixels from scaling with the wrong interpolation mode.
 // * Double buffering is disabled for safety by assigining bufferCount to 1 instead of 2 and copying presented pixel data to delayedCanvas.
 //   Find a way to wait for the previous image to be displayed before giving Cocoa the next image, so that a full copy is not needed.
 
