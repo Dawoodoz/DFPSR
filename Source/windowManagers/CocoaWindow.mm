@@ -3,8 +3,7 @@
 //   Do not use in released applications.
 // Missing features:
 //   * Make sure that the manual full screen does not collide with programmatical triggering of full screen.
-//   * Minimizing the window
-//     It just bounces back instantly.
+//     Override the button's action to use a lesser type of full screen where hovering the top allow leaving it without using the keyboard.
 
 // Potential optimizations:
 // * Double buffering is disabled for safety by assigining bufferCount to 1 instead of 2 and copying presented pixel data to delayedCanvas.
@@ -475,7 +474,6 @@ void CocoaWindow::prefetchEvents() {
 						this->receivedMouseEvent(dsr::MouseEventType::Scroll, dsr::MouseKeyEnum::ScrollDown, mousePosition);
 					}
 				}
-				[this->window makeKeyAndOrderFront:nil];
 				[application sendEvent:event];
 			} else if ([event type] == NSEventTypeKeyDown
 			        || [event type] == NSEventTypeKeyUp
@@ -536,20 +534,22 @@ void CocoaWindow::prefetchEvents() {
 			[application updateWindows];
 		}
 		// Handle changes to the window.
-		if ([window isVisible]) {
-			// The window is still visible, so check if it needs to resize the canvas.
-			int32_t wholeCanvasWidth = int32_t(canvasWidth);
-			int32_t wholeCanvasHeight = int32_t(canvasHeight);
-			if (this->windowWidth != wholeCanvasWidth || this->windowHeight != wholeCanvasHeight) {
-				this->resizeCanvas(wholeCanvasWidth, wholeCanvasHeight);
-				this->windowWidth = wholeCanvasWidth;
-				this->windowHeight = wholeCanvasHeight;
-				// Make a request to resize the canvas
-				this->receivedWindowResize(wholeCanvasWidth, wholeCanvasHeight);
+		if (![window isMiniaturized]) {
+			if ([window isVisible]) {
+				// The window is still visible, so check if it needs to resize the canvas.
+				int32_t wholeCanvasWidth = int32_t(canvasWidth);
+				int32_t wholeCanvasHeight = int32_t(canvasHeight);
+				if (this->windowWidth != wholeCanvasWidth || this->windowHeight != wholeCanvasHeight) {
+					this->resizeCanvas(wholeCanvasWidth, wholeCanvasHeight);
+					this->windowWidth = wholeCanvasWidth;
+					this->windowHeight = wholeCanvasHeight;
+					// Make a request to resize the canvas
+					this->receivedWindowResize(wholeCanvasWidth, wholeCanvasHeight);
+				}
+			} else {
+				// The window is no longer visible, so send a close event to the application.
+				this->receivedWindowCloseEvent();
 			}
-		} else {
-			// The window is no longer visible, so send a close event to the application.
-			this->receivedWindowCloseEvent();
 		}
 	}
 }
