@@ -540,8 +540,8 @@ void CocoaWindow::prefetchEvents() {
 			// The window is still visible, so check if it needs to resize the canvas.
 			int32_t wholeCanvasWidth = int32_t(canvasWidth);
 			int32_t wholeCanvasHeight = int32_t(canvasHeight);
-			this->resizeCanvas(wholeCanvasWidth, wholeCanvasHeight);
 			if (this->windowWidth != wholeCanvasWidth || this->windowHeight != wholeCanvasHeight) {
+				this->resizeCanvas(wholeCanvasWidth, wholeCanvasHeight);
 				this->windowWidth = wholeCanvasWidth;
 				this->windowHeight = wholeCanvasHeight;
 				// Make a request to resize the canvas
@@ -584,29 +584,31 @@ CocoaWindow::~CocoaWindow() {
 }
 
 void CocoaWindow::showCanvas() {
-	@autoreleasepool {
-		this->drawIndex = (this->drawIndex + 1) % bufferCount;
-		this->showIndex = (this->showIndex + 1) % bufferCount;
-		this->prefetchEvents();
-		int displayIndex = this->showIndex;
-		if (this->view != nullptr) {
-			// Get image dimensions.
-			int32_t width = dsr::image_getWidth(this->canvas[displayIndex]);
-			int32_t height = dsr::image_getHeight(this->canvas[displayIndex]);
-			int32_t stride = dsr::image_getStride(this->canvas[displayIndex]);
-			// Make a deep clone of the finished image before it gets overwritten by another frame.
-			this->delayedCanvas = dsr::buffer_clone(this->canvas[displayIndex].impl_buffer);
-			uint8_t *pixelData = dsr::buffer_dangerous_getUnsafeData(this->delayedCanvas);
-			CGDataProvider *provider = CGDataProviderCreateWithData(nullptr, pixelData, stride * height, nullptr);
-			CGImage *image = CGImageCreate(width, height, 8, 32, stride, this->colorSpace, kCGBitmapByteOrder32Little | kCGImageAlphaNoneSkipLast, provider, nullptr, false, kCGRenderingIntentDefault);
-			CGDataProviderRelease(provider);
-			if (image == nullptr) {
-				dsr::throwError(U"Could not create a Core Graphics image!\n");
-				return;
+	if (![window isMiniaturized]) {
+		@autoreleasepool {
+			this->drawIndex = (this->drawIndex + 1) % bufferCount;
+			this->showIndex = (this->showIndex + 1) % bufferCount;
+			this->prefetchEvents();
+			int displayIndex = this->showIndex;
+			if (this->view != nullptr) {
+				// Get image dimensions.
+				int32_t width = dsr::image_getWidth(this->canvas[displayIndex]);
+				int32_t height = dsr::image_getHeight(this->canvas[displayIndex]);
+				int32_t stride = dsr::image_getStride(this->canvas[displayIndex]);
+				// Make a deep clone of the finished image before it gets overwritten by another frame.
+				this->delayedCanvas = dsr::buffer_clone(this->canvas[displayIndex].impl_buffer);
+				uint8_t *pixelData = dsr::buffer_dangerous_getUnsafeData(this->delayedCanvas);
+				CGDataProvider *provider = CGDataProviderCreateWithData(nullptr, pixelData, stride * height, nullptr);
+				CGImage *image = CGImageCreate(width, height, 8, 32, stride, this->colorSpace, kCGBitmapByteOrder32Little | kCGImageAlphaNoneSkipLast, provider, nullptr, false, kCGRenderingIntentDefault);
+				CGDataProviderRelease(provider);
+				if (image == nullptr) {
+					dsr::throwError(U"Could not create a Core Graphics image!\n");
+					return;
+				}
+				this->view.wantsLayer = YES;
+				this->view.layer.contents = (__bridge id)image;
+				CGImageRelease(image);
 			}
-			this->view.wantsLayer = YES;
-			this->view.layer.contents = (__bridge id)image;
-			CGImageRelease(image);
 		}
 	}
 }
