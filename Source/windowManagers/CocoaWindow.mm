@@ -1,7 +1,6 @@
 ﻿
 // Missing features:
-//   * Make sure that the manual full screen does not collide with programmatical triggering of full screen.
-//     Override the button's action to use a lesser type of full screen where hovering the top allow leaving it without using the keyboard.
+// * The zoom button has been disabled to prevent instability from many types of partial full-screen that are currently not supported.
 
 // Potential optimizations:
 // * Let the MacOS compositor handle the up-scaling of pixels.
@@ -88,7 +87,6 @@ private:
 		this->updateTitle();
 	}
 	int windowState = 0; // 0=none, 1=windowed, 2=fullscreen
-	void setDecorations(bool decorated);
 public:
 	// Constructors
 	CocoaWindow(const CocoaWindow&) = delete; // Non-copyable because of pointer aliasing.
@@ -168,22 +166,11 @@ bool CocoaWindow::setCursorPosition(int x, int y) {
 	}
 }
 
-void CocoaWindow::setDecorations(bool decorated) {
-	// NSWindowStyleMaskFullScreen has to be preserved, because it may only be changed by full screen transitions.
-	static const SInt flags = NSWindowStyleMaskTitled | NSWindowStyleMaskClosable | NSWindowStyleMaskMiniaturizable | NSWindowStyleMaskResizable;
-	if (decorated) {
-		this->window.styleMask |= flags;
-	} else {
-		this->window.styleMask &= ~flags;
-	}
-}
-
 void CocoaWindow::setFullScreen(bool enabled) {
 	int newWindowState = enabled ? 2 : 1;
 	if (newWindowState != this->windowState) {
 		if (enabled) {
 			// Entering full screen from the start or for an existing window.
-			this->setDecorations(false);
 			[this->view enterFullScreenMode:[NSScreen mainScreen] withOptions:nil];
 			this->windowState = 2;
 		} else {
@@ -191,7 +178,6 @@ void CocoaWindow::setFullScreen(bool enabled) {
 				// Leaving full screen instead of initializing a new window.
 				[this->view exitFullScreenModeWithOptions:nil];
 			}
-			this->setDecorations(true);
 			this->windowState = 1;
 		}
 	}
@@ -219,16 +205,17 @@ CocoaWindow::CocoaWindow(const dsr::String& title, int width, int height) {
 		height = 300;
 	}
 
-	NSRect region = NSMakeRect(0, 0, width, height);
-
 	// Create a window
 	@autoreleasepool {
 		this->window = [[NSWindow alloc]
-		  initWithContentRect:region
-		  styleMask:0
+		  initWithContentRect:NSMakeRect(0, 0, width, height)
+		  styleMask:NSWindowStyleMaskTitled | NSWindowStyleMaskClosable | NSWindowStyleMaskMiniaturizable | NSWindowStyleMaskResizable
 		  backing: NSBackingStoreBuffered
 		  defer: NO];
 	}
+
+	NSButton* zoomButton = [window standardWindowButton:NSWindowZoomButton];
+	[zoomButton setEnabled:NO];
 
 	// Get the view
 	this->view = [window contentView];
