@@ -159,8 +159,8 @@ bool file_saveBuffer(const ReadableString& filename, Buffer buffer, bool mustWor
 	return true;
 }
 
-const char32_t* file_separator() {
-	return getPathSeparator(LOCAL_PATH_SYNTAX);
+const char32_t* file_separator(PathSyntax pathSyntax IMPLICIT_PATH_SYNTAX) {
+	return getPathSeparator(pathSyntax);
 }
 
 bool file_isSeparator(DsrChar c) {

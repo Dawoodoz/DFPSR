@@ -77,10 +77,10 @@ namespace dsr {
 	// Shortcuts with file extensions are counted as files, not links.
 	String file_followSymbolicLink(const ReadableString &path, bool mustExist = true);
 
-	// Path-syntax: According to the local computer.
+	// Path-syntax: According to pathSyntax, or the local computer if not specified.
 	// Get a path separator for the target operating system.
 	//   Can be used to construct a file path that works for both forward and backward slash separators.
-	const char32_t* file_separator();
+	const char32_t* file_separator(PathSyntax pathSyntax IMPLICIT_PATH_SYNTAX);
 
 	// Path-syntax: This operation can handle separators given from any supported platform.
 	//   because separators will be corrected by file_optimizePath when used to access files.
