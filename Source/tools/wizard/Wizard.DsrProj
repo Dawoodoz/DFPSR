@@ -7,6 +7,7 @@ if !(Skip)
 	# The wizard application is used to launch applications, so make sure that they are built before launching the selection menu.
 	Build "../../SDK" SkipIfBinaryExists Supressed
 	Build "../../templates" SkipIfBinaryExists Supressed
+	Build "../processing" SkipIfBinaryExists Supressed
 end if
 
 Message "Done with building the examples and continuing with building Wizard.DsrProj\n"
