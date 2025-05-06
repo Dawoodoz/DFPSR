@@ -4,13 +4,25 @@
 // TODO:
 // * Create a visual interface for creating new projects from templates in the Wizard application.
 //   Choose to create a new project, choose a template, choose a new name and location.
-// * Replace file paths in the Batch and Shell scripts.
-// * Allow renaming one of the project file, so that references to it will also be updated.
+// * Allow renaming one of the project files, so that references to it will also be updated.
+//   Maybe just select a new project name and give a warning if there are multiple projects in the same folder.
 // * Filter out files using patterns, to avoid cloning executable files and descriptions of template projects.
 
 #include "../../../DFPSR/includeEssentials.h"
 
 using namespace dsr;
+
+struct FileConversion {
+	String sourceFilePath;
+	String targetFilePath;
+	FileConversion(const ReadableString &sourceFilePath, const ReadableString &targetFilePath)
+	: sourceFilePath(sourceFilePath), targetFilePath(targetFilePath) {}
+};
+struct FileOperations {
+	String projectName;
+	List<String> newFolderPaths;
+	List<FileConversion> clonedFiles;
+};
 
 // Post-condition: Returns a list of entry names in the path, by simply segmentmenting by folder separators.
 static List<String> segmentPath(const ReadableString &path) {
@@ -195,7 +207,7 @@ static String updateProjectPaths(const ReadableString &content, const ReadableSt
 	return result;
 }
 
-static void copyFile(const ReadableString &sourcePath, const ReadableString &targetPath) {
+static void copyFile(FileOperations &operations, const ReadableString &sourcePath, const ReadableString &targetPath) {
 	EntryType sourceEntryType = file_getEntryType(sourcePath);
 	EntryType targetEntryType = file_getEntryType(targetPath);
 	if (sourceEntryType != EntryType::File) {
@@ -208,14 +220,36 @@ static void copyFile(const ReadableString &sourcePath, const ReadableString &tar
 		if (!buffer_exists(fileContent)) {
 			throwError(U"The source file ", sourcePath, U" could not be loaded!\n");
 		}
-		ReadableString extension = file_getExtension(sourcePath);
+		ReadableString pathless = file_getPathlessName(sourcePath);
+		ReadableString extension = file_getExtension(pathless);
 		if (string_caseInsensitiveMatch(extension, U"DsrProj")
 		 || string_caseInsensitiveMatch(extension, U"DsrHead")) {
 			//patterns.pushConstruct(U"Import \"", U"", U"\"");
 			fileContent = string_saveToMemory(updateProjectPaths(string_loadFromMemory(fileContent), file_getRelativeParentFolder(sourcePath), file_getRelativeParentFolder(targetPath)), CharacterEncoding::Raw_Latin1);
-		} else if (string_caseInsensitiveMatch(extension, U"bat")) {
-			//TODO: Look for paths containing U"\builder\buildProject.bat", segment the whole path, and update path origin.
-			//fileContent = string_saveToMemory(updateBatchPaths(string_loadFromMemory(fileContent), file_getRelativeParentFolder(sourcePath), file_getRelativeParentFolder(targetPath)), CharacterEncoding::Raw_Latin1);
+		} else if (string_caseInsensitiveMatch(extension, U"sh")
+		        || string_caseInsensitiveMatch(extension, U"bat")) {
+			String sourceParent = file_getRelativeParentFolder(sourcePath);
+			String targetParent = file_getRelativeParentFolder(targetPath);
+			// Entirely replace the old scripts for calling the build system with new ones, because pattern matching without clearly defined bounds is too error-prone.
+			if (string_caseInsensitiveMatch(pathless, U"build_windows.bat")) {
+				String buildScriptPath = changePathOrigin(U"..\\..\\tools\\builder\\buildProject.bat", sourceParent, targetParent, PathSyntax::Windows);
+				String content = string_combine(buildScriptPath, U" ", operations.projectName, U".DsrProj Windows %@%\n");
+				fileContent = string_saveToMemory(content, CharacterEncoding::Raw_Latin1);
+			} else if (string_caseInsensitiveMatch(pathless, U"build_linux.sh")) {
+				String buildScriptPath = changePathOrigin(U"../../tools/builder/buildProject.sh", sourceParent, targetParent, PathSyntax::Posix);
+				String content = string_combine(
+					U"chmod +x ", buildScriptPath, U"\n",
+					buildScriptPath ,U" ", operations.projectName, U".DsrProj Linux %@%\n"
+				);
+				fileContent = string_saveToMemory(content, CharacterEncoding::Raw_Latin1);
+			} else if (string_caseInsensitiveMatch(pathless, U"build_macos.sh")) {
+				String buildScriptPath = changePathOrigin(U"../../tools/builder/buildProject.sh", sourceParent, targetParent, PathSyntax::Posix);
+				String content = string_combine(
+					U"chmod +x ", buildScriptPath, U"\n",
+					buildScriptPath ,U" ", operations.projectName, U".DsrProj MacOS %@%\n"
+				);
+				fileContent = string_saveToMemory(content, CharacterEncoding::Raw_Latin1);
+			}
 		} else if (string_caseInsensitiveMatch(extension, U"sh")) {
 			//TODO: Look for paths containing U"/builder/buildProject.sh", segment the whole path, and update path origin.
 			//fileContent = string_saveToMemory(updateShellPaths(string_loadFromMemory(fileContent), file_getRelativeParentFolder(sourcePath), file_getRelativeParentFolder(targetPath)), CharacterEncoding::Raw_Latin1);
@@ -232,17 +266,6 @@ static void copyFile(const ReadableString &sourcePath, const ReadableString &tar
 		}
 	}
 }
-
-struct FileConversion {
-	String sourceFilePath;
-	String targetFilePath;
-	FileConversion(const ReadableString &sourceFilePath, const ReadableString &targetFilePath)
-	: sourceFilePath(sourceFilePath), targetFilePath(targetFilePath) {}
-};
-struct FileOperations {
-	List<String> newFolderPaths;
-	List<FileConversion> clonedFiles;
-};
 
 static bool createFolder_deferred(FileOperations &operations, const ReadableString &folderPath) {
 	EntryType targetEntryType = file_getEntryType(folderPath);
@@ -272,6 +295,11 @@ static void copyFolder_deferred(FileOperations &operations, const ReadableString
 	} else {
 		if (!file_getFolderContent(sourcePath, [&operations, targetPath](const ReadableString& entryPath, const ReadableString& entryName, EntryType entryType) {
 			if (entryType == EntryType::File) {
+				// Assuming that there is only one project in the folder.
+				if (string_caseInsensitiveMatch(file_getExtension(entryName), U"DsrProj")) {
+					// Remember the project's name from the project file's extensionless name.
+					operations.projectName = file_getExtensionless(entryName);
+				}
 				operations.clonedFiles.pushConstruct(entryPath, file_combinePaths(targetPath, entryName));
 			} else if (entryType == EntryType::Folder) {
 				copyFolder_deferred(operations, entryPath, file_combinePaths(targetPath, entryName));
@@ -292,15 +320,18 @@ void dsrMain(List<String> args) {
 		regressionTest();
 		return;
 	}
+	// Example calls:
+	//   ./Clone -s ../../../templates/basic3D -t ./NewProject
+	//   ./Clone --source ../../../templates/basic3D --target ./NewProject
 	String source;
 	String target;
 	ExpectedArgument expectedArgument = ExpectedArgument::Flag;
 	for (int i = 1; i < args.length(); i++) {
 		ReadableString argument = args[i];
 		if (expectedArgument == ExpectedArgument::Flag) {
-			if (string_caseInsensitiveMatch(argument, U"-s") || string_caseInsensitiveMatch(argument, U"-source")) {
+			if (string_caseInsensitiveMatch(argument, U"-s") || string_caseInsensitiveMatch(argument, U"--source")) {
 				expectedArgument = ExpectedArgument::Source;
-			} else if (string_caseInsensitiveMatch(argument, U"-t") || string_caseInsensitiveMatch(argument, U"-target")) {
+			} else if (string_caseInsensitiveMatch(argument, U"-t") || string_caseInsensitiveMatch(argument, U"--target")) {
 				expectedArgument = ExpectedArgument::Target;
 			} else {
 				sendWarning(U"Unrecognized flag ", argument, U" given to project cloning!\n");
@@ -349,6 +380,6 @@ void dsrMain(List<String> args) {
 	for (intptr_t fileIndex = 0; fileIndex < operations.clonedFiles.length(); fileIndex++) {
 		FileConversion conversion = operations.clonedFiles[fileIndex];
 		printText(U"Cloning file from ", conversion.sourceFilePath, U" to ", conversion.targetFilePath, U"\n");
-		copyFile(conversion.sourceFilePath, conversion.targetFilePath);
+		copyFile(operations, conversion.sourceFilePath, conversion.targetFilePath);
 	}
 }
