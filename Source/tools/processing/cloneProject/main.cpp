@@ -2,10 +2,9 @@
 // A program for cloning a project from one folder to another, while updating relative paths to headers outside of the folder.
 
 // TODO:
+// * Give a warning when the source and target paths are on different drives, because absolute paths do not work across different operating systems.
 // * Create a visual interface for creating new projects from templates in the Wizard application.
 //   Choose to create a new project, choose a template, choose a new name and location.
-// * Allow renaming one of the project files, so that references to it will also be updated.
-//   Maybe just select a new project name and give a warning if there are multiple projects in the same folder.
 // * Filter out files using patterns, to avoid cloning executable files and descriptions of template projects.
 
 #include "../../../DFPSR/includeEssentials.h"
@@ -46,7 +45,6 @@ static List<String> segmentPath(const ReadableString &path) {
 
 // Pre-conditions:
 //   path is either absolute or relative to oldOrigin.
-//   newOrigin may not be absolute.
 // Post-condition:
 //   Returns a path that refers to the same location but relative to newOrigin. 
 static String changePathOrigin(const ReadableString &path, const ReadableString &oldOrigin, const ReadableString &newOrigin, PathSyntax pathSyntax) {
@@ -54,9 +52,6 @@ static String changePathOrigin(const ReadableString &path, const ReadableString 
 	if (file_hasRoot(path, true)) {
 		// The path is absolute, so we will not change it into an absolute path, just clean up any redundancy.
 		return file_optimizePath(path, pathSyntax);
-	}
-	if (file_hasRoot(oldOrigin, true) || file_hasRoot(newOrigin, true)) {
-		throwError(U"Origins to changePathOrigin may not be absolute!\n");
 	}
 	String absoluteOldOrigin = file_getAbsolutePath(oldOrigin);
 	String absoluteNewOrigin = file_getAbsolutePath(newOrigin);
@@ -239,14 +234,14 @@ static void copyFile(FileOperations &operations, const ReadableString &sourcePat
 				String buildScriptPath = changePathOrigin(U"../../tools/builder/buildProject.sh", sourceParent, targetParent, PathSyntax::Posix);
 				String content = string_combine(
 					U"chmod +x ", buildScriptPath, U"\n",
-					buildScriptPath ,U" ", operations.projectName, U".DsrProj Linux %@%\n"
+					buildScriptPath ,U" ", operations.projectName, U".DsrProj Linux $@\n"
 				);
 				fileContent = string_saveToMemory(content, CharacterEncoding::Raw_Latin1);
 			} else if (string_caseInsensitiveMatch(pathless, U"build_macos.sh")) {
 				String buildScriptPath = changePathOrigin(U"../../tools/builder/buildProject.sh", sourceParent, targetParent, PathSyntax::Posix);
 				String content = string_combine(
 					U"chmod +x ", buildScriptPath, U"\n",
-					buildScriptPath ,U" ", operations.projectName, U".DsrProj MacOS %@%\n"
+					buildScriptPath ,U" ", operations.projectName, U".DsrProj MacOS $@\n"
 				);
 				fileContent = string_saveToMemory(content, CharacterEncoding::Raw_Latin1);
 			}
@@ -295,11 +290,6 @@ static void copyFolder_deferred(FileOperations &operations, const ReadableString
 	} else {
 		if (!file_getFolderContent(sourcePath, [&operations, targetPath](const ReadableString& entryPath, const ReadableString& entryName, EntryType entryType) {
 			if (entryType == EntryType::File) {
-				// Assuming that there is only one project in the folder.
-				if (string_caseInsensitiveMatch(file_getExtension(entryName), U"DsrProj")) {
-					// Remember the project's name from the project file's extensionless name.
-					operations.projectName = file_getExtensionless(entryName);
-				}
 				operations.clonedFiles.pushConstruct(entryPath, file_combinePaths(targetPath, entryName));
 			} else if (entryType == EntryType::Folder) {
 				copyFolder_deferred(operations, entryPath, file_combinePaths(targetPath, entryName));
@@ -311,7 +301,7 @@ static void copyFolder_deferred(FileOperations &operations, const ReadableString
 }
 
 enum class ExpectedArgument {
-	Flag, Source, Target
+	Flag, Source, Target, Name
 };
 
 DSR_MAIN_CALLER(dsrMain)
@@ -321,10 +311,11 @@ void dsrMain(List<String> args) {
 		return;
 	}
 	// Example calls:
-	//   ./Clone -s ../../../templates/basic3D -t ./NewProject
-	//   ./Clone --source ../../../templates/basic3D --target ./NewProject
+	//   ./Clone -s ../../../templates/basic3D -t ./NewProject -n NewProject
+	//   ./Clone --source ../../../templates/basic3D --target ./NewProject --name NewProject
 	String source;
 	String target;
+	String projectName;
 	ExpectedArgument expectedArgument = ExpectedArgument::Flag;
 	for (int i = 1; i < args.length(); i++) {
 		ReadableString argument = args[i];
@@ -333,6 +324,8 @@ void dsrMain(List<String> args) {
 				expectedArgument = ExpectedArgument::Source;
 			} else if (string_caseInsensitiveMatch(argument, U"-t") || string_caseInsensitiveMatch(argument, U"--target")) {
 				expectedArgument = ExpectedArgument::Target;
+			} else if (string_caseInsensitiveMatch(argument, U"-n") || string_caseInsensitiveMatch(argument, U"--name")) {
+				expectedArgument = ExpectedArgument::Name;
 			} else {
 				sendWarning(U"Unrecognized flag ", argument, U" given to project cloning!\n");
 			}
@@ -359,6 +352,9 @@ void dsrMain(List<String> args) {
 				target = argument;
 			}
 			expectedArgument = ExpectedArgument::Flag;
+		} else if (expectedArgument == ExpectedArgument::Name) {
+			projectName = argument;
+			expectedArgument = ExpectedArgument::Flag;
 		}
 	}
 	if (string_length(source) == 0 && string_length(target) == 0) {
@@ -372,11 +368,30 @@ void dsrMain(List<String> args) {
 	// List operations to perform ahead of time to prevent bottomless recursion when cloning into a subfolder of the source folder.
 	FileOperations operations;
 	copyFolder_deferred(operations, source, target);
+	// Rename things.
+	for (intptr_t fileIndex = 0; fileIndex < operations.clonedFiles.length(); fileIndex++) {
+		ReadableString fileName = file_getPathlessName(operations.clonedFiles[fileIndex].sourceFilePath);
+		// Assuming that there is only one project in the folder.
+		if (string_caseInsensitiveMatch(file_getExtension(fileName), U"DsrProj")) {
+			// Check if a project name was selected.
+			if (string_length(projectName) == 0) {
+				// No project name selected, so use the file's existing name as the project name.
+				operations.projectName = file_getExtensionless(fileName);
+			} else {
+				// A project name was selected, so rename the project file.
+				ReadableString parentFolder = file_getAbsoluteParentFolder(operations.clonedFiles[fileIndex].targetFilePath);
+				operations.clonedFiles[fileIndex].targetFilePath = file_combinePaths(parentFolder, string_combine(projectName, U".DsrProj"));
+				operations.projectName = projectName;
+			}
+		}
+	}
+	// Create folders.
 	for (intptr_t folderIndex = 0; folderIndex < operations.newFolderPaths.length(); folderIndex++) {
 		ReadableString newFolderPath = operations.newFolderPaths[folderIndex];
 		printText(U"Creating a new folder at ", newFolderPath, U"\n");
 		file_createFolder(newFolderPath);
 	}
+	// Clone files.
 	for (intptr_t fileIndex = 0; fileIndex < operations.clonedFiles.length(); fileIndex++) {
 		FileConversion conversion = operations.clonedFiles[fileIndex];
 		printText(U"Cloning file from ", conversion.sourceFilePath, U" to ", conversion.targetFilePath, U"\n");
