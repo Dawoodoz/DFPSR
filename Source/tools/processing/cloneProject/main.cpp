@@ -3,9 +3,8 @@
 
 // TODO:
 // * Give a warning when the source and target paths are on different drives, because absolute paths do not work across different operating systems.
-// * Create a visual interface for creating new projects from templates in the Wizard application.
-//   Choose to create a new project, choose a template, choose a new name and location.
 // * Filter out files using patterns, to avoid cloning executable files and descriptions of template projects.
+//   build.sh files are currently not handled due to the complex syntax, so paths there might have to be updated manually.
 
 #include "../../../DFPSR/includeEssentials.h"
 

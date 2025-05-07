@@ -1,12 +1,7 @@
 ﻿
 // TODO:
-// * A catalogue of SDK examples with images and descriptions loaded automatically from their folder.
-//     Offer one-click build and execution of SDK examples on multiple platforms, while explaining how the building works.
-//     How can the file library execute other applications and scripts in a portable way when scripts need to select a terminal application to execute them?
-//     Maybe call the builder as a static library and have it call the compiler directly in a simulated terminal window embedded into the wizard, instead of using unreliable scripts?
-// * Let the user browse a file system and select a location for a new or existing project.
-//     Should a multi-frame tab container be created to allow having multiple frames in the same container?
-//         Can let frames have a caption for when used within a container.
+// * Create a reusable file explorer component with lots of features and settings.
+//   Then use it to select a cloning destination for new projects.
 
 #include "../../DFPSR/includeFramework.h"
 #include "../../SDK/SoundEngine/soundEngine.h"
@@ -18,10 +13,18 @@ bool running = true;
 Window window;
 
 // Visual components
-Component projectList;
-Component launchButton;
-Component descriptionLabel;
-Component previewPicture;
+Component selectPanel;
+	Component previewPicture;
+	Component descriptionLabel;
+	Component projectList;
+	Component launchButton;
+	Component cloneButton;
+Component clonePanel;
+	Component sourceBox;
+	Component targetBox;
+	Component nameBox;
+	Component cancelCloneButton;
+	Component acceptCloneButton;
 
 // Media
 int boomSound;
@@ -147,6 +150,29 @@ static void populateInterface() {
 	selectProject(0);
 }
 
+static void cloneProject(const ReadableString &toolPath, const ReadableString &sourceFolderPath, const ReadableString &targetFolderPath, const ReadableString &projectName) {
+	printText(U"Cloning project from ", sourceFolderPath, U" to ", targetFolderPath, U" using project name ", projectName, U"\n");
+	if (file_getEntryType(toolPath) != EntryType::File) {
+		throwError(U"Could not find the cloning tool at ", toolPath, U"! Make sure that it is compiled and located where it should be.\n");
+	}
+	// TODO: Create a waiting panel to allow showing the progress of a process while waiting for results.
+	DsrProcess process = process_execute(toolPath, List<String>(U"-s", sourceFolderPath, U"-t", targetFolderPath, U"-n", projectName));
+	while (true) {
+		DsrProcessStatus status = process_getStatus(process);
+		if (status == DsrProcessStatus::Completed) {
+			printText(U"Done cloning the project.\n");
+			break;
+		} else if (status == DsrProcessStatus::Crashed) {
+			printText(U"The cloning tool failed!\n");
+			break;
+		} else if (status == DsrProcessStatus::NotStarted) {
+			printText(U"Failed to start the cloning tool!\n");
+			break;
+		}
+		time_sleepSeconds(0.001);
+	}	
+}
+
 DSR_MAIN_CALLER(dsrMain)
 void dsrMain(List<String> args) {
 	// Get the application folder.
@@ -172,6 +198,14 @@ void dsrMain(List<String> args) {
 	// Find components.
 	projectList = window_findComponentByName(window, U"projectList");
 	launchButton = window_findComponentByName(window, U"launchButton");
+	cloneButton = window_findComponentByName(window, U"cloneButton");
+	sourceBox = window_findComponentByName(window, U"sourceBox");
+	targetBox = window_findComponentByName(window, U"targetBox");
+	nameBox = window_findComponentByName(window, U"nameBox");
+	cancelCloneButton = window_findComponentByName(window, U"cancelCloneButton");
+	acceptCloneButton = window_findComponentByName(window, U"acceptCloneButton");
+	selectPanel = window_findComponentByName(window, U"selectPanel");
+	clonePanel = window_findComponentByName(window, U"clonePanel");
 	descriptionLabel = window_findComponentByName(window, U"descriptionLabel");
 	previewPicture = window_findComponentByName(window, U"previewPicture");
 
@@ -190,6 +224,48 @@ void dsrMain(List<String> args) {
 				running = false;
 			}
 		}
+	});
+	component_setPressedEvent(cloneButton, []() {
+		// Get the project index.
+		int projectIndex = component_getProperty_integer(projectList, U"SelectedIndex", true);
+		// Check if the project index is valid.
+		if (projectIndex >= 0 && projectIndex < projects.length()) {
+			ReadableString projectFilePath = projects[projectIndex].projectFilePath;
+			ReadableString sourceFolder = file_getAbsoluteParentFolder(projectFilePath);
+			ReadableString projectName = file_getExtensionless(file_getPathlessName(projectFilePath));
+			// Show the clone panel and fill in some information.
+			component_setProperty_string(sourceBox, U"Text", sourceFolder, true);
+			component_setProperty_string(targetBox, U"Text", U"?", true);
+			component_setProperty_string(nameBox, U"Text", projectName, true);
+			component_setProperty_integer(selectPanel, U"Visible", 0, true);
+			component_setProperty_integer(clonePanel, U"Visible", 1, true);
+			soundEngine_playSound(boomSound, false);
+		}
+	});
+	component_setPressedEvent(cancelCloneButton, []() {
+		soundEngine_playSound(boomSound, false);
+		// Show the select panel.
+		component_setProperty_integer(selectPanel, U"Visible", 1, true);
+		component_setProperty_integer(clonePanel, U"Visible", 0, true);
+	});
+	component_setPressedEvent(acceptCloneButton, [applicationFolder]() {
+		soundEngine_playSound(boomSound, false);
+		// Try to clone the selected project.
+		// TODO: Can a reusable function generate executable filenames without hardcoding them in each program?
+		#ifdef USE_MICROSOFT_WINDOWS
+			String cloneExecutableFile = U"Clone.exe";
+		#else
+			String cloneExecutableFile = U"Clone";
+		#endif
+		cloneProject(
+		  file_combinePaths(applicationFolder, U"..", U"processing", U"cloneProject", cloneExecutableFile),
+		  component_getProperty_string(sourceBox, U"Text", true),
+		  component_getProperty_string(targetBox, U"Text", true),
+		  component_getProperty_string(nameBox  , U"Text", true)
+		);
+		// Show the select panel.
+		component_setProperty_integer(selectPanel, U"Visible", 1, true);
+		component_setProperty_integer(clonePanel, U"Visible", 0, true);
 	});
 	component_setPressedEvent(launchButton, []() {
 		soundEngine_playSound(boomSound, false);
@@ -232,9 +308,6 @@ void dsrMain(List<String> args) {
 		while (!(window_executeEvents(window) || updateInterface(false))) {
 			time_sleepSeconds(0.01);
 		}
-		// Fill the background.
-		AlignedImageRgbaU8 canvas = window_getCanvas(window);
-		image_fill(canvas, ColorRgbaI32(64, 64, 64, 255));
 		// Draw interface.
 		window_drawComponents(window);
 		// Show the final image.
