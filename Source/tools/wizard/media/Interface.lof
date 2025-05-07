@@ -1,32 +1,28 @@
 ﻿Begin : Panel
 	Name = "mainPanel"
-	Solid = 0
+	Solid = 1
+	Color = 0,0,0
+	Plain = 1
 	Begin : Panel
-		Name = "upperPanel"
-		Bottom = 50
+		Name = "selectPanel"
 		Solid = 1
-		Color = 190,255,190
-	End
-	Begin : Panel
-		Name = "lowerPanel"
-		Solid = 1
-		Top = 50
 		Color = 0,0,0
 		Plain = 1
+		Visible = 1
 		Begin : Picture
 			Name = "previewPicture"
 			Interpolation = 1
 			Left = 5
 			Top = 5
 			Right = 90%-105
-			Bottom = 70%-5
+			Bottom = 70%-40
 		End
 		Begin : Label
 			Name = "descriptionLabel"
 			Color = 190,255,190
 			Left = 5
 			Right = 90%-105
-			Top = 70%
+			Top = 70%-35
 			Bottom = 100%-5
 		End
 		Begin : ListBox
@@ -39,12 +35,94 @@
 		End
 		Begin : Button
 			Name = "launchButton"
-			Text = "Launch"
+			Text = "Try"
 			Color = 190,255,190
 			Left = 90%-100
+			Right = 95%-55
+			Top = 100%-45
+			Bottom = 100%-5
+		End
+		Begin : Button
+			Name = "cloneButton"
+			Text = "Clone"
+			Color = 190,255,190
+			Left = 95%-50
 			Right = 100%-5
 			Top = 100%-45
 			Bottom = 100%-5
+		End
+	End
+	Begin : Panel
+		Name = "clonePanel"
+		Solid = 1
+		Color = 200,200,150
+		Plain = 0
+		Visible = 0
+		Begin : Label
+			Name = "sourceLabel"
+			Text = "Source path:"
+			Left = 10
+			Right = 100%-10
+			Top = 10
+			Bottom = 30
+		End
+		Begin : TextBox
+			Name = "sourceBox"
+			Text = ""
+			Left = 10
+			Right = 100%-10
+			Top = 30
+			Bottom = 55
+		End
+		Begin : Label
+			Name = "targetLabel"
+			Text = "Target path:"
+			Left = 10
+			Right = 100%-10
+			Top = 70
+			Bottom = 90
+		End
+		Begin : TextBox
+			Name = "targetBox"
+			Text = ""
+			Left = 10
+			Right = 100%-10
+			Top = 90
+			Bottom = 115
+		End
+		Begin : Label
+			Name = "nameLabel"
+			Text = "New project name:"
+			Left = 10
+			Right = 100%-10
+			Top = 130
+			Bottom = 150
+		End
+		Begin : TextBox
+			Name = "nameBox"
+			Text = ""
+			Left = 10
+			Right = 100%-10
+			Top = 150
+			Bottom = 175
+		End
+		Begin : Button
+			Name = "cancelCloneButton"
+			Text = "Cancel"
+			Color = 255,190,190
+			Left = 10
+			Right = 50%-5
+			Top = 100%-45
+			Bottom = 100%-10
+		End
+		Begin : Button
+			Name = "acceptCloneButton"
+			Text = "Begin cloning"
+			Color = 190,255,190
+			Left = 50%+5
+			Right = 100%-10
+			Top = 100%-45
+			Bottom = 100%-10
 		End
 	End
 End
