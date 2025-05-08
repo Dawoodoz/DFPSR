@@ -598,12 +598,8 @@ static LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT message, WPARAM wParam, 
 		}
 		break;
 	case WM_PAINT:
-		//parent->receivedWindowRedrawEvent();
 		// BeginPaint and EndPaint must be called with the given hwnd to prevent having the redraw message sent again
 		parent->redraw(hwnd, false, false);
-		// Passing on the event to prevent flooding with more messages. This is only a temporary solution.
-		// TODO: Avoid overwriting the result with any background color.
-		//result = DefWindowProc(hwnd, message, wParam, lParam);
 		break;
 	case WM_SIZE:
 		// If there's no size during minimization, don't try to resize the canvas
