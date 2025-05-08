@@ -107,7 +107,7 @@ public:
 
 static LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
 
-static TCHAR windowClassName[] = _T("DfpsrWindowApplication");
+static const wchar_t* windowClassName = L"DfpsrWindowApplication";
 
 dsr::ReadableString Win32Window::loadFromClipboard(double timeoutInSeconds) {
 	dsr::String result = U"";
@@ -161,7 +161,8 @@ void Win32Window::saveToClipboard(const dsr::ReadableString &text, double timeou
 
 void Win32Window::updateTitle_locked() {
 	lockWindow();
-		if (!SetWindowTextA(this->hwnd, dsr::FixedAscii<512>(this->title).getPointer())) {
+		dsr::Buffer nativeTitle = dsr::string_saveToMemory(this->title, dsr::CharacterEncoding::BOM_UTF16LE, dsr::LineEncoding::CrLf, false, true);
+		if (!SetWindowTextW(this->hwnd, (wchar_t*)dsr::buffer_dangerous_getUnsafeData(nativeTitle))) {
 			dsr::printText("Warning! Could not assign the window title ", dsr::string_mangleQuote(this->title), ".\n");
 		}
 	unlockWindow();
@@ -225,27 +226,26 @@ static bool registered = false;
 static void registerIfNeeded() {
 	if (!registered) {
 		// The Window structure
-		WNDCLASSEX wincl;
-		memset(&wincl, 0, sizeof(WNDCLASSEX));
-		wincl.hInstance = NULL;
-		wincl.lpszClassName = windowClassName;
-		wincl.lpfnWndProc = WindowProcedure;
+		WNDCLASSEXW wincl;
+		memset(&wincl, 0, sizeof(WNDCLASSEXW));
+		wincl.cbSize = sizeof(WNDCLASSEXW);
 		wincl.style = 0;
-		wincl.cbSize = sizeof(WNDCLASSEX);
-
-		// Use default icon and mouse-pointer
-		wincl.hIcon = LoadIcon (NULL, IDI_APPLICATION);
-		wincl.hIconSm = LoadIcon (NULL, IDI_APPLICATION);
-		wincl.hCursor = LoadCursor (NULL, IDC_ARROW);
-		wincl.lpszMenuName = NULL;
+		wincl.lpfnWndProc = WindowProcedure;
 		wincl.cbClsExtra = 0;
 		wincl.cbWndExtra = sizeof(LPVOID);
+		wincl.hInstance = NULL;
+		wincl.hIcon = LoadIcon (NULL, IDI_APPLICATION);
+		wincl.hCursor = LoadCursor (NULL, IDC_ARROW);
 		// Use Windows's default color as the background of the window
 		wincl.hbrBackground = (HBRUSH)COLOR_BACKGROUND; // TODO: Make black
+		wincl.lpszMenuName = NULL;
+		wincl.lpszClassName = windowClassName;
+		// Use default icon and mouse-pointer
+		wincl.hIconSm = LoadIcon (NULL, IDI_APPLICATION);
 
 		// Register the window class, and if it fails quit the program
-		if (!RegisterClassEx (&wincl)) {
-			dsr::throwError("Call to RegisterClassEx failed!\n");
+		if (!RegisterClassExW (&wincl)) {
+			dsr::throwError("Call to RegisterClassExW failed!\n");
 		}
 
 		registered = true;
@@ -263,10 +263,10 @@ void Win32Window::createWindowed_locked(const dsr::String& title, int width, int
 		registerIfNeeded();
 
 		// The class is registered, let's create the program
-		this->hwnd = CreateWindowEx(
+		this->hwnd = CreateWindowExW(
 		  0,                   // dwExStyle
 		  windowClassName,     // lpClassName
-		  _T(""),              // lpWindowName
+		  L"",                 // lpWindowName
 		  WS_OVERLAPPEDWINDOW, // dwStyle
 		  CW_USEDEFAULT,       // x
 		  CW_USEDEFAULT,       // y
@@ -299,10 +299,10 @@ void Win32Window::createFullscreen_locked() {
 		registerIfNeeded();
 
 		// The class is registered, let's create the program
-		this->hwnd = CreateWindowEx(
+		this->hwnd = CreateWindowExW(
 		  0,                     // dwExStyle
 		  windowClassName,       // lpClassName
-		  _T(""),                // lpWindowName
+		  L"",                   // lpWindowName
 		  WS_POPUP | WS_VISIBLE, // dwStyle
 		  0,                     // x
 		  0,                     // y
