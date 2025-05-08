@@ -21,9 +21,6 @@
 //    3. This notice may not be removed or altered from any source
 //    distribution.
 
-// Include fileAPI without falling back on local syntax implicitly.
-//   This prevents any local syntax from being implied in functions that are supposed to use variable pathSyntax.
-#define NO_IMPLICIT_PATH_SYNTAX
 #include "fileAPI.h"
 
 #ifdef USE_MICROSOFT_WINDOWS
@@ -159,7 +156,7 @@ bool file_saveBuffer(const ReadableString& filename, Buffer buffer, bool mustWor
 	return true;
 }
 
-const char32_t* file_separator(PathSyntax pathSyntax IMPLICIT_PATH_SYNTAX) {
+const char32_t* file_separator(PathSyntax pathSyntax) {
 	return getPathSeparator(pathSyntax);
 }
 

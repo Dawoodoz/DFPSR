@@ -46,16 +46,6 @@ namespace dsr {
 		#error "The target platform was not recognized as one of the supported operating systems in the file API!\n"
 	#endif
 
-	// Define NO_IMPLICIT_PATH_SYNTAX before including the header if you want all PathSyntax arguments to be explicit.
-	// If a function you are calling adds a new pathSyntax argument, defining NO_IMPLICIT_PATH_SYNTAX will make sure that you get a warning from the compiler after upgrading the library.
-	#ifdef NO_IMPLICIT_PATH_SYNTAX
-		// No deafult argument for PathSyntax input.
-		#define IMPLICIT_PATH_SYNTAX
-	#else
-		// Local deafult argument for PathSyntax input.
-		#define IMPLICIT_PATH_SYNTAX = LOCAL_PATH_SYNTAX
-	#endif
-
 	// Path-syntax: According to the local computer.
 	// Post-condition:
 	//   Returns the content of the readable file referred to by file_optimizePath(filename).
@@ -80,7 +70,7 @@ namespace dsr {
 	// Path-syntax: According to pathSyntax, or the local computer if not specified.
 	// Get a path separator for the target operating system.
 	//   Can be used to construct a file path that works for both forward and backward slash separators.
-	const char32_t* file_separator(PathSyntax pathSyntax IMPLICIT_PATH_SYNTAX);
+	const char32_t* file_separator(PathSyntax pathSyntax = LOCAL_PATH_SYNTAX);
 
 	// Path-syntax: This operation can handle separators given from any supported platform.
 	//   because separators will be corrected by file_optimizePath when used to access files.
@@ -113,13 +103,13 @@ namespace dsr {
 	// Path-syntax: Depends on pathSyntax argument.
 	// Turns / and \ into the path convention specified by pathSyntax, which is the local system's by default.
 	// Removes redundant . and .. to reduce the risk of running out of buffer space when calling the system.
-	String file_optimizePath(const ReadableString &path, PathSyntax pathSyntax IMPLICIT_PATH_SYNTAX);
+	String file_optimizePath(const ReadableString &path, PathSyntax pathSyntax = LOCAL_PATH_SYNTAX);
 
 	// Path-syntax: Depends on pathSyntax argument.
 	// Combines two parts into a path and automatically adding a local separator when needed.
 	// Can be used to get the full path of a file in a folder or add another folder to the path.
 	// b may not begin with a separator, because only a is allowed to contain the root.
-	String file_combinePaths(const ReadableString &a, const ReadableString &b, PathSyntax pathSyntax IMPLICIT_PATH_SYNTAX);
+	String file_combinePaths(const ReadableString &a, const ReadableString &b, PathSyntax pathSyntax = LOCAL_PATH_SYNTAX);
 	// Extended to allow combining three or more paths.
 	// Example:
 	//   String fullPath = file_combinePaths(myApplicationPath, U"myFolder", U"myOtherFolder, U"myFile.txt");
@@ -132,12 +122,12 @@ namespace dsr {
 	// Post-condition: Returns true iff path starts from a root, according to the path syntax.
 	//                 Implicit drives on Windows using \ are treated as roots because we know that there is nothing above them.
 	// If treatHomeFolderAsRoot is true, starting from the /home/username folder using the Posix ~ alias will be allowed as a root as well, because we can't append it behind another path.
-	bool file_hasRoot(const ReadableString &path, bool treatHomeFolderAsRoot, PathSyntax pathSyntax IMPLICIT_PATH_SYNTAX);
+	bool file_hasRoot(const ReadableString &path, bool treatHomeFolderAsRoot, PathSyntax pathSyntax = LOCAL_PATH_SYNTAX);
 
 	// Path-syntax: Depends on pathSyntax argument.
 	// Returns true iff path is a root without any files nor folder names following.
 	//   Does not check if it actually exists, so use file_getEntryType on the actual folders and files for verifying existence.
-	bool file_isRoot(const ReadableString &path, bool treatHomeFolderAsRoot, PathSyntax pathSyntax IMPLICIT_PATH_SYNTAX);
+	bool file_isRoot(const ReadableString &path, bool treatHomeFolderAsRoot, PathSyntax pathSyntax = LOCAL_PATH_SYNTAX);
 
 	// DSR_MAIN_CALLER is a convenient wrapper for getting input arguments as a list of portable Unicode strings.
 	//   The actual main function gets placed in DSR_MAIN_CALLER, which calls the given function.
@@ -216,7 +206,7 @@ namespace dsr {
 	// Going outside of a relative start will add .. to the path.
 	//   Depending on which current directory the result is applied to, the absolute path may end up as a root followed by multiple .. going nowhere.
 	// Going outside of the absolute root returns U"?" as an error code.
-	String file_getRelativeParentFolder(const ReadableString &path, PathSyntax pathSyntax IMPLICIT_PATH_SYNTAX);
+	String file_getRelativeParentFolder(const ReadableString &path, PathSyntax pathSyntax = LOCAL_PATH_SYNTAX);
 
 	// Gets the canonical parent folder using the current directory.
 	// This function for getting the parent folder treats path relative to the current directory and expands the result into an absolute path.
@@ -231,7 +221,7 @@ namespace dsr {
 	// A theoretical version of file_getAbsoluteParentFolder for evaluation on a theoretical system without actually calling file_getCurrentPath or running on the given system.
 	// Path-syntax: Depends on pathSyntax argument.
 	// Post-condition: Returns the absolute parent to the given path, or U"?" if trying to leave the root or use a tilde home alias.
-	String file_getTheoreticalAbsoluteParentFolder(const ReadableString &path, const ReadableString &currentPath, PathSyntax pathSyntax IMPLICIT_PATH_SYNTAX);
+	String file_getTheoreticalAbsoluteParentFolder(const ReadableString &path, const ReadableString &currentPath, PathSyntax pathSyntax = LOCAL_PATH_SYNTAX);
 
 	// Gets the canonical absolute version of the path.
 	// Current directory is expanded, but not user accounts.
@@ -243,7 +233,7 @@ namespace dsr {
 	// Current directory is expanded, but not user accounts.
 	// Path-syntax: Depends on pathSyntax argument.
 	// Post-condition: Returns an absolute version of the path.
-	String file_getTheoreticalAbsolutePath(const ReadableString &path, const ReadableString &currentPath, PathSyntax pathSyntax IMPLICIT_PATH_SYNTAX);
+	String file_getTheoreticalAbsolutePath(const ReadableString &path, const ReadableString &currentPath, PathSyntax pathSyntax = LOCAL_PATH_SYNTAX);
 
 	// Path-syntax: According to the local computer.
 	// Pre-condition: filename must refer to a file so that file_getEntryType(filename) == EntryType::File.
