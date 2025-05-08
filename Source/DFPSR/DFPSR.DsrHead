@@ -45,6 +45,8 @@ if Graphics
 		Link "kernel32"
 		Link "comctl32"
 		WindowManager = "../windowManagers/Win32Window.cpp"
+		# If the UNICODE macro is not set, SetWindowTextW will behave as SetWindowTextA and null terminate from the second byte in the first character.
+		CompilerFlag "-DUNICODE"
 	end if
 end if
 Crawl WindowManager
