@@ -180,7 +180,7 @@ void dsrMain(List<String> args) \
 	} \
 }
 
-const dsr::String inputPath = dsr::string_combine(U"test", file_separator(), U"input", file_separator());
-const dsr::String expectedPath = dsr::string_combine(U"test", file_separator(), U"expected", file_separator());
+const String inputPath = string_combine(U"test", file_separator(), U"input", file_separator());
+const String expectedPath = string_combine(U"test", file_separator(), U"expected", file_separator());
 
 #endif
