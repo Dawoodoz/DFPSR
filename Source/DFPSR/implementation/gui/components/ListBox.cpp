@@ -161,7 +161,7 @@ void ListBox::receiveMouseEvent(const MouseEvent& event) {
 }
 
 void ListBox::receiveKeyboardEvent(const KeyboardEvent& event) {
-	if (event.keyboardEventType == KeyboardEventType::KeyType) {
+	if (event.keyboardEventType == KeyboardEventType::KeyDown) {
 		int64_t contentLength = this->list.value.length();
 		int64_t oldIndex = this->selectedIndex.value;
 		if (contentLength > 1) {

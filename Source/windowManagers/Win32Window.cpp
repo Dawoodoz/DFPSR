@@ -570,16 +570,8 @@ static LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT message, WPARAM wParam, 
 		break;
 	case WM_KEYDOWN: case WM_SYSKEYDOWN: case WM_KEYUP: case WM_SYSKEYUP:
 		{
-			dsr::DsrChar character;
-			if (IsWindowUnicode(hwnd)) {
-				dsr::CharacterEncoding encoding = dsr::CharacterEncoding::BOM_UTF16LE;
-				dsr::String characterString = dsr::string_dangerous_decodeFromData((const void*)&wParam, encoding);
-				character = characterString[0]; // Convert from UTF-16 surrogate to UTF-32 Unicode character
-			} else {
-				character = wParam; // Raw ansi character
-			}
+			dsr::DsrChar character = wParam; // Raw 16-bit character
 			dsr::DsrKey dsrKey = getDsrKey(wParam); // Portable key-code
-			
 			bool previouslyPressed = lParam & (1 << 30);
 			// For now, just let Windows send both Alt and Ctrl events from AltGr.
 			//   Would however be better if it could be consistent with other platforms.
@@ -588,13 +580,21 @@ static LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT message, WPARAM wParam, 
 				if (!previouslyPressed) {
 					// Physical key down
 					parent->receivedKeyboardEvent(dsr::KeyboardEventType::KeyDown, character, dsrKey);
+					dsr::printText(U"Down event (key = ", dsrKey, U")\n");
 				}
-				// Press typing with repeat
-				parent->receivedKeyboardEvent(dsr::KeyboardEventType::KeyType, character, dsrKey);
 			} else { // message == WM_KEYUP || message == WM_SYSKEYUP
 				// Physical key up
 				parent->receivedKeyboardEvent(dsr::KeyboardEventType::KeyUp, character, dsrKey);
+				dsr::printText(U"Up event (key = ", dsrKey, U")\n");
 			}
+		}
+		break;
+	case WM_CHAR:
+		{
+			// Typing event.
+			dsr::DsrChar character = wParam; // Raw 16-bit character
+			dsr::DsrKey dsrKey = getDsrKey(wParam); // Portable key-code
+			parent->receivedKeyboardEvent(dsr::KeyboardEventType::KeyType, character, dsrKey);
 		}
 		break;
 	case WM_PAINT:
