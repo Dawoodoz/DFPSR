@@ -163,7 +163,9 @@ void DsrWindow::sendMouseEvent(const MouseEvent& event) {
 	MouseEvent scaledEvent = event / this->pixelScale;
 	// Send the global event
 	this->callback_windowMouseEvent(scaledEvent);
-	if (this->mainPanel->getVisible() && this->mainPanel->pointIsInside(scaledEvent.position)) {
+	// To pass the event to the main panel, the panel has to be visible with the cursor inside of it,
+	//   unless it is a drag move or button release in which the event should never be blocked.
+	if ((this->mainPanel->getVisible() && this->mainPanel->pointIsInside(scaledEvent.position)) || event.mouseEventType == MouseEventType::MouseUp || this->mainPanel->holdCount > 0) {
 		// In case of the root panel not covering the entire window, adjust input coordinates to the panel's local system.
 		scaledEvent.position -= this->mainPanel->location.upperLeft();
 		// Send to the main panel and its components
