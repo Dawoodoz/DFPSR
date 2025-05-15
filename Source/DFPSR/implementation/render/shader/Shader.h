@@ -56,16 +56,16 @@ struct TriangleColors {
 };
 
 struct TriangleInput {
-	const TextureRgbaU8 *diffuseMap;
-	const TextureRgbaU8 *lightMap;
+	const TextureRgbaU8 diffuseMap;
+	const TextureRgbaU8 lightMap;
 	const TriangleTexCoords texCoords;
 	const TriangleColors colors;
-	TriangleInput(const TextureRgbaU8 *diffuseMap, const TextureRgbaU8 *lightMap, const TriangleTexCoords &texCoords, const TriangleColors &colors)
+	TriangleInput(const TextureRgbaU8 &diffuseMap, const TextureRgbaU8 &lightMap, const TriangleTexCoords &texCoords, const TriangleColors &colors)
 	: diffuseMap(diffuseMap), lightMap(lightMap), texCoords(texCoords), colors(colors) {}
 };
 
 // The template for function pointers doing the work
-inline void drawCallbackTemplate(const TriangleInput &triangleInput, ImageRgbaU8 *colorBuffer, ImageF32 *depthBuffer, const ITriangle2D &triangle, const Projection &projection, const RowShape &shape, Filter filter) {}
+inline void drawCallbackTemplate(const TriangleInput &triangleInput, const ImageRgbaU8 &colorBuffer, const ImageF32 &depthBuffer, const ITriangle2D &triangle, const Projection &projection, const RowShape &shape, Filter filter) {}
 using DRAW_CALLBACK_TYPE = decltype(&drawCallbackTemplate);
 
 }

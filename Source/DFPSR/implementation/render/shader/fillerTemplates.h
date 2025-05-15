@@ -244,29 +244,29 @@ inline void fillRowSuper(void *data, PixelShadingCallback pixelShaderFunction, S
 }
 
 template<bool COLOR_WRITE, bool DEPTH_READ, bool DEPTH_WRITE, Filter FILTER, bool AFFINE>
-inline void fillShapeSuper(void *data, PixelShadingCallback pixelShaderFunction, ImageRgbaU8 *colorBuffer, ImageF32 *depthBuffer, const ITriangle2D &triangle, const Projection &projection, const RowShape &shape) {
+inline void fillShapeSuper(void *data, PixelShadingCallback pixelShaderFunction, const ImageRgbaU8 &colorBuffer, const ImageF32 &depthBuffer, const ITriangle2D &triangle, const Projection &projection, const RowShape &shape) {
 	// Prepare constants
-	const int targetStride = colorBuffer ? image_getStride(*colorBuffer) : 0;
-	const int depthBufferStride = depthBuffer ? image_getStride(*depthBuffer) : 0;
+	const int targetStride = image_getStride(colorBuffer);
+	const int depthBufferStride = image_getStride(depthBuffer);
 	const FVector3D doublePWeightDx = projection.pWeightDx * 2.0f;
-	const int colorRowSize = colorBuffer ? image_getWidth(*colorBuffer) * sizeof(uint32_t) : 0;
-	const int depthRowSize = depthBuffer ? image_getWidth(*depthBuffer) * sizeof(float) : 0;
-	const PackOrder& targetPackingOrder = colorBuffer ? image_getPackOrder(*colorBuffer) : PackOrder::getPackOrder(PackOrderIndex::RGBA);
-	const int colorHeight = colorBuffer ? image_getHeight(*colorBuffer) : 0;
-	const int depthHeight = depthBuffer ? image_getHeight(*depthBuffer) : 0;
+	const int colorRowSize = image_getWidth(colorBuffer) * sizeof(uint32_t);
+	const int depthRowSize = image_getWidth(depthBuffer) * sizeof(float);
+	const PackOrder& targetPackingOrder = image_exists(colorBuffer) ? image_getPackOrder(colorBuffer) : PackOrder::getPackOrder(PackOrderIndex::RGBA);
+	const int colorHeight = image_getHeight(colorBuffer);
+	const int depthHeight = image_getHeight(depthBuffer);
 	const int maxHeight = colorHeight > depthHeight ? colorHeight : depthHeight;
 
 	// Initialize row pointers for color buffer
 	SafePointer<uint32_t> pixelDataUpper, pixelDataLower, pixelDataUpperRow, pixelDataLowerRow;
 	if (COLOR_WRITE) {
-		pixelDataUpperRow = image_getSafePointer<uint32_t>(*colorBuffer, shape.startRow);
+		pixelDataUpperRow = image_getSafePointer<uint32_t>(colorBuffer, shape.startRow);
 		pixelDataLowerRow = pixelDataUpperRow; pixelDataLowerRow.increaseBytes(targetStride);
 	}
 
 	// Initialize row pointers for depth buffer
 	SafePointer<float> depthDataUpper, depthDataLower, depthDataUpperRow, depthDataLowerRow;
 	if (DEPTH_READ || DEPTH_WRITE) {
-		depthDataUpperRow = image_getSafePointer<float>(*depthBuffer, shape.startRow);
+		depthDataUpperRow = image_getSafePointer<float>(depthBuffer, shape.startRow);
 		depthDataLowerRow = depthDataUpperRow; depthDataLowerRow.increaseBytes(depthBufferStride);
 	}
 
@@ -384,9 +384,9 @@ inline void fillShapeSuper(void *data, PixelShadingCallback pixelShaderFunction,
 	}
 }
 
-inline void fillShape(void *data, PixelShadingCallback pixelShaderFunction, ImageRgbaU8 *colorBuffer, ImageF32 *depthBuffer, const ITriangle2D &triangle, const Projection &projection, const RowShape &shape, Filter filter) {
-	bool hasColorBuffer = colorBuffer != nullptr;
-	bool hasDepthBuffer = depthBuffer != nullptr;
+static inline void fillShape(void *data, PixelShadingCallback pixelShaderFunction, const ImageRgbaU8 &colorBuffer, const ImageF32 &depthBuffer, const ITriangle2D &triangle, const Projection &projection, const RowShape &shape, Filter filter) {
+	bool hasColorBuffer = image_exists(colorBuffer);
+	bool hasDepthBuffer = image_exists(depthBuffer);
 	if (projection.affine) {
 		if (hasDepthBuffer) {
 			if (hasColorBuffer) {
@@ -399,16 +399,16 @@ inline void fillShape(void *data, PixelShadingCallback pixelShaderFunction, Imag
 				}
 			} else {
 				// Solid depth
-				fillShapeSuper<false, true, true, Filter::Solid, true>(data, pixelShaderFunction, nullptr, depthBuffer, triangle, projection, shape);
+				fillShapeSuper<false, true, true, Filter::Solid, true>(data, pixelShaderFunction, ImageRgbaU8(), depthBuffer, triangle, projection, shape);
 			}
 		} else {
 			if (hasColorBuffer) {
 				if (filter != Filter::Solid) {
 					// Alpha filtering without depth buffer
-					fillShapeSuper<true, false, false, Filter::Alpha, true>(data, pixelShaderFunction, colorBuffer, nullptr, triangle, projection, shape);
+					fillShapeSuper<true, false, false, Filter::Alpha, true>(data, pixelShaderFunction, colorBuffer, ImageF32(), triangle, projection, shape);
 				} else {
 					// Solid without depth buffer
-					fillShapeSuper<true, false, false, Filter::Solid, true>(data, pixelShaderFunction, colorBuffer, nullptr, triangle, projection, shape);
+					fillShapeSuper<true, false, false, Filter::Solid, true>(data, pixelShaderFunction, colorBuffer, ImageF32(), triangle, projection, shape);
 				}
 			}
 		}
@@ -424,16 +424,16 @@ inline void fillShape(void *data, PixelShadingCallback pixelShaderFunction, Imag
 				}
 			} else {
 				// Solid depth
-				fillShapeSuper<false, true, true, Filter::Solid, false>(data, pixelShaderFunction, nullptr, depthBuffer, triangle, projection, shape);
+				fillShapeSuper<false, true, true, Filter::Solid, false>(data, pixelShaderFunction, ImageRgbaU8(), depthBuffer, triangle, projection, shape);
 			}
 		} else {
 			if (hasColorBuffer) {
 				if (filter != Filter::Solid) {
 					// Alpha filtering without depth buffer
-					fillShapeSuper<true, false, false, Filter::Alpha, false>(data, pixelShaderFunction, colorBuffer, nullptr, triangle, projection, shape);
+					fillShapeSuper<true, false, false, Filter::Alpha, false>(data, pixelShaderFunction, colorBuffer, ImageF32(), triangle, projection, shape);
 				} else {
 					// Solid without depth buffer
-					fillShapeSuper<true, false, false, Filter::Solid, false>(data, pixelShaderFunction, colorBuffer, nullptr, triangle, projection, shape);
+					fillShapeSuper<true, false, false, Filter::Solid, false>(data, pixelShaderFunction, colorBuffer, ImageF32(), triangle, projection, shape);
 				}
 			}
 		}

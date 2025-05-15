@@ -64,21 +64,21 @@ namespace shaderMethods {
 	  bool MIP_INSIDE = false,
 	  bool HIGHEST_RESOLUTION = false
 	>
-	inline U32x4 sample_U32(const TextureRgbaU8 *source, const F32x4 &u, const F32x4 &v) {
+	inline U32x4 sample_U32(const TextureRgbaU8 &source, const F32x4 &u, const F32x4 &v) {
 		if (INTERPOLATION == Interpolation::NN) {
 			if (HIGHEST_RESOLUTION) {
-				return texture_sample_nearest<SQUARE, SINGLE_LAYER, MIP_INSIDE, HIGHEST_RESOLUTION>(*source, u, v, 0u);
+				return texture_sample_nearest<SQUARE, SINGLE_LAYER, MIP_INSIDE, HIGHEST_RESOLUTION>(source, u, v, 0u);
 			} else {
 				// TODO: Calculate MIP levels using a separate rendering stage with sparse resolution writing results into thread-local memory.
-				uint32_t mipLevel = texture_getMipLevelIndex<F32x4>(*source, u, v);
-				return texture_sample_nearest<SQUARE, SINGLE_LAYER, MIP_INSIDE, HIGHEST_RESOLUTION>(*source, u, v, mipLevel);
+				uint32_t mipLevel = texture_getMipLevelIndex<F32x4>(source, u, v);
+				return texture_sample_nearest<SQUARE, SINGLE_LAYER, MIP_INSIDE, HIGHEST_RESOLUTION>(source, u, v, mipLevel);
 			}
 		} else {
 			if (HIGHEST_RESOLUTION) {
-				return texture_sample_bilinear<SQUARE, SINGLE_LAYER, MIP_INSIDE, HIGHEST_RESOLUTION>(*source, u, v, 0u);
+				return texture_sample_bilinear<SQUARE, SINGLE_LAYER, MIP_INSIDE, HIGHEST_RESOLUTION>(source, u, v, 0u);
 			} else {
-				uint32_t mipLevel = texture_getMipLevelIndex<F32x4>(*source, u, v);
-				return texture_sample_bilinear<SQUARE, SINGLE_LAYER, MIP_INSIDE, HIGHEST_RESOLUTION>(*source, u, v, mipLevel);
+				uint32_t mipLevel = texture_getMipLevelIndex<F32x4>(source, u, v);
+				return texture_sample_bilinear<SQUARE, SINGLE_LAYER, MIP_INSIDE, HIGHEST_RESOLUTION>(source, u, v, mipLevel);
 			}
 		}
 	}
@@ -90,7 +90,7 @@ namespace shaderMethods {
 	  bool MIP_INSIDE = false,
 	  bool HIGHEST_RESOLUTION = false
 	>
-	inline Rgba_F32<U32x4, F32x4> sample_F32(const TextureRgbaU8 *source, const F32x4 &u, const F32x4 &v) {
+	inline Rgba_F32<U32x4, F32x4> sample_F32(const TextureRgbaU8 &source, const F32x4 &u, const F32x4 &v) {
 		return Rgba_F32<U32x4, F32x4>(sample_U32<INTERPOLATION, SQUARE, SINGLE_LAYER, XY_INSIDE, MIP_INSIDE, HIGHEST_RESOLUTION>(source, u, v));
 	}
 }
