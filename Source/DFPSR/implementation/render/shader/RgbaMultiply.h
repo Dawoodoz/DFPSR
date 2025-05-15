@@ -35,18 +35,18 @@
 namespace dsr {
 
 struct RgbaMultiply_data {
-	const TextureRgbaU8 *diffuseMap; // Mip-mapping is allowed for diffuse textures.
-	const TextureRgbaU8 *lightMap; // Mip-mapping is not allowed for lightmaps, because it would increase the number of shaders to compile and still look worse.
+	const TextureRgbaU8 diffuseMap; // Mip-mapping is allowed for diffuse textures.
+	const TextureRgbaU8 lightMap; // Mip-mapping is not allowed for lightmaps, because it would increase the number of shaders to compile and still look worse.
 	// Planar format with each vector representing the three triangle corners
 	const TriangleTexCoords texCoords;
 	const TriangleColors colors;
 	// Normalize the color product by pre-multiplying the vertex colors
 	float getVertexScale() {
 		float result = 255.0f; // Scale from normalized to byte for the output
-		if (texture_exists(*(this->diffuseMap))) {
+		if (texture_exists(this->diffuseMap)) {
 			result *= 1.0f / 255.0f; // Normalize the diffuse map from 0..255 to 0..1 by dividing the vertex color
 		}
-		if (texture_exists(*(this->lightMap))) {
+		if (texture_exists(this->lightMap)) {
 			result *= 1.0f / 255.0f; // Normalize the light map from 0..255 to 0..1 by dividing the vertex color
 		}
 		return result;
@@ -107,16 +107,16 @@ inline Rgba_F32<U32x4, F32x4> getPixels_2x2(void *data, const F32x4x3 &vertexWei
 
 // The process method to take a function pointer to.
 //    Must have the same signature as drawCallbackTemplate in Shader.h.
-static void processTriangle_RgbaMultiply(const TriangleInput &triangleInput, ImageRgbaU8 *colorBuffer, ImageF32 *depthBuffer, const ITriangle2D &triangle, const Projection &projection, const RowShape &shape, Filter filter) {
+static void processTriangle_RgbaMultiply(const TriangleInput &triangleInput, const ImageRgbaU8 &colorBuffer, const ImageF32 &depthBuffer, const ITriangle2D &triangle, const Projection &projection, const RowShape &shape, Filter filter) {
 	// The pointers to textures may not be null, but can point to empty textures.
 	RgbaMultiply_data data = RgbaMultiply_data(triangleInput);
 	bool hasVertexFade = !(almostSame(data.colors.red) && almostSame(data.colors.green) && almostSame(data.colors.blue) && almostSame(data.colors.alpha));
 	bool colorless = almostOne(data.colors.red) && almostOne(data.colors.green) && almostOne(data.colors.blue) && almostOne(data.colors.alpha);
 	// TODO: Should non-existing textures use null pointers in the data, or pointers to empty textures?
-	if (texture_exists(*(data.diffuseMap))) {
-		bool hasDiffusePyramid = texture_hasPyramid(*(data.diffuseMap));
+	if (texture_exists(data.diffuseMap)) {
+		bool hasDiffusePyramid = texture_hasPyramid(data.diffuseMap);
 		// TODO: Avoid generating mip levels for the lightmap texture instead of hard-coding it to no mip levels.
-		if (texture_exists(*(data.lightMap))) {
+		if (texture_exists(data.lightMap)) {
 			if (hasVertexFade) { // DiffuseLightVertex
 				if (hasDiffusePyramid) { // With mipmap
 					fillShape(&data, getPixels_2x2<true, false, true, true, false>, colorBuffer, depthBuffer, triangle, projection, shape, filter);
@@ -154,7 +154,7 @@ static void processTriangle_RgbaMultiply(const TriangleInput &triangleInput, Ima
 			}
 		}
 	} else {
-		if (texture_exists(*(data.lightMap))) {
+		if (texture_exists(data.lightMap)) {
 			if (hasVertexFade) { // LightVertex
 				fillShape(&data, getPixels_2x2<false, false, true, true, false>, colorBuffer, depthBuffer, triangle, projection, shape, filter);
 			} else {

@@ -132,7 +132,7 @@ int Part::getPolygonVertexCount(int polygonIndex) const {
 //         Only decreasing the length of the point buffer, changing a position index or adding new polygons should set it to false
 //         Only running validation before rendering should set it from false to true
 //   point indices may not go outside of projected's array range
-static void renderTriangleFromPolygon(CommandQueue *commandQueue, ImageRgbaU8 *targetImage, ImageF32 *depthBuffer, const Camera &camera, const Polygon &polygon, int triangleIndex, const ProjectedPoint *projected, Filter filter, const TextureRgbaU8 *diffuse, const TextureRgbaU8 *light) {
+static void renderTriangleFromPolygon(CommandQueue *commandQueue, const ImageRgbaU8 &targetImage, const ImageF32 &depthBuffer, const Camera &camera, const Polygon &polygon, int triangleIndex, const ProjectedPoint *projected, Filter filter, const TextureRgbaU8 &diffuse, const TextureRgbaU8 &light) {
 	// Triangle fan starting from the first vertex of the polygon
 	int indexA = 0;
 	int indexB = 1 + triangleIndex;
@@ -147,24 +147,21 @@ static void renderTriangleFromPolygon(CommandQueue *commandQueue, ImageRgbaU8 *t
 	renderTriangleFromData(commandQueue, targetImage, depthBuffer, camera, posA, posB, posC, filter, diffuse, light, texCoords, colors);
 }
 
-void Part::render(CommandQueue *commandQueue, ImageRgbaU8* targetImage, ImageF32* depthBuffer, const Transform3D &modelToWorldTransform, const Camera &camera, Filter filter, const ProjectedPoint* projected) const {
-	// Get textures
-	const TextureRgbaU8 *diffuse = &(this->diffuseMap);
-	const TextureRgbaU8 *light = &(this->lightMap);
+void Part::render(CommandQueue *commandQueue, const ImageRgbaU8 &targetImage, const ImageF32 &depthBuffer, const Transform3D &modelToWorldTransform, const Camera &camera, Filter filter, const ProjectedPoint* projected) const {
 	for (int p = 0; p < this->polygonBuffer.length(); p++) {
 		Polygon polygon = this->polygonBuffer[p];
 		if (polygon.pointIndices[3] == -1) {
 			// Render triangle
-			renderTriangleFromPolygon(commandQueue, targetImage, depthBuffer, camera, polygon, 0, projected, filter, diffuse, light);
+			renderTriangleFromPolygon(commandQueue, targetImage, depthBuffer, camera, polygon, 0, projected, filter, this->diffuseMap, this->lightMap);
 		} else {
 			// Render quad
-			renderTriangleFromPolygon(commandQueue, targetImage, depthBuffer, camera, polygon, 0, projected, filter, diffuse, light);
-			renderTriangleFromPolygon(commandQueue, targetImage, depthBuffer, camera, polygon, 1, projected, filter, diffuse, light);
+			renderTriangleFromPolygon(commandQueue, targetImage, depthBuffer, camera, polygon, 0, projected, filter, this->diffuseMap, this->lightMap);
+			renderTriangleFromPolygon(commandQueue, targetImage, depthBuffer, camera, polygon, 1, projected, filter, this->diffuseMap, this->lightMap);
 		}
 	}
 }
 
-void Part::renderDepth(ImageF32* depthBuffer, const Transform3D &modelToWorldTransform, const Camera &camera, const ProjectedPoint* projected) const {
+void Part::renderDepth(const ImageF32 &depthBuffer, const Transform3D &modelToWorldTransform, const Camera &camera, const ProjectedPoint* projected) const {
 	for (int p = 0; p < this->polygonBuffer.length(); p++) {
 		Polygon polygon = this->polygonBuffer[p];
 		if (polygon.pointIndices[3] == -1) {
@@ -185,7 +182,7 @@ void Part::renderDepth(ImageF32* depthBuffer, const Transform3D &modelToWorldTra
 	}
 }
 
-void ModelImpl::render(CommandQueue *commandQueue, ImageRgbaU8* targetImage, ImageF32* depthBuffer, const Transform3D &modelToWorldTransform, const Camera &camera) const {
+void ModelImpl::render(CommandQueue *commandQueue, const ImageRgbaU8 &targetImage, const ImageF32 &depthBuffer, const Transform3D &modelToWorldTransform, const Camera &camera) const {
 	if (camera.isBoxSeen(this->minBound, this->maxBound, modelToWorldTransform)) {
 		// Transform and project all vertices
 		int positionCount = positionBuffer.length();
@@ -199,7 +196,7 @@ void ModelImpl::render(CommandQueue *commandQueue, ImageRgbaU8* targetImage, Ima
 	}
 }
 
-void ModelImpl::renderDepth(ImageF32* depthBuffer, const Transform3D &modelToWorldTransform, const Camera &camera) const {
+void ModelImpl::renderDepth(const ImageF32 &depthBuffer, const Transform3D &modelToWorldTransform, const Camera &camera) const {
 	if (camera.isBoxSeen(this->minBound, this->maxBound, modelToWorldTransform)) {
 		// Transform and project all vertices
 		int positionCount = positionBuffer.length();

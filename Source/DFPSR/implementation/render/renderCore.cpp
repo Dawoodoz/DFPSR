@@ -281,26 +281,26 @@ static void renderTriangleWithShader(CommandQueue *commandQueue, const TriangleD
 
 // TODO: Move shader selection to Shader_RgbaMultiply and let models default to its shader factory function pointer as shader selection
 void dsr::renderTriangleFromData(
-  CommandQueue *commandQueue, ImageRgbaU8 *targetImage, ImageF32 *depthBuffer,
+  CommandQueue *commandQueue, const ImageRgbaU8 &targetImage, const ImageF32 &depthBuffer,
   const Camera &camera, const ProjectedPoint &posA, const ProjectedPoint &posB, const ProjectedPoint &posC,
-  Filter filter, const TextureRgbaU8 *diffuse, const TextureRgbaU8 *light,
+  Filter filter, const TextureRgbaU8 &diffuse, const TextureRgbaU8 &light,
   const TriangleTexCoords &texCoords, const TriangleColors &colors) {
 	// Get dimensions from both buffers
-	int colorWidth = targetImage != nullptr ? image_getWidth(*targetImage) : 0;
-	int colorHeight = targetImage != nullptr ? image_getHeight(*targetImage) : 0;
-	int depthWidth = depthBuffer != nullptr ? image_getWidth(*depthBuffer) : 0;
-	int depthHeight = depthBuffer != nullptr ? image_getHeight(*depthBuffer) : 0;
+	int colorWidth = image_getWidth(targetImage);
+	int colorHeight = image_getHeight(targetImage);
+	int depthWidth = image_getWidth(depthBuffer);
+	int depthHeight = image_getHeight(depthBuffer);
 	// Combine dimensions
 	int targetWidth, targetHeight;
-	if (targetImage != nullptr) {
+	if (image_exists(targetImage)) {
 		targetWidth = colorWidth;
 		targetHeight = colorHeight;
-		if (depthBuffer != nullptr) {
+		if (image_exists(depthBuffer)) {
 			assert(targetWidth == depthWidth);
 			assert(targetHeight == depthHeight);
 		}
 	} else {
-		if (depthBuffer != nullptr) {
+		if (image_exists(depthBuffer)) {
 			targetWidth = depthWidth;
 			targetHeight = depthHeight;
 		} else {
@@ -316,13 +316,31 @@ void dsr::renderTriangleFromData(
 	if (visibility != Visibility::Hidden) {
 		// Select an instance of the default shader
 		if (!(filter == Filter::Alpha && almostZero(colors.alpha))) {
-			renderTriangleWithShader(commandQueue, TriangleDrawData(targetImage, depthBuffer, camera.perspective, filter, TriangleInput(diffuse, light, texCoords, colors), &processTriangle_RgbaMultiply), camera, triangle, clipBound);
+			renderTriangleWithShader (
+				commandQueue,
+				TriangleDrawData (
+					targetImage,
+					depthBuffer,
+					camera.perspective,
+					filter,
+					TriangleInput (
+						diffuse,
+						light,
+						texCoords,
+						colors
+					),
+					&processTriangle_RgbaMultiply
+				),
+				camera,
+				triangle,
+				clipBound
+			);
 		}
 	}
 }
 
 template<bool AFFINE>
-static void executeTriangleDrawingDepth(ImageF32 *depthBuffer, const ITriangle2D& triangle, const IRect &clipBound) {
+static void executeTriangleDrawingDepth(const ImageF32 &depthBuffer, const ITriangle2D& triangle, const IRect &clipBound) {
 	int32_t rowCount = triangle.getBufferSize(clipBound, 1, 1);
 	if (rowCount > 0) {
 		int startRow;
@@ -331,8 +349,8 @@ static void executeTriangleDrawingDepth(ImageF32 *depthBuffer, const ITriangle2D
 		Projection projection = triangle.getProjection(FVector3D(), FVector3D(), !AFFINE); // TODO: Create a weight using only depth to save time
 		RowShape shape = RowShape(startRow, rowCount, rows.getUnsafe());
 		// Draw the triangle
-		const int depthBufferStride = image_getStride(*depthBuffer);
-		SafePointer<float> depthDataRow = image_getSafePointer<float>(*depthBuffer, shape.startRow);
+		const int depthBufferStride = image_getStride(depthBuffer);
+		SafePointer<float> depthDataRow = image_getSafePointer<float>(depthBuffer, shape.startRow);
 		for (int32_t y = shape.startRow; y < shape.startRow + shape.rowCount; y++) {
 			RowInterval row = shape.rows[y - shape.startRow];
 			SafePointer<float> depthData = depthDataRow + row.left;
@@ -367,7 +385,7 @@ static void executeTriangleDrawingDepth(ImageF32 *depthBuffer, const ITriangle2D
 	}
 }
 
-static void drawTriangleDepth(ImageF32 *depthBuffer, const Camera &camera, const IRect &clipBound, const ITriangle2D& triangle) {
+static void drawTriangleDepth(const ImageF32 &depthBuffer, const Camera &camera, const IRect &clipBound, const ITriangle2D& triangle) {
 	// Rounding sub-triangles to integer locations may reverse the direction of zero area triangles
 	if (triangle.isFrontfacing()) {
 		if (camera.perspective) {
@@ -378,18 +396,18 @@ static void drawTriangleDepth(ImageF32 *depthBuffer, const Camera &camera, const
 	}
 }
 
-static void drawSubTriangleDepth(ImageF32 *depthBuffer, const Camera &camera, const IRect &clipBound, const SubVertex &vertexA, const SubVertex &vertexB, const SubVertex &vertexC) {
+static void drawSubTriangleDepth(const ImageF32 &depthBuffer, const Camera &camera, const IRect &clipBound, const SubVertex &vertexA, const SubVertex &vertexB, const SubVertex &vertexC) {
 	ProjectedPoint posA = camera.cameraToScreen(vertexA.cs);
 	ProjectedPoint posB = camera.cameraToScreen(vertexB.cs);
 	ProjectedPoint posC = camera.cameraToScreen(vertexC.cs);
 	drawTriangleDepth(depthBuffer, camera, clipBound, ITriangle2D(posA, posB, posC));
 }
 
-void dsr::renderTriangleFromDataDepth(ImageF32 *depthBuffer, const Camera &camera, const ProjectedPoint &posA, const ProjectedPoint &posB, const ProjectedPoint &posC) {
+void dsr::renderTriangleFromDataDepth(const ImageF32 &depthBuffer, const Camera &camera, const ProjectedPoint &posA, const ProjectedPoint &posB, const ProjectedPoint &posC) {
 	// Skip rendering if there's no target buffer
-	if (depthBuffer == nullptr) { return; }
+	if (!image_exists(depthBuffer)) { return; }
 	// Select a bound
-	IRect clipBound = IRect::FromSize(image_getWidth(*depthBuffer), image_getHeight(*depthBuffer));
+	IRect clipBound = IRect::FromSize(image_getWidth(depthBuffer), image_getHeight(depthBuffer));
 	// Create a triangle
 	ITriangle2D triangle(posA, posB, posC);
 	// Only draw visible triangles

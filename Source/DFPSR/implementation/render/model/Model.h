@@ -70,8 +70,8 @@ struct Part {
 	explicit Part(const ReadableString &name);
 	Part(const TextureRgbaU8 &diffuseMap, const TextureRgbaU8 &lightMap, const List<Polygon> &polygonBuffer, const String &name);
 	Part clone() const;
-	void render(CommandQueue *commandQueue, ImageRgbaU8* targetImage, ImageF32* depthBuffer, const Transform3D &modelToWorldTransform, const Camera &camera, Filter filter, const ProjectedPoint* projected) const;
-	void renderDepth(ImageF32* depthBuffer, const Transform3D &modelToWorldTransform, const Camera &camera, const ProjectedPoint* projected) const;
+	void render(CommandQueue *commandQueue, const ImageRgbaU8 &targetImage, const ImageF32 &depthBuffer, const Transform3D &modelToWorldTransform, const Camera &camera, Filter filter, const ProjectedPoint* projected) const;
+	void renderDepth(const ImageF32 &depthBuffer, const Transform3D &modelToWorldTransform, const Camera &camera, const ProjectedPoint* projected) const;
 	int getPolygonCount() const;
 	int getPolygonVertexCount(int polygonIndex) const;
 };
@@ -128,8 +128,8 @@ public:
 	FVector4D getTexCoord(int partIndex, int polygonIndex, int vertexIndex) const;
 	void setTexCoord(int partIndex, int polygonIndex, int vertexIndex, const FVector4D& texCoord);
 	// Rendering
-	void render(CommandQueue *commandQueue, ImageRgbaU8* targetImage, ImageF32* depthBuffer, const Transform3D &modelToWorldTransform, const Camera &camera) const;
-	void renderDepth(ImageF32* depthBuffer, const Transform3D &modelToWorldTransform, const Camera &camera) const;
+	void render(CommandQueue *commandQueue, const ImageRgbaU8 &targetImage, const ImageF32 &depthBuffer, const Transform3D &modelToWorldTransform, const Camera &camera) const;
+	void renderDepth(const ImageF32 &depthBuffer, const Transform3D &modelToWorldTransform, const Camera &camera) const;
 };
 
 }

@@ -34,9 +34,9 @@ namespace dsr {
 
 struct TriangleDrawData {
 	// Color target
-	ImageRgbaU8 *targetImage;
+	ImageRgbaU8 targetImage;
 	// Depth target
-	ImageF32 *depthBuffer;
+	ImageF32 depthBuffer;
 	// When perspective is used, the depth buffer stores 1 / depth instead of linear depth.
 	bool perspective;
 	// The target blending method
@@ -45,7 +45,7 @@ struct TriangleDrawData {
 	TriangleInput triangleInput;
 	// Function pointer to the method that will process the command
 	DRAW_CALLBACK_TYPE processTriangle;
-	TriangleDrawData(ImageRgbaU8 *targetImage, ImageF32 *depthBuffer, bool perspective, Filter filter, const TriangleInput &triangleInput, DRAW_CALLBACK_TYPE processTriangle)
+	TriangleDrawData(const ImageRgbaU8 &targetImage, const ImageF32 &depthBuffer, bool perspective, Filter filter, const TriangleInput &triangleInput, DRAW_CALLBACK_TYPE processTriangle)
 	: targetImage(targetImage), depthBuffer(depthBuffer), perspective(perspective), filter(filter), triangleInput(triangleInput), processTriangle(processTriangle) {}
 };
 
@@ -102,12 +102,12 @@ public:
 // targetImage can be null to avoid using the pixel shader.
 // depthBuffer can be null to render without depth buffering.
 void renderTriangleFromData(
-  CommandQueue *commandQueue, ImageRgbaU8 *targetImage, ImageF32 *depthBuffer,
+  CommandQueue *commandQueue, const ImageRgbaU8 &targetImage, const ImageF32 &depthBuffer,
   const Camera &camera, const ProjectedPoint &posA, const ProjectedPoint &posB, const ProjectedPoint &posC,
-  Filter filter, const TextureRgbaU8 *diffuse, const TextureRgbaU8 *light,
+  Filter filter, const TextureRgbaU8 &diffuse, const TextureRgbaU8 &light,
   const TriangleTexCoords &texCoords, const TriangleColors &colors
 );
-void renderTriangleFromDataDepth(ImageF32 *depthBuffer, const Camera &camera, const ProjectedPoint &posA, const ProjectedPoint &posB, const ProjectedPoint &posC);
+void renderTriangleFromDataDepth(const ImageF32 &depthBuffer, const Camera &camera, const ProjectedPoint &posA, const ProjectedPoint &posB, const ProjectedPoint &posC);
 
 }
 
