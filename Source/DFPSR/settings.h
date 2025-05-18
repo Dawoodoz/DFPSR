@@ -103,21 +103,6 @@
 		#define USE_BASIC_SIMD
 	#endif
 
-	// If using C++ 2020 or later.
-	#if (__cplusplus >= 202002L)
-		// Endianness
-		//   Compile with C++ 2020 or later to detect endianness automatically.
-		//   Or define the DSR_BIG_ENDIAN macro externally when building for big-endian targets.
-		#include <bit>
-		#if (std::endian::native == std::endian::big)
-			// We detected a big endian target.
-			#define DSR_BIG_ENDIAN
-		#elif (std::endian::native == std::endian::little)
-			// We detected a little endian target.
-			// TODO: Insert a compiler message here just to test that the check works with C++ 2020.
-		#else
-			// We detected a mixed endian target!
-			#error "The DFPSR framework does not work on mixed-endian systems, because it relies on a linear relation between memory addresses and bit shifting!\n"
-		#endif
-	#endif
+	// Enable this flag if you are compiling for big-endian.
+	//#define DSR_BIG_ENDIAN
 #endif
