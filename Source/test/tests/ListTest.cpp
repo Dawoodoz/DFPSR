@@ -6,6 +6,21 @@ static void targetByReference(List<int32_t> &target, int32_t value) {
 	target.push(value);
 }
 
+struct Unique {
+	String name;
+	// Constructible
+	Unique(const ReadableString &name) : name(name) {}
+	// Movable
+	Unique(Unique &&original) = default;
+	Unique& operator=(Unique &&original) = default;
+	// Destructible
+	~Unique() = default;
+	// Not clonable
+	Unique(const Unique& original) = delete;
+	Unique& operator=(const Unique& original) = delete;
+};
+static_assert(std::is_move_constructible<Unique>::value, "The Unique type should be move constructible!");
+
 START_TEST(List)
 	{
 		// Populate
@@ -129,5 +144,24 @@ START_TEST(List)
 		myOtherStrings.clear();
 		ASSERT_EQUAL(myOtherStrings.length(), 0);
 	}
-	// TODO: Test lists of objects that can not be cloned.
+	{
+		// Non-copyable types ensure that the constructed object is not accidentally copied into another location.
+		List<Unique> objects = List<Unique>(Unique(U"One"), Unique(U"Two"));
+		ASSERT_EQUAL(objects.length(), 2);
+		ASSERT_EQUAL(objects[0].name, U"One");
+		ASSERT_EQUAL(objects[1].name, U"Two");
+		// The push method can not be called with on non-copyable element types, because push must copy the given element.
+		//objects.push(Unique(U"Three"));
+		// The pushConstruct method can be used instead to construct the element inside of the list.
+		objects.pushConstruct(U"Three");
+		ASSERT_EQUAL(objects.length(), 3);
+		ASSERT_EQUAL(objects[0].name, U"One");
+		ASSERT_EQUAL(objects[1].name, U"Two");
+		ASSERT_EQUAL(objects[2].name, U"Three");
+		objects.swap(0, 1);
+		ASSERT_EQUAL(objects.length(), 3);
+		ASSERT_EQUAL(objects[0].name, U"Two");
+		ASSERT_EQUAL(objects[1].name, U"One");
+		ASSERT_EQUAL(objects[2].name, U"Three");
+	}
 END_TEST

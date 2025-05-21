@@ -46,6 +46,7 @@ private:
 	T *impl_elements = nullptr;
 	intptr_t impl_length = 0;
 	intptr_t impl_buffer_length = 0;
+
 	// Makes sure that there is memory available for storing at least minimumAllocatedLength elements.
 	void impl_reserve(intptr_t minimumAllocatedLength) {
 		if (minimumAllocatedLength > this->impl_buffer_length) {
@@ -60,17 +61,9 @@ private:
 			uintptr_t availableSize = heap_getAllocationSize(newAllocation.header);
 			heap_setUsedSize(newAllocation.header, availableSize);
 			// Move the data from the old allocation to the new allocation.
-			if (std::is_move_constructible<T>::value) {
-				// If T is move constructible, we do not have to clone the elements.
-				for (intptr_t e = 0; e < this->impl_buffer_length; e++) {
-					new (newElements + e) T(std::move(this->impl_elements[e]));
-				}
-			} else {
-				// If T is not move constructible, we have to create a copy and then destroy the original.
-				for (intptr_t e = 0; e < this->impl_buffer_length; e++) {
-					new (newElements + e) T(this->impl_elements[e]);
-					this->impl_elements[e].~T();
-				}
+			//   The compiler should automatically call a copy constructor if the move operator is deleted.
+			for (intptr_t e = 0; e < this->impl_buffer_length; e++) {
+				new (newElements + e) T(std::move(this->impl_elements[e]));
 			}
 			// Transfer ownership to the new allocation.
 			heap_decreaseUseCount(this->impl_elements);
@@ -94,10 +87,12 @@ private:
 		intptr_t elementCount = sizeof...(args);
 		this->impl_reserve(elementCount);
 		this->impl_length = elementCount;
-		std::initializer_list<T> otherArguments = { T(args)... };
-		for (intptr_t e = 0; e < elementCount; e++) {
-			new (this->impl_elements + e) T(otherArguments.begin()[e]);
-		}
+		intptr_t e = 0;
+		(void)std::initializer_list<int>{
+			(
+				new (this->impl_elements + e) T(std::move(args)), e++, 0
+			)...
+		};
 	}
 public:
 	// Copy constructor
@@ -153,7 +148,7 @@ public:
 	  typename... OTHERS,
 	  DSR_ENABLE_IF(DSR_CONVERTIBLE_TO(FIRST, T))
 	>
-	List(FIRST first, OTHERS... others) {
+	List(FIRST first, OTHERS&&... others) {
 		this->impl_setElements(first, others...);
 	}
 	~List() {
