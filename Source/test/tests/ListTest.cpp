@@ -20,6 +20,22 @@ struct Unique {
 	Unique& operator=(const Unique& original) = delete;
 };
 static_assert(std::is_move_constructible<Unique>::value, "The Unique type should be move constructible!");
+static_assert(!std::is_copy_constructible<Unique>::value, "The Unique type should not be copy constructible!");
+static_assert(!std::is_default_constructible<Unique>::value, "The Unique type should not be default constructible!");
+
+struct Tree {
+	String name;
+	List<Tree> children;
+	Tree() {}
+	Tree(const ReadableString &name)
+	: name(name) {}
+	Tree(const ReadableString &name, List<Tree> children)
+	: name(name), children(children) {}
+	// Copy/move construct/assign should be generated automatically by the compiler, because only constructors have been specified manually.
+};
+static_assert(std::is_move_constructible<Tree>::value, "The Tree type should be move constructible!");
+static_assert(std::is_copy_constructible<Tree>::value, "The Tree type should be copy constructible!");
+static_assert(std::is_default_constructible<Tree>::value, "The Tree type should be default constructible!");
 
 START_TEST(List)
 	{
@@ -163,5 +179,48 @@ START_TEST(List)
 		ASSERT_EQUAL(objects[0].name, U"Two");
 		ASSERT_EQUAL(objects[1].name, U"One");
 		ASSERT_EQUAL(objects[2].name, U"Three");
+	}
+	{
+		// Default movable and copyable types should clone the content recursively when the list is copied.
+		Tree treeOne = Tree(U"A", List<Tree>(Tree(U"B", List<Tree>(Tree(U"D"), Tree(U"E"))), Tree(U"C")));
+		ASSERT_EQUAL(treeOne.name, U"A");
+		ASSERT_EQUAL(treeOne.children.length(), 2);
+			ASSERT_EQUAL(treeOne.children[0].name, U"B");
+			ASSERT_EQUAL(treeOne.children[0].children.length(), 2);
+				ASSERT_EQUAL(treeOne.children[0].children[0].name, U"D");
+				ASSERT_EQUAL(treeOne.children[0].children[0].children.length(), 0);
+				ASSERT_EQUAL(treeOne.children[0].children[1].name, U"E");
+				ASSERT_EQUAL(treeOne.children[0].children[1].children.length(), 0);
+			ASSERT_EQUAL(treeOne.children[1].name, U"C");
+			ASSERT_EQUAL(treeOne.children[1].children.length(), 0);
+		// Copy the tree using copy assignment. (Default construction can be optimized away.)
+		Tree treeTwo = treeOne;
+		// Modify an element in treeTwo to have the content copied to the next trees.
+		treeTwo.children[0].name = U"BBBB";
+		// Copy the tree using copy construction. (Default construction can be optimized away.)
+		Tree treeThree = Tree(treeTwo);
+		// Copy the tree using default generated copy construction. (Direct construction without any assignment.)
+		Tree treeFour(treeThree);
+		// Modify each version of the tree
+		treeOne.name   = U"A1";
+		treeTwo.name   = U"A2";
+		treeThree.name = U"A3";
+		treeFour.name  = U"A4";
+		ASSERT_EQUAL(treeOne.name  , U"A1");
+		ASSERT_EQUAL(treeOne.children.length(), 2);
+		ASSERT_EQUAL(treeTwo.name  , U"A2");
+		ASSERT_EQUAL(treeTwo.children.length(), 2);
+		ASSERT_EQUAL(treeThree.name, U"A3");
+		ASSERT_EQUAL(treeThree.children.length(), 2);
+		ASSERT_EQUAL(treeFour.name , U"A4");
+		ASSERT_EQUAL(treeFour.children.length(), 2);
+			ASSERT_EQUAL(treeFour.children[0].name, U"BBBB");
+			ASSERT_EQUAL(treeFour.children[0].children.length(), 2);
+				ASSERT_EQUAL(treeFour.children[0].children[0].name, U"D");
+				ASSERT_EQUAL(treeFour.children[0].children[0].children.length(), 0);
+				ASSERT_EQUAL(treeFour.children[0].children[1].name, U"E");
+				ASSERT_EQUAL(treeFour.children[0].children[1].children.length(), 0);
+			ASSERT_EQUAL(treeFour.children[1].name, U"C");
+			ASSERT_EQUAL(treeFour.children[1].children.length(), 0);
 	}
 END_TEST
