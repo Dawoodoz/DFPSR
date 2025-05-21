@@ -32,6 +32,9 @@ static thread_local String ExpectedErrorPrefix;
 inline bool OP_NEAR(float a, float b) {
 	return a > b - 0.0001f && a < b + 0.0001f;
 }
+inline bool OP_NEAR(double a, double b) {
+	return a > b - 0.0000001 && a < b + 0.0000001;
+}
 inline bool OP_NEAR(const FVector2D& a, const FVector2D& b) {
 	return OP_NEAR(a.x, b.x) && OP_NEAR(a.y, b.y);
 }

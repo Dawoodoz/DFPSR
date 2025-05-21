@@ -273,8 +273,15 @@ START_TEST(String)
 	ASSERT_EQUAL(string_toInteger(U"1000000"), 1000000);
 	ASSERT_EQUAL(string_toInteger(U"-1000000"), -1000000);
 	ASSERT_EQUAL(string_toInteger(U"123"), 123);
-	ASSERT_EQUAL(string_toDouble(U"123"), 123.0);
-	ASSERT_EQUAL(string_toDouble(U"123.456"), 123.456);
+	ASSERT_NEAR(string_toDouble(U"123"), 123.0);
+	ASSERT_NEAR(string_toDouble(U"123.456"), 123.456);
+	ASSERT_NEAR(string_toDouble(U"123.456e-3"), 0.123456);
+	ASSERT_NEAR(string_toDouble(U"123.456e-2"), 1.23456);
+	ASSERT_NEAR(string_toDouble(U"123.456e-1"), 12.3456);
+	ASSERT_NEAR(string_toDouble(U"123.456e0"), 123.456);
+	ASSERT_NEAR(string_toDouble(U"123.456e1"), 1234.56);
+	ASSERT_NEAR(string_toDouble(U"123.456e2"), 12345.6);
+	ASSERT_NEAR(string_toDouble(U"123.456e3"), 123456.0);
 	{ // Assigning strings using reference counting
 		String a = U"Some text";
 		ASSERT_EQUAL(string_getBufferUseCount(a), 1);
