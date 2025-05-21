@@ -31,6 +31,7 @@
 #include <thread>
 #include <mutex>
 #include <stdexcept>
+#include <cmath>
 #include "stringAPI.h"
 #include "../api/fileAPI.h"
 #include "../settings.h"
@@ -1019,6 +1020,11 @@ double dsr::string_toDouble(const ReadableString& source) {
 			}
 		} else if (c == ',' || c == '.') {
 			reachedDecimal = true;
+		} else if (c == 'e' || c == 'E') {
+			// Apply the exponent after 'e'.
+			result *= std::pow(10.0, string_toInteger(string_after(source, i)));
+			// Skip remaining characters.
+			i = source.view.length;
 		}
 	}
 	if (negated) {
