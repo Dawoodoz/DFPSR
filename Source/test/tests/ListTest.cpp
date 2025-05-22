@@ -179,6 +179,13 @@ START_TEST(List)
 		ASSERT_EQUAL(objects[0].name, U"Two");
 		ASSERT_EQUAL(objects[1].name, U"One");
 		ASSERT_EQUAL(objects[2].name, U"Three");
+		// Move the whole list.
+		List<Unique> objects2 = std::move(objects);
+		ASSERT_EQUAL(objects.length(), 0);
+		ASSERT_EQUAL(objects2.length(), 3);
+		ASSERT_EQUAL(objects2[0].name, U"Two");
+		ASSERT_EQUAL(objects2[1].name, U"One");
+		ASSERT_EQUAL(objects2[2].name, U"Three");
 	}
 	{
 		// Default movable and copyable types should clone the content recursively when the list is copied.
@@ -222,5 +229,50 @@ START_TEST(List)
 				ASSERT_EQUAL(treeFour.children[0].children[1].children.length(), 0);
 			ASSERT_EQUAL(treeFour.children[1].name, U"C");
 			ASSERT_EQUAL(treeFour.children[1].children.length(), 0);
+		// Move the first tree to a new location.
+		Tree newTree = std::move(treeOne);
+		ASSERT_EQUAL(treeOne.children.length(), 0);
+		ASSERT_EQUAL(newTree.name, U"A1");
+		ASSERT_EQUAL(newTree.children.length(), 2);
+			ASSERT_EQUAL(newTree.children[0].name, U"B");
+			ASSERT_EQUAL(newTree.children[0].children.length(), 2);
+				ASSERT_EQUAL(newTree.children[0].children[0].name, U"D");
+				ASSERT_EQUAL(newTree.children[0].children[0].children.length(), 0);
+				ASSERT_EQUAL(newTree.children[0].children[1].name, U"E");
+				ASSERT_EQUAL(newTree.children[0].children[1].children.length(), 0);
+			ASSERT_EQUAL(newTree.children[1].name, U"C");
+			ASSERT_EQUAL(newTree.children[1].children.length(), 0);
+	}
+	{
+		// Construct and push.
+		Tree tree = Tree(U"A");
+		tree.children.push(Tree(U"B", List<Tree>(Tree(U"D"), Tree(U"E"))));
+		tree.children.push(Tree(U"C"));
+		ASSERT_EQUAL(tree.name, U"A");
+		ASSERT_EQUAL(tree.children.length(), 2);
+			ASSERT_EQUAL(tree.children[0].name, U"B");
+			ASSERT_EQUAL(tree.children[0].children.length(), 2);
+				ASSERT_EQUAL(tree.children[0].children[0].name, U"D");
+				ASSERT_EQUAL(tree.children[0].children[0].children.length(), 0);
+				ASSERT_EQUAL(tree.children[0].children[1].name, U"E");
+				ASSERT_EQUAL(tree.children[0].children[1].children.length(), 0);
+			ASSERT_EQUAL(tree.children[1].name, U"C");
+			ASSERT_EQUAL(tree.children[1].children.length(), 0);
+	}
+	{
+		// Push-construct.
+		Tree tree = Tree(U"A");
+		tree.children.pushConstruct(U"B", List<Tree>(Tree(U"D"), Tree(U"E")));
+		tree.children.pushConstruct(U"C");
+		ASSERT_EQUAL(tree.name, U"A");
+		ASSERT_EQUAL(tree.children.length(), 2);
+			ASSERT_EQUAL(tree.children[0].name, U"B");
+			ASSERT_EQUAL(tree.children[0].children.length(), 2);
+				ASSERT_EQUAL(tree.children[0].children[0].name, U"D");
+				ASSERT_EQUAL(tree.children[0].children[0].children.length(), 0);
+				ASSERT_EQUAL(tree.children[0].children[1].name, U"E");
+				ASSERT_EQUAL(tree.children[0].children[1].children.length(), 0);
+			ASSERT_EQUAL(tree.children[1].name, U"C");
+			ASSERT_EQUAL(tree.children[1].children.length(), 0);
 	}
 END_TEST
