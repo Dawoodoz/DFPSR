@@ -230,6 +230,8 @@ public:
 	}
 	// Side-effect: Pushes a new element constructed using the given arguments.
 	//   Warning! Reallocation may invalidate old pointers and references to elements in the replaced buffer.
+	//   Warning! Do not pass an element in the list as an argument to the constructor,
+	//     because reallocating will move the data from that location before being sent to the constructor.
 	// Post-condition: Returns a reference to the new element in the list.
 	template<typename... ARGS>
 	T& pushConstruct(ARGS&&... args) {
@@ -240,6 +242,8 @@ public:
 	}
 	// Side-effect: Pushes a new element constructed using the given arguments.
 	//   Warning! Reallocation may invalidate old pointers and references to elements in the replaced buffer.
+	//   Warning! Do not pass an element in the list as an argument to the constructor,
+	//     because reallocating will move the data from that location before being sent to the constructor.
 	// Post-condition: Returns an index to the new element in the list.
 	template<typename... ARGS>
 	intptr_t pushConstructGetIndex(ARGS&&... args) {
