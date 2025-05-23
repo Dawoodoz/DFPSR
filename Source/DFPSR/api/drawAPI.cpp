@@ -177,7 +177,7 @@ inline void drawLineSuper(const IMAGE_TYPE &target, int32_t x1, int32_t y1, int3
 	// Culling test to reduce wasted pixels outside of the image.
 	int32_t width = image_getWidth(target);
 	int32_t height = image_getHeight(target);	
-	if ((x1 < 0 && x1 < 0) || (y1 < 0 && y1 < 0) || (x1 >= width && x1 >= width) || (y1 >= height && y1 >= height)) {
+	if ((x1 < 0 && x2 < 0) || (y1 < 0 && y2 < 0) || (x1 >= width && x2 >= width) || (y1 >= height && y2 >= height)) {
 		// Skip drawing because both points are outside of the same edge.
 		return;
 	}
