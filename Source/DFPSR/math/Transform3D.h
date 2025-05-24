@@ -29,8 +29,7 @@
 
 namespace dsr {
 
-class Transform3D {
-public:
+struct Transform3D {
 	FVector3D position;
 	FMatrix3x3 transform;
 	Transform3D() : position(0.0f, 0.0f, 0.0f), transform(FVector3D(1.0f, 0.0f, 0.0f), FVector3D(0.0f, 1.0f, 0.0f), FVector3D(0.0f, 0.0f, 1.0f)) {}
