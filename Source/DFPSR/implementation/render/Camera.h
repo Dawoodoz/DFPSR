@@ -38,7 +38,7 @@
 namespace dsr {
 
 // A special rounding used for vertex projection
-inline int64_t safeRoundInt64(float value) {
+static inline int64_t safeRoundInt64(float value) {
 	int64_t result = (int64_t)value;
 	if (value <= -1048576.0f || value >= 1048576.0f) { result = 0; }
 	return result;
@@ -71,12 +71,39 @@ public:
 		planes[4] = FPlane3D(FVector3D(0.0f, 0.0f, -1.0f), -nearClip);
 		planes[5] = FPlane3D(FVector3D(0.0f, 0.0f, 1.0f), farClip);
 	}
-	int getPlaneCount() const {
+	inline int getPlaneCount() const {
 		return this->planeCount;
 	}
-	FPlane3D getPlane(int sideIndex) const {
+	inline FPlane3D getPlane(int sideIndex) const {
 		assert(sideIndex >= 0 && sideIndex < this->planeCount);
 		return planes[sideIndex];
+	}
+	// Quick estimation of potential visibility without caring about edges nor details.
+	// The convex hull points to test are relative to the camera's location.
+	// Returns 0 if all points are outside of the same plane, so that an object within the convex hull can not be visible.
+	// Returns 1 if one or more points are outside of the view frustum but they are not all outside of the same plane, so it may or may not be visible.
+	// Returns 2 if all points are inside of the view frustum, so that it is certainly visible, unless hidden by something else.
+	int isConvexHullSeen(SafePointer<const FVector3D> cameraSpacePoints, int32_t pointCount) const {
+		bool anyOutside = false;
+		for (int s = 0; s < this->getPlaneCount(); s++) {
+			FPlane3D plane = this->getPlane(s);
+			// Check if any point is inside of the current plane.
+			bool anyInside = false;
+			for (int p = 0; p < pointCount; p++) {
+				if (plane.inside(cameraSpacePoints[p])) {
+					anyInside = true;
+				} else {
+					anyOutside = true;
+				}
+			}
+			// If none was inside of the plane, then the point clound is not visible.
+			if (!anyInside) {
+				// All points were outside of the current side, so the hull is not visible.
+				return 0;
+			}
+		}
+		// Every side had at least one point inside, so the hull is visible.
+		return anyOutside ? 1 : 2;
 	}
 };
 
@@ -93,13 +120,17 @@ static const float clipRatio = 2.0f;
 static const float defaultNearClip = 0.01f;
 static const float defaultFarClip = 1000.0f;
 
-// Just create a new camera on stack memory every time you need to render something
+// Just create a new camera on stack memory every time you need to render something.
 class Camera {
-public: // Do not modify individual settings without assigning whole new cameras
+public: // Do not modify individual settings without assigning whole new cameras.
 	bool perspective; // When off, widthSlope and heightSlope will be used as halfWidth and halfHeight.
 	Transform3D location; // Only translation and rotation allowed. Scaling and tilting will obviously not work for cameras.
 	float widthSlope, heightSlope, invWidthSlope, invHeightSlope, imageWidth, imageHeight, nearClip, farClip;
-	ViewFrustum cullFrustum, clipFrustum;
+	// The tight view frustum, used for skipping rendering as soon as something is fully out of sight.
+	ViewFrustum cullFrustum;
+	// The extra large frustum outside of the visible border, used to clip rendering of partial visibility to prevent integer overflow in perspective projection.
+	//   The clip frustum is much larger than the cull frustum because clipping is expensive and can not be done using exact integers.
+	ViewFrustum clipFrustum;
 	Camera() :
 	  perspective(true), location(Transform3D()), widthSlope(0.0f), heightSlope(0.0f),
 	  invWidthSlope(0.0f), invHeightSlope(0.0f), imageWidth(0), imageHeight(0),
@@ -122,7 +153,7 @@ public:
 		  ViewFrustum(halfWidth * cullRatio, halfHeight * cullRatio),
 		  ViewFrustum(halfWidth * clipRatio, halfHeight * clipRatio));
 	}
-	FVector3D worldToCamera(const FVector3D &worldSpace) const {
+	inline FVector3D worldToCamera(const FVector3D &worldSpace) const {
 		return this->location.transformPointTransposedInverse(worldSpace);
 	}
 	ProjectedPoint cameraToScreen(const FVector3D &cameraSpace) const {
@@ -153,49 +184,35 @@ public:
 			return ProjectedPoint(cameraSpace, projectedFloat, rounded);
 		}
 	}
-	ProjectedPoint worldToScreen(const FVector3D &worldSpace) const {
+	inline ProjectedPoint worldToScreen(const FVector3D &worldSpace) const {
 		return this->cameraToScreen(this->worldToCamera(worldSpace));
 	}
-	int getFrustumPlaneCount(bool clipping) const {
+	inline int getFrustumPlaneCount(bool clipping) const {
 		return clipping ? this->clipFrustum.getPlaneCount() : this->cullFrustum.getPlaneCount();
 	}
-	FPlane3D getFrustumPlane(int sideIndex, bool clipping) const {
+	inline FPlane3D getFrustumPlane(int sideIndex, bool clipping) const {
 		return clipping ? this->clipFrustum.getPlane(sideIndex) : this->cullFrustum.getPlane(sideIndex);
 	}
-	// Returns false iff all 6 points from the box of minBound and maxBound multiplied by transform are outside of the same plane of cullFrustum
-	//   This is a quick indication to if something within that bound would be rendered
-	bool isBoxSeen(const FVector3D& minBound, const FVector3D& maxBound, const Transform3D &modelToWorld) const {
-		FVector3D corner[8] = {
-			FVector3D(minBound.x, minBound.y, minBound.z),
-			FVector3D(maxBound.x, minBound.y, minBound.z),
-			FVector3D(minBound.x, maxBound.y, minBound.z),
-			FVector3D(maxBound.x, maxBound.y, minBound.z),
-			FVector3D(minBound.x, minBound.y, maxBound.z),
-			FVector3D(maxBound.x, minBound.y, maxBound.z),
-			FVector3D(minBound.x, maxBound.y, maxBound.z),
-			FVector3D(maxBound.x, maxBound.y, maxBound.z)
-		};
-		for (int c = 0; c < 8; c++) {
-			corner[c] = worldToCamera(modelToWorld.transformPoint(corner[c]));
-		}
-		for (int s = 0; s < this->cullFrustum.getPlaneCount(); s++) {
-			FPlane3D plane = this->cullFrustum.getPlane(s);
-			if (!(plane.inside(corner[0])
-			   || plane.inside(corner[1])
-			   || plane.inside(corner[2])
-			   || plane.inside(corner[3])
-			   || plane.inside(corner[4])
-			   || plane.inside(corner[5])
-			   || plane.inside(corner[6])
-			   || plane.inside(corner[7]))) {
-				return false;
-			}
-		}
-		return true;
+	// Returns 0 iff the model inside of the bound can clearly not be visible, 1 if it intersects with the view frustum, or 2 if fully in view.
+	//   by having all corners outside of the same side in the camera's culling frustum.
+	int isBoxSeen(const FVector3D& minModelSpaceBound, const FVector3D& maxModelSpaceBound, const Transform3D &modelToWorld) const {
+		// Allocate memory for the corners.
+		FVector3D cornerBuffer[8];
+		SafePointer<FVector3D> corners = SafePointer<FVector3D>("corners in Camera::isBoxSeen", cornerBuffer, sizeof(cornerBuffer));
+		// Convert from model space bounds to camera space point cloud.
+		corners[0] = this->worldToCamera(modelToWorld.transformPoint(FVector3D(minModelSpaceBound.x, minModelSpaceBound.y, minModelSpaceBound.z)));
+		corners[1] = this->worldToCamera(modelToWorld.transformPoint(FVector3D(maxModelSpaceBound.x, minModelSpaceBound.y, minModelSpaceBound.z)));
+		corners[2] = this->worldToCamera(modelToWorld.transformPoint(FVector3D(minModelSpaceBound.x, maxModelSpaceBound.y, minModelSpaceBound.z)));
+		corners[3] = this->worldToCamera(modelToWorld.transformPoint(FVector3D(maxModelSpaceBound.x, maxModelSpaceBound.y, minModelSpaceBound.z)));
+		corners[4] = this->worldToCamera(modelToWorld.transformPoint(FVector3D(minModelSpaceBound.x, minModelSpaceBound.y, maxModelSpaceBound.z)));
+		corners[5] = this->worldToCamera(modelToWorld.transformPoint(FVector3D(maxModelSpaceBound.x, minModelSpaceBound.y, maxModelSpaceBound.z)));
+		corners[6] = this->worldToCamera(modelToWorld.transformPoint(FVector3D(minModelSpaceBound.x, maxModelSpaceBound.y, maxModelSpaceBound.z)));
+		corners[7] = this->worldToCamera(modelToWorld.transformPoint(FVector3D(maxModelSpaceBound.x, maxModelSpaceBound.y, maxModelSpaceBound.z)));
+		// Apply a fast visibility test, which might return true even when the object is not visible.
+		return this->cullFrustum.isConvexHullSeen(corners, 8);
 	}
 };
 
 }
 
 #endif
-
