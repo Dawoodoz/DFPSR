@@ -187,10 +187,13 @@ public:
 	inline ProjectedPoint worldToScreen(const FVector3D &worldSpace) const {
 		return this->cameraToScreen(this->worldToCamera(worldSpace));
 	}
-	inline int getFrustumPlaneCount(bool clipping) const {
+	// Get the number of planes in the clipping or culling frustum.
+	inline int getFrustumPlaneCount(bool clipping = false) const {
 		return clipping ? this->clipFrustum.getPlaneCount() : this->cullFrustum.getPlaneCount();
 	}
-	inline FPlane3D getFrustumPlane(int sideIndex, bool clipping) const {
+	// Get a certain plane from the clipping or culling frustum.
+	//   The plane is expressed in camera space.
+	inline FPlane3D getFrustumPlane(int sideIndex, bool clipping = false) const {
 		return clipping ? this->clipFrustum.getPlane(sideIndex) : this->cullFrustum.getPlane(sideIndex);
 	}
 	// Returns 0 iff the model inside of the bound can clearly not be visible, 1 if it intersects with the view frustum, or 2 if fully in view.
