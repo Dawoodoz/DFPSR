@@ -36,15 +36,16 @@ struct FPlane3D {
 	FPlane3D(const FVector3D &normal, float offset) : normal(normalize(normal)), offset(offset) {}
 	// Get the closest distance between the point and the plane
 	// A negative distance is returned if the point is inside
-	float signedDistance(const FVector3D &point) const {
+	inline float signedDistance(const FVector3D &point) const {
 		return dotProduct(this->normal, point) - this->offset;
 	}
-	bool inside(const FVector3D &point) const {
+	inline bool inside(const FVector3D &point) const {
 		return this->signedDistance(point) <= 0.0f;
 	}
-	// Returns a point on the plane intersecting the line starting at point along direction
-	// Returns +-INF or NaN when there's no point of intersection
-	FVector3D rayIntersect(const FVector3D &point, const FVector3D &direction) {
+	// Returns a point on the plane intersecting the line starting at point along direction.
+	// The direction does not have to be normalized.
+	// Returns +-INF or NaN when there's no point of intersection.
+	inline FVector3D rayIntersect(const FVector3D &point, const FVector3D &direction) const {
 		float relativeOffset = -(this->offset + dotProduct(this->normal, point)) / dotProduct(this->normal, direction);
 		return point + (direction * relativeOffset);
 	}
