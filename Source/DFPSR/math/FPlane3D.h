@@ -46,7 +46,7 @@ struct FPlane3D {
 	// The direction does not have to be normalized.
 	// Returns +-INF or NaN when there's no point of intersection.
 	inline FVector3D rayIntersect(const FVector3D &point, const FVector3D &direction) const {
-		float relativeOffset = -(this->offset + dotProduct(this->normal, point)) / dotProduct(this->normal, direction);
+		float relativeOffset = -(dotProduct(this->normal, point) - this->offset) / dotProduct(this->normal, direction);
 		return point + (direction * relativeOffset);
 	}
 };
