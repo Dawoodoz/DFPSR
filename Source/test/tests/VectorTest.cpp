@@ -116,5 +116,10 @@ START_TEST(Vector)
 	ASSERT_EQUAL(12 / IVector2D(3, 4), IVector2D(4, 3));
 	ASSERT_EQUAL(12 / LVector2D(3, 4), LVector2D(4, 3));
 	ASSERT_NEAR(12.0f / FVector2D(3.0f, 4.0f), FVector2D(4.0f, 3.0f));
+	// Linear algebra
+	ASSERT_EQUAL(length(FVector3D(1.0f, 0.0f, 0.0f)), 1.0f);
+	ASSERT_EQUAL(length(FVector3D(0.0f, 2.0f, 0.0f)), 2.0f);
+	ASSERT_EQUAL(length(FVector3D(0.0f, 0.0f, 3.0f)), 3.0f);
+	ASSERT_EQUAL(length(FVector3D(1.0f, 1.0f, 0.0f)), 1.41421356f);
 END_TEST
 
