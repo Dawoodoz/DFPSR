@@ -133,7 +133,7 @@ static void processTriangle_RgbaMultiply(const TriangleInput &triangleInput, con
 		} else {
 			if (hasVertexFade) { // DiffuseVertex
 				if (hasDiffusePyramid) { // With mipmap
-					fillShape(&data, getPixels_2x2<false, false, false, false, false>, colorBuffer, depthBuffer, triangle, projection, shape, filter);
+					fillShape(&data, getPixels_2x2<true, false, false, true, false>, colorBuffer, depthBuffer, triangle, projection, shape, filter);
 				} else { // Without mipmap
 					fillShape(&data, getPixels_2x2<true, true, false, true, false>, colorBuffer, depthBuffer, triangle, projection, shape, filter);
 				}
@@ -142,7 +142,7 @@ static void processTriangle_RgbaMultiply(const TriangleInput &triangleInput, con
 					if (hasDiffusePyramid) { // With mipmap
 						fillShape(&data, getPixels_2x2<true, false, false, false, true>, colorBuffer, depthBuffer, triangle, projection, shape, filter);
 					} else { // Without mipmap
-					fillShape(&data, getPixels_2x2<true, true, false, false, true>, colorBuffer, depthBuffer, triangle, projection, shape, filter);
+						fillShape(&data, getPixels_2x2<true, true, false, false, true>, colorBuffer, depthBuffer, triangle, projection, shape, filter);
 					}
 				} else { // Diffuse
 					if (hasDiffusePyramid) { // With mipmap
