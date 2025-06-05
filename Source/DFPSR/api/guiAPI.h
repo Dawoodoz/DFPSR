@@ -146,6 +146,13 @@ namespace dsr {
 	// Draw the root component and its children to the canvas.
 	//   Raises an exception if window doesn't exist.
 	void window_drawComponents(const Window& window);
+	// Executes deferred actions without having to call window_drawComponents.
+	// So if you just called component_detachFromParent to remove a child component, this will trigger it instantly
+	//   so that calls to component_getChildCount will show the new count without having to wait for window_drawComponents.
+	// Make sure not to call window_flushDeferredActions from inside of a comonent's event, because that would remove the whole point of deferring actions.
+	//   If an event is triggered from within another event, it can easily cause bugs in the program by not executing transactions one after another.
+	// Raises an exception if window doesn't exist.
+	void window_flushDeferredActions(const Window& window);
 	// Show the canvas.
 	//   Raises an exception if window doesn't exist.
 	void window_showCanvas(const Window& window);
@@ -265,10 +272,8 @@ namespace dsr {
 	Component component_createWithInterfaceFromFile(Component& parent, const String& filename);
 	// Returns true iff the component exists.
 	bool component_exists(const Component& component);
-	// Removed the component from the parent.
-	//   Does nothing if used against the root component.
-	//   Make sure to erase any other references to the component if you want it erased, including parent pointers in any child components that may still be attached unless you detach them first.
-	//   There is currently no attach function, because such a function would need runtime checks against cyclic dependencies from attaching a parent to its own child, and still be hard to debug once it happens.
+	// Marks component as detached, so that it will be safely removed from the parent's list next time window_drawComponents or window_flushDeferredActions is called.
+	//   Deferring the removal makes sure that no event's callback is called from inside of another event.
 	void component_detachFromParent(const Component& component);
 	// Returns the number of direct (non-recursive) child components attached to parent, or -1 if parent is a null handle.
 	int component_getChildCount(const Component& parent);

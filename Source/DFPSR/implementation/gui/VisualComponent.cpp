@@ -202,9 +202,17 @@ static void drawOverlays(ImageRgbaU8& targetImage, VisualComponent &component, c
 	}
 }
 
+void VisualComponent::flushDeferredActions() {
+	this->sendNotifications();
+	if (!this->managesChildren()) {
+		for (int i = 0; i < this->getChildCount(); i++) {
+			this->children[i]->flushDeferredActions();
+		}
+	}
+}
+
 // Offset may become non-zero when the origin is outside of targetImage from being clipped outside of the parent region
 void VisualComponent::draw(ImageRgbaU8& targetImage, const IVector2D& offset) {
-	// TODO: Any more good places to send notifications to make the GUI respond faster?
 	// When about to start drawing from the root, check for state changes and handle events before drawing,
 	//   so that anything needed for visuals is handled without further delay.
 	if (this->parent == nullptr) {
