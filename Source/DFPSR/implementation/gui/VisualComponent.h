@@ -55,6 +55,8 @@ public: // Relations
 	int holdCount = 0;
 	// Marked for removal from the parent when set to true.
 	bool detach = false;
+	// Applying deferred actions before drawing.
+	void flushDeferredActions();
 	// Remember the pressed component for sending mouse move events outside of its region.
 	Handle<VisualComponent> dragComponent;
 private: // States

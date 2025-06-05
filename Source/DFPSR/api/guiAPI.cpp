@@ -172,6 +172,11 @@ void dsr::window_drawComponents(const Window& window) {
 	MUST_EXIST(window, window_drawComponents);
 	window->drawComponents();
 }
+void dsr::window_flushDeferredActions(const Window& window) {
+	MUST_EXIST(window, window_flushDeferredActions);
+	window->flushDeferredActions();
+}
+
 void dsr::window_showCanvas(const Window& window) {
 	MUST_EXIST(window, window_showCanvas);
 	window->showCanvas();

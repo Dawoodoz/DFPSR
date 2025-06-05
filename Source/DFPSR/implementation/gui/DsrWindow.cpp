@@ -248,6 +248,10 @@ void DsrWindow::drawComponents() {
 	this->mainPanel->draw(canvas, IVector2D(0, 0));
 }
 
+void DsrWindow::flushDeferredActions() {
+	this->mainPanel->flushDeferredActions();
+}
+
 AlignedImageRgbaU8 DsrWindow::getCanvas() {
 	auto fullResolutionCanvas = this->backend->getCanvas();
 	if (this->pixelScale > 1) {

@@ -127,6 +127,8 @@ public:
 		void removeDepthBuffer();
 		// Draw components directly to the canvas in full resolution
 		void drawComponents();
+		// Execute deferred actions once it is safe to trigger callbacks from affected components.
+		void flushDeferredActions();
 		// Show the canvas when an image is ready
 		void showCanvas();
 		// Canvas width in the pre-upscale resolution
