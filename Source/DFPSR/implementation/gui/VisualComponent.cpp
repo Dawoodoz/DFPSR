@@ -265,6 +265,8 @@ void VisualComponent::addChildComponent(Handle<VisualComponent> child) {
 		child->detachFromParent();
 		// Update layout based on the new parent size
 		child->applyLayout(IRect(0, 0, this->location.width(), this->location.height()));
+		// Let the new component inherit the theme from its parent.
+		child->applyTheme(this->getTheme());
 		// Connect to the new parent
 		this->children.push(child);
 		this->childChanged = true;
@@ -281,6 +283,8 @@ bool VisualComponent::addChild(Handle<Persistent> child) {
 		return false; // Wrong type!
 	} else {
 		this->addChildComponent(visualComponent);
+		// Let the new component inherit the theme from its parent.
+		visualComponent->applyTheme(this->getTheme());
 		return true; // Success!
 	}
 }
