@@ -340,6 +340,13 @@ namespace dsr {
 	    DSR_CHECK_PROPERTY(DsrTrait_Any_U32, M)
 	  )>
 	inline auto texture_sample_bilinear(const TextureRgbaU8 &texture, const F32 &u, const F32 &v, const M &mipLevel) {
+		if (!MIP_INSIDE) {
+			// TODO: Either handle all special cases with mipLevel out of bound, or make an integer mimimum
+			//         function that is emulated with scalar operations when not available in hardware.
+			//       Clamping the MIP level in texture_getMipLevelIndex will probably always be faster anyway,
+			//         because there it can be clamped as a single scalar integer for muliple pixels.
+			throwError(U"MIP_INSIDE is currently mandatory for texture_sample_bilinear because some processors do not have integer minimum functions for limiting mipLevel efficiently!\n");
+		}
 		M scaleU = M(256u << texture.impl_log2width);
 		M scaleV = M(256u << texture.impl_log2height);
 		if (!HIGHEST_RESOLUTION) {
@@ -481,7 +488,9 @@ namespace dsr {
 		if (offset >  4.0f) { result = 2; }
 		if (offset >  8.0f) { result = 3; }
 		if (offset > 16.0f) { result = 4; }
-		// TODO: Should it be possible to configure the number of mip levels?
+		// Clamp the MIP level.
+		int32_t maxMip = texture_getSmallestMipLevel(source);
+		if (result > maxMip) { result = maxMip; }
 		return result;
 	}
 

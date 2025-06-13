@@ -78,12 +78,12 @@ inline Rgba_F32<U32x4, F32x4> getPixels_2x2(void *data, const F32x4x3 &vertexWei
 		// Optimized for diffuse only
 		F32x4 u1 = shaderMethods::interpolate(assets->texCoords.u1, vertexWeights);
 		F32x4 v1 = shaderMethods::interpolate(assets->texCoords.v1, vertexWeights);
-		return shaderMethods::sample_F32<Interpolation::BL, false, DIFFUSE_SINGLE_LAYER, false, false, false>(assets->diffuseMap, u1, v1);
+		return shaderMethods::sample_F32<Interpolation::BL, false, DIFFUSE_SINGLE_LAYER, false, false>(assets->diffuseMap, u1, v1);
 	} else if (HAS_LIGHT_MAP && !HAS_DIFFUSE_MAP && COLORLESS) {
 		// Optimized for light only
 		F32x4 u2 = shaderMethods::interpolate(assets->texCoords.u2, vertexWeights);
 		F32x4 v2 = shaderMethods::interpolate(assets->texCoords.v2, vertexWeights);
-		return shaderMethods::sample_F32<Interpolation::BL, false, false, false, false, true>(assets->lightMap, u2, v2);
+		return shaderMethods::sample_F32<Interpolation::BL, false, false, false, true>(assets->lightMap, u2, v2);
 	} else {
 		// Interpolate the vertex color
 		Rgba_F32<U32x4, F32x4> color = HAS_VERTEX_FADING ?
@@ -93,13 +93,13 @@ inline Rgba_F32<U32x4, F32x4> getPixels_2x2(void *data, const F32x4x3 &vertexWei
 		if (HAS_DIFFUSE_MAP) {
 			F32x4 u1 = shaderMethods::interpolate(assets->texCoords.u1, vertexWeights);
 			F32x4 v1 = shaderMethods::interpolate(assets->texCoords.v1, vertexWeights);
-			color = color * shaderMethods::sample_F32<Interpolation::BL, false, DIFFUSE_SINGLE_LAYER, false, false, false>(assets->diffuseMap, u1, v1);
+			color = color * shaderMethods::sample_F32<Interpolation::BL, false, DIFFUSE_SINGLE_LAYER, false, false>(assets->diffuseMap, u1, v1);
 		}
 		// Sample lightmap
 		if (HAS_LIGHT_MAP) {
 			F32x4 u2 = shaderMethods::interpolate(assets->texCoords.u2, vertexWeights);
 			F32x4 v2 = shaderMethods::interpolate(assets->texCoords.v2, vertexWeights);
-			color = color * shaderMethods::sample_F32<Interpolation::BL, false, false, false, false, true>(assets->lightMap, u2, v2);
+			color = color * shaderMethods::sample_F32<Interpolation::BL, false, false, false, true>(assets->lightMap, u2, v2);
 		}
 		return color;
 	}
