@@ -115,5 +115,11 @@ If you have linked with guiAPI.cpp, you need to import DFPSR.DsrHead in your *.D
 If the Graphics variable is default assigned to 1 before DFPSR.DsrHead is imported, a window manager will be selected based on which system you are compiling for.
 If the Graphics variable did not exist, was accidentally placed after the DFPSR.DsrHead import, or you assigned it to 0, then NoWindow.cpp will be used as a stub implementation to throw an exception if someone tries to actually create a window.
 </P><IMG SRC="Images/Border.png"><P>
+
+</P><P>
+</P><H2> Getting linker errors with duplicate symbols when building on an operating system with a case insensitive file system.</H2><P>
+</P><P>
+The Builder build system needs consistent paths to files, so if your C++ source code includes from "dfpsr" but your project imports from "DFPSR", the different paths to the same files will be treated as different files and linked twice.
+</P><IMG SRC="Images/Border.png"><P>
 </P>
 </BODY> </HTML>
