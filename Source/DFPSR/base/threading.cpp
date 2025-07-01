@@ -182,7 +182,9 @@ void threadedWorkFromArray(SafePointer<std::function<void()>> jobs, int jobCount
 }
 
 void threadedWorkFromList(List<std::function<void()>> jobs, int maxThreadCount) {
-	threadedWorkFromArray(&jobs[0], jobs.length(), maxThreadCount);
+	if (jobs.length() > 0) {
+		threadedWorkFromArray(&jobs[0], jobs.length(), maxThreadCount);
+	}
 	jobs.clear();
 }
 
