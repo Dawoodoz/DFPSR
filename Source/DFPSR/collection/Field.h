@@ -106,7 +106,7 @@ public:
 	const T& unsafe_readAccess(const UVector2D &location) const { return this->unsafe_readAccess(location.x, location.y); }
 	T read_border(const UVector2D& location, const T& outside) const { return this->read_border(location.x, location.y, outside); }
 	T read_clamp(UVector2D location) const { return this->read_clamp(location.x, location.y); }
-	void write_ignore(const UVector2D& location, const T& value) { this->write_ignore(location.x, location.y); }
+	void write_ignore(const UVector2D& location, const T& value) { this->write_ignore(location.x, location.y, value); }
 
 	// Wrappers for access using IVector instead of separate (x, y) coordinates.
 	bool inside(const IVector2D& location) const { return this->inside(location.x, location.y); }
@@ -114,7 +114,7 @@ public:
 	const T& unsafe_readAccess(const IVector2D &location) const { return this->unsafe_readAccess(location.x, location.y); }
 	T read_border(const IVector2D& location, const T& outside) const { return this->read_border(location.x, location.y, outside); }
 	T read_clamp(IVector2D location) const { return this->read_clamp(location.x, location.y); }
-	void write_ignore(const IVector2D& location, const T& value) { this->write_ignore(location.x, location.y); }
+	void write_ignore(const IVector2D& location, const T& value) { this->write_ignore(location.x, location.y, value); }
 
 	// Wrappers for access using LVector instead of separate (x, y) coordinates.
 	bool inside(const LVector2D& location) const { return this->inside(location.x, location.y); }
@@ -122,7 +122,7 @@ public:
 	const T& unsafe_readAccess(const LVector2D &location) const { return this->unsafe_readAccess(location.x, location.y); }
 	T read_border(const LVector2D& location, const T& outside) const { return this->read_border(location.x, location.y, outside); }
 	T read_clamp(LVector2D location) const { return this->read_clamp(location.x, location.y); }
-	void write_ignore(const LVector2D& location, const T& value) { this->write_ignore(location.x, location.y); }
+	void write_ignore(const LVector2D& location, const T& value) { this->write_ignore(location.x, location.y, value); }
 };
 
 }
