@@ -36,13 +36,13 @@ Buffer buffer_create(intptr_t newSize) {
 	return handle_createArray<uint8_t>(AllocationInitialization::Zeroed, (uintptr_t)newSize);
 }
 
-Buffer buffer_create(intptr_t newSize, uintptr_t paddToAlignment) {
+Buffer buffer_create(intptr_t newSize, uintptr_t paddToAlignment, bool zeroed) {
 	if (newSize < 0) newSize = 0;
 	if (paddToAlignment > heap_getHeapAlignment()) {
 		throwError(U"Maximum alignment exceeded when creating a buffer!\n");
 		return Handle<uint8_t>();
 	} else {
-		return handle_createArray<uint8_t>(AllocationInitialization::Zeroed, memory_getPaddedSize((uintptr_t)newSize, paddToAlignment));
+		return handle_createArray<uint8_t>(zeroed ? AllocationInitialization::Zeroed : AllocationInitialization::Uninitialized, memory_getPaddedSize((uintptr_t)newSize, paddToAlignment));
 	}
 }
 

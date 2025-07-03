@@ -41,11 +41,14 @@ namespace dsr {
 	//   1 <= height <= 65536
 	// Post-condition:
 	//   Returns a new image of width x height pixels, or an empty image on failure.
-	AlignedImageU8 image_create_U8(int32_t width, int32_t height);
-	AlignedImageU16 image_create_U16(int32_t width, int32_t height);
-	AlignedImageF32 image_create_F32(int32_t width, int32_t height);
-	OrderedImageRgbaU8 image_create_RgbaU8(int32_t width, int32_t height);
-	AlignedImageRgbaU8 image_create_RgbaU8_native(int32_t width, int32_t height, PackOrderIndex packOrderIndex);
+	// Warning: Setting zeroed to false will initialize the image with non-deterministic pixel data.
+	//          This can make execution faster but also complicate tracking down errors.
+	//          Only recommended for temporary images when you know for sure that all content will be overwritten.
+	AlignedImageU8 image_create_U8(int32_t width, int32_t height, bool zeroed = true);
+	AlignedImageU16 image_create_U16(int32_t width, int32_t height, bool zeroed = true);
+	AlignedImageF32 image_create_F32(int32_t width, int32_t height, bool zeroed = true);
+	OrderedImageRgbaU8 image_create_RgbaU8(int32_t width, int32_t height, bool zeroed = true);
+	AlignedImageRgbaU8 image_create_RgbaU8_native(int32_t width, int32_t height, PackOrderIndex packOrderIndex, bool zeroed = true);
 
 // Properties
 	// Returns image's width in pixels, or 0 from an empty image
