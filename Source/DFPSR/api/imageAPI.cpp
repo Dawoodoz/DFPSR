@@ -39,7 +39,7 @@ static const int32_t maximumImageWidth = 65536;
 static const int32_t maximumImageHeight = 65536;
 
 template <typename IMAGE_TYPE>
-IMAGE_TYPE image_create_template(const char * name, int32_t width, int32_t height, PackOrderIndex packOrderIndex) {
+IMAGE_TYPE image_create_template(const char * name, int32_t width, int32_t height, PackOrderIndex packOrderIndex, bool zeroed) {
 	if (width < 1 || width > maximumImageWidth || height < 1 || height > maximumImageHeight) {
 		sendWarning(U"");
 		// Return an empty image on failure.
@@ -50,29 +50,29 @@ IMAGE_TYPE image_create_template(const char * name, int32_t width, int32_t heigh
 		uintptr_t byteStride = memory_getPaddedSize(width * pixelSize, heap_getHeapAlignment());
 		uint32_t pixelStride = byteStride / pixelSize;
 		// Create the image.
-		return IMAGE_TYPE(buffer_create(byteStride * height).setName(name), 0, width, height, pixelStride, packOrderIndex);
+		return IMAGE_TYPE(buffer_create(byteStride * height, 1, zeroed).setName(name), 0, width, height, pixelStride, packOrderIndex);
 	}
 }
 
 // Take the dimensions as signed integers to avoid getting extreme dimensions on underflow.
-AlignedImageU8 image_create_U8(int32_t width, int32_t height) {
-	return image_create_template<AlignedImageU8>("U8 pixel buffer", width, height, PackOrderIndex::RGBA);
+AlignedImageU8 image_create_U8(int32_t width, int32_t height, bool zeroed) {
+	return image_create_template<AlignedImageU8>("U8 pixel buffer", width, height, PackOrderIndex::RGBA, zeroed);
 }
 
-AlignedImageU16 image_create_U16(int32_t width, int32_t height) {
-	return image_create_template<AlignedImageU16>("U16 pixel buffer", width, height, PackOrderIndex::RGBA);
+AlignedImageU16 image_create_U16(int32_t width, int32_t height, bool zeroed) {
+	return image_create_template<AlignedImageU16>("U16 pixel buffer", width, height, PackOrderIndex::RGBA, zeroed);
 }
 
-AlignedImageF32 image_create_F32(int32_t width, int32_t height) {
-	return image_create_template<AlignedImageF32>("F32 pixel buffer", width, height, PackOrderIndex::RGBA);
+AlignedImageF32 image_create_F32(int32_t width, int32_t height, bool zeroed) {
+	return image_create_template<AlignedImageF32>("F32 pixel buffer", width, height, PackOrderIndex::RGBA, zeroed);
 }
 
-OrderedImageRgbaU8 image_create_RgbaU8(int32_t width, int32_t height) {
-	return image_create_template<OrderedImageRgbaU8>("RgbaU8 pixel buffer", width, height, PackOrderIndex::RGBA);
+OrderedImageRgbaU8 image_create_RgbaU8(int32_t width, int32_t height, bool zeroed) {
+	return image_create_template<OrderedImageRgbaU8>("RgbaU8 pixel buffer", width, height, PackOrderIndex::RGBA, zeroed);
 }
 
-AlignedImageRgbaU8 image_create_RgbaU8_native(int32_t width, int32_t height, PackOrderIndex packOrderIndex) {
-	return image_create_template<OrderedImageRgbaU8>("Native pixel buffer", width, height, packOrderIndex);
+AlignedImageRgbaU8 image_create_RgbaU8_native(int32_t width, int32_t height, PackOrderIndex packOrderIndex, bool zeroed) {
+	return image_create_template<OrderedImageRgbaU8>("Native pixel buffer", width, height, packOrderIndex, zeroed);
 }
 
 // Pre-condition: image exists.

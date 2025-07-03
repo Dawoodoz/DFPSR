@@ -289,10 +289,10 @@ static void resize_aux(const ImageU8& target, const ImageU8& source, bool interp
 
 // Creating an image to replacedImage with the same pack order as originalImage when applicable to the image format.
 static ImageRgbaU8 createWithSamePackOrder(const ImageRgbaU8& originalImage, int32_t width, int32_t height) {
-	return image_create_RgbaU8_native(width, height, image_getPackOrderIndex(originalImage));
+	return image_create_RgbaU8_native(width, height, image_getPackOrderIndex(originalImage), false);
 }
 static ImageU8 createWithSamePackOrder(const ImageU8& originalImage, int32_t width, int32_t height) {
-	return image_create_U8(width, height);
+	return image_create_U8(width, height, false);
 }
 
 template <typename IMAGE_TYPE>
@@ -776,7 +776,7 @@ void filter_mapRgbaU8(const ImageRgbaU8 &target, const ImageGenRgbaU8& lambda, i
 	}
 }
 OrderedImageRgbaU8 filter_generateRgbaU8(int width, int height, const ImageGenRgbaU8& lambda, int startX, int startY) {
-	OrderedImageRgbaU8 result = image_create_RgbaU8(width, height);
+	OrderedImageRgbaU8 result = image_create_RgbaU8(width, height, false);
 	filter_mapRgbaU8(result, lambda, startX, startY);
 	return result;
 }
@@ -805,7 +805,7 @@ void filter_mapU8(const ImageU8 &target, const ImageGenI32& lambda, int startX, 
 	}
 }
 AlignedImageU8 filter_generateU8(int width, int height, const ImageGenI32& lambda, int startX, int startY) {
-	AlignedImageU8 result = image_create_U8(width, height);
+	AlignedImageU8 result = image_create_U8(width, height, false);
 	filter_mapU8(result, lambda, startX, startY);
 	return result;
 }
@@ -815,7 +815,7 @@ void filter_mapU16(const ImageU16 &target, const ImageGenI32& lambda, int startX
 	}
 }
 AlignedImageU16 filter_generateU16(int width, int height, const ImageGenI32& lambda, int startX, int startY) {
-	AlignedImageU16 result = image_create_U16(width, height);
+	AlignedImageU16 result = image_create_U16(width, height, false);
 	filter_mapU16(result, lambda, startX, startY);
 	return result;
 }
@@ -840,7 +840,7 @@ void filter_mapF32(const ImageF32 &target, const ImageGenF32& lambda, int startX
 	}
 }
 AlignedImageF32 filter_generateF32(int width, int height, const ImageGenF32& lambda, int startX, int startY) {
-	AlignedImageF32 result = image_create_F32(width, height);
+	AlignedImageF32 result = image_create_F32(width, height, false);
 	filter_mapF32(result, lambda, startX, startY);
 	return result;
 }
@@ -851,7 +851,7 @@ AlignedImageF32 filter_generateF32(int width, int height, const ImageGenF32& lam
 
 OrderedImageRgbaU8 filter_resize(const ImageRgbaU8 &source, Sampler interpolation, int32_t newWidth, int32_t newHeight) {
 	if (image_exists(source)) {
-		OrderedImageRgbaU8 resultImage = image_create_RgbaU8(newWidth, newHeight);
+		OrderedImageRgbaU8 resultImage = image_create_RgbaU8(newWidth, newHeight, false);
 		resizeToTarget<ImageRgbaU8>(resultImage, source, interpolation == Sampler::Linear);
 		return resultImage;
 	} else {
@@ -861,7 +861,7 @@ OrderedImageRgbaU8 filter_resize(const ImageRgbaU8 &source, Sampler interpolatio
 
 AlignedImageU8 filter_resize(const ImageU8 &source, Sampler interpolation, int32_t newWidth, int32_t newHeight) {
 	if (image_exists(source)) {
-		AlignedImageU8 resultImage = image_create_U8(newWidth, newHeight);
+		AlignedImageU8 resultImage = image_create_U8(newWidth, newHeight, false);
 		resizeToTarget<ImageU8>(resultImage, source, interpolation == Sampler::Linear);
 		return resultImage;
 	} else {
