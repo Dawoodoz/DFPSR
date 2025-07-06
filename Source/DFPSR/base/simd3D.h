@@ -259,6 +259,8 @@ struct F32x8x3 {
 };
 SIMD_VECTOR_INFIX_OPERATORS_3D(F32x8x3, F32x8, float)
 
+// TODO: Refactor into template types to allow using vector lengths that are not known in compile time, such as ARM SVE registers.
+
 // X vector aliases
 #if DSR_DEFAULT_VECTOR_SIZE == 16
 	using F32xXx3 = F32x4x3;
