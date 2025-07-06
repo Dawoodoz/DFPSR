@@ -114,7 +114,7 @@ namespace dsr {
 	inline T min(const T &a, const T &b) {
 		return (a < b) ? a : b;
 	}
-	template <typename T, typename... TAIL, DSR_ENABLE_IF(DSR_CHECK_PROPERTY(DsrTrait_Scalar, T))>
+	template <typename T, typename... TAIL, DSR_ENABLE_IF(DSR_CHECK_PROPERTY(DsrTrait_Any, T))>
 	inline T min(const T &a, const T &b, TAIL... tail) {
 		return min(min(a, b), tail...);
 	}
@@ -125,7 +125,7 @@ namespace dsr {
 	inline T max(const T &a, const T &b) {
 		return (a > b) ? a : b;
 	}
-	template <typename T, typename... TAIL, DSR_ENABLE_IF(DSR_CHECK_PROPERTY(DsrTrait_Scalar, T))>
+	template <typename T, typename... TAIL, DSR_ENABLE_IF(DSR_CHECK_PROPERTY(DsrTrait_Any, T))>
 	inline T max(const T &a, const T &b, TAIL... tail) {
 		return max(max(a, b), tail...);
 	}
