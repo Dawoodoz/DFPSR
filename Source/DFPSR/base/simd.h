@@ -4093,7 +4093,7 @@
 	//   Used when you know that your algorithm is only going to work with float types and you need the extra performance.
 	//     Some processors have AVX but not AVX2, meaning that it has 256-bit SIMD for floats, but only 128-bit SIMD for integers.
 	//   F32xF
-	//     The longest available SIMD vector for storing 32-bit float values. Iterating laneCountF_32Bit floats at a time.
+	//     The longest available SIMD vector for storing 32-bit float values. Iterating laneCountF floats at a time.
 	#if defined(USE_256BIT_F_SIMD) || defined(EMULATE_256BIT_F_SIMD)
 		#define DSR_FLOAT_VECTOR_SIZE 32
 		#define DSR_FLOAT_ALIGNMENT 32
