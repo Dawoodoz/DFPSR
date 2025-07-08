@@ -35,8 +35,8 @@ public:
 	float subB, subC; // Weights for second and third vertices in the parent triangle
 	int state = 0; // Used by algorithms
 	float value = 0.0f; // Used by algorithms
-	SubVertex() : cs(FVector3D()), subB(0.0f), subC(0.0f) {}
-	SubVertex(FVector3D cs, float subB, float subC) : cs(cs), subB(subB), subC(subC) {}
+	SubVertex() : subB(0.0f), subC(0.0f) {}
+	SubVertex(const FVector3D &cs, float subB, float subC) : cs(cs), subB(subB), subC(subC) {}
 	SubVertex(const SubVertex &vertexA, const SubVertex &vertexB, float ratio) {
 		float invRatio = 1.0f - ratio;
 		this->cs = vertexA.cs * invRatio + vertexB.cs * ratio;
