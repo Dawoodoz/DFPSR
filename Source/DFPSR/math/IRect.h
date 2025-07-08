@@ -25,9 +25,9 @@
 #define DFPSR_GEOMETRY_IRECT
 
 #include <cstdint>
-#include <cmath>
 #include <algorithm>
 #include "IVector.h"
+#include "../base/noSimd.h"
 
 namespace dsr {
 
@@ -55,10 +55,10 @@ public:
 	// Returns the intersection between a and b or a rectangle that has no width nor height if overlaps(a, b) is false
 	static IRect cut(const IRect &a, const IRect &b) {
 		if (overlaps(a, b)) {
-			int32_t leftSide = std::max(a.left(), b.left());
-			int32_t topSide = std::max(a.top(), b.top());
-			int32_t rightSide = std::min(a.right(), b.right());
-			int32_t bottomSide = std::min(a.bottom(), b.bottom());
+			int32_t leftSide = max(a.left(), b.left());
+			int32_t topSide = max(a.top(), b.top());
+			int32_t rightSide = min(a.right(), b.right());
+			int32_t bottomSide = min(a.bottom(), b.bottom());
 			return IRect(leftSide, topSide, rightSide - leftSide, bottomSide - topSide);
 		} else {
 			return IRect();
@@ -66,10 +66,10 @@ public:
 	}
 	// Returns a bounding box of the union
 	static IRect merge(const IRect &a, const IRect &b) {
-		int32_t leftSide = std::min(a.left(), b.left());
-		int32_t topSide = std::min(a.top(), b.top());
-		int32_t rightSide = std::max(a.right(), b.right());
-		int32_t bottomSide = std::max(a.bottom(), b.bottom());
+		int32_t leftSide = min(a.left(), b.left());
+		int32_t topSide = min(a.top(), b.top());
+		int32_t rightSide = max(a.right(), b.right());
+		int32_t bottomSide = max(a.bottom(), b.bottom());
 		return IRect(leftSide, topSide, rightSide - leftSide, bottomSide - topSide);
 	}
 	// Returns true iff the rectangles have an overlapping area
