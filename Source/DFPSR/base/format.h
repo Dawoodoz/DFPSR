@@ -58,7 +58,7 @@ void format_writeI64_LE(SafePointer<uint8_t> target, int64_t value);
 // Convert bits interpreted as a 32-bit IEEE754 floating-point value into the native float representation.
 float format_bitsToF32_IEEE754(uint32_t bits);
 
-// Convert bits interpreted as a 65-bit IEEE754 floating-point value into the native double representation.
+// Convert bits interpreted as a 64-bit IEEE754 floating-point value into the native double representation.
 double format_bitsToF64_IEEE754(uint64_t bits);
 	
 }
