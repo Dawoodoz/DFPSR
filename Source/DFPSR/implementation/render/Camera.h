@@ -49,27 +49,34 @@ private:
 	FPlane3D planes[6];
 	int planeCount;
 public:
+	// Named indices to the different planes defining a view frustum.
+	static const int view_left   = 0;
+	static const int view_right  = 1;
+	static const int view_top    = 2;
+	static const int view_bottom = 3;
+	static const int view_near   = 4;
+	static const int view_far    = 5;
 	ViewFrustum() : planeCount(0) {}
 	// Orthogonal view frustum in camera space
 	ViewFrustum(float halfWidth, float halfHeight)
 	: planeCount(4) {
 		// Sides
-		planes[0] = FPlane3D(FVector3D(1.0f, 0.0f, 0.0f), halfWidth);
-		planes[1] = FPlane3D(FVector3D(-1.0f, 0.0f, 0.0f), halfWidth);
-		planes[2] = FPlane3D(FVector3D(0.0f, 1.0f, 0.0f), halfHeight);
-		planes[3] = FPlane3D(FVector3D(0.0f, -1.0f, 0.0f), halfHeight);
+		planes[view_left  ] = FPlane3D(FVector3D(-1.0f, 0.0f, 0.0f), halfWidth);
+		planes[view_right ] = FPlane3D(FVector3D(1.0f, 0.0f, 0.0f), halfWidth);
+		planes[view_top   ] = FPlane3D(FVector3D(0.0f, 1.0f, 0.0f), halfHeight);
+		planes[view_bottom] = FPlane3D(FVector3D(0.0f, -1.0f, 0.0f), halfHeight);
 	}
 	// Perspective view frustum in camera space
 	ViewFrustum(float nearClip, float farClip, float widthSlope, float heightSlope)
 	: planeCount(farClip == std::numeric_limits<float>::infinity() ? 5 : 6) { // Skip the far clip plane if its distance is infinite.
 		// Sides
-		planes[0] = FPlane3D(FVector3D(1.0f, 0.0f, -widthSlope), 0.0f);
-		planes[1] = FPlane3D(FVector3D(-1.0f, 0.0f, -widthSlope), 0.0f);
-		planes[2] = FPlane3D(FVector3D(0.0f, 1.0f, -heightSlope), 0.0f);
-		planes[3] = FPlane3D(FVector3D(0.0f, -1.0f, -heightSlope), 0.0f);
+		planes[view_left  ] = FPlane3D(FVector3D(-1.0f,  0.0f, -widthSlope ), 0.0f);
+		planes[view_right ] = FPlane3D(FVector3D( 1.0f,  0.0f, -widthSlope ), 0.0f);
+		planes[view_top   ] = FPlane3D(FVector3D( 0.0f,  1.0f, -heightSlope), 0.0f);
+		planes[view_bottom] = FPlane3D(FVector3D( 0.0f, -1.0f, -heightSlope), 0.0f);
 		// Near and far clip planes
-		planes[4] = FPlane3D(FVector3D(0.0f, 0.0f, -1.0f), -nearClip);
-		planes[5] = FPlane3D(FVector3D(0.0f, 0.0f, 1.0f), farClip);
+		planes[view_near  ] = FPlane3D(FVector3D(0.0f, 0.0f, -1.0f), -nearClip);
+		planes[view_far   ] = FPlane3D(FVector3D(0.0f, 0.0f,  1.0f),   farClip);
 	}
 	inline int getPlaneCount() const {
 		return this->planeCount;
