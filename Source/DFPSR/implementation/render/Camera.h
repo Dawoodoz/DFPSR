@@ -37,13 +37,6 @@
 
 namespace dsr {
 
-// A special rounding used for vertex projection
-static inline int64_t safeRoundInt64(float value) {
-	int64_t result = (int64_t)value;
-	if (value <= -1048576.0f || value >= 1048576.0f) { result = 0; }
-	return result;
-}
-
 class ViewFrustum {
 private:
 	FPlane3D planes[6];
@@ -179,7 +172,7 @@ public:
 			);
 			FVector2D projectedFloat = preProjection * invDepth;
 			FVector2D subPixel = projectedFloat * constants::unitsPerPixel;
-			LVector2D rounded = LVector2D(safeRoundInt64(subPixel.x), safeRoundInt64(subPixel.y));
+			LVector2D rounded = LVector2D(int64_t(subPixel.x), int64_t(subPixel.y));
 			return ProjectedPoint(cameraSpace, projectedFloat, rounded);
 		} else {
 			FVector2D projectedFloat = FVector2D(
@@ -187,7 +180,7 @@ public:
 			  (-cameraSpace.y * this->invHeightSlope + 0.5f) * this->imageHeight
 			);
 			FVector2D subPixel = projectedFloat * constants::unitsPerPixel;
-			LVector2D rounded = LVector2D(safeRoundInt64(subPixel.x), safeRoundInt64(subPixel.y));
+			LVector2D rounded = LVector2D(int64_t(subPixel.x), int64_t(subPixel.y));
 			return ProjectedPoint(cameraSpace, projectedFloat, rounded);
 		}
 	}
