@@ -36,9 +36,9 @@
 			static constexpr T value = VALUE;
 		};
 		// Custom implementation of std::false_type.
-		using DSR_TRAIT_FALSE = DSR_PROPERTY<bool, false>;
+		using DSR_TRAIT_FALSE = dsr::DSR_PROPERTY<bool, false>;
 		// Custom implementation of std::true_type.
-		using DSR_TRAIT_TRUE = DSR_PROPERTY<bool, true>;
+		using DSR_TRAIT_TRUE = dsr::DSR_PROPERTY<bool, true>;
 		// Custom implementation of std::is_same.
 		template <typename T, typename U>
 		struct DsrTrait_SameType { static const bool value = false; };
@@ -54,30 +54,30 @@
 
 		// Place this as a template argument to disable the template function when false.
 		#define DSR_ENABLE_IF(TRAIT) \
-			typename = typename DsrTrait_EnableIf<TRAIT>::type 
+			typename = typename dsr::DsrTrait_EnableIf<TRAIT>::type 
 
 		// Properties are given to single types.
 		#define DSR_DECLARE_PROPERTY(PROPERTY_NAME) \
-			template <typename T> struct PROPERTY_NAME : DSR_TRAIT_FALSE {};
+			template <typename T> struct PROPERTY_NAME : dsr::DSR_TRAIT_FALSE {};
 
 		#define DSR_APPLY_PROPERTY(PROPERTY_NAME, TYPE_NAME) \
-			template <> struct PROPERTY_NAME<TYPE_NAME> : DSR_TRAIT_TRUE  {};
+			template <> struct PROPERTY_NAME<TYPE_NAME> : dsr::DSR_TRAIT_TRUE  {};
 
 		#define DSR_CHECK_PROPERTY(PROPERTY_NAME, TYPE_NAME) \
 			(PROPERTY_NAME<TYPE_NAME>::value)
 
 		// Relations are given to pairs of types.
 		#define DSR_DECLARE_RELATION(RELATION_NAME) \
-			template <typename T, typename U> struct RELATION_NAME : DSR_TRAIT_FALSE {};
+			template <typename T, typename U> struct RELATION_NAME : dsr::DSR_TRAIT_FALSE {};
 
 		#define DSR_APPLY_RELATION(RELATION_NAME, TYPE_A, TYPE_B) \
-			template <> struct RELATION_NAME<TYPE_A, TYPE_B> : DSR_TRAIT_TRUE  {};
+			template <> struct RELATION_NAME<TYPE_A, TYPE_B> : dsr::DSR_TRAIT_TRUE  {};
 
 		#define DSR_CHECK_RELATION(RELATION_NAME, TYPE_A, TYPE_B) \
 			(RELATION_NAME<TYPE_A, TYPE_B>::value)
 
 		// Checking types.
-		#define DSR_SAME_TYPE(TYPE_A, TYPE_B) DsrTrait_SameType<TYPE_A, TYPE_B>::value
+		#define DSR_SAME_TYPE(TYPE_A, TYPE_B) dsr::DsrTrait_SameType<TYPE_A, TYPE_B>::value
 		#define DSR_CONVERTIBLE_TO(FROM, TO) std::is_convertible<FROM, TO>::value
 		#define DSR_UTF32_LITERAL(TYPE) std::is_convertible<TYPE, const char32_t*>::value
 		#define DSR_ASCII_LITERAL(TYPE) std::is_convertible<TYPE, const char*>::value
