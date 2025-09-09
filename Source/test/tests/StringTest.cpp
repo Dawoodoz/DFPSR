@@ -260,6 +260,35 @@ START_TEST(String)
 	ASSERT_EQUAL(dsr::string_combine(-0.5), U"-0.5");
 	ASSERT_EQUAL(dsr::string_combine(789.123456), U"789.123456");
 	ASSERT_EQUAL(dsr::string_combine(-789.123456), U"-789.123456");
+	// Manual number serialization
+	String serializedNumber;
+	// Check that epsilon does not overflow the fraction
+	serializedNumber = U""; dsr::string_fromDouble(serializedNumber, 123.0                        ); ASSERT_EQUAL(serializedNumber, U"123.0");
+	serializedNumber = U""; dsr::string_fromDouble(serializedNumber, 123.0 + 0.0000000000000000001); ASSERT_EQUAL(serializedNumber, U"123.0");
+	serializedNumber = U""; dsr::string_fromDouble(serializedNumber, 123.0 - 0.0000000000000000001); ASSERT_EQUAL(serializedNumber, U"123.0");
+	serializedNumber = U""; dsr::string_fromDouble(serializedNumber, 734.0 + 0.0000000000000000001); ASSERT_EQUAL(serializedNumber, U"734.0");
+	serializedNumber = U""; dsr::string_fromDouble(serializedNumber, 734.0 - 0.0000000000000000001); ASSERT_EQUAL(serializedNumber, U"734.0");
+	serializedNumber = U""; dsr::string_fromDouble(serializedNumber, -15.0 + 0.0000000000000000001); ASSERT_EQUAL(serializedNumber, U"-15.0");
+	serializedNumber = U""; dsr::string_fromDouble(serializedNumber, -15.0 - 0.0000000000000000001); ASSERT_EQUAL(serializedNumber, U"-15.0");
+	// Test different settings
+	serializedNumber = U""; dsr::string_fromDouble(serializedNumber, 123.456789, -12); ASSERT_EQUAL(serializedNumber, U"123.5"); // At least one decimal
+	serializedNumber = U""; dsr::string_fromDouble(serializedNumber, 123.456789,  -1); ASSERT_EQUAL(serializedNumber, U"123.5"); // At least one decimal
+	serializedNumber = U""; dsr::string_fromDouble(serializedNumber, 123.456789,   0); ASSERT_EQUAL(serializedNumber, U"123.5"); // At least one decimal
+	serializedNumber = U""; dsr::string_fromDouble(serializedNumber, 123.456789,   1); ASSERT_EQUAL(serializedNumber, U"123.5"); // Good input
+	serializedNumber = U""; dsr::string_fromDouble(serializedNumber, 123.456789,   2); ASSERT_EQUAL(serializedNumber, U"123.46"); // Rounded
+	serializedNumber = U""; dsr::string_fromDouble(serializedNumber, 123.456789,   3); ASSERT_EQUAL(serializedNumber, U"123.457"); // Rounded
+	serializedNumber = U""; dsr::string_fromDouble(serializedNumber, 123.456789,   4); ASSERT_EQUAL(serializedNumber, U"123.4568"); // Rounded
+	serializedNumber = U""; dsr::string_fromDouble(serializedNumber, 123.456789,   5); ASSERT_EQUAL(serializedNumber, U"123.45679"); // Rounded
+	serializedNumber = U""; dsr::string_fromDouble(serializedNumber, 123.456789,   6); ASSERT_EQUAL(serializedNumber, U"123.456789"); // All decimals included, so no need to round.
+	serializedNumber = U""; dsr::string_fromDouble(serializedNumber, -123.456789, -12); ASSERT_EQUAL(serializedNumber, U"-123.5"); // At least one decimal
+	serializedNumber = U""; dsr::string_fromDouble(serializedNumber, -123.456789,  -1); ASSERT_EQUAL(serializedNumber, U"-123.5"); // At least one decimal
+	serializedNumber = U""; dsr::string_fromDouble(serializedNumber, -123.456789,   0); ASSERT_EQUAL(serializedNumber, U"-123.5"); // At least one decimal
+	serializedNumber = U""; dsr::string_fromDouble(serializedNumber, -123.456789,   1); ASSERT_EQUAL(serializedNumber, U"-123.5"); // Good input
+	serializedNumber = U""; dsr::string_fromDouble(serializedNumber, -123.456789,   2); ASSERT_EQUAL(serializedNumber, U"-123.46"); // Rounded
+	serializedNumber = U""; dsr::string_fromDouble(serializedNumber, -123.456789,   3); ASSERT_EQUAL(serializedNumber, U"-123.457"); // Rounded
+	serializedNumber = U""; dsr::string_fromDouble(serializedNumber, -123.456789,   4); ASSERT_EQUAL(serializedNumber, U"-123.4568"); // Rounded
+	serializedNumber = U""; dsr::string_fromDouble(serializedNumber, -123.456789,   5); ASSERT_EQUAL(serializedNumber, U"-123.45679"); // Rounded
+	serializedNumber = U""; dsr::string_fromDouble(serializedNumber, -123.456789,   6); ASSERT_EQUAL(serializedNumber, U"-123.456789"); // All decimals included, so no need to round.
 	// Number parsing
 	ASSERT_EQUAL(string_toInteger(U"0"), 0);
 	ASSERT_EQUAL(string_toInteger(U"-0"), 0);
