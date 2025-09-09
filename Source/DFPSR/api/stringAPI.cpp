@@ -308,6 +308,42 @@ static double decimalMultipliers[MAX_DECIMALS] = {
 	1000000000000000.0,
 	10000000000000000.0
 };
+static double roundingOffsets[MAX_DECIMALS] = {
+	0.05,
+	0.005,
+	0.0005,
+	0.00005,
+	0.000005,
+	0.0000005,
+	0.00000005,
+	0.000000005,
+	0.0000000005,
+	0.00000000005,
+	0.000000000005,
+	0.0000000000005,
+	0.00000000000005,
+	0.000000000000005,
+	0.0000000000000005,
+	0.00000000000000005
+};
+static uint64_t decimalLimits[MAX_DECIMALS] = {
+	9,
+	99,
+	999,
+	9999,
+	99999,
+	999999,
+	9999999,
+	99999999,
+	999999999,
+	9999999999,
+	99999999999,
+	999999999999,
+	9999999999999,
+	99999999999999,
+	999999999999999,
+	9999999999999999
+};
 void dsr::string_fromDouble(String& target, double value, int decimalCount, bool removeTrailingZeroes, DsrChar decimalCharacter, DsrChar negationCharacter) {
 	if (decimalCount < 1) decimalCount = 1;
 	if (decimalCount > MAX_DECIMALS) decimalCount = MAX_DECIMALS;
@@ -317,14 +353,21 @@ void dsr::string_fromDouble(String& target, double value, int decimalCount, bool
 		string_appendChar(target, negationCharacter);
 		remainder = -remainder;
 	}
+	// Apply an offset to make the following truncation round to the closest printable decimal.
+	int offsetIndex = decimalCount - 1;
+	remainder += roundingOffsets[offsetIndex];
 	// Get whole part
 	uint64_t whole = (uint64_t)remainder;
 	string_fromUnsigned(target, whole);
+	// Remove the whole part from the remainder.
 	remainder = remainder - whole;
 	// Print the decimal
 	string_appendChar(target, decimalCharacter);
 	// Get decimals
-	uint64_t scaledDecimals = (uint64_t)((remainder * decimalMultipliers[decimalCount - 1]) + 0.5f);
+	uint64_t scaledDecimals = uint64_t(remainder * decimalMultipliers[offsetIndex]);
+	// Limit decimals to all nines prevent losing a whole unit from fraction overflow.
+	uint64_t limit = decimalLimits[offsetIndex];
+	if (scaledDecimals > limit) scaledDecimals = limit;
 	DsrChar digits[MAX_DECIMALS]; // Using 0 to decimalCount - 1
 	int writeIndex = decimalCount - 1;
 	for (int d = 0; d < decimalCount; d++) {
