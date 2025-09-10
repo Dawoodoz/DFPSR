@@ -289,6 +289,53 @@ START_TEST(String)
 	serializedNumber = U""; dsr::string_fromDouble(serializedNumber, -123.456789,   4); ASSERT_EQUAL(serializedNumber, U"-123.4568"); // Rounded
 	serializedNumber = U""; dsr::string_fromDouble(serializedNumber, -123.456789,   5); ASSERT_EQUAL(serializedNumber, U"-123.45679"); // Rounded
 	serializedNumber = U""; dsr::string_fromDouble(serializedNumber, -123.456789,   6); ASSERT_EQUAL(serializedNumber, U"-123.456789"); // All decimals included, so no need to round.
+	// Test nearest rounding while returning by value.
+	ASSERT_EQUAL(dsr::string_fromDouble(1.00,   1), U"1.0");
+	ASSERT_EQUAL(dsr::string_fromDouble(1.01,   1), U"1.0");
+	ASSERT_EQUAL(dsr::string_fromDouble(1.02,   1), U"1.0");
+	ASSERT_EQUAL(dsr::string_fromDouble(1.03,   1), U"1.0");
+	ASSERT_EQUAL(dsr::string_fromDouble(1.04,   1), U"1.0");
+	ASSERT_EQUAL(dsr::string_fromDouble(1.049,   1), U"1.0");
+	ASSERT_EQUAL(dsr::string_fromDouble(1.0499,   1), U"1.0");
+	ASSERT_EQUAL(dsr::string_fromDouble(1.04999,   1), U"1.0");
+	ASSERT_EQUAL(dsr::string_fromDouble(1.049999,   1), U"1.0");
+	ASSERT_EQUAL(dsr::string_fromDouble(1.0499999,   1), U"1.0");
+	ASSERT_EQUAL(dsr::string_fromDouble(1.04999999,   1), U"1.0");
+	ASSERT_EQUAL(dsr::string_fromDouble(1.049999999,   1), U"1.0");
+	ASSERT_EQUAL(dsr::string_fromDouble(1.050000001,   1), U"1.1");
+	ASSERT_EQUAL(dsr::string_fromDouble(1.05000001,   1), U"1.1");
+	ASSERT_EQUAL(dsr::string_fromDouble(1.0500001,   1), U"1.1");
+	ASSERT_EQUAL(dsr::string_fromDouble(1.050001,   1), U"1.1");
+	ASSERT_EQUAL(dsr::string_fromDouble(1.05001,   1), U"1.1");
+	ASSERT_EQUAL(dsr::string_fromDouble(1.0501,   1), U"1.1");
+	ASSERT_EQUAL(dsr::string_fromDouble(1.051,   1), U"1.1");
+	ASSERT_EQUAL(dsr::string_fromDouble(1.06,   1), U"1.1");
+	ASSERT_EQUAL(dsr::string_fromDouble(1.07,   1), U"1.1");
+	ASSERT_EQUAL(dsr::string_fromDouble(1.08,   1), U"1.1");
+	ASSERT_EQUAL(dsr::string_fromDouble(1.09,   1), U"1.1");
+	ASSERT_EQUAL(dsr::string_fromDouble(1.10,   1), U"1.1");
+	// Not removing trailing zeroes.
+	ASSERT_EQUAL(dsr::string_fromDouble(1.0,  0, false), U"1.0");
+	ASSERT_EQUAL(dsr::string_fromDouble(1.0,  1, false), U"1.0");
+	ASSERT_EQUAL(dsr::string_fromDouble(1.0,  2, false), U"1.00");
+	ASSERT_EQUAL(dsr::string_fromDouble(1.0,  3, false), U"1.000");
+	ASSERT_EQUAL(dsr::string_fromDouble(1.0,  4, false), U"1.0000");
+	ASSERT_EQUAL(dsr::string_fromDouble(1.0,  5, false), U"1.00000");
+	ASSERT_EQUAL(dsr::string_fromDouble(1.0,  6, false), U"1.000000");
+	ASSERT_EQUAL(dsr::string_fromDouble(1.0,  7, false), U"1.0000000");
+	ASSERT_EQUAL(dsr::string_fromDouble(1.0,  8, false), U"1.00000000");
+	ASSERT_EQUAL(dsr::string_fromDouble(1.0,  9, false), U"1.000000000");
+	ASSERT_EQUAL(dsr::string_fromDouble(1.0, 10, false), U"1.0000000000");
+	ASSERT_EQUAL(dsr::string_fromDouble(1.0, 11, false), U"1.00000000000");
+	ASSERT_EQUAL(dsr::string_fromDouble(1.0, 12, false), U"1.000000000000");
+	ASSERT_EQUAL(dsr::string_fromDouble(1.0, 13, false), U"1.0000000000000");
+	ASSERT_EQUAL(dsr::string_fromDouble(1.0, 14, false), U"1.00000000000000");
+	ASSERT_EQUAL(dsr::string_fromDouble(1.0, 15, false), U"1.000000000000000");
+	ASSERT_EQUAL(dsr::string_fromDouble(1.0, 16, false), U"1.0000000000000000");
+	ASSERT_EQUAL(dsr::string_fromDouble(1.0, 17, false), U"1.0000000000000000");
+	ASSERT_EQUAL(dsr::string_fromDouble(1.0, 18, false), U"1.0000000000000000");
+	// Special characters.
+	ASSERT_EQUAL(dsr::string_fromDouble(-1.0,  2, false, U',', U'~'), U"~1,00");
 	// Number parsing
 	ASSERT_EQUAL(string_toInteger(U"0"), 0);
 	ASSERT_EQUAL(string_toInteger(U"-0"), 0);
