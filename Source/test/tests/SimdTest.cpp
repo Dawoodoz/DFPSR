@@ -3,7 +3,6 @@
 #include "../../DFPSR/base/simd.h"
 #include "../../DFPSR/base/endian.h"
 
-// TODO: Test: allLanesNotEqual, allLanesLesser, allLanesGreater, allLanesLesserOrEqual, allLanesGreaterOrEqual, operand ~.
 // TODO: Set up a test where SIMD is disabled to force using the reference implementation.
 // TODO: Keep the reference implementation alongside the SIMD types during brute-force testing with millions of random inputs.
 
@@ -11,6 +10,189 @@
 #define ASSERT_NOTEQUAL_SIMD(A, B) ASSERT_COMP(A, B, !allLanesEqual, "!=")
 
 static void testComparisons() {
+	// Test non-vectorized comparison functions. (Used for test conditions and debug assertions)
+	ASSERT_EQUAL(allLanesEqual(I32x4(-2, 1, 4, 7345), I32x4(-2, 1, 4, 7345)), true);
+	ASSERT_EQUAL(allLanesEqual(I32x4(-2, 1, 4, 7345), I32x4( 2, 1, 4, 7345)), false);
+	ASSERT_EQUAL(allLanesEqual(I32x4(-2, 1, 4, 7345), I32x4(-2, 5, 4, 7345)), false);
+	ASSERT_EQUAL(allLanesEqual(I32x4(-2, 1, 4, 7345), I32x4(-2, 1, 2, 7345)), false);
+	ASSERT_EQUAL(allLanesEqual(I32x4(-2, 1, 4, 7345), I32x4(-2, 1, 4, 6531)), false);
+	ASSERT_EQUAL(allLanesEqual(I32x4(-2, 1, 4, 7345), I32x4(-2, 0, 4,  385)), false);
+	ASSERT_EQUAL(allLanesEqual(I32x4( 0, 0, 0,    0), I32x4(-2, 1, 4, 7345)), false);
+	ASSERT_EQUAL(allLanesNotEqual(I32x4(-2, 1, 4, 5), I32x4( 6, 8, 3, 7)), true);
+	ASSERT_EQUAL(allLanesNotEqual(I32x4(-2, 1, 4, 5), I32x4(-2, 8, 3, 7)), false);
+	ASSERT_EQUAL(allLanesNotEqual(I32x4(-2, 1, 4, 5), I32x4( 6, 1, 3, 7)), false);
+	ASSERT_EQUAL(allLanesNotEqual(I32x4(-2, 1, 4, 5), I32x4( 6, 8, 4, 7)), false);
+	ASSERT_EQUAL(allLanesNotEqual(I32x4(-2, 1, 4, 5), I32x4( 6, 8, 3, 5)), false);
+	ASSERT_EQUAL(allLanesNotEqual(I32x4(-2, 1, 4, 5), I32x4(-2, 8, 3, 5)), false);
+	ASSERT_EQUAL(allLanesNotEqual(I32x4(-2, 1, 4, 5), I32x4( 6, 1, 4, 7)), false);
+	ASSERT_EQUAL(allLanesLesser (I32x4(-4, -1,  1,  3), I32x4(-3,  0,  2,  4)), true);
+	ASSERT_EQUAL(allLanesLesser (I32x4(-3, -1,  1,  3), I32x4(-3,  0,  2,  4)), false);
+	ASSERT_EQUAL(allLanesLesser (I32x4(-4,  0,  1,  3), I32x4(-3,  0,  2,  4)), false);
+	ASSERT_EQUAL(allLanesLesser (I32x4(-4, -1,  2,  3), I32x4(-3,  0,  2,  4)), false);
+	ASSERT_EQUAL(allLanesLesser (I32x4(-4, -1,  1,  4), I32x4(-3,  0,  2,  4)), false);
+	ASSERT_EQUAL(allLanesLesser (I32x4(36, -1,  1,  3), I32x4(-3,  0,  2,  4)), false);
+	ASSERT_EQUAL(allLanesLesser (I32x4(-4, 86,  1,  3), I32x4(-3,  0,  2,  4)), false);
+	ASSERT_EQUAL(allLanesLesser (I32x4(-4, -1, 35,  3), I32x4(-3,  0,  2,  4)), false);
+	ASSERT_EQUAL(allLanesLesser (I32x4(-4, -1,  1, 75), I32x4(-3,  0,  2,  4)), false);
+	ASSERT_EQUAL(allLanesGreater(I32x4(-2,  1,  4,  5), I32x4(-3,  0,  2,  4)), true);
+	ASSERT_EQUAL(allLanesGreater(I32x4(-3,  1,  4,  5), I32x4(-3,  0,  2,  4)), false);
+	ASSERT_EQUAL(allLanesGreater(I32x4(-2,  0,  4,  5), I32x4(-3,  0,  2,  4)), false);
+	ASSERT_EQUAL(allLanesGreater(I32x4(-2,  1,  2,  5), I32x4(-3,  0,  2,  4)), false);
+	ASSERT_EQUAL(allLanesGreater(I32x4(-2,  1,  4,  4), I32x4(-3,  0,  2,  4)), false);
+	ASSERT_EQUAL(allLanesGreater(I32x4(-5,  1,  4,  5), I32x4(-3,  0,  2,  4)), false);
+	ASSERT_EQUAL(allLanesGreater(I32x4(-2, -5,  4,  5), I32x4(-3,  0,  2,  4)), false);
+	ASSERT_EQUAL(allLanesGreater(I32x4(-2,  1, -7,  5), I32x4(-3,  0,  2,  4)), false);
+	ASSERT_EQUAL(allLanesGreater(I32x4(-2,  1,  4, -4), I32x4(-3,  0,  2,  4)), false);
+	ASSERT_EQUAL(allLanesLesserOrEqual (I32x4(-4, -1,  1,  3), I32x4(-3,  0,  2,  4)), true);
+	ASSERT_EQUAL(allLanesLesserOrEqual (I32x4(-3, -1,  1,  3), I32x4(-3,  0,  2,  4)), true);
+	ASSERT_EQUAL(allLanesLesserOrEqual (I32x4(-4,  0,  1,  3), I32x4(-3,  0,  2,  4)), true);
+	ASSERT_EQUAL(allLanesLesserOrEqual (I32x4(-4, -1,  2,  3), I32x4(-3,  0,  2,  4)), true);
+	ASSERT_EQUAL(allLanesLesserOrEqual (I32x4(-4, -1,  1,  4), I32x4(-3,  0,  2,  4)), true);
+	ASSERT_EQUAL(allLanesLesserOrEqual (I32x4(36, -1,  1,  3), I32x4(-3,  0,  2,  4)), false);
+	ASSERT_EQUAL(allLanesLesserOrEqual (I32x4(-4, 86,  1,  3), I32x4(-3,  0,  2,  4)), false);
+	ASSERT_EQUAL(allLanesLesserOrEqual (I32x4(-4, -1, 35,  3), I32x4(-3,  0,  2,  4)), false);
+	ASSERT_EQUAL(allLanesLesserOrEqual (I32x4(-4, -1,  1, 75), I32x4(-3,  0,  2,  4)), false);
+	ASSERT_EQUAL(allLanesGreaterOrEqual(I32x4(-2,  1,  4,  5), I32x4(-3,  0,  2,  4)), true);
+	ASSERT_EQUAL(allLanesGreaterOrEqual(I32x4(-3,  1,  4,  5), I32x4(-3,  0,  2,  4)), true);
+	ASSERT_EQUAL(allLanesGreaterOrEqual(I32x4(-2,  0,  4,  5), I32x4(-3,  0,  2,  4)), true);
+	ASSERT_EQUAL(allLanesGreaterOrEqual(I32x4(-2,  1,  2,  5), I32x4(-3,  0,  2,  4)), true);
+	ASSERT_EQUAL(allLanesGreaterOrEqual(I32x4(-2,  1,  4,  4), I32x4(-3,  0,  2,  4)), true);
+	ASSERT_EQUAL(allLanesGreaterOrEqual(I32x4(-5,  1,  4,  5), I32x4(-3,  0,  2,  4)), false);
+	ASSERT_EQUAL(allLanesGreaterOrEqual(I32x4(-2, -5,  4,  5), I32x4(-3,  0,  2,  4)), false);
+	ASSERT_EQUAL(allLanesGreaterOrEqual(I32x4(-2,  1, -7,  5), I32x4(-3,  0,  2,  4)), false);
+	ASSERT_EQUAL(allLanesGreaterOrEqual(I32x4(-2,  1,  4, -4), I32x4(-3,  0,  2,  4)), false);
+	ASSERT_EQUAL(allLanesEqual         (I32x8(-2, 1, 4, 8, 74, 23, 5, 64), I32x8(-2, 1, 4, 8, 74, 23, 5, 64)), true);
+	ASSERT_EQUAL(allLanesEqual         (I32x8( 0, 1, 4, 8, 74, 23, 5, 64), I32x8(-2, 1, 4, 8, 74, 23, 5, 64)), false);
+	ASSERT_EQUAL(allLanesEqual         (I32x8(-2, 0, 4, 8, 74, 23, 5, 64), I32x8(-2, 1, 4, 8, 74, 23, 5, 64)), false);
+	ASSERT_EQUAL(allLanesEqual         (I32x8(-2, 1, 0, 8, 74, 23, 5, 64), I32x8(-2, 1, 4, 8, 74, 23, 5, 64)), false);
+	ASSERT_EQUAL(allLanesEqual         (I32x8(-2, 1, 4, 0, 74, 23, 5, 64), I32x8(-2, 1, 4, 8, 74, 23, 5, 64)), false);
+	ASSERT_EQUAL(allLanesEqual         (I32x8(-2, 1, 4, 8,  0, 23, 5, 64), I32x8(-2, 1, 4, 8, 74, 23, 5, 64)), false);
+	ASSERT_EQUAL(allLanesEqual         (I32x8(-2, 1, 4, 8, 74,  0, 5, 64), I32x8(-2, 1, 4, 8, 74, 23, 5, 64)), false);
+	ASSERT_EQUAL(allLanesEqual         (I32x8(-2, 1, 4, 8, 74, 23, 0, 64), I32x8(-2, 1, 4, 8, 74, 23, 5, 64)), false);
+	ASSERT_EQUAL(allLanesEqual         (I32x8(-2, 1, 4, 8, 74, 23, 5,  0), I32x8(-2, 1, 4, 8, 74, 23, 5, 64)), false);
+	ASSERT_EQUAL(allLanesNotEqual      (I32x8( 5, 8, 6, 9, 35, 75, 3, 75), I32x8(-2, 1, 4, 8, 74, 23, 5, 64)), true);
+	ASSERT_EQUAL(allLanesNotEqual      (I32x8(-2, 8, 6, 9, 35, 75, 3, 75), I32x8(-2, 1, 4, 8, 74, 23, 5, 64)), false);
+	ASSERT_EQUAL(allLanesNotEqual      (I32x8( 5, 1, 6, 9, 35, 75, 3, 75), I32x8(-2, 1, 4, 8, 74, 23, 5, 64)), false);
+	ASSERT_EQUAL(allLanesNotEqual      (I32x8( 5, 8, 4, 9, 35, 75, 3, 75), I32x8(-2, 1, 4, 8, 74, 23, 5, 64)), false);
+	ASSERT_EQUAL(allLanesNotEqual      (I32x8( 5, 8, 6, 8, 35, 75, 3, 75), I32x8(-2, 1, 4, 8, 74, 23, 5, 64)), false);
+	ASSERT_EQUAL(allLanesNotEqual      (I32x8( 5, 8, 6, 9, 74, 75, 3, 75), I32x8(-2, 1, 4, 8, 74, 23, 5, 64)), false);
+	ASSERT_EQUAL(allLanesNotEqual      (I32x8( 5, 8, 6, 9, 35, 23, 3, 75), I32x8(-2, 1, 4, 8, 74, 23, 5, 64)), false);
+	ASSERT_EQUAL(allLanesNotEqual      (I32x8( 5, 8, 6, 9, 35, 75, 5, 75), I32x8(-2, 1, 4, 8, 74, 23, 5, 64)), false);
+	ASSERT_EQUAL(allLanesNotEqual      (I32x8( 5, 8, 6, 9, 35, 75, 3, 64), I32x8(-2, 1, 4, 8, 74, 23, 5, 64)), false);
+	ASSERT_EQUAL(allLanesNotEqual      (I32x8(-2, 1, 4, 8, 74, 23, 5, 64), I32x8(-2, 1, 4, 8, 74, 23, 5, 64)), false);
+	ASSERT_EQUAL(allLanesLesser        (I32x8(-3, 0, 3, 7, 73, 22, 4, 63), I32x8(-2, 1, 4, 8, 74, 23, 5, 64)), true);
+	ASSERT_EQUAL(allLanesGreater       (I32x8(-1, 2, 5, 9, 75, 24, 6, 65), I32x8(-2, 1, 4, 8, 74, 23, 5, 64)), true);
+	ASSERT_EQUAL(allLanesGreater       (I32x8(-2, 2, 5, 9, 75, 24, 6, 65), I32x8(-2, 1, 4, 8, 74, 23, 5, 64)), false);
+	ASSERT_EQUAL(allLanesGreater       (I32x8(-1, 0, 5, 9, 75, 24, 6, 65), I32x8(-2, 1, 4, 8, 74, 23, 5, 64)), false);
+	ASSERT_EQUAL(allLanesGreater       (I32x8(-1, 2, 4, 9, 75, 24, 6, 65), I32x8(-2, 1, 4, 8, 74, 23, 5, 64)), false);
+	ASSERT_EQUAL(allLanesGreater       (I32x8(-1, 2, 5, 8, 75, 24, 6, 65), I32x8(-2, 1, 4, 8, 74, 23, 5, 64)), false);
+	ASSERT_EQUAL(allLanesGreater       (I32x8(-1, 2, 5, 9,  3, 24, 6, 65), I32x8(-2, 1, 4, 8, 74, 23, 5, 64)), false);
+	ASSERT_EQUAL(allLanesGreater       (I32x8(-1, 2, 5, 9, 75, 23, 6, 65), I32x8(-2, 1, 4, 8, 74, 23, 5, 64)), false);
+	ASSERT_EQUAL(allLanesGreater       (I32x8(-1, 2, 5, 9, 75, 24, 2, 65), I32x8(-2, 1, 4, 8, 74, 23, 5, 64)), false);
+	ASSERT_EQUAL(allLanesGreater       (I32x8(-1, 2, 5, 9, 75, 24, 6,  5), I32x8(-2, 1, 4, 8, 74, 23, 5, 64)), false);
+	ASSERT_EQUAL(allLanesLesserOrEqual (I32x8(-2, 1, 4, 8, 74, 23, 5, 64), I32x8(-2, 1, 4, 8, 74, 23, 5, 64)), true);
+	ASSERT_EQUAL(allLanesLesserOrEqual (I32x8(-1, 1, 4, 8, 74, 23, 5, 64), I32x8(-2, 1, 4, 8, 74, 23, 5, 64)), false);
+	ASSERT_EQUAL(allLanesLesserOrEqual (I32x8(-2, 2, 4, 8, 74, 23, 5, 64), I32x8(-2, 1, 4, 8, 74, 23, 5, 64)), false);
+	ASSERT_EQUAL(allLanesLesserOrEqual (I32x8(-2, 1, 5, 8, 74, 23, 5, 64), I32x8(-2, 1, 4, 8, 74, 23, 5, 64)), false);
+	ASSERT_EQUAL(allLanesLesserOrEqual (I32x8(-2, 1, 4, 9, 74, 23, 5, 64), I32x8(-2, 1, 4, 8, 74, 23, 5, 64)), false);
+	ASSERT_EQUAL(allLanesLesserOrEqual (I32x8(-2, 1, 4, 8, 75, 23, 5, 64), I32x8(-2, 1, 4, 8, 74, 23, 5, 64)), false);
+	ASSERT_EQUAL(allLanesLesserOrEqual (I32x8(-2, 1, 4, 8, 74, 73, 5, 64), I32x8(-2, 1, 4, 8, 74, 23, 5, 64)), false);
+	ASSERT_EQUAL(allLanesLesserOrEqual (I32x8(-2, 1, 4, 8, 74, 23, 6, 64), I32x8(-2, 1, 4, 8, 74, 23, 5, 64)), false);
+	ASSERT_EQUAL(allLanesLesserOrEqual (I32x8(-2, 1, 4, 8, 74, 23, 5, 69), I32x8(-2, 1, 4, 8, 74, 23, 5, 64)), false);
+	ASSERT_EQUAL(allLanesGreaterOrEqual(I32x8(-2, 1, 4, 8, 74, 23, 5, 64), I32x8(-2, 1, 4, 8, 74, 23, 5, 64)), true);
+	ASSERT_EQUAL(allLanesGreaterOrEqual(I32x8(-3, 1, 4, 8, 74, 23, 5, 64), I32x8(-2, 1, 4, 8, 74, 23, 5, 64)), false);
+	ASSERT_EQUAL(allLanesGreaterOrEqual(I32x8(-2, 0, 4, 8, 74, 23, 5, 64), I32x8(-2, 1, 4, 8, 74, 23, 5, 64)), false);
+	ASSERT_EQUAL(allLanesGreaterOrEqual(I32x8(-2, 1, 2, 8, 74, 23, 5, 64), I32x8(-2, 1, 4, 8, 74, 23, 5, 64)), false);
+	ASSERT_EQUAL(allLanesGreaterOrEqual(I32x8(-2, 1, 4, 5, 74, 23, 5, 64), I32x8(-2, 1, 4, 8, 74, 23, 5, 64)), false);
+	ASSERT_EQUAL(allLanesGreaterOrEqual(I32x8(-2, 1, 4, 8, 34, 23, 5, 64), I32x8(-2, 1, 4, 8, 74, 23, 5, 64)), false);
+	ASSERT_EQUAL(allLanesGreaterOrEqual(I32x8(-2, 1, 4, 8, 74,  1, 5, 64), I32x8(-2, 1, 4, 8, 74, 23, 5, 64)), false);
+	ASSERT_EQUAL(allLanesGreaterOrEqual(I32x8(-2, 1, 4, 8, 74, 23, 3, 64), I32x8(-2, 1, 4, 8, 74, 23, 5, 64)), false);
+	ASSERT_EQUAL(allLanesGreaterOrEqual(I32x8(-2, 1, 4, 8, 74, 23, 5,  4), I32x8(-2, 1, 4, 8, 74, 23, 5, 64)), false);
+	ASSERT_EQUAL(allLanesEqual(U32x4(8, 1, 4, 7345), U32x4(8, 1, 4, 7345)), true);
+	ASSERT_EQUAL(allLanesEqual(U32x4(8, 1, 4, 7345), U32x4(2, 1, 4, 7345)), false);
+	ASSERT_EQUAL(allLanesEqual(U32x4(8, 1, 4, 7345), U32x4(8, 5, 4, 7345)), false);
+	ASSERT_EQUAL(allLanesEqual(U32x4(8, 1, 4, 7345), U32x4(8, 1, 2, 7345)), false);
+	ASSERT_EQUAL(allLanesEqual(U32x4(8, 1, 4, 7345), U32x4(8, 1, 4, 6531)), false);
+	ASSERT_EQUAL(allLanesNotEqual(U32x4(8, 1, 4, 5), U32x4(6, 8, 3, 7)), true);
+	ASSERT_EQUAL(allLanesNotEqual(U32x4(8, 1, 4, 5), U32x4(8, 8, 3, 7)), false);
+	ASSERT_EQUAL(allLanesNotEqual(U32x4(8, 1, 4, 5), U32x4(6, 1, 3, 7)), false);
+	ASSERT_EQUAL(allLanesNotEqual(U32x4(8, 1, 4, 5), U32x4(6, 8, 4, 7)), false);
+	ASSERT_EQUAL(allLanesNotEqual(U32x4(8, 1, 4, 5), U32x4(6, 8, 3, 5)), false);
+	ASSERT_EQUAL(allLanesLesser (U32x4( 7, 4,  1,  3), U32x4( 8,  5,  2,  4)), true);
+	ASSERT_EQUAL(allLanesLesser (U32x4( 8, 4,  1,  3), U32x4( 8,  5,  2,  4)), false);
+	ASSERT_EQUAL(allLanesLesser (U32x4( 7, 5,  1,  3), U32x4( 8,  5,  2,  4)), false);
+	ASSERT_EQUAL(allLanesLesser (U32x4( 7, 4,  2,  3), U32x4( 8,  5,  2,  4)), false);
+	ASSERT_EQUAL(allLanesLesser (U32x4( 7, 4,  1,  4), U32x4( 8,  5,  2,  4)), false);
+	ASSERT_EQUAL(allLanesLesser (U32x4(36, 4,  1,  3), U32x4( 8,  5,  2,  4)), false);
+	ASSERT_EQUAL(allLanesLesser (U32x4( 7,48,  1,  3), U32x4( 8,  5,  2,  4)), false);
+	ASSERT_EQUAL(allLanesLesser (U32x4( 7, 4, 35,  3), U32x4( 8,  5,  2,  4)), false);
+	ASSERT_EQUAL(allLanesLesser (U32x4( 7, 4,  1, 75), U32x4( 8,  5,  2,  4)), false);
+	ASSERT_EQUAL(allLanesGreater(U32x4( 9, 6,  3,  5), U32x4( 8,  5,  2,  4)), true);
+	ASSERT_EQUAL(allLanesGreater(U32x4( 8, 6,  3,  5), U32x4( 8,  5,  2,  4)), false);
+	ASSERT_EQUAL(allLanesGreater(U32x4( 9, 5,  3,  5), U32x4( 8,  5,  2,  4)), false);
+	ASSERT_EQUAL(allLanesGreater(U32x4( 9, 6,  2,  5), U32x4( 8,  5,  2,  4)), false);
+	ASSERT_EQUAL(allLanesGreater(U32x4( 9, 6,  3,  4), U32x4( 8,  5,  2,  4)), false);
+	ASSERT_EQUAL(allLanesGreater(U32x4( 4, 6,  3,  5), U32x4( 8,  5,  2,  4)), false);
+	ASSERT_EQUAL(allLanesGreater(U32x4( 9, 2,  3,  5), U32x4( 8,  5,  2,  4)), false);
+	ASSERT_EQUAL(allLanesGreater(U32x4( 9, 6,  1,  5), U32x4( 8,  5,  2,  4)), false);
+	ASSERT_EQUAL(allLanesGreater(U32x4( 9, 6,  3,  0), U32x4( 8,  5,  2,  4)), false);
+	ASSERT_EQUAL(allLanesLesserOrEqual (U32x4( 6, 9, 1, 3), U32x4(7,10, 2, 4)), true);
+	ASSERT_EQUAL(allLanesLesserOrEqual (U32x4( 7, 9, 1, 3), U32x4(7,10, 2, 4)), true);
+	ASSERT_EQUAL(allLanesLesserOrEqual (U32x4( 6,10, 1, 3), U32x4(7,10, 2, 4)), true);
+	ASSERT_EQUAL(allLanesLesserOrEqual (U32x4( 6, 9, 2, 3), U32x4(7,10, 2, 4)), true);
+	ASSERT_EQUAL(allLanesLesserOrEqual (U32x4( 6, 9, 1, 4), U32x4(7,10, 2, 4)), true);
+	ASSERT_EQUAL(allLanesLesserOrEqual (U32x4(36, 9, 1, 3), U32x4(7,10, 2, 4)), false);
+	ASSERT_EQUAL(allLanesLesserOrEqual (U32x4( 6,86, 1, 3), U32x4(7,10, 2, 4)), false);
+	ASSERT_EQUAL(allLanesLesserOrEqual (U32x4( 6, 9,35, 3), U32x4(7,10, 2, 4)), false);
+	ASSERT_EQUAL(allLanesLesserOrEqual (U32x4( 6, 9, 1,75), U32x4(7,10, 2, 4)), false);
+	ASSERT_EQUAL(allLanesEqual         (U32x8( 8, 1, 4, 8, 74, 23, 5, 64), U32x8( 8, 1, 4, 8, 74, 23, 5, 64)), true);
+	ASSERT_EQUAL(allLanesEqual         (U32x8( 0, 1, 4, 8, 74, 23, 5, 64), U32x8( 8, 1, 4, 8, 74, 23, 5, 64)), false);
+	ASSERT_EQUAL(allLanesEqual         (U32x8( 8, 0, 4, 8, 74, 23, 5, 64), U32x8( 8, 1, 4, 8, 74, 23, 5, 64)), false);
+	ASSERT_EQUAL(allLanesEqual         (U32x8( 8, 1, 0, 8, 74, 23, 5, 64), U32x8( 8, 1, 4, 8, 74, 23, 5, 64)), false);
+	ASSERT_EQUAL(allLanesEqual         (U32x8( 8, 1, 4, 0, 74, 23, 5, 64), U32x8( 8, 1, 4, 8, 74, 23, 5, 64)), false);
+	ASSERT_EQUAL(allLanesEqual         (U32x8( 8, 1, 4, 8,  0, 23, 5, 64), U32x8( 8, 1, 4, 8, 74, 23, 5, 64)), false);
+	ASSERT_EQUAL(allLanesEqual         (U32x8( 8, 1, 4, 8, 74,  0, 5, 64), U32x8( 8, 1, 4, 8, 74, 23, 5, 64)), false);
+	ASSERT_EQUAL(allLanesEqual         (U32x8( 8, 1, 4, 8, 74, 23, 0, 64), U32x8( 8, 1, 4, 8, 74, 23, 5, 64)), false);
+	ASSERT_EQUAL(allLanesEqual         (U32x8( 8, 1, 4, 8, 74, 23, 5,  0), U32x8( 8, 1, 4, 8, 74, 23, 5, 64)), false);
+	ASSERT_EQUAL(allLanesNotEqual      (U32x8( 5, 8, 6, 9, 35, 75, 3, 75), U32x8( 8, 1, 4, 8, 74, 23, 5, 64)), true);
+	ASSERT_EQUAL(allLanesNotEqual      (U32x8( 8, 8, 6, 9, 35, 75, 3, 75), U32x8( 8, 1, 4, 8, 74, 23, 5, 64)), false);
+	ASSERT_EQUAL(allLanesNotEqual      (U32x8( 5, 1, 6, 9, 35, 75, 3, 75), U32x8( 8, 1, 4, 8, 74, 23, 5, 64)), false);
+	ASSERT_EQUAL(allLanesNotEqual      (U32x8( 5, 8, 4, 9, 35, 75, 3, 75), U32x8( 8, 1, 4, 8, 74, 23, 5, 64)), false);
+	ASSERT_EQUAL(allLanesNotEqual      (U32x8( 5, 8, 6, 8, 35, 75, 3, 75), U32x8( 8, 1, 4, 8, 74, 23, 5, 64)), false);
+	ASSERT_EQUAL(allLanesNotEqual      (U32x8( 5, 8, 6, 9, 74, 75, 3, 75), U32x8( 8, 1, 4, 8, 74, 23, 5, 64)), false);
+	ASSERT_EQUAL(allLanesNotEqual      (U32x8( 5, 8, 6, 9, 35, 23, 3, 75), U32x8( 8, 1, 4, 8, 74, 23, 5, 64)), false);
+	ASSERT_EQUAL(allLanesNotEqual      (U32x8( 5, 8, 6, 9, 35, 75, 5, 75), U32x8( 8, 1, 4, 8, 74, 23, 5, 64)), false);
+	ASSERT_EQUAL(allLanesNotEqual      (U32x8( 5, 8, 6, 9, 35, 75, 3, 64), U32x8( 8, 1, 4, 8, 74, 23, 5, 64)), false);
+	ASSERT_EQUAL(allLanesNotEqual      (U32x8( 8, 1, 4, 8, 74, 23, 5, 64), U32x8( 8, 1, 4, 8, 74, 23, 5, 64)), false);
+	ASSERT_EQUAL(allLanesLesser        (U32x8( 7, 0, 3, 7, 73, 22, 4, 63), U32x8( 8, 1, 4, 8, 74, 23, 5, 64)), true);
+	ASSERT_EQUAL(allLanesGreater       (U32x8( 9, 2, 5, 9, 75, 24, 6, 65), U32x8( 8, 1, 4, 8, 74, 23, 5, 64)), true);
+	ASSERT_EQUAL(allLanesGreater       (U32x8( 8, 2, 5, 9, 75, 24, 6, 65), U32x8( 8, 1, 4, 8, 74, 23, 5, 64)), false);
+	ASSERT_EQUAL(allLanesGreater       (U32x8( 9, 0, 5, 9, 75, 24, 6, 65), U32x8( 8, 1, 4, 8, 74, 23, 5, 64)), false);
+	ASSERT_EQUAL(allLanesGreater       (U32x8( 9, 2, 4, 9, 75, 24, 6, 65), U32x8( 8, 1, 4, 8, 74, 23, 5, 64)), false);
+	ASSERT_EQUAL(allLanesGreater       (U32x8( 9, 2, 5, 8, 75, 24, 6, 65), U32x8( 8, 1, 4, 8, 74, 23, 5, 64)), false);
+	ASSERT_EQUAL(allLanesGreater       (U32x8( 9, 2, 5, 9,  3, 24, 6, 65), U32x8( 8, 1, 4, 8, 74, 23, 5, 64)), false);
+	ASSERT_EQUAL(allLanesGreater       (U32x8( 9, 2, 5, 9, 75, 23, 6, 65), U32x8( 8, 1, 4, 8, 74, 23, 5, 64)), false);
+	ASSERT_EQUAL(allLanesGreater       (U32x8( 9, 2, 5, 9, 75, 24, 2, 65), U32x8( 8, 1, 4, 8, 74, 23, 5, 64)), false);
+	ASSERT_EQUAL(allLanesGreater       (U32x8( 9, 2, 5, 9, 75, 24, 6,  5), U32x8( 8, 1, 4, 8, 74, 23, 5, 64)), false);
+	ASSERT_EQUAL(allLanesLesserOrEqual (U32x8( 8, 1, 4, 8, 74, 23, 5, 64), U32x8( 8, 1, 4, 8, 74, 23, 5, 64)), true);
+	ASSERT_EQUAL(allLanesLesserOrEqual (U32x8( 9, 1, 4, 8, 74, 23, 5, 64), U32x8( 8, 1, 4, 8, 74, 23, 5, 64)), false);
+	ASSERT_EQUAL(allLanesLesserOrEqual (U32x8( 8, 2, 4, 8, 74, 23, 5, 64), U32x8( 8, 1, 4, 8, 74, 23, 5, 64)), false);
+	ASSERT_EQUAL(allLanesLesserOrEqual (U32x8( 8, 1, 5, 8, 74, 23, 5, 64), U32x8( 8, 1, 4, 8, 74, 23, 5, 64)), false);
+	ASSERT_EQUAL(allLanesLesserOrEqual (U32x8( 8, 1, 4, 9, 74, 23, 5, 64), U32x8( 8, 1, 4, 8, 74, 23, 5, 64)), false);
+	ASSERT_EQUAL(allLanesLesserOrEqual (U32x8( 8, 1, 4, 8, 75, 23, 5, 64), U32x8( 8, 1, 4, 8, 74, 23, 5, 64)), false);
+	ASSERT_EQUAL(allLanesLesserOrEqual (U32x8( 8, 1, 4, 8, 74, 73, 5, 64), U32x8( 8, 1, 4, 8, 74, 23, 5, 64)), false);
+	ASSERT_EQUAL(allLanesLesserOrEqual (U32x8( 8, 1, 4, 8, 74, 23, 6, 64), U32x8( 8, 1, 4, 8, 74, 23, 5, 64)), false);
+	ASSERT_EQUAL(allLanesLesserOrEqual (U32x8( 8, 1, 4, 8, 74, 23, 5, 69), U32x8( 8, 1, 4, 8, 74, 23, 5, 64)), false);
+	ASSERT_EQUAL(allLanesGreaterOrEqual(U32x8( 8, 1, 4, 8, 74, 23, 5, 64), U32x8( 8, 1, 4, 8, 74, 23, 5, 64)), true);
+	ASSERT_EQUAL(allLanesGreaterOrEqual(U32x8( 7, 1, 4, 8, 74, 23, 5, 64), U32x8( 8, 1, 4, 8, 74, 23, 5, 64)), false);
+	ASSERT_EQUAL(allLanesGreaterOrEqual(U32x8( 8, 0, 4, 8, 74, 23, 5, 64), U32x8( 8, 1, 4, 8, 74, 23, 5, 64)), false);
+	ASSERT_EQUAL(allLanesGreaterOrEqual(U32x8( 8, 1, 2, 8, 74, 23, 5, 64), U32x8( 8, 1, 4, 8, 74, 23, 5, 64)), false);
+	ASSERT_EQUAL(allLanesGreaterOrEqual(U32x8( 8, 1, 4, 5, 74, 23, 5, 64), U32x8( 8, 1, 4, 8, 74, 23, 5, 64)), false);
+	ASSERT_EQUAL(allLanesGreaterOrEqual(U32x8( 8, 1, 4, 8, 34, 23, 5, 64), U32x8( 8, 1, 4, 8, 74, 23, 5, 64)), false);
+	ASSERT_EQUAL(allLanesGreaterOrEqual(U32x8( 8, 1, 4, 8, 74,  1, 5, 64), U32x8( 8, 1, 4, 8, 74, 23, 5, 64)), false);
+	ASSERT_EQUAL(allLanesGreaterOrEqual(U32x8( 8, 1, 4, 8, 74, 23, 3, 64), U32x8( 8, 1, 4, 8, 74, 23, 5, 64)), false);
+	ASSERT_EQUAL(allLanesGreaterOrEqual(U32x8( 8, 1, 4, 8, 74, 23, 5,  4), U32x8( 8, 1, 4, 8, 74, 23, 5, 64)), false);
+
 	// F32x4 Comparisons
 	ASSERT_EQUAL_SIMD(F32x4(1.5f), F32x4(1.5f, 1.5f, 1.5f, 1.5f));
 	ASSERT_EQUAL_SIMD(F32x4(-1.5f), F32x4(-1.5f, -1.5f, -1.5f, -1.5f));
@@ -1048,6 +1230,24 @@ START_TEST(Simd)
 	testBitMasks();
 
 	testBitShift();
+
+	// Bitwise negation.
+	ASSERT_EQUAL_SIMD(
+	  ~U32x4(0b11000000111000000111111100001100, 0b00111000000000110000001110001100, 0b00001110000000100011000000011001, 0b00001110001000000111001100001000),
+	   U32x4(0b00111111000111111000000011110011, 0b11000111111111001111110001110011, 0b11110001111111011100111111100110, 0b11110001110111111000110011110111)
+	);
+	ASSERT_EQUAL_SIMD(
+	  ~U16x8(0b1100000011100000, 0b0111111100001100, 0b0011100000000011, 0b0000001110001100, 0b0000111000000010, 0b0011000000011000, 0b0000111000100000, 0b0111001100001000),
+	   U16x8(0b0011111100011111, 0b1000000011110011, 0b1100011111111100, 0b1111110001110011, 0b1111000111111101, 0b1100111111100111, 0b1111000111011111, 0b1000110011110111)
+	);
+	ASSERT_EQUAL_SIMD(
+	  ~U32x8(0b11000000111000000111111100001100, 0b00111000000000110000001110001100, 0b00001110000000100011000000011000, 0b00001110001000000111001100001000, 0b11000000111000100111101100101100, 0b00111010000000110010001110101101, 0b01001110001000100011001000010010, 0b01001110001001000111100110000100),
+	   U32x8(0b00111111000111111000000011110011, 0b11000111111111001111110001110011, 0b11110001111111011100111111100111, 0b11110001110111111000110011110111, 0b00111111000111011000010011010011, 0b11000101111111001101110001010010, 0b10110001110111011100110111101101, 0b10110001110110111000011001111011)
+	);
+	ASSERT_EQUAL_SIMD(
+	  ~U16x16(0b1100000011100000, 0b0111111100001100, 0b0011100000000011, 0b0000001110001100, 0b0000111000000010, 0b0011000000011000, 0b0000111000100000, 0b0111001100001000,  0b1100100011100100, 0b0110011100001110, 0b0010100001001011, 0b0001001110001110, 0b0000111011000110, 0b0011000111011000, 0b0000111000100100, 0b0101001100011000),
+	   U16x16(0b0011111100011111, 0b1000000011110011, 0b1100011111111100, 0b1111110001110011, 0b1111000111111101, 0b1100111111100111, 0b1111000111011111, 0b1000110011110111,  0b0011011100011011, 0b1001100011110001, 0b1101011110110100, 0b1110110001110001, 0b1111000100111001, 0b1100111000100111, 0b1111000111011011, 0b1010110011100111)
+	);
 
 	// Reinterpret cast.
 	ASSERT_EQUAL_SIMD(
