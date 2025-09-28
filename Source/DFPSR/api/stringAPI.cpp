@@ -97,19 +97,19 @@ DsrChar dsr::character_upperCase(DsrChar character) {
 		return character - (U'à' - U'À');
 	} else if (U'ø' <= character && character <= U'þ') { // ø (248) to þ (254) Latin-1
 		return character - (U'ø' - U'Ø');
-	} else if (character == U'ÿ') { // ÿ (255)
+	} else if (character == U'ÿ') { // ÿ (255) Latin Extended-A
 		return U'Ÿ'; // Ÿ (376)
-	} else if (U'Ā' <= character && character <= U'ķ') { // Ā (256) to ķ (311)
+	} else if (U'Ā' <= character && character <= U'ķ') { // Ā (256) to ķ (311) Latin Extended-A
 		return character & ~DsrChar(1);
-	} else if (U'Ĺ' <= character && character <= U'ň' && !(character & 1)) { // Even from Ĺ (313) to ň (328)
+	} else if (U'Ĺ' <= character && character <= U'ň' && !(character & 1)) { // Even from Ĺ (313) to ň (328) Latin Extended-A
 		return character - 1;
-	} else if (U'Ŋ' <= character && character <= U'ŷ') { // Ŋ (330) to ŷ (375)
+	} else if (U'Ŋ' <= character && character <= U'ŷ') { // Ŋ (330) to ŷ (375) Latin Extended-A
 		return character & ~DsrChar(1);
-	} else if (character == U'ź') { // ź (378)
+	} else if (character == U'ź') { // ź (378) Latin Extended-A
 		return U'Ź'; // Ź (377)
-	} else if (character == U'ż') { // ż (380)
+	} else if (character == U'ż') { // ż (380) Latin Extended-A
 		return U'Ż'; // Ż (379)
-	} else if (character == U'ž') { // ž (382)
+	} else if (character == U'ž') { // ž (382) Latin Extended-A
 		return U'Ž'; // Ž (381)
 	} else {
 		return character;
@@ -123,19 +123,19 @@ DsrChar dsr::character_lowerCase(DsrChar character) {
 		return character + (U'à' - U'À');
 	} else if (U'Ø' <= character && character <= U'Þ') { // Ø (216) to Þ (222) Latin-1
 		return character + (U'ø' - U'Ø');
-	} else if (character == U'Ÿ') { // Ÿ (376)
+	} else if (character == U'Ÿ') { // Ÿ (376) Latin Extended-A
 		return U'ÿ'; // ÿ (255)
-	} else if (U'Ā' <= character && character <= U'ķ') { // Ā (256) to ķ (311)
+	} else if (U'Ā' <= character && character <= U'ķ') { // Ā (256) to ķ (311) Latin Extended-A
 		return character | DsrChar(1);
-	} else if (U'Ĺ' <= character && character <= U'ň' && character & 1) { // Odd from Ĺ (313) to ň (328)
+	} else if (U'Ĺ' <= character && character <= U'ň' && character & 1) { // Odd from Ĺ (313) to ň (328) Latin Extended-A
 		return character + 1;
-	} else if (U'Ŋ' <= character && character <= U'ŷ') { // Ŋ (330) to ŷ (375)
+	} else if (U'Ŋ' <= character && character <= U'ŷ') { // Ŋ (330) to ŷ (375) Latin Extended-A
 		return character | DsrChar(1);
-	} else if (character == U'Ź') { // Ź (377)
+	} else if (character == U'Ź') { // Ź (377) Latin Extended-A
 		return U'ź'; // ź (378)
-	} else if (character == U'Ż') { // Ż (379)
+	} else if (character == U'Ż') { // Ż (379) Latin Extended-A
 		return U'ż'; // ż (380)
-	} else if (character == U'Ž') { // Ž (381)
+	} else if (character == U'Ž') { // Ž (381) Latin Extended-A
 		return U'ž'; // ž (382)
 	} else {
 		return character;
