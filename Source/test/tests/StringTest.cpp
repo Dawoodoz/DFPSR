@@ -185,6 +185,9 @@ START_TEST(String)
 	ASSERT_EQUAL(dsr::string_upperCase(U"abc1"), U"ABC1");
 	ASSERT_EQUAL(dsr::string_upperCase(U"Abc12"), U"ABC12");
 	ASSERT_EQUAL(dsr::string_upperCase(U"ABC123"), U"ABC123");
+	ASSERT_EQUAL(dsr::string_upperCase(U"!%& abcdefghijklmnopqrstuvwxyz ABCDEFGHIJKLMNOPQRSTUVWXYZ"), U"!%& ABCDEFGHIJKLMNOPQRSTUVWXYZ ABCDEFGHIJKLMNOPQRSTUVWXYZ");
+	ASSERT_EQUAL(dsr::string_upperCase(U"àáâãäåæçèéêëìíîïðñòóôõöÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖ"), U"ÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖ");
+	ASSERT_EQUAL(dsr::string_upperCase(U"øùúûüýþØÙÚÛÜÝÞ"), U"ØÙÚÛÜÝÞØÙÚÛÜÝÞ");
 	// Lower case
 	ASSERT_EQUAL(dsr::string_lowerCase(U"a"), U"a");
 	ASSERT_EQUAL(dsr::string_lowerCase(U"aB"), U"ab");
@@ -192,6 +195,9 @@ START_TEST(String)
 	ASSERT_EQUAL(dsr::string_lowerCase(U"abc1"), U"abc1");
 	ASSERT_EQUAL(dsr::string_lowerCase(U"Abc12"), U"abc12");
 	ASSERT_EQUAL(dsr::string_lowerCase(U"ABC123"), U"abc123");
+	ASSERT_EQUAL(dsr::string_lowerCase(U"!%& abcdefghijklmnopqrstuvwxyz ABCDEFGHIJKLMNOPQRSTUVWXYZ"), U"!%& abcdefghijklmnopqrstuvwxyz abcdefghijklmnopqrstuvwxyz");
+	ASSERT_EQUAL(dsr::string_lowerCase(U"àáâãäåæçèéêëìíîïðñòóôõöÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖ"), U"àáâãäåæçèéêëìíîïðñòóôõöàáâãäåæçèéêëìíîïðñòóôõö");
+	ASSERT_EQUAL(dsr::string_lowerCase(U"øùúûüýþØÙÚÛÜÝÞ"), U"øùúûüýþøùúûüýþ");
 	// White space removal by pointing to a section of the original input
 	ASSERT_EQUAL(dsr::string_removeOuterWhiteSpace(U" "), U"");
 	ASSERT_EQUAL(dsr::string_removeOuterWhiteSpace(U"  abc  "), U"abc");
