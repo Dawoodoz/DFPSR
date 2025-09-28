@@ -88,7 +88,7 @@ String Printable::toString() const {
 
 Printable::~Printable() {}
 
-// TODO: Handle ŉ (329) and the remaining Unicode characters after Ÿ (376).
+// TODO: Handle ŉ (329) and the remaining Unicode characters after ž (382).
 
 DsrChar dsr::character_upperCase(DsrChar character) {
 	if (U'a' <= character && character <= U'z') { // a (97) to z (122) Ascii
@@ -105,6 +105,12 @@ DsrChar dsr::character_upperCase(DsrChar character) {
 		return character - 1;
 	} else if (U'Ŋ' <= character && character <= U'ŷ') { // Ŋ (330) to ŷ (375)
 		return character & ~DsrChar(1);
+	} else if (character == U'ź') { // ź (378)
+		return U'Ź'; // Ź (377)
+	} else if (character == U'ż') { // ż (380)
+		return U'Ż'; // Ż (379)
+	} else if (character == U'ž') { // ž (382)
+		return U'Ž'; // Ž (381)
 	} else {
 		return character;
 	}
@@ -125,6 +131,12 @@ DsrChar dsr::character_lowerCase(DsrChar character) {
 		return character + 1;
 	} else if (U'Ŋ' <= character && character <= U'ŷ') { // Ŋ (330) to ŷ (375)
 		return character | DsrChar(1);
+	} else if (character == U'Ź') { // Ź (377)
+		return U'ź'; // ź (378)
+	} else if (character == U'Ż') { // Ż (379)
+		return U'ż'; // ż (380)
+	} else if (character == U'Ž') { // Ž (381)
+		return U'ž'; // ž (382)
 	} else {
 		return character;
 	}
