@@ -419,6 +419,10 @@ inline void string_split_callback(const ReadableString& source, DsrChar separato
 // Useful for pre-allocation.
 intptr_t string_splitCount(const ReadableString& source, DsrChar separator);
 
+// Post-condition: Returns the upper case version of character if it is a lower case character, otherwise returning character as is.
+DsrChar character_upperCase(DsrChar character);
+// Post-condition: Returns the lower case version of character if it is an upper case character, otherwise returning character as is.
+DsrChar character_lowerCase(DsrChar character);
 // Post-condition: Returns true iff c is a digit.
 //   Digit <- '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9'
 bool character_isDigit(DsrChar c);

@@ -114,11 +114,35 @@ bool dsr::string_caseInsensitiveMatch(const ReadableString& a, const ReadableStr
 	}
 }
 
+DsrChar dsr::character_upperCase(DsrChar character) {
+	if (U'a' <= character && character <= U'z') { // a (97) to z (122)
+		return character - (U'a' - U'A');
+	} else if (U'à' <= character && character <= U'ö') { // à (224) to ö (246)
+		return character - (U'à' - U'À');
+	} else if (U'ø' <= character && character <= U'þ') { // ø (248) to þ (254)
+		return character - (U'ø' - U'Ø');
+	} else {
+		return character;
+	}
+}
+
+DsrChar dsr::character_lowerCase(DsrChar character) {
+	if (U'A' <= character && character <= U'Z') { // A (65) to Z (90)
+		return character + (U'a' - U'A');
+	} else if (U'À' <= character && character <= U'Ö') { // À (192) to Ö (214)
+		return character + (U'à' - U'À');
+	} else if (U'Ø' <= character && character <= U'Þ') { // Ø (216) to Þ (222)
+		return character + (U'ø' - U'Ø');
+	} else {
+		return character;
+	}
+}
+
 String dsr::string_upperCase(const ReadableString &text) {
 	String result;
 	string_reserve(result, text.view.length);
 	for (intptr_t i = 0; i < text.view.length; i++) {
-		string_appendChar(result, towupper(text[i]));
+		string_appendChar(result, character_upperCase(text[i]));
 	}
 	return result;
 }
@@ -127,7 +151,7 @@ String dsr::string_lowerCase(const ReadableString &text) {
 	String result;
 	string_reserve(result, text.view.length);
 	for (intptr_t i = 0; i < text.view.length; i++) {
-		string_appendChar(result, towlower(text[i]));
+		string_appendChar(result, character_lowerCase(text[i]));
 	}
 	return result;
 }
