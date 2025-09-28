@@ -115,24 +115,28 @@ bool dsr::string_caseInsensitiveMatch(const ReadableString& a, const ReadableStr
 }
 
 DsrChar dsr::character_upperCase(DsrChar character) {
-	if (U'a' <= character && character <= U'z') { // a (97) to z (122)
+	if (U'a' <= character && character <= U'z') { // a (97) to z (122) Ascii
 		return character - (U'a' - U'A');
-	} else if (U'à' <= character && character <= U'ö') { // à (224) to ö (246)
+	} else if (U'à' <= character && character <= U'ö') { // à (224) to ö (246) Latin-1
 		return character - (U'à' - U'À');
-	} else if (U'ø' <= character && character <= U'þ') { // ø (248) to þ (254)
+	} else if (U'ø' <= character && character <= U'þ') { // ø (248) to þ (254) Latin-1
 		return character - (U'ø' - U'Ø');
+	} else if (U'Ā' <= character && character <= U'ķ') { // Ā (256) to ķ (311)
+		return character & ~DsrChar(1);
 	} else {
 		return character;
 	}
 }
 
 DsrChar dsr::character_lowerCase(DsrChar character) {
-	if (U'A' <= character && character <= U'Z') { // A (65) to Z (90)
+	if (U'A' <= character && character <= U'Z') { // A (65) to Z (90) Ascii
 		return character + (U'a' - U'A');
-	} else if (U'À' <= character && character <= U'Ö') { // À (192) to Ö (214)
+	} else if (U'À' <= character && character <= U'Ö') { // À (192) to Ö (214) Latin-1
 		return character + (U'à' - U'À');
-	} else if (U'Ø' <= character && character <= U'Þ') { // Ø (216) to Þ (222)
+	} else if (U'Ø' <= character && character <= U'Þ') { // Ø (216) to Þ (222) Latin-1
 		return character + (U'ø' - U'Ø');
+	} else if (U'Ā' <= character && character <= U'ķ') { // Ā (256) to ķ (311)
+		return character | DsrChar(1);
 	} else {
 		return character;
 	}
