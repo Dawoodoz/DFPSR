@@ -187,8 +187,10 @@ START_TEST(String)
 	ASSERT_EQUAL(dsr::string_upperCase(U"ABC123"), U"ABC123");
 	ASSERT_EQUAL(dsr::string_upperCase(U"!%& abcdefghijklmnopqrstuvwxyz ABCDEFGHIJKLMNOPQRSTUVWXYZ"), U"!%& ABCDEFGHIJKLMNOPQRSTUVWXYZ ABCDEFGHIJKLMNOPQRSTUVWXYZ");
 	ASSERT_EQUAL(dsr::string_upperCase(U"àáâãäåæçèéêëìíîïðñòóôõöÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖ"), U"ÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖ");
-	ASSERT_EQUAL(dsr::string_upperCase(U"øùúûüýþØÙÚÛÜÝÞ"), U"ØÙÚÛÜÝÞØÙÚÛÜÝÞ");
+	ASSERT_EQUAL(dsr::string_upperCase(U"ÿøùúûüýþŸØÙÚÛÜÝÞ"), U"ŸØÙÚÛÜÝÞŸØÙÚÛÜÝÞ");
 	ASSERT_EQUAL(dsr::string_upperCase(U"āăąćĉċčďđēĕėęěĝğġģĥħĩīĭįıĳĵķ ĸ ĀĂĄĆĈĊČĎĐĒĔĖĘĚĜĞĠĢĤĦĨĪĬĮİĲĴĶ"), U"ĀĂĄĆĈĊČĎĐĒĔĖĘĚĜĞĠĢĤĦĨĪĬĮİĲĴĶ ĸ ĀĂĄĆĈĊČĎĐĒĔĖĘĚĜĞĠĢĤĦĨĪĬĮİĲĴĶ");
+	ASSERT_EQUAL(dsr::string_upperCase(U"313 to 328 ĺļľŀłńņň ĹĻĽĿŁŃŅŇ"), U"313 TO 328 ĹĻĽĿŁŃŅŇ ĹĻĽĿŁŃŅŇ");
+	ASSERT_EQUAL(dsr::string_upperCase(U"330 to 375 ŋōŏőœŕŗřśŝşšţťŧũūŭůűųŵŷ ŊŌŎŐŒŔŖŘŚŜŞŠŢŤŦŨŪŬŮŰŲŴŶ"), U"330 TO 375 ŊŌŎŐŒŔŖŘŚŜŞŠŢŤŦŨŪŬŮŰŲŴŶ ŊŌŎŐŒŔŖŘŚŜŞŠŢŤŦŨŪŬŮŰŲŴŶ");
 	// Lower case
 	ASSERT_EQUAL(dsr::string_lowerCase(U"a"), U"a");
 	ASSERT_EQUAL(dsr::string_lowerCase(U"aB"), U"ab");
@@ -198,8 +200,10 @@ START_TEST(String)
 	ASSERT_EQUAL(dsr::string_lowerCase(U"ABC123"), U"abc123");
 	ASSERT_EQUAL(dsr::string_lowerCase(U"!%& abcdefghijklmnopqrstuvwxyz ABCDEFGHIJKLMNOPQRSTUVWXYZ"), U"!%& abcdefghijklmnopqrstuvwxyz abcdefghijklmnopqrstuvwxyz");
 	ASSERT_EQUAL(dsr::string_lowerCase(U"àáâãäåæçèéêëìíîïðñòóôõöÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖ"), U"àáâãäåæçèéêëìíîïðñòóôõöàáâãäåæçèéêëìíîïðñòóôõö");
-	ASSERT_EQUAL(dsr::string_lowerCase(U"øùúûüýþØÙÚÛÜÝÞ"), U"øùúûüýþøùúûüýþ");
+	ASSERT_EQUAL(dsr::string_lowerCase(U"ÿøùúûüýþŸØÙÚÛÜÝÞ"), U"ÿøùúûüýþÿøùúûüýþ");
 	ASSERT_EQUAL(dsr::string_lowerCase(U"āăąćĉċčďđēĕėęěĝğġģĥħĩīĭįıĳĵķ ĸ ĀĂĄĆĈĊČĎĐĒĔĖĘĚĜĞĠĢĤĦĨĪĬĮİĲĴĶ"), U"āăąćĉċčďđēĕėęěĝğġģĥħĩīĭįıĳĵķ ĸ āăąćĉċčďđēĕėęěĝğġģĥħĩīĭįıĳĵķ");
+	ASSERT_EQUAL(dsr::string_lowerCase(U"313 to 328 ĺļľŀłńņň ĹĻĽĿŁŃŅŇ"), U"313 to 328 ĺļľŀłńņň ĺļľŀłńņň");
+	ASSERT_EQUAL(dsr::string_lowerCase(U"330 to 375 ŋōŏőœŕŗřśŝşšţťŧũūŭůűųŵŷ ŊŌŎŐŒŔŖŘŚŜŞŠŢŤŦŨŪŬŮŰŲŴŶ"), U"330 to 375 ŋōŏőœŕŗřśŝşšţťŧũūŭůűųŵŷ ŋōŏőœŕŗřśŝşšţťŧũūŭůűųŵŷ");
 	// White space removal by pointing to a section of the original input
 	ASSERT_EQUAL(dsr::string_removeOuterWhiteSpace(U" "), U"");
 	ASSERT_EQUAL(dsr::string_removeOuterWhiteSpace(U"  abc  "), U"abc");

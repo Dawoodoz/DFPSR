@@ -88,31 +88,7 @@ String Printable::toString() const {
 
 Printable::~Printable() {}
 
-bool dsr::string_match(const ReadableString& a, const ReadableString& b) {
-	if (a.view.length != b.view.length) {
-		return false;
-	} else {
-		for (intptr_t i = 0; i < a.view.length; i++) {
-			if (a[i] != b[i]) {
-				return false;
-			}
-		}
-		return true;
-	}
-}
-
-bool dsr::string_caseInsensitiveMatch(const ReadableString& a, const ReadableString& b) {
-	if (a.view.length != b.view.length) {
-		return false;
-	} else {
-		for (intptr_t i = 0; i < a.view.length; i++) {
-			if (towupper(a[i]) != towupper(b[i])) {
-				return false;
-			}
-		}
-		return true;
-	}
-}
+// TODO: Handle ŉ (329) and the remaining Unicode characters after Ÿ (376).
 
 DsrChar dsr::character_upperCase(DsrChar character) {
 	if (U'a' <= character && character <= U'z') { // a (97) to z (122) Ascii
@@ -121,7 +97,13 @@ DsrChar dsr::character_upperCase(DsrChar character) {
 		return character - (U'à' - U'À');
 	} else if (U'ø' <= character && character <= U'þ') { // ø (248) to þ (254) Latin-1
 		return character - (U'ø' - U'Ø');
+	} else if (character == U'ÿ') { // ÿ (255)
+		return U'Ÿ'; // Ÿ (376)
 	} else if (U'Ā' <= character && character <= U'ķ') { // Ā (256) to ķ (311)
+		return character & ~DsrChar(1);
+	} else if (U'Ĺ' <= character && character <= U'ň' && !(character & 1)) { // Even from Ĺ (313) to ň (328)
+		return character - 1;
+	} else if (U'Ŋ' <= character && character <= U'ŷ') { // Ŋ (330) to ŷ (375)
 		return character & ~DsrChar(1);
 	} else {
 		return character;
@@ -135,7 +117,13 @@ DsrChar dsr::character_lowerCase(DsrChar character) {
 		return character + (U'à' - U'À');
 	} else if (U'Ø' <= character && character <= U'Þ') { // Ø (216) to Þ (222) Latin-1
 		return character + (U'ø' - U'Ø');
+	} else if (character == U'Ÿ') { // Ÿ (376)
+		return U'ÿ'; // ÿ (255)
 	} else if (U'Ā' <= character && character <= U'ķ') { // Ā (256) to ķ (311)
+		return character | DsrChar(1);
+	} else if (U'Ĺ' <= character && character <= U'ň' && character & 1) { // Odd from Ĺ (313) to ň (328)
+		return character + 1;
+	} else if (U'Ŋ' <= character && character <= U'ŷ') { // Ŋ (330) to ŷ (375)
 		return character | DsrChar(1);
 	} else {
 		return character;
@@ -158,6 +146,32 @@ String dsr::string_lowerCase(const ReadableString &text) {
 		string_appendChar(result, character_lowerCase(text[i]));
 	}
 	return result;
+}
+
+bool dsr::string_match(const ReadableString& a, const ReadableString& b) {
+	if (a.view.length != b.view.length) {
+		return false;
+	} else {
+		for (intptr_t i = 0; i < a.view.length; i++) {
+			if (a[i] != b[i]) {
+				return false;
+			}
+		}
+		return true;
+	}
+}
+
+bool dsr::string_caseInsensitiveMatch(const ReadableString& a, const ReadableString& b) {
+	if (a.view.length != b.view.length) {
+		return false;
+	} else {
+		for (intptr_t i = 0; i < a.view.length; i++) {
+			if (character_upperCase(a[i]) != character_upperCase(b[i])) {
+				return false;
+			}
+		}
+		return true;
+	}
 }
 
 static intptr_t findFirstNonWhite(const ReadableString &text) {
