@@ -88,7 +88,7 @@ String Printable::toString() const {
 
 Printable::~Printable() {}
 
-// TODO: Handle ŉ (329) and the remaining Unicode characters after ž (382).
+// TODO: Handle the remaining Unicode characters after ǌ (460), starting from Pinyin.
 
 DsrChar dsr::character_upperCase(DsrChar character) {
 	if (U'a' <= character && character <= U'z') { // a (97) to z (122) Ascii
@@ -111,6 +111,44 @@ DsrChar dsr::character_upperCase(DsrChar character) {
 		return U'Ż'; // Ż (379)
 	} else if (character == U'ž') { // ž (382) Latin Extended-A
 		return U'Ž'; // Ž (381)
+	} else if (character == U'ƃ') { // ƃ (387) Latin Extended-B
+		return U'Ƃ'; // Ƃ (386)
+	} else if (character == U'ƅ') { // ƅ (389) Latin Extended-B
+		return U'Ƅ'; // Ƅ (388)
+	} else if (character == U'ƈ') { // ƈ (392) Latin Extended-B
+		return U'Ƈ'; // Ƈ (391)
+	} else if (character == U'ƌ') { // ƌ (396) Latin Extended-B
+		return U'Ƌ'; // Ƌ (395)
+	} else if (character == U'ƒ') { // ƒ (402) Latin Extended-B
+		return U'Ƒ'; // Ƒ (401)
+	} else if (character == U'ƙ') { // ƙ (409) Latin Extended-B
+		return U'Ƙ'; // Ƙ (408)
+	} else if (character == U'ơ') { // ơ (417) Latin Extended-B
+		return U'Ơ'; // Ơ (416)
+	} else if (character == U'ƣ') { // ƣ (419) Latin Extended-B
+		return U'Ƣ'; // Ƣ (418)
+	} else if (character == U'ƥ') { // ƥ (421) Latin Extended-B
+		return U'Ƥ'; // Ƥ (420)
+	} else if (character == U'ƨ') { // ƨ (424) Latin Extended-B
+		return U'Ƨ'; // Ƨ (423)
+	} else if (character == U'ƭ') { // ƭ (429) Latin Extended-B
+		return U'Ƭ'; // Ƭ (428)
+	} else if (character == U'ư') { // ư (432) Latin Extended-B
+		return U'Ư'; // Ư (431)
+	} else if (character == U'ƴ') { // ƴ (436) Latin Extended-B
+		return U'Ƴ'; // Ƴ (435)
+	} else if (character == U'ƶ') { // ƶ (438) Latin Extended-B
+		return U'Ƶ'; // Ƶ (437)
+	} else if (character == U'ƹ') { // ƹ (441) Latin Extended-B
+		return U'Ƹ'; // Ƹ (440)
+	} else if (character == U'ƽ') { // ƽ (445) Latin Extended-B
+		return U'Ƽ'; // Ƽ (444)
+	} else if (character == U'ǆ' || character == U'ǅ') { // ǆ, ǅ (454, 453) Latin Extended-B
+		return U'Ǆ'; // Ǆ (454)
+	} else if (character == U'ǉ' || character == U'ǈ') { // ǉ, ǈ (457, 456) Latin Extended-B
+		return U'Ǉ'; // Ǉ (457)
+	} else if (character == U'ǌ' || character == U'ǋ') { // ǌ, ǋ (460, 459) Latin Extended-B
+		return U'Ǌ'; // Ǌ (460)
 	} else {
 		return character;
 	}
@@ -137,6 +175,44 @@ DsrChar dsr::character_lowerCase(DsrChar character) {
 		return U'ż'; // ż (380)
 	} else if (character == U'Ž') { // Ž (381) Latin Extended-A
 		return U'ž'; // ž (382)
+	} else if (character == U'Ƃ') { // Ƃ (386) Latin Extended-B
+		return U'ƃ'; // ƃ (387)
+	} else if (character == U'Ƅ') { // Ƅ (388) Latin Extended-B
+		return U'ƅ'; // ƅ (389)
+	} else if (character == U'Ƈ') { // Ƈ (391) Latin Extended-B
+		return U'ƈ'; // ƈ (392)
+	} else if (character == U'Ƌ') { // Ƌ (395) Latin Extended-B
+		return U'ƌ'; // ƌ (396)
+	} else if (character == U'Ƒ') { // Ƒ (401) Latin Extended-B
+		return U'ƒ'; // ƒ (402)
+	} else if (character == U'Ƙ') { // Ƙ (408) Latin Extended-B
+		return U'ƙ'; // ƙ (409)
+	} else if (character == U'Ơ') { // Ơ (416) Latin Extended-B
+		return U'ơ'; // ơ (417)
+	} else if (character == U'Ƣ') { // Ƣ (418) Latin Extended-B
+		return U'ƣ'; // ƣ (419)
+	} else if (character == U'Ƥ') { // Ƥ (420) Latin Extended-B
+		return U'ƥ'; // ƥ (421)
+	} else if (character == U'Ƨ') { // Ƨ (423) Latin Extended-B
+		return U'ƨ'; // ƨ (424)
+	} else if (character == U'Ƭ') { // Ƭ (428) Latin Extended-B
+		return U'ƭ'; // ƭ (429)
+	} else if (character == U'Ư') { // Ư (431) Latin Extended-B
+		return U'ư'; // ư (432)
+	} else if (character == U'Ƴ') { // Ƴ (435) Latin Extended-B
+		return U'ƴ'; // ƴ (436)
+	} else if (character == U'Ƶ') { // Ƶ (437) Latin Extended-B
+		return U'ƶ'; // ƶ (438)
+	} else if (character == U'Ƹ') { // Ƹ (440) Latin Extended-B
+		return U'ƹ'; // ƹ (441)
+	} else if (character == U'Ƽ') { // Ƽ (444) Latin Extended-B
+		return U'ƽ'; // ƽ (445)
+	} else if (character == U'Ǆ' || character == U'ǅ') { // Ǆ, ǅ (452, 453) Latin Extended-B
+		return U'ǆ'; // ǆ (454)
+	} else if (character == U'Ǉ' || character == U'ǈ') { // Ǉ, ǈ (455, 456) Latin Extended-B
+		return U'ǉ'; // ǉ (457)
+	} else if (character == U'Ǌ' || character == U'ǋ') { // Ǌ, ǋ (458, 459) Latin Extended-B
+		return U'ǌ'; // ǌ (460)
 	} else {
 		return character;
 	}
