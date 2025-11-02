@@ -88,7 +88,7 @@ String Printable::toString() const {
 
 Printable::~Printable() {}
 
-// TODO: Handle the remaining Unicode characters after ǜ (476).
+// TODO: Handle the remaining Unicode characters after ȳ (563).
 
 DsrChar dsr::character_upperCase(DsrChar character) {
 	if (U'a' <= character && character <= U'z') { // a (97) to z (122) Ascii
@@ -151,6 +151,17 @@ DsrChar dsr::character_upperCase(DsrChar character) {
 		return U'Ǌ'; // Ǌ (460)
 	} else if (U'Ǎ' <= character && character <= U'ǜ' && !(character & 1)) { // Even from Ǎ (461) to ǜ (476) Latin Extended-B Pinyin
 		return character - 1;
+	// Unhandled: ǝ (477)
+	} else if (U'Ǟ' <= character && character <= U'ǯ') { // Ǟ (478) to ǯ (495) Latin Extended-B
+		return character & ~DsrChar(1);
+	// Unhandled: ǰ (496)
+	} else if (character == U'ǳ' || character == U'ǲ') { // ǆ, ǅ (499, 498) Latin Extended-B
+		return U'Ǳ'; // Ǆ (497)
+	} else if (character == U'ǵ') { // ǵ (501) Latin Extended-B
+		return U'Ǵ'; // Ǵ (500)
+	// Unhandled: Ƕ Ƿ
+	} else if (U'Ǹ' <= character && character <= U'ȳ') { // Ǹ (504) to ȳ (563) Latin Extended-B
+		return character & ~DsrChar(1);
 	} else {
 		return character;
 	}
@@ -217,6 +228,14 @@ DsrChar dsr::character_lowerCase(DsrChar character) {
 		return U'ǌ'; // ǌ (460)
 	} else if (U'Ǎ' <= character && character <= U'ǜ' && character & 1) { // Odd from Ǎ (461) to ǜ (476) Latin Extended-B Pinyin
 		return character + 1;
+	} else if (U'Ǟ' <= character && character <= U'ǯ') { // Ǟ (478) to ǯ (495) Latin Extended-B
+		return character & DsrChar(1);
+	} else if (character == U'Ǳ' || character == U'ǲ') { // Ǆ, ǅ (497, 498) Latin Extended-B
+		return U'ǳ'; // Ǆǳ499)
+	} else if (character == U'Ǵ') { // Ǵ (500) Latin Extended-B
+		return U'ǵ'; // ǵ (501)
+	} else if (U'Ǹ' <= character && character <= U'ȳ') { // Ǹ (504) to ȳ (563) Latin Extended-B
+		return character & DsrChar(1);
 	} else {
 		return character;
 	}
