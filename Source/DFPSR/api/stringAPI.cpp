@@ -88,7 +88,7 @@ String Printable::toString() const {
 
 Printable::~Printable() {}
 
-// TODO: Handle the remaining Unicode characters after ǌ (460), starting from Pinyin.
+// TODO: Handle the remaining Unicode characters after ǜ (476).
 
 DsrChar dsr::character_upperCase(DsrChar character) {
 	if (U'a' <= character && character <= U'z') { // a (97) to z (122) Ascii
@@ -149,6 +149,8 @@ DsrChar dsr::character_upperCase(DsrChar character) {
 		return U'Ǉ'; // Ǉ (457)
 	} else if (character == U'ǌ' || character == U'ǋ') { // ǌ, ǋ (460, 459) Latin Extended-B
 		return U'Ǌ'; // Ǌ (460)
+	} else if (U'Ǎ' <= character && character <= U'ǜ' && !(character & 1)) { // Even from Ǎ (461) to ǜ (476) Latin Extended-B Pinyin
+		return character - 1;
 	} else {
 		return character;
 	}
@@ -213,6 +215,8 @@ DsrChar dsr::character_lowerCase(DsrChar character) {
 		return U'ǉ'; // ǉ (457)
 	} else if (character == U'Ǌ' || character == U'ǋ') { // Ǌ, ǋ (458, 459) Latin Extended-B
 		return U'ǌ'; // ǌ (460)
+	} else if (U'Ǎ' <= character && character <= U'ǜ' && character & 1) { // Odd from Ǎ (461) to ǜ (476) Latin Extended-B Pinyin
+		return character + 1;
 	} else {
 		return character;
 	}
