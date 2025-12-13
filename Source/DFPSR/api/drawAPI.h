@@ -29,7 +29,7 @@
 
 namespace dsr {
 
-// Instead of having lots of arguments for source and target regions, this library uses a system of sub-images to that any drawing method can be cropped.
+// Instead of having lots of arguments for source and target regions, this library uses a system of sub-images, so that any non-aligned drawing method can have source and target regions modified by cropping the image arguments as views.
 //   To limit drawing to a rectangular target region:
 //     * Create a sub-image using image_getSubImage.
 //         0-----------------------------------X
