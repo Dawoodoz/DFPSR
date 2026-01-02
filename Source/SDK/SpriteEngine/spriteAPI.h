@@ -31,7 +31,7 @@ public:
 	bool shadowCasting;
 	uint64_t userData; // Can be used to store additional information needed for specific games.
 public:
-	SpriteInstance(int typeIndex, Direction direction, const IVector3D& location, bool shadowCasting, uint64_t userData = 0)
+	SpriteInstance(int32_t typeIndex, Direction direction, const IVector3D& location, bool shadowCasting, uint64_t userData = 0)
 	: typeIndex(typeIndex), direction(direction), location(location), shadowCasting(shadowCasting), userData(userData) {}
 };
 
@@ -43,11 +43,11 @@ DenseModel DenseModel_create(const Model& original);
 //   To be rendered during game-play to allow free rotation.
 struct ModelInstance {
 public:
-	int typeIndex;
+	int32_t typeIndex;
 	Transform3D location; // 3D tile coordinates with translation and 3-axis rotation allowed.
 	uint64_t userData; // Can be used to store additional information needed for specific games.
 public:
-	ModelInstance(int typeIndex, const Transform3D& location, uint64_t userData = 0)
+	ModelInstance(int32_t typeIndex, const Transform3D& location, uint64_t userData = 0)
 	: typeIndex(typeIndex), location(location), userData(userData) {}
 };
 
@@ -55,16 +55,16 @@ class SpriteWorldImpl;
 using SpriteWorld = std::shared_ptr<SpriteWorldImpl>;
 
 // Sprite types
-int spriteWorld_loadSpriteTypeFromFile(const String& folderPath, const String& spriteName);
-int spriteWorld_getSpriteTypeCount();
-String spriteWorld_getSpriteTypeName(int index);
+int32_t spriteWorld_loadSpriteTypeFromFile(const String& folderPath, const String& spriteName);
+int32_t spriteWorld_getSpriteTypeCount();
+String spriteWorld_getSpriteTypeName(int32_t index);
 
 // Model types
-int spriteWorld_loadModelTypeFromFile(const String& folderPath, const String& visibleModelName, const String& shadowModelName);
-int spriteWorld_getModelTypeCount();
-String spriteWorld_getModelTypeName(int index);
+int32_t spriteWorld_loadModelTypeFromFile(const String& folderPath, const String& visibleModelName, const String& shadowModelName);
+int32_t spriteWorld_getModelTypeCount();
+String spriteWorld_getModelTypeName(int32_t index);
 
-SpriteWorld spriteWorld_create(OrthoSystem ortho, int shadowResolution);
+SpriteWorld spriteWorld_create(OrthoSystem ortho, int32_t shadowResolution);
 void spriteWorld_addBackgroundSprite(SpriteWorld& world, const SpriteInstance& sprite);
 void spriteWorld_addBackgroundModel(SpriteWorld& world, const ModelInstance& instance);
 void spriteWorld_addTemporarySprite(SpriteWorld& world, const SpriteInstance& sprite);
@@ -125,8 +125,8 @@ void spriteWorld_setCameraLocation(SpriteWorld& world, const IVector3D miniTileL
 // Access the index of the camera's fixed direction.
 //   This is not an index selecting the camera itself, only selecting the viewing angle.
 // TODO: Implement bound checks or a system that's easier to understand.
-int spriteWorld_getCameraDirectionIndex(const SpriteWorld& world);
-void spriteWorld_setCameraDirectionIndex(SpriteWorld& world, int index);
+int32_t spriteWorld_getCameraDirectionIndex(const SpriteWorld& world);
+void spriteWorld_setCameraDirectionIndex(SpriteWorld& world, int32_t index);
 
 // Get the current direction's orthogonal axis system.
 //   This can be used to convert between world and screen coordinates using the camera location.
@@ -140,9 +140,9 @@ OrthoSystem& spriteWorld_getOrthoSystem(SpriteWorld& world);
 //   Enabling debug will save another file using a *Debug.png prefix with additional information.
 //     Use it to find flaws in generated shadow shapes that are hard to see in raw data.
 // TODO: Hide OrthoSystem or expose it safely.
-void sprite_generateFromModel(const Model& visibleModel, const Model& shadowModel, const OrthoSystem& ortho, const String& targetPath, int cameraAngles, bool debug = false);
+void sprite_generateFromModel(const Model& visibleModel, const Model& shadowModel, const OrthoSystem& ortho, const String& targetPath, int32_t cameraAngles, bool debug = false);
 // A simpler version writing the result to an image and a string instead of saving to files.
-void sprite_generateFromModel(ImageRgbaU8& targetAtlas, String& targetConfigText, const Model& visibleModel, const Model& shadowModel, const OrthoSystem& ortho, const String& targetPath, int cameraAngles);
+void sprite_generateFromModel(ImageRgbaU8& targetAtlas, String& targetConfigText, const Model& visibleModel, const Model& shadowModel, const OrthoSystem& ortho, const String& targetPath, int32_t cameraAngles);
 
 }
 

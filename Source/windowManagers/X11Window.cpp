@@ -28,7 +28,7 @@
 	inline void unlockWindow() {}
 #endif
 
-static const int bufferCount = 2;
+static const int32_t bufferCount = 2;
 
 class X11Window : public dsr::BackendWindow {
 private:
@@ -48,8 +48,8 @@ private:
 	dsr::AlignedImageRgbaU8 canvas[bufferCount];
 	// An X11 image wrapped around the canvas pixel data
 	XImage *canvasX[bufferCount] = {};
-	int drawIndex = 0 % bufferCount;
-	int showIndex = 1 % bufferCount;
+	int32_t drawIndex = 0 % bufferCount;
+	int32_t showIndex = 1 % bufferCount;
 	bool firstFrame = true;
 
 	#ifndef DISABLE_MULTI_THREADING
@@ -59,7 +59,7 @@ private:
 
 	// Remembers the dimensions of the window from creation and resize events
 	//   This allow requesting the size of the window at any time
-	int windowWidth = 0, windowHeight = 0;
+	int32_t windowWidth = 0, windowHeight = 0;
 
 	// Called before the application fetches events from the input queue
 	//   Closing the window, moving the mouse, pressing a key, et cetera
@@ -70,7 +70,7 @@ private:
 	bool setCursorVisibility(bool visible) override;
 
 	// Place the cursor within the window
-	bool setCursorPosition(int x, int y) override;
+	bool setCursorPosition(int32_t x, int32_t y) override;
 
 	// Color format
 	dsr::PackOrderIndex packOrderIndex = dsr::PackOrderIndex::RGBA;
@@ -81,24 +81,24 @@ private:
 private:
 	// Canvas methods
 	dsr::AlignedImageRgbaU8 getCanvas() override { return this->canvas[this->drawIndex]; }
-	void resizeCanvas(int width, int height) override;
+	void resizeCanvas(int32_t width, int32_t height) override;
 	// Window methods
 	void setTitle(const dsr::String &newTitle) override {
 		this->title = newTitle;
 		this->updateTitle_locked();
 	}
 	void removeOldWindow_locked();
-	void createGCWindow_locked(const dsr::String& title, int width, int height);
-	void createWindowed_locked(const dsr::String& title, int width, int height);
+	void createGCWindow_locked(const dsr::String& title, int32_t width, int32_t height);
+	void createWindowed_locked(const dsr::String& title, int32_t width, int32_t height);
 	void createFullscreen_locked();
 	void prepareWindow_locked();
-	int windowState = 0; // 0=none, 1=windowed, 2=fullscreen
+	int32_t windowState = 0; // 0=none, 1=windowed, 2=fullscreen
 public:
 	// Constructors
 	X11Window(const X11Window&) = delete; // Non-copyable because of pointer aliasing.
-	X11Window(const dsr::String& title, int width, int height);
-	int getWidth() const override { return this->windowWidth; };
-	int getHeight() const override { return this->windowHeight; };
+	X11Window(const dsr::String& title, int32_t width, int32_t height);
+	int32_t getWidth() const override { return this->windowWidth; };
+	int32_t getHeight() const override { return this->windowHeight; };
 	// Destructor
 	~X11Window();
 	// Full-screen
@@ -153,7 +153,7 @@ void X11Window::saveToClipboard(const dsr::ReadableString &text, double timeoutI
 	this->listContentInClipboard();
 }
 
-bool X11Window::setCursorPosition(int x, int y) {
+bool X11Window::setCursorPosition(int32_t x, int32_t y) {
 	lockWindow();
 		XWarpPointer(this->display, this->window, this->window, 0, 0, this->windowWidth, this->windowHeight, x, y);
 	unlockWindow();
@@ -193,11 +193,11 @@ dsr::PackOrderIndex X11Window::getColorFormat_locked() {
 		visualRequest.screen = 0;
 		visualRequest.depth = 32;
 		visualRequest.c_class = TrueColor;
-		int visualCount;
+		int32_t visualCount;
 		dsr::PackOrderIndex result = dsr::PackOrderIndex::RGBA;
 		XVisualInfo *formatList = XGetVisualInfo(this->display, VisualScreenMask | VisualDepthMask | VisualClassMask, &visualRequest, &visualCount);
 		if (formatList != nullptr) {
-			for (int i = 0; i < visualCount; i++) {
+			for (int32_t i = 0; i < visualCount; i++) {
 				if (formatList[i].bits_per_rgb == 8) {
 					const uint32_t red = formatList[i].red_mask;
 					const uint32_t green = formatList[i].green_mask;
@@ -225,7 +225,7 @@ dsr::PackOrderIndex X11Window::getColorFormat_locked() {
 			visualRequest.depth = 24;
 			XVisualInfo *formatList = XGetVisualInfo(this->display, VisualScreenMask | VisualDepthMask | VisualClassMask, &visualRequest, &visualCount);
 			if (formatList != nullptr) {
-				for (int i = 0; i < visualCount; i++) {
+				for (int32_t i = 0; i < visualCount; i++) {
 					if (formatList[i].bits_per_rgb == 8) {
 						const uint32_t red = formatList[i].red_mask;
 						const uint32_t green = formatList[i].green_mask;
@@ -307,13 +307,13 @@ void X11Window::prepareWindow_locked() {
 	this->resizeCanvas(this->windowWidth, this->windowHeight);
 }
 
-void X11Window::createGCWindow_locked(const dsr::String& title, int width, int height) {
+void X11Window::createGCWindow_locked(const dsr::String& title, int32_t width, int32_t height) {
 	lockWindow();
 		// Request to resize the canvas and interface according to the new window
 		this->windowWidth = width;
 		this->windowHeight = height;
 		this->receivedWindowResize(width, height);
-		int screenIndex = DefaultScreen(this->display);
+		int32_t screenIndex = DefaultScreen(this->display);
 		unsigned long black = BlackPixel(this->display, screenIndex);
 		unsigned long white = WhitePixel(this->display, screenIndex);
 		// Create a new window
@@ -331,7 +331,7 @@ void X11Window::createGCWindow_locked(const dsr::String& title, int width, int h
 	unlockWindow();
 }
 
-void X11Window::createWindowed_locked(const dsr::String& title, int width, int height) {
+void X11Window::createWindowed_locked(const dsr::String& title, int32_t width, int32_t height) {
 	// Create the window
 	this->createGCWindow_locked(title, width, height);
 	lockWindow();
@@ -388,7 +388,7 @@ void X11Window::createFullscreen_locked() {
 	this->prepareWindow_locked();
 }
 
-X11Window::X11Window(const dsr::String& title, int width, int height) {
+X11Window::X11Window(const dsr::String& title, int32_t width, int32_t height) {
 	bool fullScreen = false;
 	if (width < 1 || height < 1) {
 		fullScreen = true;
@@ -434,7 +434,7 @@ X11Window::X11Window(const dsr::String& title, int width, int height) {
 }
 
 // Convert keycodes from XLib to DSR
-static dsr::MouseKeyEnum getMouseKey(int keyCode) {
+static dsr::MouseKeyEnum getMouseKey(int32_t keyCode) {
 	dsr::MouseKeyEnum result = dsr::MouseKeyEnum::NoKey;
 	if (keyCode == Button1) {
 		result = dsr::MouseKeyEnum::Left;
@@ -595,7 +595,7 @@ static dsr::DsrKey getDsrKey(KeySym keyCode) {
 }
 
 static dsr::DsrChar getCharacterCode(XEvent& event) {
-	const int buffersize = 8;
+	const int32_t buffersize = 8;
 	KeySym key; char codePoints[buffersize]; dsr::DsrChar character = '\0';
 	if (XLookupString(&event.xkey, codePoints, buffersize, &key, 0) == 1) {
 		// X11 does not specify any encoding, but BOM_UTF16LE seems to work on Linux.
@@ -718,7 +718,7 @@ void X11Window::prefetchEvents() {
 						this->loadingFromClipboard = false;
 					} else {
 						Atom actualType;
-						int actualFormat;
+						int32_t actualFormat;
 						unsigned long bytesAfter;
 						unsigned char* data;
 						unsigned long count;
@@ -753,7 +753,7 @@ void X11Window::prefetchEvents() {
 	}
 }
 
-static int destroyXImage(XImage *image) {
+static int32_t destroyXImage(XImage *image) {
 	if (image != nullptr) {
 		if (image->data) {
 			dsr::heap_decreaseUseCount(image->data);
@@ -765,13 +765,13 @@ static int destroyXImage(XImage *image) {
 }
 
 // Locked because it overrides
-void X11Window::resizeCanvas(int width, int height) {
+void X11Window::resizeCanvas(int32_t width, int32_t height) {
 	lockWindow();
 		if (this->display) {
-			unsigned int defaultDepth = DefaultDepth(this->display, XDefaultScreen(this->display));
+			unsigned int32_t defaultDepth = DefaultDepth(this->display, XDefaultScreen(this->display));
 			// Get the old canvas
 			dsr::AlignedImageRgbaU8 oldCanvas = this->canvas[this->showIndex];
-			for (int b = 0; b < bufferCount; b++) {
+			for (int32_t b = 0; b < bufferCount; b++) {
 				// Create a new canvas
 				this->canvas[b] = dsr::image_create_RgbaU8_native(width, height, this->packOrderIndex);
 				// Copy from any old canvas
@@ -831,12 +831,12 @@ void X11Window::showCanvas() {
 		this->drawIndex = (this->drawIndex + 1) % bufferCount;
 		this->showIndex = (this->showIndex + 1) % bufferCount;
 		this->prefetchEvents();
-		int displayIndex = this->showIndex;
+		int32_t displayIndex = this->showIndex;
 		lockWindow();
 		std::function<void()> task = [this, displayIndex]() {
 				// Clamp canvas dimensions to the target window
-				int width = std::min(dsr::image_getWidth(this->canvas[displayIndex]), this->windowWidth);
-				int height = std::min(dsr::image_getHeight(this->canvas[displayIndex]), this->windowHeight);
+				int32_t width = std::min(dsr::image_getWidth(this->canvas[displayIndex]), this->windowWidth);
+				int32_t height = std::min(dsr::image_getHeight(this->canvas[displayIndex]), this->windowHeight);
 				// Display the result
 				XPutImage(this->display, this->window, this->graphicsContext, this->canvasX[displayIndex], 0, 0, 0, 0, width, height);
 			unlockWindow();
@@ -861,7 +861,7 @@ void X11Window::showCanvas() {
 	}
 }
 
-dsr::Handle<dsr::BackendWindow> createBackendWindow(const dsr::String& title, int width, int height) {
+dsr::Handle<dsr::BackendWindow> createBackendWindow(const dsr::String& title, int32_t width, int32_t height) {
 	if (XOpenDisplay(nullptr) != nullptr) {
 		return dsr::handle_create<X11Window>(title, width, height);
 	} else {

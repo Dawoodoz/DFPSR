@@ -36,7 +36,7 @@ public:
 	void makeRegionDirty(IRect newRegion) {
 		newRegion = IRect::cut(newRegion, getTargetBound());
 		if (newRegion.hasArea()) {
-			for (int i = 0; i < this->dirtyRectangles.length(); i++) {
+			for (int32_t i = 0; i < this->dirtyRectangles.length(); i++) {
 				if (IRect::touches(this->dirtyRectangles[i], newRegion)) {
 					// Merge with any existing bound
 					newRegion = IRect::merge(newRegion, this->dirtyRectangles[i]);

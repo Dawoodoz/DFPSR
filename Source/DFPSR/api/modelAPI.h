@@ -90,38 +90,38 @@ namespace dsr {
 	// Pre-condition: model must refer to an existing model.
 	// Side-effect: Adds an empty part without any polygons and returns its new local part index.
 	// The returned part index is relative to the model and goes from 0 to model_getNumberOfParts(model) - 1.
-	int model_addEmptyPart(Model& model, const String &name);
+	int32_t model_addEmptyPart(Model& model, const String &name);
 	// Pre-condition: model must refer to an existing model.
 	// Post-condition: Returns the number of parts in model.
-	int model_getNumberOfParts(const Model& model);
+	int32_t model_getNumberOfParts(const Model& model);
 	// Pre-condition: model must refer to an existing model.
 	// Side-effect: Sets the part at partIndex in model to the new name.
-	void model_setPartName(Model& model, int partIndex, const String &name);
+	void model_setPartName(Model& model, int32_t partIndex, const String &name);
 	// Pre-condition: model must refer to an existing model.
 	// Post-condition: Returns the name of the part at partIndex in model.
-	String model_getPartName(const Model& model, int partIndex);
+	String model_getPartName(const Model& model, int32_t partIndex);
 
 	// Pre-condition: model must refer to an existing model.
 	// Post-condition: Returns the number of points in model.
-	int model_getNumberOfPoints(const Model& model);
+	int32_t model_getNumberOfPoints(const Model& model);
 	// Pre-condition: model must refer to an existing model.
 	// Post-condition: Returns the 3D position of the point at pointIndex in model.
-	FVector3D model_getPoint(const Model& model, int pointIndex);
+	FVector3D model_getPoint(const Model& model, int32_t pointIndex);
 	// Pre-condition: model must refer to an existing model.
-	void model_setPoint(Model& model, int pointIndex, const FVector3D& position);
+	void model_setPoint(Model& model, int32_t pointIndex, const FVector3D& position);
 	// Pre-condition: model must refer to an existing model.
 	// Post-condition:
 	//   Returns an index to the closest point in model relative to position in euclidean distance.
 	//   Returns -1 if none was inside of threshold.
 	// A point p is inside of threshold iff |p - position| < threshold.
 	// If multiple points have the same distance approximated, the point with the lowest index will be preferred.
-	int model_findPoint(const Model& model, const FVector3D &position, float threshold);
+	int32_t model_findPoint(const Model& model, const FVector3D &position, float threshold);
 	// Add a point even if it overlaps an existing point.
 	// Can be used for animation where the initial position might not always be the same.
 	// Pre-condition: model must refer to an existing model.
 	// Side-effect: Adds a new point to model at position.
 	// Post-condition: Returns a local index to the new point.
-	int model_addPoint(const Model& model, const FVector3D &position);
+	int32_t model_addPoint(const Model& model, const FVector3D &position);
 	// Add a point, only if it does not overlap.
 	// Can be used to seal small gaps and reduce the time needed to transform vertex positions.
 	// Pre-condition: model must refer to an existing model.
@@ -132,7 +132,7 @@ namespace dsr {
 	//   then the index of the closest existing point in euclidean distance is returned.
 	//   If multiple existing points are within the same distance,
 	//   then the point with the lowest index is preferred, just like in model_findPoint.
-	int model_addPointIfNeeded(Model& model, const FVector3D &position, float threshold);
+	int32_t model_addPointIfNeeded(Model& model, const FVector3D &position, float threshold);
 	// Get the bounding box, which expands automatically when adding or moving points in the model.
 	// Side-effect: Writes model's bounding box to minimum and maximum by reference.
 	void model_getBoundingBox(const Model& model, FVector3D& minimum, FVector3D& maximum);
@@ -140,14 +140,14 @@ namespace dsr {
 	// Get the vertex position's index, which refers to a shared point in the model.
 	// Pre-condition: model must refer to an existing model.
 	// Post-condition: Returns the position index of the vertex. (At vertexIndex in the polygon at polygonIndex in the part at partIndex in model.)
-	int model_getVertexPointIndex(const Model& model, int partIndex, int polygonIndex, int vertexIndex);
+	int32_t model_getVertexPointIndex(const Model& model, int32_t partIndex, int32_t polygonIndex, int32_t vertexIndex);
 	// Pre-condition: model must refer to an existing model.
 	// Side-effect: Sets the position index of the vertex to pointIndex. (At vertexIndex in the polygon at polygonIndex in the part at partIndex in model.)
-	void model_setVertexPointIndex(Model& model, int partIndex, int polygonIndex, int vertexIndex, int pointIndex);
+	void model_setVertexPointIndex(Model& model, int32_t partIndex, int32_t polygonIndex, int32_t vertexIndex, int32_t pointIndex);
 	// Get the vertex position directly, without having to look it up by index using model_getPoint.
 	// Pre-condition: model must refer to an existing model.
 	// Post-condition: Returns the position of the vertex. (At vertexIndex in the polygon at polygonIndex in the part at partIndex in model.)
-	FVector3D model_getVertexPosition(const Model& model, int partIndex, int polygonIndex, int vertexIndex);
+	FVector3D model_getVertexPosition(const Model& model, int32_t partIndex, int32_t polygonIndex, int32_t vertexIndex);
 	// Get the vertex color, which is not shared with any other polygons. (Red, green, blue, alpha) channels are packed as (x, y, z, w) in FVector4D.
 	// Vertex colors use a normalized scale from 0.0f to 1.0f.
 	//   Transparent black is FVector4D(0.0f, 0.0f, 0.0f, 0.0f).
@@ -157,21 +157,21 @@ namespace dsr {
 	//   Half opaque orange is FVector4D(1.0f, 0.5f, 0.0f, 0.5f).
 	// Pre-condition: model must refer to an existing model.
 	// Post-condition: Returns the color of the vertex. (At vertexIndex in the polygon at polygonIndex in the part at partIndex in model.)
-	FVector4D model_getVertexColor(const Model& model, int partIndex, int polygonIndex, int vertexIndex);
+	FVector4D model_getVertexColor(const Model& model, int32_t partIndex, int32_t polygonIndex, int32_t vertexIndex);
 	// Set the vertex color using the same system as model_getVertexColor.
 	// Pre-condition: model must refer to an existing model.
 	// Side-effect: Sets the color of the vertex to color. (At vertexIndex in the polygon at polygonIndex in the part at partIndex in model.)
-	void model_setVertexColor(Model& model, int partIndex, int polygonIndex, int vertexIndex, const FVector4D& color);
+	void model_setVertexColor(Model& model, int32_t partIndex, int32_t polygonIndex, int32_t vertexIndex, const FVector4D& color);
 	// Get (U1, V1, U2, V2) texture coordinates packed as (x, y, z, w) in FVector4D.
 	// UV1 coordinates (x, y) refers to normalized texture sampling coordinates for the diffuse-map.
 	// UV2 coordinates (z, w) refers to normalized texture sampling coordinates for the light-map.
 	//   Light-maps do not use mip-map layers, which allow generating light-maps dynamically.
 	// Pre-condition: model must refer to an existing model.
-	FVector4D model_getTexCoord(const Model& model, int partIndex, int polygonIndex, int vertexIndex);
+	FVector4D model_getTexCoord(const Model& model, int32_t partIndex, int32_t polygonIndex, int32_t vertexIndex);
 	// Pre-condition: model must refer to an existing model.
 	// Side-effect: Sets the texture coordinates of the vertex to texCoord for both UV1 and UV2.
 	//              (At vertexIndex in the polygon at polygonIndex in the part at partIndex in model.)
-	void model_setTexCoord(Model& model, int partIndex, int polygonIndex, int vertexIndex, const FVector4D& texCoord);
+	void model_setTexCoord(Model& model, int32_t partIndex, int32_t polygonIndex, int32_t vertexIndex, const FVector4D& texCoord);
 
 	// Create a triangle surface at given position indices.
 	//   The fourth vertex is used as padding, so quads and triangles take the same amount of memory per polygon.
@@ -184,7 +184,7 @@ namespace dsr {
 	//   Each new vertex has the color set to solid white using (1.0f, 1.0f, 1.0f, 1.0f).
 	// Post-condition:
 	//   Returns the new polygon's local index within the part at partIndex in model.
-	int model_addTriangle(Model& model, int partIndex, int pointA, int pointB, int pointC);
+	int32_t model_addTriangle(Model& model, int32_t partIndex, int32_t pointA, int32_t pointB, int32_t pointC);
 	// Create a quad surface at given position indices.
 	// Pre-condition: model must refer to an existing model.
 	// Side-effect:
@@ -194,20 +194,20 @@ namespace dsr {
 	//   Each new vertex has the color set to solid white using (1.0f, 1.0f, 1.0f, 1.0f).
 	// Post-condition:
 	//   Returns the new polygon's local index within the part at partIndex in model.
-	int model_addQuad(Model& model, int partIndex, int pointA, int pointB, int pointC, int pointD);
+	int32_t model_addQuad(Model& model, int32_t partIndex, int32_t pointA, int32_t pointB, int32_t pointC, int32_t pointD);
 	// Pre-condition: model must refer to an existing model.
 	// Post-condition: Returns the number of polygons (triangles + quads) in the part at partIndex in model.
-	int model_getNumberOfPolygons(const Model& model, int partIndex);
+	int32_t model_getNumberOfPolygons(const Model& model, int32_t partIndex);
 	// Pre-condition: model must refer to an existing model.
 	// Post-condition: Returns the number of vertices in the polygon at polygonIndex in the part at partIndex in model.
-	int model_getPolygonVertexCount(const Model& model, int partIndex, int polygonIndex);
+	int32_t model_getPolygonVertexCount(const Model& model, int32_t partIndex, int32_t polygonIndex);
 
 	// Get the part's diffuse texture.
 	// Pre-condition: model must refer to an existing model.
 	// Post-condition:
 	//   Returns an image handle to the diffuse texture in the part at partIndex in model.
 	//   If the part has no diffuse image then an empth handle is returned.
-	TextureRgbaU8 model_getDiffuseMap(const Model& model, int partIndex);
+	TextureRgbaU8 model_getDiffuseMap(const Model& model, int32_t partIndex);
 	// Set the part's diffuse texture.
 	//   A texture is just an image fulfilling the criterias of image_isTexture to allow fast texture sampling and pyramid generation.
 	// Pre-condition:
@@ -216,7 +216,7 @@ namespace dsr {
 	// Side-effect:
 	//   Sets the diffuse texture in the part at partIndex in model to diffuseMap.
 	//   If diffuseMap is an empty image handle, then the diffuse texture will be replaced by the default solid white color.
-	void model_setDiffuseMap(Model& model, int partIndex, const TextureRgbaU8 &diffuseMap);
+	void model_setDiffuseMap(Model& model, int32_t partIndex, const TextureRgbaU8 &diffuseMap);
 	// Automatically find the diffuse texture by name in the resource pool and assign it.
 	// Pre-condition:
 	//   model must refer to an existing model.
@@ -229,14 +229,14 @@ namespace dsr {
 	//     "Car_1.2" is rejected for using a dot in the actual name, just to catch more mistakes with file extensions.
 	// Side-effect:
 	//   Sets the diffuse texture in the part at partIndex in model to the image looked up by filename in pool.
-	void model_setDiffuseMapByName(Model& model, int partIndex, ResourcePool &pool, const String &filename);
+	void model_setDiffuseMapByName(Model& model, int32_t partIndex, ResourcePool &pool, const String &filename);
 	// Get the part's light texture.
 	// Pre-condition:
 	//   model must refer to an existing model.
 	// Post-condition:
 	//   Returns an image handle to the light texture in the part at partIndex in model.
 	//   If the part has no light image then an empth handle is returned.
-	TextureRgbaU8 model_getLightMap(Model& model, int partIndex);
+	TextureRgbaU8 model_getLightMap(Model& model, int32_t partIndex);
 	// Set the part's light texture.
 	//   A texture is just an image fulfilling the criterias of image_isTexture to allow fast texture sampling.
 	//   Even though no texture-pyramid is used for light-maps, it still has to look up
@@ -247,7 +247,7 @@ namespace dsr {
 	// Side-effect:
 	//   Sets the diffuse texture in the part at partIndex in model to diffuseMap.
 	//   If diffuseMap is an empty image handle, then the diffuse texture will be replaced by the default solid white color.
-	void model_setLightMap(Model& model, int partIndex, const TextureRgbaU8 &lightMap);
+	void model_setLightMap(Model& model, int32_t partIndex, const TextureRgbaU8 &lightMap);
 	// Automatically find the light texture by name in the resource pool and assign it.
 	// Pre-condition:
 	//   model must refer to an existing model.
@@ -255,7 +255,7 @@ namespace dsr {
 	//   filename must be the image's filename without any extension nor path.
 	// Side-effect:
 	//   Sets the light texture in the part at partIndex in model to the image looked up by filename in pool.
-	void model_setLightMapByName(Model& model, int partIndex, ResourcePool &pool, const String &filename);
+	void model_setLightMapByName(Model& model, int32_t partIndex, ResourcePool &pool, const String &filename);
 
 	// In order to draw two adjacent polygons without any missing pixels along the seam, they must:
 	//   * Share two position indices in opposite directions.
@@ -316,7 +316,7 @@ namespace dsr {
 	//       Remove any textures that are not used by the shaders.
 	//       The fixed pipeline only checks which textures are used.
 	//   * Make sure that texture names are spelled case sensitive or they might not be found on some operating systems like Linux.
-	Model importFromContent_DMF1(const String &fileContent, ResourcePool &pool, int detailLevel = 2);
+	Model importFromContent_DMF1(const String &fileContent, ResourcePool &pool, int32_t detailLevel = 2);
 
 }
 

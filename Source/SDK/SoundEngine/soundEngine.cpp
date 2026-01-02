@@ -13,9 +13,9 @@
 
 namespace dsr {
 
-static const int maxChannels = 2;
-static const int outputChannels = 2;
-static const int outputSampleRate = 44100;
+static const int32_t maxChannels = 2;
+static const int32_t outputChannels = 2;
+static const int32_t outputSampleRate = 44100;
 double outputSoundStep = 1.0 / (double)outputSampleRate;
 
 std::future<void> soundFuture;
@@ -58,14 +58,14 @@ struct Sound {
 		double ratio = location - truncated;
 		return this->sampleLinear(floor, ceiling, ratio, channel);
 	}
-	void sampleMinMax(float &minimum, float &maximum, int startSample, int endSample, int channel) {
+	void sampleMinMax(float &minimum, float &maximum, int32_t startSample, int32_t endSample, int32_t channel) {
 		if (startSample < 0) { startSample = 0; }
 		if (endSample >= sound_getSamplesPerChannel(this->buffer)) { endSample = sound_getSamplesPerChannel(this->buffer) - 1; }
 		if (channel < 0) { channel = 0; }
 		if (channel >= sound_getChannelCount(this->buffer)) { channel = sound_getChannelCount(this->buffer) - 1; }
-		int bufferIndex = startSample * sound_getChannelCount(this->buffer) + channel;
+		int32_t bufferIndex = startSample * sound_getChannelCount(this->buffer) + channel;
 		SafePointer<float> source = sound_getSafePointer(this->buffer);
-		for (int s = startSample; s <= endSample; s++) {
+		for (int32_t s = startSample; s <= endSample; s++) {
 			minMax(minimum, maximum, source[bufferIndex]);
 			bufferIndex += sound_getChannelCount(this->buffer);
 		}
@@ -73,9 +73,9 @@ struct Sound {
 };
 List<Sound> sounds;
 
-int soundEngine_loadSoundFromFile(const ReadableString &filename, bool mustExist) {
+int32_t soundEngine_loadSoundFromFile(const ReadableString &filename, bool mustExist) {
 	// Try to reuse any previously instance of the file before accessing the file system
-	for (int s = 0; s < sounds.length(); s++) {
+	for (int32_t s = 0; s < sounds.length(); s++) {
 		if (sounds[s].fromFile && string_match(sounds[s].name, filename)) {
 			return s;
 		}
@@ -83,14 +83,14 @@ int soundEngine_loadSoundFromFile(const ReadableString &filename, bool mustExist
 	return soundEngine_insertSoundBuffer(sound_load(filename, mustExist), filename, true);
 }
 
-int soundEngine_getSoundBufferCount() {
+int32_t soundEngine_getSoundBufferCount() {
 	return sounds.length();
 }
 
 List<SoundPlayer> fixedPlayers;
 int64_t nextPlayerID = 0;
-int soundEngine_playSound(int soundIndex, bool repeat, float leftVolume, float rightVolume, const EnvelopeSettings &envelopeSettings) {
-	int result;
+int32_t soundEngine_playSound(int32_t soundIndex, bool repeat, float leftVolume, float rightVolume, const EnvelopeSettings &envelopeSettings) {
+	int32_t result;
 	if (soundIndex < 0 || soundIndex >= sounds.length()) {
 		sendWarning(U"playSound_simple: Sound index ", soundIndex, U" does not exist!\n");
 		return -1;
@@ -100,11 +100,11 @@ int soundEngine_playSound(int soundIndex, bool repeat, float leftVolume, float r
 		// Nothing to play.
 		return -1;
 	}
-	int soundSampleRate = sound_getSampleRate(sound->buffer);
+	int32_t soundSampleRate = sound_getSampleRate(sound->buffer);
 	if (soundSampleRate != outputSampleRate) {
 		throwError(U"playSound_simple: The sound ", sound->name, U" has ", soundSampleRate, U" samples per second in each channel, but the sound engine samples output at ", outputSampleRate, U" samples per second!\n");
 	}
-	int soundChannel = sound_getChannelCount(sound->buffer);
+	int32_t soundChannel = sound_getChannelCount(sound->buffer);
 	if (soundChannel > maxChannels) {
 		throwError(U"playSound_simple: The sound ", sound->name, U" has ", soundChannel, U" channels, but the sound engine can not play more than ", maxChannels, U"channels!\n");
 	}
@@ -116,8 +116,8 @@ int soundEngine_playSound(int soundIndex, bool repeat, float leftVolume, float r
 	return result;
 }
 
-static int findFixedPlayer(int64_t playerID) {
-	for (int p = 0; p < fixedPlayers.length(); p++) {
+static int32_t findFixedPlayer(int64_t playerID) {
+	for (int32_t p = 0; p < fixedPlayers.length(); p++) {
 		if (fixedPlayers[p].playerID == playerID) {
 			return p;
 		}
@@ -127,7 +127,7 @@ static int findFixedPlayer(int64_t playerID) {
 void soundEngine_releaseSound(int64_t playerID) {
 	if (playerID != -1) {
 		soundMutex.lock();
-			int index = findFixedPlayer(playerID);
+			int32_t index = findFixedPlayer(playerID);
 			if (index > -1) {
 				fixedPlayers[index].sustained = false;
 			}
@@ -137,7 +137,7 @@ void soundEngine_releaseSound(int64_t playerID) {
 void soundEngine_stopSound(int64_t playerID) {
 	if (playerID != -1) {
 		soundMutex.lock();
-			int index = findFixedPlayer(playerID);
+			int32_t index = findFixedPlayer(playerID);
 			if (index > -1) {
 				fixedPlayers.remove(index);
 			}

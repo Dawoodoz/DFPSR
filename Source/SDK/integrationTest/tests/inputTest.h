@@ -19,6 +19,6 @@
 // verticalScroll = true means that there exists a vertical scroll wheel or the two finger gesture to allow scrolling vertically. 
 // verticalScroll = false is used to skip all tests that require vertical scrolling.
 // Horizontal scrolling is currently not supported, because it mostly requires getting a laptop and the tests should be possible to complete with a three button mouse that can easily be moved around between computers.
-void inputTests_populate(dsr::List<Test> &target, int buttonCount = 3, bool relative = true, bool verticalScroll = true);
+void inputTests_populate(dsr::List<Test> &target, int32_t buttonCount = 3, bool relative = true, bool verticalScroll = true);
 
 #endif

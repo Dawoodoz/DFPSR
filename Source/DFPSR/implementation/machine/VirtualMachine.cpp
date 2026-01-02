@@ -40,12 +40,12 @@ VirtualMachine::VirtualMachine(const ReadableString& code, const Handle<PlanarMe
 	#endif
 	string_split_callback([this](ReadableString currentLine) {
 		// If the line has a comment, then skip everything from #
-		int commentIndex = string_findFirst(currentLine, U'#');
+		int32_t commentIndex = string_findFirst(currentLine, U'#');
 		if (commentIndex > -1) {
 			currentLine = string_before(currentLine, commentIndex);
 		}
 		currentLine = string_removeOuterWhiteSpace(currentLine);
-		int colonIndex = string_findFirst(currentLine, U':');
+		int32_t colonIndex = string_findFirst(currentLine, U':');
 		if (colonIndex > -1) {
 			ReadableString command = string_removeOuterWhiteSpace(string_before(currentLine, colonIndex));
 			ReadableString argumentLine = string_after(currentLine, colonIndex);
@@ -62,8 +62,8 @@ VirtualMachine::VirtualMachine(const ReadableString& code, const Handle<PlanarMe
 	this->executeMethod(0);
 }
 
-int VirtualMachine::findMethod(const ReadableString& name) {
-	for (int i = 0; i < this->methods.length(); i++) {
+int32_t VirtualMachine::findMethod(const ReadableString& name) {
+	for (int32_t i = 0; i < this->methods.length(); i++) {
 		if (string_caseInsensitiveMatch(this->methods[i].name, name)) {
 			return i;
 		}
@@ -71,7 +71,7 @@ int VirtualMachine::findMethod(const ReadableString& name) {
 	return -1;
 }
 
-Variable* VirtualMachine::getResource(const ReadableString& name, int methodIndex) {
+Variable* VirtualMachine::getResource(const ReadableString& name, int32_t methodIndex) {
 	Variable* result = this->methods[methodIndex].getLocal(name);
 	if (result) {
 		// If found, take the local variable
@@ -96,7 +96,7 @@ void VirtualMachine::addMachineWord(MachineOperation operation) {
 
 void VirtualMachine::interpretCommand(const ReadableString& operation, const List<VMA>& resolvedArguments) {
 	// Compare the input with overloads
-	for (int s = 0; s < machineInstructionCount; s++) {
+	for (int32_t s = 0; s < machineInstructionCount; s++) {
 		if (machineInstructions[s].matches(operation, resolvedArguments)) {
 			this->addMachineWord(machineInstructions[s].operation, resolvedArguments);
 			return;
@@ -104,11 +104,11 @@ void VirtualMachine::interpretCommand(const ReadableString& operation, const Lis
 	}
 	// TODO: Allow asking the specific machine type what the given types are called.
 	String message = string_combine(U"\nError! ", operation, U" does not match any overload for the given arguments:\n");
-	for (int s = 0; s < machineInstructionCount; s++) {
+	for (int32_t s = 0; s < machineInstructionCount; s++) {
 		const InsSig* signature = &machineInstructions[s];
 		if (string_caseInsensitiveMatch(signature->name, operation)) {
 			string_append(message, "  * ", signature->name, "(");
-			for (int a = 0; a < signature->arguments.length(); a++) {
+			for (int32_t a = 0; a < signature->arguments.length(); a++) {
 				if (a > 0) {
 					string_append(message, ", ");
 				}
@@ -122,7 +122,7 @@ void VirtualMachine::interpretCommand(const ReadableString& operation, const Lis
 }
 
 // TODO: Inline into declareVariable
-Variable* VirtualMachine::declareVariable_aux(const VMTypeDef& typeDef, int methodIndex, AccessType access, const ReadableString& name, bool initialize, const ReadableString& defaultValueText) {
+Variable* VirtualMachine::declareVariable_aux(const VMTypeDef& typeDef, int32_t methodIndex, AccessType access, const ReadableString& name, bool initialize, const ReadableString& defaultValueText) {
 	// Make commonly used data more readable
 	bool global = methodIndex == 0;
 	Method* currentMethod = &this->methods[methodIndex];
@@ -152,8 +152,8 @@ Variable* VirtualMachine::declareVariable_aux(const VMTypeDef& typeDef, int meth
 		this->methods[methodIndex].declaredNonInput = true;
 	}
 	// Declare the variable so that code may find the type and index by name
-	int typeLocalIndex = currentMethod->count[typeDef.dataType] - 1;
-	int globalIndex = typeLocalToGlobalIndex(global, typeLocalIndex);
+	int32_t typeLocalIndex = currentMethod->count[typeDef.dataType] - 1;
+	int32_t globalIndex = typeLocalToGlobalIndex(global, typeLocalIndex);
 	this->methods[methodIndex].locals.pushConstruct(name, access, &typeDef, typeLocalIndex, global);
 	if (initialize && access != AccessType::Input) {
 		// Generate instructions for assigning the variable's initial value
@@ -162,7 +162,7 @@ Variable* VirtualMachine::declareVariable_aux(const VMTypeDef& typeDef, int meth
 	return &this->methods[methodIndex].locals.last();
 }
 
-Variable* VirtualMachine::declareVariable(int methodIndex, AccessType access, const ReadableString& typeName, const ReadableString& name, bool initialize, const ReadableString& defaultValueText) {
+Variable* VirtualMachine::declareVariable(int32_t methodIndex, AccessType access, const ReadableString& typeName, const ReadableString& name, bool initialize, const ReadableString& defaultValueText) {
 	if (this->getResource(name, methodIndex)) {
 		throwError("A resource named \"", name, "\" already exists! Be aware that resource names are case insensitive.\n");
 		return nullptr;
@@ -181,7 +181,7 @@ Variable* VirtualMachine::declareVariable(int methodIndex, AccessType access, co
 	}
 }
 
-VMA VirtualMachine::VMAfromText(int methodIndex, const ReadableString& content) {
+VMA VirtualMachine::VMAfromText(int32_t methodIndex, const ReadableString& content) {
 	DsrChar first = content[0];
 	DsrChar second = content[1];
 	if (first == U'-' && second >= U'0' && second <= U'9') {
@@ -189,8 +189,8 @@ VMA VirtualMachine::VMAfromText(int methodIndex, const ReadableString& content) 
 	} else if (first >= U'0' && first <= U'9') {
 		return VMA(FixedPoint::fromText(content));
 	} else {
-		int leftIndex = string_findFirst(content, U'<');
-		int rightIndex = string_findLast(content, U'>');
+		int32_t leftIndex = string_findFirst(content, U'<');
+		int32_t rightIndex = string_findLast(content, U'>');
 		if (leftIndex > -1 && rightIndex > -1) {
 			ReadableString name = string_removeOuterWhiteSpace(string_before(content, leftIndex));
 			ReadableString typeName = string_removeOuterWhiteSpace(string_inclusiveRange(content, leftIndex + 1, rightIndex - 1));
@@ -255,9 +255,9 @@ void VirtualMachine::addCallInstructions(const List<String>& arguments) {
 		throwError(U"Cannot make a call without the name of a method!\n");
 	}
 	// TODO: Allow calling methods that aren't defined yet.
-	int currentMethodIndex = this->methods.length() - 1;
+	int32_t currentMethodIndex = this->methods.length() - 1;
 	ReadableString methodName = string_removeOuterWhiteSpace(arguments[0]);
-	int calledMethodIndex = findMethod(methodName);
+	int32_t calledMethodIndex = findMethod(methodName);
 	if (calledMethodIndex == -1) {
 		throwError(U"Tried to make an internal call to the method \"", methodName, U"\", which was not previously defined in the virtual machine! Make sure that the name is spelled correctly and the method is defined above the caller.\n");
 	}
@@ -271,8 +271,8 @@ void VirtualMachine::addCallInstructions(const List<String>& arguments) {
 	List<VMA> outputArguments;
 	inputArguments.push(VMA(FixedPoint::fromMantissa(calledMethodIndex)));
 	outputArguments.push(VMA(FixedPoint::fromMantissa(calledMethodIndex)));
-	int outputCount = 0;
-	for (int a = 1; a < arguments.length(); a++) {
+	int32_t outputCount = 0;
+	for (int32_t a = 1; a < arguments.length(); a++) {
 		ReadableString content = string_removeOuterWhiteSpace(arguments[a]);
 		if (string_length(content) > 0) {
 			if (outputCount < calledMethod->outputCount) {
@@ -284,7 +284,7 @@ void VirtualMachine::addCallInstructions(const List<String>& arguments) {
 		}
 	}
 	// Check types
-	for (int a = 1; a < outputArguments.length(); a++) {
+	for (int32_t a = 1; a < outputArguments.length(); a++) {
 		// Output
 		Variable* variable = &calledMethod->locals[a - 1 + calledMethod->inputCount];
 		if (outputArguments[a].argType != ArgumentType::Reference) {
@@ -293,7 +293,7 @@ void VirtualMachine::addCallInstructions(const List<String>& arguments) {
 			throwError(U"Output argument for \"", variable->name, U"\" in \"", calledMethod->name, U"\" must have the type \"", variable->typeDescription->name, U"\"!\n");
 		}
 	}
-	for (int a = 1; a < inputArguments.length(); a++) {
+	for (int32_t a = 1; a < inputArguments.length(); a++) {
 		// Input
 		Variable* variable = &calledMethod->locals[a - 1];
 		if (inputArguments[a].dataType != variable->typeDescription->dataType) {
@@ -302,9 +302,9 @@ void VirtualMachine::addCallInstructions(const List<String>& arguments) {
 	}
 	addMachineWord([](VirtualMachine& machine, PlanarMemory& memory, const List<VMA>& args) {
 		// Get the method to call
-		int calledMethodIndex = args[0].value.getMantissa();
+		int32_t calledMethodIndex = args[0].value.getMantissa();
 		#ifdef VIRTUAL_MACHINE_DEBUG_PRINT
-			int oldMethodIndex = memory.current.methodIndex;
+			int32_t oldMethodIndex = memory.current.methodIndex;
 		#endif
 		Method* calledMethod = &machine.methods[calledMethodIndex];
 		#ifdef VIRTUAL_MACHINE_DEBUG_PRINT
@@ -313,7 +313,7 @@ void VirtualMachine::addCallInstructions(const List<String>& arguments) {
 		// Calculate new frame pointers
 		int32_t newFramePointer[MAX_TYPE_COUNT] = {};
 		int32_t newStackPointer[MAX_TYPE_COUNT] = {};
-		for (int t = 0; t < MAX_TYPE_COUNT; t++) {
+		for (int32_t t = 0; t < MAX_TYPE_COUNT; t++) {
 			newFramePointer[t] = memory.current.stackPointer[t];
 			newStackPointer[t] = memory.current.stackPointer[t] + machine.methods[calledMethodIndex].count[t];
 			#ifdef VIRTUAL_MACHINE_DEBUG_PRINT
@@ -326,33 +326,33 @@ void VirtualMachine::addCallInstructions(const List<String>& arguments) {
 			#endif
 		}
 		// Assign inputs
-		for (int a = 1; a < args.length(); a++) {
+		for (int32_t a = 1; a < args.length(); a++) {
 			Variable* target = &calledMethod->locals[a - 1];
 			DataType typeIndex = target->typeDescription->dataType;
-			int targetStackIndex = target->getStackIndex(newFramePointer[typeIndex]);
+			int32_t targetStackIndex = target->getStackIndex(newFramePointer[typeIndex]);
 			memory.store(targetStackIndex, args[a], memory.current.framePointer[typeIndex], typeIndex);
 		}
 		// Jump into the method
 		memory.callStack.push(memory.current);
 		memory.current.methodIndex = calledMethodIndex;
 		memory.current.programCounter = machine.methods[calledMethodIndex].startAddress;
-		for (int t = 0; t < MAX_TYPE_COUNT; t++) {
+		for (int32_t t = 0; t < MAX_TYPE_COUNT; t++) {
 			memory.current.framePointer[t] = newFramePointer[t];
 			memory.current.stackPointer[t] = newStackPointer[t];
 		}
 	}, inputArguments);
 	// Get results from the method
 	addMachineWord([](VirtualMachine& machine, PlanarMemory& memory, const List<VMA>& args) {
-		int calledMethodIndex = args[0].value.getMantissa();
+		int32_t calledMethodIndex = args[0].value.getMantissa();
 		Method* calledMethod = &machine.methods[calledMethodIndex];
 		#ifdef VIRTUAL_MACHINE_DEBUG_PRINT
 			printText(U"Writing results after call to \"", calledMethod->name, U"\":\n");
 		#endif
 		// Assign outputs
-		for (int a = 1; a < args.length(); a++) {
+		for (int32_t a = 1; a < args.length(); a++) {
 			Variable* source = &calledMethod->locals[a - 1 + calledMethod->inputCount];
 			DataType typeIndex = source->typeDescription->dataType;
-			int sourceStackIndex = source->getStackIndex(memory.current.stackPointer[typeIndex]);
+			int32_t sourceStackIndex = source->getStackIndex(memory.current.stackPointer[typeIndex]);
 			memory.load(sourceStackIndex, args[a], memory.current.framePointer[typeIndex], typeIndex);
 			#ifdef VIRTUAL_MACHINE_DEBUG_PRINT
 				printText(U"  ");
@@ -375,7 +375,7 @@ void VirtualMachine::addCallInstructions(const List<String>& arguments) {
 void VirtualMachine::interpretMachineWord(const ReadableString& command, const List<String>& arguments) {
 	#ifdef VIRTUAL_MACHINE_DEBUG_PRINT
 		printText(U"interpretMachineWord @", this->machineWords.length(), U" ", command, U"(");
-		for (int a = 0; a < arguments.length(); a++) {
+		for (int32_t a = 0; a < arguments.length(); a++) {
 			if (a > 0) { printText(U", "); }
 			printText(getArg(arguments, a));
 		}
@@ -389,7 +389,7 @@ void VirtualMachine::interpretMachineWord(const ReadableString& command, const L
 		}
 		this->methods.pushConstruct(getArg(arguments, 0), this->machineWords.length(), this->machineTypeCount);
 	} else if (string_caseInsensitiveMatch(command, U"Temp")) {
-		for (int a = 1; a < arguments.length(); a++) {
+		for (int32_t a = 1; a < arguments.length(); a++) {
 			this->declareVariable(methods.length() - 1, AccessType::Hidden, getArg(arguments, 0), getArg(arguments, a), false, U"");
 		}
 	} else if (string_caseInsensitiveMatch(command, U"Hidden")) {
@@ -403,9 +403,9 @@ void VirtualMachine::interpretMachineWord(const ReadableString& command, const L
 	} else if (string_caseInsensitiveMatch(command, U"Call")) {
 		this->addCallInstructions(arguments);
 	} else {
-		int methodIndex = this->methods.length() - 1;
+		int32_t methodIndex = this->methods.length() - 1;
 		List<VMA> resolvedArguments;
-		for (int a = 0; a < arguments.length(); a++) {
+		for (int32_t a = 0; a < arguments.length(); a++) {
 			ReadableString content = string_removeOuterWhiteSpace(arguments[a]);
 			if (string_length(content) > 0) {
 				resolvedArguments.push(this->VMAfromText(methodIndex, getArg(arguments, a)));
@@ -415,7 +415,7 @@ void VirtualMachine::interpretMachineWord(const ReadableString& command, const L
 	}
 }
 
-void VirtualMachine::executeMethod(int methodIndex) {
+void VirtualMachine::executeMethod(int32_t methodIndex) {
 	Method* rootMethod = &this->methods[methodIndex];
 
 	#ifdef VIRTUAL_MACHINE_PROFILE
@@ -429,8 +429,8 @@ void VirtualMachine::executeMethod(int methodIndex) {
 	// Create a new current state
 	this->memory->current.methodIndex = methodIndex;
 	this->memory->current.programCounter = rootMethod->startAddress;
-	for (int t = 0; t < this->machineTypeCount; t++) {
-		int framePointer = this->methods[0].count[t];
+	for (int32_t t = 0; t < this->machineTypeCount; t++) {
+		int32_t framePointer = this->methods[0].count[t];
 		this->memory->current.framePointer[t] = framePointer;
 		this->memory->current.stackPointer[t] = framePointer + this->methods[methodIndex].count[t];
 	}
@@ -458,7 +458,7 @@ void VirtualMachine::executeMethod(int methodIndex) {
 			const InsSig* signature = getMachineInstructionFromFunction(word->operation);
 			if (signature) {
 				printText(U"Executing @", pc, U" ", signature->name, U"(");
-				for (int a = signature->targetCount; a < word->args.length(); a++) {
+				for (int32_t a = signature->targetCount; a < word->args.length(); a++) {
 					if (a > signature->targetCount) {
 						printText(U", ");
 					}
@@ -470,7 +470,7 @@ void VirtualMachine::executeMethod(int methodIndex) {
 			if (signature) {
 				if (signature->targetCount > 0) {
 					printText(U" -> ");
-					for (int a = 0; a < signature->targetCount; a++) {
+					for (int32_t a = 0; a < signature->targetCount; a++) {
 						if (a > 0) {
 							printText(U", ");
 						}

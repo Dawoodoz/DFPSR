@@ -23,7 +23,7 @@
 
 #include "../DFPSR/settings.h"
 
-static const int bufferCount = 1;
+static const int32_t bufferCount = 1;
 
 static bool applicationInitialized = false;
 static NSApplication *application;
@@ -43,7 +43,7 @@ private:
 	// 0 for regular left click.
 	// 1 for control click converted to right mouse button.
 	// 2 for command click converted to middle mouse button.
-	int modifiedClick = 0;
+	int32_t modifiedClick = 0;
 	// Last modifiers to allow converting NSEventTypeFlagsChanged into up and down key press events.
 	bool pressedControl = false;
 	bool pressedCommand = false;
@@ -58,12 +58,12 @@ private:
 	dsr::Buffer delayedCanvas;
 	// An Cocoa image wrapped around the canvas pixel data
 	//NSImage *canvasNS[bufferCount] = {};
-	int drawIndex = 0 % bufferCount;
-	int showIndex = 1 % bufferCount;
+	int32_t drawIndex = 0 % bufferCount;
+	int32_t showIndex = 1 % bufferCount;
 
 	// Remembers the dimensions of the window from creation and resize events
 	//   This allow requesting the size of the window at any time
-	int windowWidth = 0, windowHeight = 0;
+	int32_t windowWidth = 0, windowHeight = 0;
 
 	// Called before the application fetches events from the input queue
 	//   Closing the window, moving the mouse, pressing a key, et cetera
@@ -73,26 +73,26 @@ private:
 	bool setCursorVisibility(bool visible) override;
 
 	// Place the cursor within the window
-	bool setCursorPosition(int x, int y) override;
+	bool setCursorPosition(int32_t x, int32_t y) override;
 private:
 	// Helper methods specific to calling XLib
 	void updateTitle();
 private:
 	// Canvas methods
 	dsr::AlignedImageRgbaU8 getCanvas() override { return this->canvas[this->drawIndex]; }
-	void resizeCanvas(int width, int height) override;
+	void resizeCanvas(int32_t width, int32_t height) override;
 	// Window methods
 	void setTitle(const dsr::String &newTitle) override {
 		this->title = newTitle;
 		this->updateTitle();
 	}
-	int windowState = 0; // 0=none, 1=windowed, 2=fullscreen
+	int32_t windowState = 0; // 0=none, 1=windowed, 2=fullscreen
 public:
 	// Constructors
 	CocoaWindow(const CocoaWindow&) = delete; // Non-copyable because of pointer aliasing.
-	CocoaWindow(const dsr::String& title, int width, int height);
-	int getWidth() const override { return this->windowWidth; };
-	int getHeight() const override { return this->windowHeight; };
+	CocoaWindow(const dsr::String& title, int32_t width, int32_t height);
+	int32_t getWidth() const override { return this->windowWidth; };
+	int32_t getHeight() const override { return this->windowHeight; };
 	// Destructor
 	~CocoaWindow();
 	// Full-screen
@@ -150,7 +150,7 @@ bool CocoaWindow::setCursorVisibility(bool visible) {
 	return true;
 }
 
-bool CocoaWindow::setCursorPosition(int x, int y) {
+bool CocoaWindow::setCursorPosition(int32_t x, int32_t y) {
 	// Get the offset from window pixels to screen pixels.
 	NSWindow *window = [this->view window];
 	NSRect viewBounds = [this->view bounds];
@@ -169,7 +169,7 @@ bool CocoaWindow::setCursorPosition(int x, int y) {
 }
 
 void CocoaWindow::setFullScreen(bool enabled) {
-	int newWindowState = enabled ? 2 : 1;
+	int32_t newWindowState = enabled ? 2 : 1;
 	if (newWindowState != this->windowState) {
 		if (enabled) {
 			// Entering full screen from the start or for an existing window.
@@ -192,7 +192,7 @@ void CocoaWindow::updateTitle() {
 	[window setTitle:windowTitle];
 }
 
-CocoaWindow::CocoaWindow(const dsr::String& title, int width, int height) {
+CocoaWindow::CocoaWindow(const dsr::String& title, int32_t width, int32_t height) {
 	if (!applicationInitialized) {
 		application = [NSApplication sharedApplication];
 		[application setActivationPolicy:NSApplicationActivationPolicyRegular];
@@ -549,8 +549,8 @@ void CocoaWindow::prefetchEvents() {
 
 static const dsr::PackOrderIndex MacOSPackOrder = dsr::PackOrderIndex::ABGR;
 
-void CocoaWindow::resizeCanvas(int width, int height) {
-	for (int b = 0; b < bufferCount; b++) {
+void CocoaWindow::resizeCanvas(int32_t width, int32_t height) {
+	for (int32_t b = 0; b < bufferCount; b++) {
 		if (image_exists(this->canvas[b])) {
 			if (image_getWidth(this->canvas[b]) == width && image_getHeight(this->canvas[b]) == height) {
 				// The canvas already has the requested resolution.
@@ -582,7 +582,7 @@ void CocoaWindow::showCanvas() {
 			this->drawIndex = (this->drawIndex + 1) % bufferCount;
 			this->showIndex = (this->showIndex + 1) % bufferCount;
 			this->prefetchEvents();
-			int displayIndex = this->showIndex;
+			int32_t displayIndex = this->showIndex;
 			if (this->view != nullptr) {
 				// Get image dimensions.
 				int32_t width = dsr::image_getWidth(this->canvas[displayIndex]);
@@ -606,6 +606,6 @@ void CocoaWindow::showCanvas() {
 	}
 }
 
-dsr::Handle<dsr::BackendWindow> createBackendWindow(const dsr::String& title, int width, int height) {
+dsr::Handle<dsr::BackendWindow> createBackendWindow(const dsr::String& title, int32_t width, int32_t height) {
 	return dsr::handle_create<CocoaWindow>(title, width, height);
 }

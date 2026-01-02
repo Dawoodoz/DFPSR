@@ -79,15 +79,15 @@ bool Menu::hasArrow() {
 	return this->subMenu && this->getChildCount() > 0;
 }
 
-static OrderedImageRgbaU8 generateHeadImage(Menu &menu, MediaMethod imageGenerator, int pressed, int focused, int hover, int width, int height, ColorRgbI32 backColor, ColorRgbI32 foreColor, const ReadableString &text, RasterFont font) {
+static OrderedImageRgbaU8 generateHeadImage(Menu &menu, MediaMethod imageGenerator, int32_t pressed, int32_t focused, int32_t hover, int32_t width, int32_t height, ColorRgbI32 backColor, ColorRgbI32 foreColor, const ReadableString &text, RasterFont font) {
 	// Create a scaled image
 	OrderedImageRgbaU8 result;
  	component_generateImage(menu.getTheme(), imageGenerator, width, height, backColor.red, backColor.green, backColor.blue, pressed, focused, hover)(result);
 	if (string_length(text) > 0) {
-		int backWidth = image_getWidth(result);
-		int backHeight = image_getHeight(result);
-		int left = menu.padding.value;
-		int top = (backHeight - font_getSize(font)) / 2;
+		int32_t backWidth = image_getWidth(result);
+		int32_t backHeight = image_getHeight(result);
+		int32_t left = menu.padding.value;
+		int32_t top = (backHeight - font_getSize(font)) / 2;
 		if (pressed) {
 			top += 1;
 		}
@@ -95,10 +95,10 @@ static OrderedImageRgbaU8 generateHeadImage(Menu &menu, MediaMethod imageGenerat
 		font_printLine(result, font, text, IVector2D(left, top), ColorRgbaI32(foreColor, 255));
 		// Draw the arrow
 		if (menu.hasArrow()) {
-			int arrowWidth = image_getWidth(arrowImage);
-			int arrowHeight = image_getHeight(arrowImage);
-			int arrowLeft = backWidth - arrowWidth - 4;
-			int arrowTop = (backHeight - arrowHeight) / 2;
+			int32_t arrowWidth = image_getWidth(arrowImage);
+			int32_t arrowHeight = image_getHeight(arrowImage);
+			int32_t arrowLeft = backWidth - arrowWidth - 4;
+			int32_t arrowTop = (backHeight - arrowHeight) / 2;
 			draw_silhouette(result, arrowImage, ColorRgbaI32(foreColor, 255), arrowLeft, arrowTop);
 		}
 	}
@@ -106,8 +106,8 @@ static OrderedImageRgbaU8 generateHeadImage(Menu &menu, MediaMethod imageGenerat
 }
 
 void Menu::generateGraphics() {
-	int headWidth = this->location.width();
-	int headHeight = this->location.height();
+	int32_t headWidth = this->location.width();
+	int32_t headHeight = this->location.height();
 	if (headWidth < 1) { headWidth = 1; }
 	if (headHeight < 1) { headHeight = 1; }
 	// headImage is set to an empty handle when something used as input changes.
@@ -132,8 +132,8 @@ void Menu::drawSelf(ImageRgbaU8& targetImage, const IRect &relativeLocation) {
 
 void Menu::generateBackground() {
 	if (!image_exists(this->listBackgroundImage)) {
-		int listWidth = this->overlayLocation.width();
-		int listHeight = this->overlayLocation.height();
+		int32_t listWidth = this->overlayLocation.width();
+		int32_t listHeight = this->overlayLocation.height();
 		if (listWidth < 1) { listWidth = 1; }
 		if (listHeight < 1) { listHeight = 1; }
 		component_generateImage(this->theme, this->listBackgroundImageMethod, listWidth, listHeight, this->backColor.value.red, this->backColor.value.green, this->backColor.value.blue)(this->listBackgroundImage);
@@ -145,7 +145,7 @@ void Menu::createOverlay() {
 		this->showOverlay();
 		this->makeFocused(); // Focus on the current menu path to make others lose focus.
 		IRect memberBound = this->children[0]->location;
-		for (int i = 1; i < this->getChildCount(); i++) {
+		for (int32_t i = 1; i < this->getChildCount(); i++) {
 			memberBound = IRect::merge(memberBound, this->children[i]->location);
 		}
 		// Calculate the new list bound.
@@ -169,7 +169,7 @@ void Menu::drawOverlay(ImageRgbaU8& targetImage, const IVector2D &absoluteOffset
 	} else {
 		draw_copy(targetImage, this->listBackgroundImage, overlayOffset.x, overlayOffset.y);
 	}
-	for (int i = 0; i < this->getChildCount(); i++) {
+	for (int32_t i = 0; i < this->getChildCount(); i++) {
 		this->children[i]->draw(targetImage, absoluteOffset + this->location.upperLeft());
 	}
 }
@@ -251,23 +251,23 @@ void Menu::updateStateEvent(ComponentState oldState, ComponentState newState) {
 }
 
 void Menu::updateLocationEvent(const IRect& oldLocation, const IRect& newLocation) {	
-	int left = this->padding.value;
-	int top = this->padding.value;
-	int overlap = 3;
+	int32_t left = this->padding.value;
+	int32_t top = this->padding.value;
+	int32_t overlap = 3;
 	if (this->subMenu) {
 		left += newLocation.width() - overlap;
 	} else {
 		top += newLocation.height() - overlap;
 	}
-	int maxWidth = 80; // Minimum usable with.
+	int32_t maxWidth = 80; // Minimum usable with.
 	// Expand list with to fit child components.
-	for (int i = 0; i < this->getChildCount(); i++) {
-		int width = this->children[i]->getDesiredDimensions().x;
+	for (int32_t i = 0; i < this->getChildCount(); i++) {
+		int32_t width = this->children[i]->getDesiredDimensions().x;
 		if (maxWidth < width) maxWidth = width;
 	}
 	// Stretch out the child components to use the whole width.
-	for (int i = 0; i < this->getChildCount(); i++) {
-		int height = this->children[i]->getDesiredDimensions().y;
+	for (int32_t i = 0; i < this->getChildCount(); i++) {
+		int32_t height = this->children[i]->getDesiredDimensions().y;
 		this->children[i]->applyLayout(IRect(left, top, maxWidth, height));
 		top += height + this->spacing.value;
 	}
@@ -283,7 +283,7 @@ static void closeEntireMenu(VisualComponent* menu) {
 }
 
 void Menu::receiveMouseEvent(const MouseEvent& event) {
-	int childCount = this->getChildCount();
+	int32_t childCount = this->getChildCount();
 	MouseEvent localEvent = event;
 	localEvent.position -= this->location.upperLeft();
 	bool inOverlay = this->showingOverlay() && this->pointIsInsideOfOverlay(event.position);
@@ -297,7 +297,7 @@ void Menu::receiveMouseEvent(const MouseEvent& event) {
 		}
 	} else if (inOverlay) {
 		// Pass on down and move events to a child component that the cursor is inside of.
-		for (int i = childCount - 1; i >= 0; i--) {
+		for (int32_t i = childCount - 1; i >= 0; i--) {
 			if (this->children[i]->pointIsInside(localEvent.position)) {
 				MouseEvent childEvent = localEvent;
 				childEvent.position -= this->children[i]->location.upperLeft();
@@ -328,7 +328,7 @@ void Menu::receiveMouseEvent(const MouseEvent& event) {
 					if (this->parent != nullptr) {
 						VisualComponent *toolbar = this->parent;
 						if (toolbar->ownsFocus()) {
-							for (int i = 0; i < toolbar->getChildCount(); i++) {
+							for (int32_t i = 0; i < toolbar->getChildCount(); i++) {
 								if (toolbar->children[i]->showingOverlay()) {
 									toggleExpansion = true;
 									break;
@@ -378,8 +378,8 @@ void Menu::receiveMouseEvent(const MouseEvent& event) {
 
 IVector2D Menu::getDesiredDimensions() {
 	this->completeAssets();
-	int widthAdder = this->padding.value * 2;
-	int heightAdder = widthAdder;
+	int32_t widthAdder = this->padding.value * 2;
+	int32_t heightAdder = widthAdder;
 	if (this->hasArrow()) {
 		// Make extra space for the expansion arrowhead when containing a list of members.
 		widthAdder += 24;

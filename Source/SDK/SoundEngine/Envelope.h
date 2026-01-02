@@ -21,7 +21,7 @@ struct Envelope {
 	// Settings
 	EnvelopeSettings envelopeSettings;
 	// Dynamic
-	int state = 0;
+	int32_t state = 0;
 	double currentVolume = 0.0, currentGoal = 0.0, releaseVolume = 0.0, timeSinceChange = 0.0;
 	bool lastSustained = true;
 	Envelope(const EnvelopeSettings &envelopeSettings);

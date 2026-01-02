@@ -71,7 +71,7 @@ Polygon::Polygon(const Vertex &vertA, const Vertex &vertB, const Vertex &vertC, 
 	this->colors[3] = vertD.data.color;
 }
 
-Polygon::Polygon(int indexA, int indexB, int indexC) {
+Polygon::Polygon(int32_t indexA, int32_t indexB, int32_t indexC) {
 	this->pointIndices[0] = indexA;
 	this->pointIndices[1] = indexB;
 	this->pointIndices[2] = indexC;
@@ -86,7 +86,7 @@ Polygon::Polygon(int indexA, int indexB, int indexC) {
 	this->colors[3] = FVector4D(1.0f, 1.0f, 1.0f, 1.0f);
 }
 
-Polygon::Polygon(int indexA, int indexB, int indexC, int indexD) {
+Polygon::Polygon(int32_t indexA, int32_t indexB, int32_t indexC, int32_t indexD) {
 	this->pointIndices[0] = indexA;
 	this->pointIndices[1] = indexB;
 	this->pointIndices[2] = indexC;
@@ -101,7 +101,7 @@ Polygon::Polygon(int indexA, int indexB, int indexC, int indexD) {
 	this->colors[3] = FVector4D(1.0f, 1.0f, 1.0f, 1.0f);
 }
 
-int Polygon::getVertexCount() const {
+int32_t Polygon::getVertexCount() const {
 	if (this->pointIndices[0] < 0) {
 		return 0;
 	} else if (this->pointIndices[1] < 0) {
@@ -119,10 +119,10 @@ Part::Part(const ReadableString &name) : name(name) {}
 Part::Part(const TextureRgbaU8 &diffuseMap, const TextureRgbaU8 &lightMap, const List<Polygon> &polygonBuffer, const String &name) :
   diffuseMap(diffuseMap), lightMap(lightMap), polygonBuffer(polygonBuffer), name(name) {}
 Part Part::clone() const { return Part(this->diffuseMap, this->lightMap, this->polygonBuffer, this->name); }
-int Part::getPolygonCount() const {
+int32_t Part::getPolygonCount() const {
 	return this->polygonBuffer.length();
 }
-int Part::getPolygonVertexCount(int polygonIndex) const {
+int32_t Part::getPolygonVertexCount(int32_t polygonIndex) const {
 	CHECK_POLYGON_INDEX(this, polygonIndex, return -1);
 	return this->polygonBuffer[polygonIndex].getVertexCount();
 }
@@ -132,11 +132,11 @@ int Part::getPolygonVertexCount(int polygonIndex) const {
 //         Only decreasing the length of the point buffer, changing a position index or adding new polygons should set it to false
 //         Only running validation before rendering should set it from false to true
 //   point indices may not go outside of projected's array range
-static void renderTriangleFromPolygon(CommandQueue *commandQueue, const ImageRgbaU8 &targetImage, const ImageF32 &depthBuffer, const Camera &camera, const Polygon &polygon, int triangleIndex, const ProjectedPoint *projected, Filter filter, const TextureRgbaU8 &diffuse, const TextureRgbaU8 &light) {
+static void renderTriangleFromPolygon(CommandQueue *commandQueue, const ImageRgbaU8 &targetImage, const ImageF32 &depthBuffer, const Camera &camera, const Polygon &polygon, int32_t triangleIndex, const ProjectedPoint *projected, Filter filter, const TextureRgbaU8 &diffuse, const TextureRgbaU8 &light) {
 	// Triangle fan starting from the first vertex of the polygon
-	int indexA = 0;
-	int indexB = 1 + triangleIndex;
-	int indexC = 2 + triangleIndex;
+	int32_t indexA = 0;
+	int32_t indexB = 1 + triangleIndex;
+	int32_t indexC = 2 + triangleIndex;
 	ProjectedPoint posA = projected[polygon.pointIndices[indexA]];
 	ProjectedPoint posB = projected[polygon.pointIndices[indexB]];
 	ProjectedPoint posC = projected[polygon.pointIndices[indexC]];
@@ -148,7 +148,7 @@ static void renderTriangleFromPolygon(CommandQueue *commandQueue, const ImageRgb
 }
 
 void Part::render(CommandQueue *commandQueue, const ImageRgbaU8 &targetImage, const ImageF32 &depthBuffer, const Transform3D &modelToWorldTransform, const Camera &camera, Filter filter, const ProjectedPoint* projected) const {
-	for (int p = 0; p < this->polygonBuffer.length(); p++) {
+	for (int32_t p = 0; p < this->polygonBuffer.length(); p++) {
 		Polygon polygon = this->polygonBuffer[p];
 		if (polygon.pointIndices[3] == -1) {
 			// Render triangle
@@ -162,7 +162,7 @@ void Part::render(CommandQueue *commandQueue, const ImageRgbaU8 &targetImage, co
 }
 
 void Part::renderDepth(const ImageF32 &depthBuffer, const Transform3D &modelToWorldTransform, const Camera &camera, const ProjectedPoint* projected) const {
-	for (int p = 0; p < this->polygonBuffer.length(); p++) {
+	for (int32_t p = 0; p < this->polygonBuffer.length(); p++) {
 		Polygon polygon = this->polygonBuffer[p];
 		if (polygon.pointIndices[3] == -1) {
 			// Render triangle
@@ -185,12 +185,12 @@ void Part::renderDepth(const ImageF32 &depthBuffer, const Transform3D &modelToWo
 void ModelImpl::render(CommandQueue *commandQueue, const ImageRgbaU8 &targetImage, const ImageF32 &depthBuffer, const Transform3D &modelToWorldTransform, const Camera &camera) const {
 	if (camera.isBoxSeen(this->minBound, this->maxBound, modelToWorldTransform)) {
 		// Transform and project all vertices
-		int positionCount = positionBuffer.length();
+		int32_t positionCount = positionBuffer.length();
 		VirtualStackAllocation<ProjectedPoint> projected(positionCount, "Projected points in ModelImpl::render");
-		for (int vert = 0; vert < positionCount; vert++) {
+		for (int32_t vert = 0; vert < positionCount; vert++) {
 			projected[vert] = camera.worldToScreen(modelToWorldTransform.transformPoint(positionBuffer[vert]));
 		}
-		for (int partIndex = 0; partIndex < this->partBuffer.length(); partIndex++) {
+		for (int32_t partIndex = 0; partIndex < this->partBuffer.length(); partIndex++) {
 			this->partBuffer[partIndex].render(commandQueue, targetImage, depthBuffer, modelToWorldTransform, camera, this->filter, projected.getUnsafe());
 		}
 	}
@@ -199,12 +199,12 @@ void ModelImpl::render(CommandQueue *commandQueue, const ImageRgbaU8 &targetImag
 void ModelImpl::renderDepth(const ImageF32 &depthBuffer, const Transform3D &modelToWorldTransform, const Camera &camera) const {
 	if (camera.isBoxSeen(this->minBound, this->maxBound, modelToWorldTransform)) {
 		// Transform and project all vertices
-		int positionCount = positionBuffer.length();
+		int32_t positionCount = positionBuffer.length();
 		VirtualStackAllocation<ProjectedPoint> projected(positionCount, "Projected points in ModelImpl::renderDepth");
-		for (int vert = 0; vert < positionCount; vert++) {
+		for (int32_t vert = 0; vert < positionCount; vert++) {
 			projected[vert] = camera.worldToScreen(modelToWorldTransform.transformPoint(positionBuffer[vert]));
 		}
-		for (int partIndex = 0; partIndex < this->partBuffer.length(); partIndex++) {
+		for (int32_t partIndex = 0; partIndex < this->partBuffer.length(); partIndex++) {
 			this->partBuffer[partIndex].renderDepth(depthBuffer, modelToWorldTransform, camera, projected.getUnsafe());
 		}
 	}
@@ -219,63 +219,63 @@ ModelImpl::ModelImpl(const ModelImpl &old) :
   filter(old.filter),
   positionBuffer(old.positionBuffer),
   partBuffer(old.partBuffer) {}
-int ModelImpl::addEmptyPart(const String& name) {
+int32_t ModelImpl::addEmptyPart(const String& name) {
 	return this->partBuffer.pushConstructGetIndex(name);
 }
-int ModelImpl::getNumberOfParts() const {
+int32_t ModelImpl::getNumberOfParts() const {
 	return this->partBuffer.length();
 }
-void ModelImpl::setPartName(int partIndex, const String &name) {
+void ModelImpl::setPartName(int32_t partIndex, const String &name) {
 	CHECK_PART_INDEX(partIndex, return);
 	this->partBuffer[partIndex].name = name;
 }
-String ModelImpl::getPartName(int partIndex) const {
+String ModelImpl::getPartName(int32_t partIndex) const {
 	CHECK_PART_INDEX(partIndex, return "");
 	return this->partBuffer[partIndex].name;
 }
-TextureRgbaU8 ModelImpl::getDiffuseMap(int partIndex) const {
+TextureRgbaU8 ModelImpl::getDiffuseMap(int32_t partIndex) const {
 	CHECK_PART_INDEX(partIndex, return TextureRgbaU8());
 	return this->partBuffer[partIndex].diffuseMap;
 }
-void ModelImpl::setDiffuseMap(const TextureRgbaU8 &diffuseMap, int partIndex) {
+void ModelImpl::setDiffuseMap(const TextureRgbaU8 &diffuseMap, int32_t partIndex) {
 	CHECK_PART_INDEX(partIndex, return);
 	this->partBuffer[partIndex].diffuseMap = diffuseMap;
 }
-void ModelImpl::setDiffuseMapByName(ResourcePool &pool, const String &filename, int partIndex) {
+void ModelImpl::setDiffuseMapByName(ResourcePool &pool, const String &filename, int32_t partIndex) {
 	CHECK_PART_INDEX(partIndex, return);
 	const TextureRgbaU8 texture = pool.fetchTextureRgba(filename, 5);
 	if (texture_exists(texture)) {
 		this->setDiffuseMap(texture, partIndex);
 	}
 }
-TextureRgbaU8 ModelImpl::getLightMap(int partIndex) const {
+TextureRgbaU8 ModelImpl::getLightMap(int32_t partIndex) const {
 	CHECK_PART_INDEX(partIndex, return TextureRgbaU8());
 	return this->partBuffer[partIndex].lightMap;
 }
-void ModelImpl::setLightMap(const TextureRgbaU8 &lightMap, int partIndex) {
+void ModelImpl::setLightMap(const TextureRgbaU8 &lightMap, int32_t partIndex) {
 	CHECK_PART_INDEX(partIndex, return);
 	this->partBuffer[partIndex].lightMap = lightMap;
 }
-void ModelImpl::setLightMapByName(ResourcePool &pool, const String &filename, int partIndex) {
+void ModelImpl::setLightMapByName(ResourcePool &pool, const String &filename, int32_t partIndex) {
 	CHECK_PART_INDEX(partIndex, return);
 	const TextureRgbaU8 texture = pool.fetchTextureRgba(filename, 1); // TODO: Allow configuring the number of mip levels and selecting a sampler somehow.
 	if (texture_exists(texture)) {
 		this->setLightMap(texture, partIndex);
 	}
 }
-int ModelImpl::addPolygon(Polygon polygon, int partIndex) {
+int32_t ModelImpl::addPolygon(Polygon polygon, int32_t partIndex) {
 	CHECK_PART_INDEX(partIndex, return -1);
 	return this->partBuffer[partIndex].polygonBuffer.pushGetIndex(polygon);
 }
-int ModelImpl::getNumberOfPolygons(int partIndex) const {
+int32_t ModelImpl::getNumberOfPolygons(int32_t partIndex) const {
 	CHECK_PART_INDEX(partIndex, return -1);
 	return this->partBuffer[partIndex].getPolygonCount();
 }
-int ModelImpl::getPolygonVertexCount(int partIndex, int polygonIndex) const {
+int32_t ModelImpl::getPolygonVertexCount(int32_t partIndex, int32_t polygonIndex) const {
 	CHECK_PART_INDEX(partIndex, return -1);
 	return this->partBuffer[partIndex].getPolygonVertexCount(polygonIndex);
 }
-int ModelImpl::getNumberOfPoints() const {
+int32_t ModelImpl::getNumberOfPoints() const {
 	return this->positionBuffer.length();
 }
 void ModelImpl::expandBound(const FVector3D& point) {
@@ -286,10 +286,10 @@ void ModelImpl::expandBound(const FVector3D& point) {
 	if (this->maxBound.y < point.y) { this->maxBound.y = point.y; }
 	if (this->maxBound.z < point.z) { this->maxBound.z = point.z; }
 }
-int ModelImpl::findPoint(const FVector3D &position, float threshold) const {
+int32_t ModelImpl::findPoint(const FVector3D &position, float threshold) const {
 	float bestDistance = threshold;
-	int bestIndex = -1;
-	for (int index = 0; index < this->positionBuffer.length(); index++) {
+	int32_t bestIndex = -1;
+	for (int32_t index = 0; index < this->positionBuffer.length(); index++) {
 		float distance = length(position - this->getPoint(index));
 		if (distance < bestDistance) {
 			bestDistance = distance;
@@ -298,21 +298,21 @@ int ModelImpl::findPoint(const FVector3D &position, float threshold) const {
 	}
 	return bestIndex;
 }
-FVector3D ModelImpl::getPoint(int pointIndex) const {
+FVector3D ModelImpl::getPoint(int32_t pointIndex) const {
 	CHECK_POINT_INDEX(pointIndex, return FVector3D());
 	return this->positionBuffer[pointIndex];
 }
-void ModelImpl::setPoint(int pointIndex, const FVector3D& position) {
+void ModelImpl::setPoint(int32_t pointIndex, const FVector3D& position) {
 	CHECK_POINT_INDEX(pointIndex, return);
 	this->expandBound(position);
 	this->positionBuffer[pointIndex] = position;
 }
-int ModelImpl::addPoint(const FVector3D &position) {
+int32_t ModelImpl::addPoint(const FVector3D &position) {
 	this->expandBound(position);
 	return this->positionBuffer.pushGetIndex(position);
 }
-int ModelImpl::addPointIfNeeded(const FVector3D &position, float threshold) {
-	int existingIndex = this->findPoint(position, threshold);
+int32_t ModelImpl::addPointIfNeeded(const FVector3D &position, float threshold) {
+	int32_t existingIndex = this->findPoint(position, threshold);
 	if (existingIndex > -1) {
 		return existingIndex;
 	} else {
@@ -320,40 +320,40 @@ int ModelImpl::addPointIfNeeded(const FVector3D &position, float threshold) {
 	}
 }
 
-int ModelImpl::getVertexPointIndex(int partIndex, int polygonIndex, int vertexIndex) const {
+int32_t ModelImpl::getVertexPointIndex(int32_t partIndex, int32_t polygonIndex, int32_t vertexIndex) const {
 	CHECK_PART_POLYGON_INDEX(partIndex, polygonIndex, return -1);
 	CHECK_VERTEX_INDEX(vertexIndex, return -1);
 	return partBuffer[partIndex].polygonBuffer[polygonIndex].pointIndices[vertexIndex];
 }
-void ModelImpl::setVertexPointIndex(int partIndex, int polygonIndex, int vertexIndex, int pointIndex) {
+void ModelImpl::setVertexPointIndex(int32_t partIndex, int32_t polygonIndex, int32_t vertexIndex, int32_t pointIndex) {
 	CHECK_PART_POLYGON_INDEX(partIndex, polygonIndex, return);
 	CHECK_VERTEX_INDEX(vertexIndex, return);
 	partBuffer[partIndex].polygonBuffer[polygonIndex].pointIndices[vertexIndex] = pointIndex;
 }
-FVector3D ModelImpl::getVertexPosition(int partIndex, int polygonIndex, int vertexIndex) const {
-	int pointIndex = getVertexPointIndex(partIndex, polygonIndex, vertexIndex);
+FVector3D ModelImpl::getVertexPosition(int32_t partIndex, int32_t polygonIndex, int32_t vertexIndex) const {
+	int32_t pointIndex = getVertexPointIndex(partIndex, polygonIndex, vertexIndex);
 	if (pointIndex > -1 && pointIndex < this->getNumberOfPoints()) {
 		return this->getPoint(pointIndex);
 	} else {
 		return FVector3D();
 	}
 }
-FVector4D ModelImpl::getVertexColor(int partIndex, int polygonIndex, int vertexIndex) const {
+FVector4D ModelImpl::getVertexColor(int32_t partIndex, int32_t polygonIndex, int32_t vertexIndex) const {
 	CHECK_PART_POLYGON_INDEX(partIndex, polygonIndex, return FVector4D());
 	CHECK_VERTEX_INDEX(vertexIndex, return FVector4D());
 	return partBuffer[partIndex].polygonBuffer[polygonIndex].colors[vertexIndex];
 }
-void ModelImpl::setVertexColor(int partIndex, int polygonIndex, int vertexIndex, const FVector4D& color) {
+void ModelImpl::setVertexColor(int32_t partIndex, int32_t polygonIndex, int32_t vertexIndex, const FVector4D& color) {
 	CHECK_PART_POLYGON_INDEX(partIndex, polygonIndex, return);
 	CHECK_VERTEX_INDEX(vertexIndex, return);
 	partBuffer[partIndex].polygonBuffer[polygonIndex].colors[vertexIndex] = color;
 }
-FVector4D ModelImpl::getTexCoord(int partIndex, int polygonIndex, int vertexIndex) const {
+FVector4D ModelImpl::getTexCoord(int32_t partIndex, int32_t polygonIndex, int32_t vertexIndex) const {
 	CHECK_PART_POLYGON_INDEX(partIndex, polygonIndex, return FVector4D());
 	CHECK_VERTEX_INDEX(vertexIndex, return FVector4D());
 	return partBuffer[partIndex].polygonBuffer[polygonIndex].texCoords[vertexIndex];
 }
-void ModelImpl::setTexCoord(int partIndex, int polygonIndex, int vertexIndex, const FVector4D& texCoord) {
+void ModelImpl::setTexCoord(int32_t partIndex, int32_t polygonIndex, int32_t vertexIndex, const FVector4D& texCoord) {
 	CHECK_PART_POLYGON_INDEX(partIndex, polygonIndex, return);
 	CHECK_VERTEX_INDEX(vertexIndex, return);
 	partBuffer[partIndex].polygonBuffer[polygonIndex].texCoords[vertexIndex] = texCoord;

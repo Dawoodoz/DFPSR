@@ -32,9 +32,9 @@ bool PersistentStringList::assignValue(const ReadableString &text, const Readabl
 	bool quoted = false;
 	bool first = true;
 	bool hadComma = false;
-	int start = 0;
+	int32_t start = 0;
 	this->value.clear();
-	for (int i = 0; i < string_length(text); i++) {
+	for (int32_t i = 0; i < string_length(text); i++) {
 		DsrChar c = text[i];
 		if (quoted) {
 			if (c == U'\\') { // Escape sequence
@@ -73,7 +73,7 @@ bool PersistentStringList::assignValue(const ReadableString &text, const Readabl
 
 String& PersistentStringList::toStreamIndented(String& out, const ReadableString& indentation) const {
 	string_append(out, indentation);
-	for (int i = 0; i < this->value.length(); i++) {
+	for (int32_t i = 0; i < this->value.length(); i++) {
 		if (i > 0) {
 			string_append(out, ", ");
 		}

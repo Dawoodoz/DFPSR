@@ -74,7 +74,7 @@ DsrWindow::DsrWindow(Handle<BackendWindow> backend)
 		this->sendCloseEvent();
 	};
 	// Receiving notifications about resizing should be done in the main panel
-	this->backend->resizeEvent() = [this](int width, int height) {
+	this->backend->resizeEvent() = [this](int32_t width, int32_t height) {
 		BackendWindow *backend = this->backend.getUnsafe();
 		ImageRgbaU8 canvas = backend->getCanvas();
 		this->innerWidth = width;
@@ -92,7 +92,7 @@ DsrWindow::DsrWindow(Handle<BackendWindow> backend)
 
 static void setBackendWindowHandle(Handle<VisualComponent> component, Handle<BackendWindow> windowHandle) {
 	component->window = windowHandle;
-	for (int c = 0; c < component->children.length(); c++) {
+	for (int32_t c = 0; c < component->children.length(); c++) {
 		setBackendWindowHandle(component->children[c], windowHandle);
 	}
 }
@@ -114,7 +114,7 @@ Handle<VisualComponent> DsrWindow::findComponentByName(ReadableString name) cons
 	}
 }
 
-Handle<VisualComponent> DsrWindow::findComponentByNameAndIndex(ReadableString name, int index) const {
+Handle<VisualComponent> DsrWindow::findComponentByNameAndIndex(ReadableString name, int32_t index) const {
 	if (string_match(this->mainPanel->getName(), name) && this->mainPanel->getIndex() == index) {
 		return this->mainPanel;
 	} else {
@@ -184,26 +184,26 @@ void DsrWindow::sendCloseEvent() {
 	this->callback_windowCloseEvent();
 }
 
-int DsrWindow::getInnerWidth() {
+int32_t DsrWindow::getInnerWidth() {
 	return this->innerWidth;
 }
 
-int DsrWindow::getInnerHeight() {
+int32_t DsrWindow::getInnerHeight() {
 	return this->innerHeight;
 }
 
-int DsrWindow::getCanvasWidth() {
+int32_t DsrWindow::getCanvasWidth() {
 	return max(1, this->innerWidth / this->pixelScale);
 }
 
-int DsrWindow::getCanvasHeight() {
+int32_t DsrWindow::getCanvasHeight() {
 	return max(1, this->innerHeight / this->pixelScale);
 }
 
 AlignedImageF32 DsrWindow::getDepthBuffer() {
 	this->backend->getCanvas();
-	int smallWidth = getCanvasWidth();
-	int smallHeight = getCanvasHeight();
+	int32_t smallWidth = getCanvasWidth();
+	int32_t smallHeight = getCanvasHeight();
 	if (!image_exists(this->depthBuffer)
 	  || image_getWidth(this->depthBuffer) != smallWidth
 	  || image_getHeight(this->depthBuffer) != smallHeight) {
@@ -216,11 +216,11 @@ void DsrWindow::removeDepthBuffer() {
 	this->depthBuffer = AlignedImageF32();
 }
 
-int DsrWindow::getPixelScale() const {
+int32_t DsrWindow::getPixelScale() const {
 	return this->pixelScale;
 }
 
-void DsrWindow::setPixelScale(int scale) {
+void DsrWindow::setPixelScale(int32_t scale) {
 	if (this->pixelScale != scale) {
 		this->pixelScale = scale;
 		// Update layout
@@ -256,8 +256,8 @@ AlignedImageRgbaU8 DsrWindow::getCanvas() {
 	auto fullResolutionCanvas = this->backend->getCanvas();
 	if (this->pixelScale > 1) {
 		// Get low resolution canvas in deterministic RGBA pack order
-		int smallWidth = getCanvasWidth();
-		int smallHeight = getCanvasHeight();
+		int32_t smallWidth = getCanvasWidth();
+		int32_t smallHeight = getCanvasHeight();
 		if (!image_exists(this->lowResolutionCanvas)
 		 || image_getWidth(this->lowResolutionCanvas) != smallWidth
  		 || image_getHeight(this->lowResolutionCanvas) != smallHeight) {

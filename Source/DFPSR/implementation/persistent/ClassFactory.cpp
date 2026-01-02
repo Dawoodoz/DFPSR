@@ -39,8 +39,8 @@ Handle<StructureDefinition> Persistent::getStructure() const {
 	return Handle<StructureDefinition>();
 }
 
-static int findPersistentClass(const String &type) {
-	for (int i = 0; i < persistentClasses.length(); i++) {
+static int32_t findPersistentClass(const String &type) {
+	for (int32_t i = 0; i < persistentClasses.length(); i++) {
 		if (string_match(persistentClasses[i].type, type)) {
 			return i;
 		}
@@ -53,7 +53,7 @@ String Persistent::getClassName() const {
 }
 
 void Persistent::registerPersistentClass() {
-	int existingIndex = findPersistentClass(this->getClassName());
+	int32_t existingIndex = findPersistentClass(this->getClassName());
 	// If a class of the name doesn't already exist
 	if (existingIndex == -1) {
 		// Register its constructor using the name
@@ -65,11 +65,11 @@ bool Persistent::addChild(Handle<Persistent> child) {
 	return false;
 }
 
-int Persistent::getChildCount() const {
+int32_t Persistent::getChildCount() const {
 	return 0;
 }
 
-Handle<Persistent> Persistent::getChild(int index) const {
+Handle<Persistent> Persistent::getChild(int32_t index) const {
 	return Handle<Persistent>();
 }
 
@@ -103,7 +103,7 @@ String& Persistent::toStreamIndented(String& out, const ReadableString& indentat
 	string_append(out, indentation, U"Begin : ", structure->name, U"\n");
 	String nextIndentation = indentation + U"	";
 	// Save parameters
-	for (int i = 0; i < structure->length(); i++) {
+	for (int32_t i = 0; i < structure->length(); i++) {
 		String name = structure->attributes[i].name;
 		Persistent* value = ((Persistent*)this)->findAttribute(name); // Override const
 		if (value == nullptr) {
@@ -115,7 +115,7 @@ String& Persistent::toStreamIndented(String& out, const ReadableString& indentat
 		}
 	}
 	// Save child objects
-	for (int c = 0; c < this->getChildCount(); c++) {
+	for (int32_t c = 0; c < this->getChildCount(); c++) {
 		this->getChild(c)->toStreamIndented(out, nextIndentation);
 	}
 	string_append(out, indentation, U"End\n");
@@ -124,7 +124,7 @@ String& Persistent::toStreamIndented(String& out, const ReadableString& indentat
 
 Handle<Persistent> dsr::createPersistentClass(const String &type, bool mustExist) {
 	// Look for the component
-	int existingIndex = findPersistentClass(type);
+	int32_t existingIndex = findPersistentClass(type);
 	if (existingIndex > -1) {
 		return persistentClasses[existingIndex].defaultConstructor();
 	}
@@ -139,14 +139,14 @@ Handle<Persistent> dsr::createPersistentClassFromText(const ReadableString &text
 	Handle<Persistent> rootObject, newObject;
 	List<Handle<Persistent>> stack;
 	string_split_callback([&rootObject, &newObject, &stack, &fromPath](ReadableString line) {
-		int equalityIndex = string_findFirst(line, '=');
+		int32_t equalityIndex = string_findFirst(line, '=');
 		if (equalityIndex > -1) {
 			// Assignment
 			String key = string_removeOuterWhiteSpace(string_before(line, equalityIndex));
 			String value = string_removeOuterWhiteSpace(string_after(line, equalityIndex));
 			stack.last()->setProperty(key, value, fromPath);
 		} else {
-			int colonIndex = string_findFirst(line, ':');
+			int32_t colonIndex = string_findFirst(line, ':');
 			if (colonIndex > -1) {
 				// Declaration
 				String keyword = string_removeOuterWhiteSpace(string_before(line, colonIndex));

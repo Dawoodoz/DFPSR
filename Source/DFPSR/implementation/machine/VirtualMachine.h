@@ -153,9 +153,9 @@ public:
 	List<CallState> callStack;
 	virtual ~PlanarMemory() {}
 	// Store in memory
-	virtual void store(int targetStackIndex, const VMA& sourceArg, int sourceFramePointer, DataType type) = 0;
+	virtual void store(int32_t targetStackIndex, const VMA& sourceArg, int32_t sourceFramePointer, DataType type) = 0;
 	// Load from memory
-	virtual void load(int sourceStackIndex, const VMA& targetArg, int targetFramePointer, DataType type) = 0;
+	virtual void load(int32_t sourceStackIndex, const VMA& targetArg, int32_t targetFramePointer, DataType type) = 0;
 };
 
 // Lambdas without capture is used to create function pointers without objects
@@ -174,10 +174,10 @@ struct MachineWord {
 struct InsSig {
 public:
 	ReadableString name;
-	int targetCount; // Number of first arguments to present as results
+	int32_t targetCount; // Number of first arguments to present as results
 	List<ArgSig> arguments;
 	MachineOperation operation;
-	InsSig(const ReadableString& name, int targetCount, MachineOperation operation)
+	InsSig(const ReadableString& name, int32_t targetCount, MachineOperation operation)
 	: name(name), targetCount(targetCount), operation(operation) {}
 private:
 	void addArguments() {}
@@ -188,7 +188,7 @@ private:
 	}
 public:
 	template <typename... ARGS>
-	static InsSig create(const ReadableString& name, int targetCount, MachineOperation operation, ARGS... args) {
+	static InsSig create(const ReadableString& name, int32_t targetCount, MachineOperation operation, ARGS... args) {
 		InsSig result = InsSig(name, targetCount, operation);
 		result.addArguments(args...);
 		return result;
@@ -199,7 +199,7 @@ public:
 		} else if (!string_caseInsensitiveMatch(this->name, name)) {
 			return false;
 		} else {
-			for (int i = 0; i < this->arguments.length(); i++) {
+			for (int32_t i = 0; i < this->arguments.length(); i++) {
 				if (!this->arguments[i].matches(resolvedArguments[i].argType, resolvedArguments[i].dataType)) {
 					return false;
 				}
@@ -210,9 +210,9 @@ public:
 };
 
 // Types
-inline void initializeTemplate(VirtualMachine& machine, int globalIndex, const ReadableString& defaultValue) {}
+inline void initializeTemplate(VirtualMachine& machine, int32_t globalIndex, const ReadableString& defaultValue) {}
 using VMT_Initializer = decltype(&initializeTemplate);
-inline void debugPrintTemplate(PlanarMemory& memory, Variable& variable, int globalIndex, int32_t* framePointer, bool fullContent) {}
+inline void debugPrintTemplate(PlanarMemory& memory, Variable& variable, int32_t globalIndex, int32_t* framePointer, bool fullContent) {}
 using VMT_DebugPrinter = decltype(&debugPrintTemplate);
 struct VMTypeDef {
 	ReadableString name;
@@ -250,7 +250,7 @@ struct Method {
 		assert(machineTypeCount <= MAX_TYPE_COUNT);
 	}
 	Variable* getLocal(const ReadableString& name) {
-		for (int i = 0; i < this->locals.length(); i++) {
+		for (int32_t i = 0; i < this->locals.length(); i++) {
 			if (string_caseInsensitiveMatch(this->locals[i].name, name)) {
 				return &this->locals[i];
 			}
@@ -268,7 +268,7 @@ struct VirtualMachine {
 	// Instruction types
 	const InsSig* machineInstructions; int32_t machineInstructionCount;
 	const InsSig* getMachineInstructionFromFunction(MachineOperation functionPointer) {
-		for (int s = 0; s < this->machineInstructionCount; s++) {
+		for (int32_t s = 0; s < this->machineInstructionCount; s++) {
 			if (this->machineInstructions[s].operation == functionPointer) {
 				return &this->machineInstructions[s];
 			}
@@ -280,7 +280,7 @@ struct VirtualMachine {
 	// Types
 	const VMTypeDef* machineTypes; int32_t machineTypeCount;
 	const VMTypeDef* getMachineType(const ReadableString& name) {
-		for (int s = 0; s < this->machineTypeCount; s++) {
+		for (int32_t s = 0; s < this->machineTypeCount; s++) {
 			if (string_caseInsensitiveMatch(this->machineTypes[s].name, name)) {
 				return &this->machineTypes[s];
 			}
@@ -288,7 +288,7 @@ struct VirtualMachine {
 		return nullptr;
 	}
 	const VMTypeDef* getMachineType(DataType dataType) {
-		for (int s = 0; s < this->machineTypeCount; s++) {
+		for (int32_t s = 0; s < this->machineTypeCount; s++) {
 			if (this->machineTypes[s].dataType == dataType) {
 				return &this->machineTypes[s];
 			}
@@ -300,8 +300,8 @@ struct VirtualMachine {
 	  const InsSig* machineInstructions, int32_t machineInstructionCount,
 	  const VMTypeDef* machineTypes, int32_t machineTypeCount);
 
-	int findMethod(const ReadableString& name);
-	Variable* getResource(const ReadableString& name, int methodIndex);
+	int32_t findMethod(const ReadableString& name);
+	Variable* getResource(const ReadableString& name, int32_t methodIndex);
 	/*
 	Indices
 		Global index: (Identifier) The value stores in the mantissas of machine instructions to refer to things
@@ -320,10 +320,10 @@ struct VirtualMachine {
 			Can be used to find the name of the variable for debugging
 			Unlike the type local index, the unified index knows the type
 	*/
-	static int globalToTypeLocalIndex(int globalIndex) {
+	static int32_t globalToTypeLocalIndex(int32_t globalIndex) {
 		return globalIndex < 0 ? -(globalIndex + 1) : globalIndex;
 	}
-	static int typeLocalToGlobalIndex(bool isGlobal, int typeLocalIndex) {
+	static int32_t typeLocalToGlobalIndex(bool isGlobal, int32_t typeLocalIndex) {
 		return isGlobal ? -(typeLocalIndex + 1) : typeLocalIndex;
 	}
 
@@ -332,25 +332,25 @@ struct VirtualMachine {
 	void addReturnInstruction();
 	void addCallInstructions(const List<String>& arguments);
 	void interpretCommand(const ReadableString& operation, const List<VMA>& resolvedArguments);
-	Variable* declareVariable_aux(const VMTypeDef& typeDef, int methodIndex, AccessType access, const ReadableString& name, bool initialize, const ReadableString& defaultValueText);
-	Variable* declareVariable(int methodIndex, AccessType access, const ReadableString& type, const ReadableString& name, bool initialize, const ReadableString& defaultValueText);
-	VMA VMAfromText(int methodIndex, const ReadableString& content);
+	Variable* declareVariable_aux(const VMTypeDef& typeDef, int32_t methodIndex, AccessType access, const ReadableString& name, bool initialize, const ReadableString& defaultValueText);
+	Variable* declareVariable(int32_t methodIndex, AccessType access, const ReadableString& type, const ReadableString& name, bool initialize, const ReadableString& defaultValueText);
+	VMA VMAfromText(int32_t methodIndex, const ReadableString& content);
 	void interpretMachineWord(const ReadableString& command, const List<String>& arguments);
 
 	// Run-time debug printing
 	#ifdef VIRTUAL_MACHINE_DEBUG_PRINT
-		Variable* getDebugInfo(DataType dataType, int globalIndex, int methodIndex) {
+		Variable* getDebugInfo(DataType dataType, int32_t globalIndex, int32_t methodIndex) {
 			if (globalIndex < 0) { methodIndex = 0; } // Go to the global method if it's a global index
 			Method* method = &this->methods[methodIndex];
-			int typeLocalIndex = globalToTypeLocalIndex(globalIndex);
-			int unifiedLocalIndex = method->unifiedLocalIndices[dataType][typeLocalIndex];
+			int32_t typeLocalIndex = globalToTypeLocalIndex(globalIndex);
+			int32_t unifiedLocalIndex = method->unifiedLocalIndices[dataType][typeLocalIndex];
 			return &(method->locals[unifiedLocalIndex]);
 		}
-		void debugArgument(const VMA& data, int methodIndex, int32_t* framePointer, bool fullContent) {
+		void debugArgument(const VMA& data, int32_t methodIndex, int32_t* framePointer, bool fullContent) {
 			if (data.argType == ArgumentType::Immediate) {
 				printText(data.value);
 			} else {
-				int globalIndex = data.value.getMantissa();
+				int32_t globalIndex = data.value.getMantissa();
 				Variable* variable = getDebugInfo(data.dataType, globalIndex, methodIndex);
 				const VMTypeDef* typeDefinition = getMachineType(data.dataType);
 				#ifndef VIRTUAL_MACHINE_DEBUG_FULL_CONTENT
@@ -368,9 +368,9 @@ struct VirtualMachine {
 				}
 			}
 		}
-		void debugPrintVariables(int methodIndex, int32_t* framePointer, const ReadableString& indentation) {
+		void debugPrintVariables(int32_t methodIndex, int32_t* framePointer, const ReadableString& indentation) {
 			Method* method = &this->methods[methodIndex];
-			for (int i = 0; i < method->locals.length(); i++) {
+			for (int32_t i = 0; i < method->locals.length(); i++) {
 				Variable* variable = &method->locals[i];
 				printText(indentation, U"* ", getName(variable->access), U" ");
 				const VMTypeDef* typeDefinition = getMachineType(variable->typeDescription->dataType);
@@ -382,30 +382,30 @@ struct VirtualMachine {
 				printText(U"\n");
 			}
 		}
-		void debugPrintMethod(int methodIndex, int32_t* framePointer, int32_t* stackPointer, const ReadableString& indentation) {
+		void debugPrintMethod(int32_t methodIndex, int32_t* framePointer, int32_t* stackPointer, const ReadableString& indentation) {
 			printText("  ", this->methods[methodIndex].name, ":\n");
-			for (int t = 0; t < this->machineTypeCount; t++) {
+			for (int32_t t = 0; t < this->machineTypeCount; t++) {
 				printText(U"    FramePointer[", t, "] = ", framePointer[t], U" Count[", t, "] = ", this->methods[methodIndex].count[t], U" StackPointer[", t, "] = ", stackPointer[t], U"\n");
 			}
 			debugPrintVariables(methodIndex, framePointer, indentation);
 			printText(U"\n");
 		}
 		void debugPrintMemory() {
-			int methodIndex = this->memory->current.methodIndex;
+			int32_t methodIndex = this->memory->current.methodIndex;
 			printText(U"\nMemory:\n");
 			// Global memory is at the bottom of the stack.
 			int32_t globalFramePointer[MAX_TYPE_COUNT] = {};
 			debugPrintMethod(0, globalFramePointer, this->methods[0].count, U"    ");
 			// Stack memory for each calling method.
-			for (int i = 0; i < memory->callStack.length(); i++) {
+			for (int32_t i = 0; i < memory->callStack.length(); i++) {
 				debugPrintMethod(memory->callStack[i].methodIndex, memory->callStack[i].framePointer, memory->callStack[i].stackPointer, U"    ");
 			}
 			// Stack memory for the current method, which is not in the call stack because that would be slow to access.
 			debugPrintMethod(methodIndex, this->memory->current.framePointer, this->memory->current.stackPointer, U"    ");
 		}
 	#endif
-	void executeMethod(int methodIndex);
-	int32_t getResourceStackIndex(const ReadableString& name, int methodIndex, DataType dataType, AccessType access = AccessType::Any) {
+	void executeMethod(int32_t methodIndex);
+	int32_t getResourceStackIndex(const ReadableString& name, int32_t methodIndex, DataType dataType, AccessType access = AccessType::Any) {
 		Variable* variable = getResource(name, methodIndex);
 		if (variable) {
 			if (variable->typeDescription->dataType != dataType) {

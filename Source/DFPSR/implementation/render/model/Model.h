@@ -52,15 +52,15 @@ struct Vertex {
 };
 
 struct Polygon {
-	static const int maxCorners = 4;
+	static const int32_t maxCorners = 4;
 	int32_t pointIndices[maxCorners]; // pointIndices[3] equals -1 for triangles
 	FVector4D texCoords[maxCorners];
 	FVector4D colors[maxCorners];
 	Polygon(const Vertex &vertA, const Vertex &vertB, const Vertex &vertC);
 	Polygon(const Vertex &vertA, const Vertex &vertB, const Vertex &vertC, const Vertex &vertD);
-	Polygon(int indexA, int indexB, int indexC);
-	Polygon(int indexA, int indexB, int indexC, int indexD);
-	int getVertexCount() const;
+	Polygon(int32_t indexA, int32_t indexB, int32_t indexC);
+	Polygon(int32_t indexA, int32_t indexB, int32_t indexC, int32_t indexD);
+	int32_t getVertexCount() const;
 };
 
 struct Part {
@@ -72,8 +72,8 @@ struct Part {
 	Part clone() const;
 	void render(CommandQueue *commandQueue, const ImageRgbaU8 &targetImage, const ImageF32 &depthBuffer, const Transform3D &modelToWorldTransform, const Camera &camera, Filter filter, const ProjectedPoint* projected) const;
 	void renderDepth(const ImageF32 &depthBuffer, const Transform3D &modelToWorldTransform, const Camera &camera, const ProjectedPoint* projected) const;
-	int getPolygonCount() const;
-	int getPolygonVertexCount(int polygonIndex) const;
+	int32_t getPolygonCount() const;
+	int32_t getPolygonVertexCount(int32_t polygonIndex) const;
 };
 
 class ModelImpl {
@@ -94,39 +94,39 @@ public:
 	//   TODO: Add empty quads and triangles and fill them later using setters
 	//   TODO: Make a texture slot index instead of having getters and setters for each texture slot
 	// Part interface
-	int addEmptyPart(const String& name);
-	int getNumberOfParts() const;
-	void setPartName(int partIndex, const String &name);
-	String getPartName(int partIndex) const;
+	int32_t addEmptyPart(const String& name);
+	int32_t getNumberOfParts() const;
+	void setPartName(int32_t partIndex, const String &name);
+	String getPartName(int32_t partIndex) const;
 
 	// TODO: Make an array of texture slots using a class enum for index
-	TextureRgbaU8 getDiffuseMap(int partIndex) const;
-	void setDiffuseMap(const TextureRgbaU8 &diffuseMap, int partIndex);
-	void setDiffuseMapByName(ResourcePool &pool, const String &filename, int partIndex);
+	TextureRgbaU8 getDiffuseMap(int32_t partIndex) const;
+	void setDiffuseMap(const TextureRgbaU8 &diffuseMap, int32_t partIndex);
+	void setDiffuseMapByName(ResourcePool &pool, const String &filename, int32_t partIndex);
 
-	TextureRgbaU8 getLightMap(int partIndex) const;
-	void setLightMap(const TextureRgbaU8 &lightMap, int partIndex);
-	void setLightMapByName(ResourcePool &pool, const String &filename, int partIndex);
+	TextureRgbaU8 getLightMap(int32_t partIndex) const;
+	void setLightMap(const TextureRgbaU8 &lightMap, int32_t partIndex);
+	void setLightMapByName(ResourcePool &pool, const String &filename, int32_t partIndex);
 
 	// Polygon interface
-	int addPolygon(Polygon polygon, int partIndex);
-	int getNumberOfPolygons(int partIndex) const;
-	int getPolygonVertexCount(int partIndex, int polygonIndex) const;
+	int32_t addPolygon(Polygon polygon, int32_t partIndex);
+	int32_t getNumberOfPolygons(int32_t partIndex) const;
+	int32_t getPolygonVertexCount(int32_t partIndex, int32_t polygonIndex) const;
 	// Point interface
-	int getNumberOfPoints() const;
-	FVector3D getPoint(int pointIndex) const;
-	void setPoint(int pointIndex, const FVector3D& position);
-	int findPoint(const FVector3D &position, float threshold) const;
-	int addPoint(const FVector3D &position);
-	int addPointIfNeeded(const FVector3D &position, float threshold); // Returns the index of a new point or the first existing within threshold in euclidean 3D distance
+	int32_t getNumberOfPoints() const;
+	FVector3D getPoint(int32_t pointIndex) const;
+	void setPoint(int32_t pointIndex, const FVector3D& position);
+	int32_t findPoint(const FVector3D &position, float threshold) const;
+	int32_t addPoint(const FVector3D &position);
+	int32_t addPointIfNeeded(const FVector3D &position, float threshold); // Returns the index of a new point or the first existing within threshold in euclidean 3D distance
 	// Vertex interface
-	int getVertexPointIndex(int partIndex, int polygonIndex, int vertexIndex) const;
-	void setVertexPointIndex(int partIndex, int polygonIndex, int vertexIndex, int pointIndex);
-	FVector3D getVertexPosition(int partIndex, int polygonIndex, int vertexIndex) const; // Returning getPoint using the point index shared by other polygons
-	FVector4D getVertexColor(int partIndex, int polygonIndex, int vertexIndex) const;
-	void setVertexColor(int partIndex, int polygonIndex, int vertexIndex, const FVector4D& color);
-	FVector4D getTexCoord(int partIndex, int polygonIndex, int vertexIndex) const;
-	void setTexCoord(int partIndex, int polygonIndex, int vertexIndex, const FVector4D& texCoord);
+	int32_t getVertexPointIndex(int32_t partIndex, int32_t polygonIndex, int32_t vertexIndex) const;
+	void setVertexPointIndex(int32_t partIndex, int32_t polygonIndex, int32_t vertexIndex, int32_t pointIndex);
+	FVector3D getVertexPosition(int32_t partIndex, int32_t polygonIndex, int32_t vertexIndex) const; // Returning getPoint using the point index shared by other polygons
+	FVector4D getVertexColor(int32_t partIndex, int32_t polygonIndex, int32_t vertexIndex) const;
+	void setVertexColor(int32_t partIndex, int32_t polygonIndex, int32_t vertexIndex, const FVector4D& color);
+	FVector4D getTexCoord(int32_t partIndex, int32_t polygonIndex, int32_t vertexIndex) const;
+	void setTexCoord(int32_t partIndex, int32_t polygonIndex, int32_t vertexIndex, const FVector4D& texCoord);
 	// Rendering
 	void render(CommandQueue *commandQueue, const ImageRgbaU8 &targetImage, const ImageF32 &depthBuffer, const Transform3D &modelToWorldTransform, const Camera &camera) const;
 	void renderDepth(const ImageF32 &depthBuffer, const Transform3D &modelToWorldTransform, const Camera &camera) const;

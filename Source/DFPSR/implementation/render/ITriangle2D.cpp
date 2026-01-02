@@ -35,10 +35,10 @@ IRect dsr::getTriangleBound(LVector2D a, LVector2D b, LVector2D c) {
 	int32_t rY2 = (b.y + constants::unitsPerHalfPixel) / constants::unitsPerPixel;
 	int32_t rX3 = (c.x + constants::unitsPerHalfPixel) / constants::unitsPerPixel;
 	int32_t rY3 = (c.y + constants::unitsPerHalfPixel) / constants::unitsPerPixel;
-	int leftBound = min(rX1, rX2, rX3) - 1;
-	int topBound = min(rY1, rY2, rY3) - 1;
-	int rightBound = max(rX1, rX2, rX3) + 1;
-	int bottomBound = max(rY1, rY2, rY3) + 1;
+	int32_t leftBound = min(rX1, rX2, rX3) - 1;
+	int32_t topBound = min(rY1, rY2, rY3) - 1;
+	int32_t rightBound = max(rX1, rX2, rX3) + 1;
+	int32_t bottomBound = max(rY1, rY2, rY3) + 1;
 	return IRect(leftBound, topBound, rightBound - leftBound, bottomBound - topBound);
 }
 
@@ -67,14 +67,14 @@ inline static void cutLeft(int32_t& leftBound, int32_t value) {
 	leftBound = max(leftBound, value);
 }
 
-IRect ITriangle2D::getAlignedRasterBound(const IRect& clipBound, int alignX, int alignY) const {
+IRect ITriangle2D::getAlignedRasterBound(const IRect& clipBound, int32_t alignX, int32_t alignY) const {
 	IRect unaligned = IRect::cut(this->wholeBound, clipBound);
-	int alignedTop = roundDown(unaligned.top(), 2);
-	int alignedBottom = roundUp(unaligned.bottom(), 2);
+	int32_t alignedTop = roundDown(unaligned.top(), 2);
+	int32_t alignedBottom = roundUp(unaligned.bottom(), 2);
 	return IRect(unaligned.left(), alignedTop, unaligned.width(), alignedBottom - alignedTop);
 }
 
-int ITriangle2D::getBufferSize(const IRect& clipBound, int alignX, int alignY) const {
+int32_t ITriangle2D::getBufferSize(const IRect& clipBound, int32_t alignX, int32_t alignY) const {
 	if (IRect::overlaps(this->wholeBound, clipBound)) {
 		IRect rasterBound = this->getAlignedRasterBound(clipBound, alignX, alignY);
 		return rasterBound.bottom() - rasterBound.top();
@@ -84,10 +84,10 @@ int ITriangle2D::getBufferSize(const IRect& clipBound, int alignX, int alignY) c
 }
 
 static void cutConvexEdge(const LVector2D& startPoint, const LVector2D& endPoint, RowInterval* rows, const IRect& clipBound) {
-	int leftBound = clipBound.left();
-	int topBound = clipBound.top();
-	int rightBound = clipBound.right();
-	int bottomBound = clipBound.bottom();
+	int32_t leftBound = clipBound.left();
+	int32_t topBound = clipBound.top();
+	int32_t rightBound = clipBound.right();
+	int32_t bottomBound = clipBound.bottom();
 
 	// Get origin in units
 	int64_t originX = constants::unitsPerHalfPixel + clipBound.left() * constants::unitsPerPixel;
@@ -168,7 +168,7 @@ void dsr::rasterizeTriangle(const LVector2D& cornerA, const LVector2D& cornerB, 
 	}
 }
 
-void ITriangle2D::getShape(int& startRow, RowInterval* rows, const IRect& clipBound, int alignX, int alignY) const {
+void ITriangle2D::getShape(int32_t& startRow, RowInterval* rows, const IRect& clipBound, int32_t alignX, int32_t alignY) const {
 	// TODO: Move alignment to the render core where it belongs so that all alignX and alignY arguments are removed from the triangle
 	IRect alignedBound = this->getAlignedRasterBound(clipBound, alignX, alignY);
 	startRow = alignedBound.top();
@@ -191,8 +191,8 @@ Projection ITriangle2D::getProjection(const FVector3D& subB, const FVector3D& su
 */
 	// Get offsets
 	FVector3D offsetX, offsetY;
-	for (int i = 0; i < 3; i++) {
-		int j = (i + 1) % 3;      // End
+	for (int32_t i = 0; i < 3; i++) {
+		int32_t j = (i + 1) % 3;      // End
 		FVector2D posI = this->position[i].is;
 		FVector2D posJ = this->position[j].is;
 		// Get offsets for each edge
@@ -202,7 +202,7 @@ Projection ITriangle2D::getProjection(const FVector3D& subB, const FVector3D& su
 	// Get the maximum values along the offsets for normalization
 	FVector3D weightMultiplier;
 	for (int32_t i = 0; i < 3; i++) {
-		int o = (i + 2) % 3;
+		int32_t o = (i + 2) % 3;
 		// Take the same kind of dot product from the point that is furthest away from the edge for normalization.
 		float otherSideValue = ((this->position[o].is.x - this->position[i].is.x) * offsetX[i])
 		                     + ((this->position[o].is.y - this->position[i].is.y) * offsetY[i]);
@@ -214,14 +214,14 @@ Projection ITriangle2D::getProjection(const FVector3D& subB, const FVector3D& su
 	}
 	// Get normal from weight multiplier and offset
 	FVector3D normalX, normalY;
-	for (int i = 0; i < 3; i++) {
+	for (int32_t i = 0; i < 3; i++) {
 		normalX[i] = offsetX[i] * weightMultiplier[i];
 		normalY[i] = offsetY[i] * weightMultiplier[i];
 	}
 	// Sample the weight of each corner at the upper left corner of the target image
 	FVector3D targetWeight;
 	for (int32_t i = 0; i < 3; i++) {
-		int o = (i + 2) % 3;
+		int32_t o = (i + 2) % 3;
 		// Take the dot product to get a normalized weight
 		targetWeight[o] = this->position[i].is.x * -normalX[i] + this->position[i].is.y * -normalY[i];
 	}

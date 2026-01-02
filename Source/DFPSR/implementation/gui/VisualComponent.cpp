@@ -33,7 +33,7 @@ VisualComponent::VisualComponent() {}
 VisualComponent::~VisualComponent() {
 	this->callback_destroyEvent();
 	// Let the children know that the parent component no longer exists.
-	for (int i = 0; i < this->getChildCount(); i++) {
+	for (int32_t i = 0; i < this->getChildCount(); i++) {
 		this->children[i]->parent = nullptr;
 	}
 }
@@ -140,14 +140,14 @@ String VisualComponent::getName() const {
 	return this->name.value;
 }
 
-void VisualComponent::setIndex(int newIndex) {
+void VisualComponent::setIndex(int32_t newIndex) {
 	this->index.value = newIndex;
 	if (this->parent) {
 		this->parent->childChanged = true;
 	}
 }
 
-int VisualComponent::getIndex() const {
+int32_t VisualComponent::getIndex() const {
 	return this->index.value;
 }
 
@@ -171,7 +171,7 @@ void VisualComponent::applyLayout(const IRect& givenSpace) {
 
 void VisualComponent::updateLocationEvent(const IRect& oldLocation, const IRect& newLocation) {
 	// Place each child component
-	for (int i = 0; i < this->getChildCount(); i++) {
+	for (int32_t i = 0; i < this->getChildCount(); i++) {
 		this->children[i]->applyLayout(IRect(0, 0, newLocation.width(), newLocation.height()));
 	}
 }
@@ -196,7 +196,7 @@ static void drawOverlays(ImageRgbaU8& targetImage, VisualComponent &component, c
 			component.drawOverlay(targetImage, offset - component.location.upperLeft());
 		}
 		// Draw overlays in each child component on top.
-		for (int i = 0; i < component.getChildCount(); i++) {
+		for (int32_t i = 0; i < component.getChildCount(); i++) {
 			drawOverlays(targetImage, component.children[i].getReference(), offset + component.children[i]->location.upperLeft());
 		}
 	}
@@ -205,7 +205,7 @@ static void drawOverlays(ImageRgbaU8& targetImage, VisualComponent &component, c
 void VisualComponent::flushDeferredActions() {
 	this->sendNotifications();
 	if (!this->managesChildren()) {
-		for (int i = 0; i < this->getChildCount(); i++) {
+		for (int32_t i = 0; i < this->getChildCount(); i++) {
 			this->children[i]->flushDeferredActions();
 		}
 	}
@@ -224,7 +224,7 @@ void VisualComponent::draw(ImageRgbaU8& targetImage, const IVector2D& offset) {
 		this->drawSelf(targetImage, containerBound);
 		// Draw each child component
 		if (!this->managesChildren()) {
-			for (int i = 0; i < this->getChildCount(); i++) {
+			for (int32_t i = 0; i < this->getChildCount(); i++) {
 				this->children[i]->drawClipped(targetImage, containerBound.upperLeft(), containerBound);
 			}
 		}
@@ -289,11 +289,11 @@ bool VisualComponent::addChild(Handle<Persistent> child) {
 	}
 }
 
-int VisualComponent::getChildCount() const {
+int32_t VisualComponent::getChildCount() const {
 	return this->children.length();
 }
 
-Handle<Persistent> VisualComponent::getChild(int index) const {
+Handle<Persistent> VisualComponent::getChild(int32_t index) const {
 	if (index >= 0 && index < this->children.length()) {
 		return this->children[index];
 	} else {
@@ -303,7 +303,7 @@ Handle<Persistent> VisualComponent::getChild(int index) const {
 
 static void detachFromWindow(Handle<VisualComponent> component) {
 	component->window = Handle<BackendWindow>();
-	for (int c = 0; c < component->children.length(); c++) {
+	for (int32_t c = 0; c < component->children.length(); c++) {
 		detachFromWindow(component->children[c]);
 	}
 }
@@ -314,7 +314,7 @@ void VisualComponent::detachFromParent() {
 	if (parent != nullptr) {
 		parent->childChanged = true;
 		// Find the component to detach among the child components.
-		for (int i = 0; i < parent->getChildCount(); i++) {
+		for (int32_t i = 0; i < parent->getChildCount(); i++) {
 			Handle<VisualComponent> current = parent->children[i];
 			if (current.getUnsafe() == this) {
 				// Disconnect child from backend window.
@@ -334,7 +334,7 @@ void VisualComponent::detachFromParent() {
 }
 
 bool VisualComponent::hasChild(VisualComponent *child) const {
-	for (int i = 0; i < this->getChildCount(); i++) {
+	for (int32_t i = 0; i < this->getChildCount(); i++) {
 		Handle<VisualComponent> current = this->children[i];
 		if (current.getUnsafe() == child) {
 			return true; // Found the component
@@ -352,7 +352,7 @@ bool VisualComponent::hasChild(Handle<VisualComponent> child) const {
 }
 
 Handle<VisualComponent> VisualComponent::findChildByName(ReadableString name) const {
-	for (int i = 0; i < this->getChildCount(); i++) {
+	for (int32_t i = 0; i < this->getChildCount(); i++) {
 		Handle<VisualComponent> current = this->children[i];
 		if (string_match(current->getName(), name)) {
 			return current; // Found the component
@@ -366,8 +366,8 @@ Handle<VisualComponent> VisualComponent::findChildByName(ReadableString name) co
 	return Handle<VisualComponent>(); // Could not find the component
 }
 
-Handle<VisualComponent> VisualComponent::findChildByNameAndIndex(ReadableString name, int index) const {
-	for (int i = 0; i < this->getChildCount(); i++) {
+Handle<VisualComponent> VisualComponent::findChildByNameAndIndex(ReadableString name, int32_t index) const {
+	for (int32_t i = 0; i < this->getChildCount(); i++) {
 		Handle<VisualComponent> current = this->children[i];
 		if (string_match(current->getName(), name) && current->getIndex() == index) {
 			return current; // Found the component
@@ -397,7 +397,7 @@ bool VisualComponent::pointIsInsideOfHover(const IVector2D& pixelPosition) {
 // Non-recursive top-down search
 Handle<VisualComponent> VisualComponent::getDirectChild(const IVector2D& pixelPosition) {
 	// Iterate child components in reverse drawing order
-	for (int i = this->getChildCount() - 1; i >= 0; i--) {
+	for (int32_t i = this->getChildCount() - 1; i >= 0; i--) {
 		Handle<VisualComponent> currentChild = this->children[i];
 		// Check if the point is inside the child component
 		if (currentChild->getVisible() && currentChild->pointIsInside(pixelPosition)) {
@@ -422,7 +422,7 @@ void VisualComponent::updateStateEvent(ComponentState oldState, ComponentState n
 void VisualComponent::updateIndirectStates() {
 	// Call recursively for child components while checking what they contain.
 	ComponentState childStates = 0;
-	for (int i = this->getChildCount() - 1; i >= 0; i--) {
+	for (int32_t i = this->getChildCount() - 1; i >= 0; i--) {
 		this->children[i]->updateIndirectStates();
 		childStates |= this->children[i]->currentState;
 	}
@@ -434,7 +434,7 @@ void VisualComponent::updateIndirectStates() {
 void VisualComponent::sendNotifications() {
 	// Call recursively for child components while checking what they contain.
 	//   Run the loop backwards, so that no components are missed when once is detached.
-	for (int i = this->getChildCount() - 1; i >= 0; i--) {
+	for (int32_t i = this->getChildCount() - 1; i >= 0; i--) {
 		// Use a reference counted pointer to the child, so that it can be removed safely outside of custom events.
 		Handle<VisualComponent> child = this->children[i];
 		if (child->detach) {
@@ -457,7 +457,7 @@ static VisualComponent *getTopmostOverlay(VisualComponent *component, const IVec
 	// Only visible component may show its overlay or child components.
 	if (component->getVisible()) {
 		// Go through child components in reverse draw order to stop when reaching the one that is visible.
-		for (int i = component->getChildCount() - 1; i >= 0; i--) {
+		for (int32_t i = component->getChildCount() - 1; i >= 0; i--) {
 			VisualComponent *result = getTopmostOverlay(component->children[i].getUnsafe(), point - component->children[i]->location.upperLeft());
 			if (result != nullptr) return result;
 		}
@@ -485,7 +485,7 @@ static IVector2D getTotalOffset(const VisualComponent *child, const VisualCompon
 
 // Remove its pointer to its child and the whole trail of focus.
 void VisualComponent::defocusChildren() {
-	for (int i = 0; i < this->getChildCount(); i++) {
+	for (int32_t i = 0; i < this->getChildCount(); i++) {
 		this->children[i]->applyStateAndMask(~componentState_focus);
 	}
 }
@@ -533,7 +533,7 @@ void VisualComponent::hideOverlay() {
 
 void VisualComponent::applyStateAndMask(ComponentState keepMask) {
 	this->currentState &= keepMask;
-	for (int i = 0; i < this->getChildCount(); i++) {
+	for (int32_t i = 0; i < this->getChildCount(); i++) {
 		this->children[i]->applyStateAndMask(keepMask);
 	}
 }
@@ -626,7 +626,7 @@ void VisualComponent::receiveMouseEvent(const MouseEvent& event) {
 }
 
 void VisualComponent::sendKeyboardEvent(const KeyboardEvent& event) {
-	for (int i = 0; i < this->getChildCount(); i++) {
+	for (int32_t i = 0; i < this->getChildCount(); i++) {
 		ComponentState state = this->children[i]->currentState;
 		if (state & componentState_focus) {
 			if (state & componentState_focusDirect) {
@@ -656,7 +656,7 @@ void VisualComponent::receiveKeyboardEvent(const KeyboardEvent& event) {
 void VisualComponent::applyTheme(VisualTheme theme) {
 	this->theme = theme;
 	this->changedTheme(theme);
-	for (int i = 0; i < this->getChildCount(); i++) {
+	for (int32_t i = 0; i < this->getChildCount(); i++) {
 		this->children[i]->applyTheme(theme);
 	}
 }
@@ -676,8 +676,8 @@ bool VisualComponent::managesChildren() {
 	return false;
 }
 
-MediaResult dsr::component_generateImage(VisualTheme theme, MediaMethod &method, int width, int height, int red, int green, int blue, int pressed, int focused, int hovered) {
-	return method.callUsingKeywords([&theme, &method, width, height, red, green, blue, pressed, focused, hovered](MediaMachine &machine, int methodIndex, int inputIndex, const ReadableString &argumentName) {
+MediaResult dsr::component_generateImage(VisualTheme theme, MediaMethod &method, int32_t width, int32_t height, int32_t red, int32_t green, int32_t blue, int32_t pressed, int32_t focused, int32_t hovered) {
+	return method.callUsingKeywords([&theme, &method, width, height, red, green, blue, pressed, focused, hovered](MediaMachine &machine, int32_t methodIndex, int32_t inputIndex, const ReadableString &argumentName) {
 		if (string_caseInsensitiveMatch(argumentName, U"width")) {
 			machine_setInputByIndex(machine, methodIndex, inputIndex, width);
 		} else if (string_caseInsensitiveMatch(argumentName, U"height")) {

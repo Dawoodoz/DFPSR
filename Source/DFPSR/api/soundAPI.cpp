@@ -83,12 +83,12 @@ static double fromIntegerScaleI32 = 1.0 / toIntegerScaleI32;
 
 // TODO: Create a folder for implementations of sound formats.
 
-static const int fmtOffset_audioFormat = 0;
-static const int fmtOffset_channelCount = 2;
-static const int fmtOffset_sampleRate = 4;
-static const int fmtOffset_bytesPerSecond = 8;
-static const int fmtOffset_blockAlign = 12;
-static const int fmtOffset_bitsPerSample = 14;
+static const int32_t fmtOffset_audioFormat = 0;
+static const int32_t fmtOffset_channelCount = 2;
+static const int32_t fmtOffset_sampleRate = 4;
+static const int32_t fmtOffset_bytesPerSecond = 8;
+static const int32_t fmtOffset_blockAlign = 12;
+static const int32_t fmtOffset_bitsPerSample = 14;
 
 static uint32_t getSampleBits(RiffWaveFormat format) {
 	if (format == RiffWaveFormat::RawU8) {

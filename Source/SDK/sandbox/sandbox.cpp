@@ -111,10 +111,10 @@ static bool updateImage = true;
 static IVector2D mousePos;
 static bool panorate = false;
 static bool tileAlign = false;
-static int debugView = 0;
-static int mouseLights = 1;
+static int32_t debugView = 0;
+static int32_t mouseLights = 1;
 
-static int random(const int minimum, const int maximum) {
+static int32_t random(const int32_t minimum, const int32_t maximum) {
 	if (maximum > minimum) {
 		return (std::rand() % (maximum + 1 - minimum)) + minimum;
 	} else {
@@ -123,14 +123,14 @@ static int random(const int minimum, const int maximum) {
 }
 
 // Variables
-static int brushHeight = 0; // In mini-tile units
+static int32_t brushHeight = 0; // In mini-tile units
 static SpriteInstance spriteBrush(0, ortho_dir0, IVector3D(), true);
 static bool placingModel = false; // True when left mouse button is pressed and the direction is being assigned
 static ModelInstance modelBrush(0, Transform3D());
-static const int brushStep = ortho_miniUnitsPerTile / 32;
-static int pressing_left = 0, pressing_right = 0, pressing_up = 0, pressing_down = 0, pressing_delete = 0;
+static const int32_t brushStep = ortho_miniUnitsPerTile / 32;
+static int32_t pressing_left = 0, pressing_right = 0, pressing_up = 0, pressing_down = 0, pressing_delete = 0;
 static IVector2D cameraMovement;
-static const int cameraSpeed = 1;
+static const int32_t cameraSpeed = 1;
 
 // World
 static SpriteWorld world;
@@ -140,15 +140,15 @@ bool castShadows = true;
 // GUI
 static Window window;
 Component mainPanel, toolPanel, spritePanel, spriteList, modelPanel, modelList;
-static int overlayMode = 2;
-	static const int OverlayMode_None = 0;
-	static const int OverlayMode_Profiling = 1;
-	static const int OverlayMode_Tools = 2;
-	static const int OverlayModeCount = 3;
-static int tool = 0;
-	static const int Tool_PlaceSprite = 0;
-	static const int Tool_PlaceModel = 1;
-	static const int ToolCount = 2;
+static int32_t overlayMode = 2;
+	static const int32_t OverlayMode_None = 0;
+	static const int32_t OverlayMode_Profiling = 1;
+	static const int32_t OverlayMode_Tools = 2;
+	static const int32_t OverlayModeCount = 3;
+static int32_t tool = 0;
+	static const int32_t Tool_PlaceSprite = 0;
+	static const int32_t Tool_PlaceModel = 1;
+	static const int32_t ToolCount = 2;
 void updateOverlay() {
 	component_setProperty_integer(toolPanel, U"Visible", overlayMode == OverlayMode_Tools);
 		component_setProperty_integer(spritePanel, U"Visible", tool == Tool_PlaceSprite);
@@ -341,14 +341,14 @@ void sandbox_main() {
 	loadModel(U"Mage", U"Character_Mage.ply", U"Character_Mage_Shadow.ply");
 
 	// Create passive sprites
-	for (int z = -300; z < 300; z++) {
-		for (int x = -300; x < 300; x++) {
+	for (int32_t z = -300; z < 300; z++) {
+		for (int32_t x = -300; x < 300; x++) {
 			// The bottom floor does not have to throw shadows
 			spriteWorld_addBackgroundSprite(world, SpriteInstance(random(0, 1), random(0, 3) * ortho_dir90, IVector3D(x * ortho_miniUnitsPerTile, 0, z * ortho_miniUnitsPerTile), false));
 		}
 	}
-	for (int z = -300; z < 300; z++) {
-		for (int x = -300; x < 300; x++) {
+	for (int32_t z = -300; z < 300; z++) {
+		for (int32_t x = -300; x < 300; x++) {
 			if (random(1, 4) == 1) {
 				// Obstacles should cast shadows when possible
 				spriteWorld_addBackgroundSprite(world, SpriteInstance(random(2, 4), random(0, 3) * ortho_dir90, IVector3D(x * ortho_miniUnitsPerTile, 0, z * ortho_miniUnitsPerTile), true));
@@ -388,11 +388,11 @@ void sandbox_main() {
 			//   By performing game logic in multiples of msTicks, integer operations
 			//   can be scaled without comming to a full stop in high frame rates
 			stepRemainder += secondsPerFrame * 1000.0;
-			int msTicks = (int)stepRemainder;
+			int32_t msTicks = (int32_t)stepRemainder;
 			stepRemainder -= (double)msTicks;
 
 			// Move the camera
-			int cameraSteps = cameraSpeed * msTicks;
+			int32_t cameraSteps = cameraSpeed * msTicks;
 			// TODO: Find a way to move the camera using exact pixel offsets so that the camera's 3D location is only generating the 2D offset when rotating.
 			//       Can the sprite brush be guaranteed to come back to the mouse location after adding and subtracting the same 2D camera offset?
 			//         A new integer coordinate system along the ground might move half a pixel vertically and a full pixel sideways in the diagonal view.
@@ -474,8 +474,8 @@ void sandbox_main() {
 				draw_copy(colorBuffer, spriteWorld_getNormalBuffer(world));
 			} else if (debugView == 3) {
 				AlignedImageF32 heightBuffer = spriteWorld_getHeightBuffer(world);
-				for (int y = 0; y < image_getHeight(colorBuffer); y++) {
-					for (int x = 0; x < image_getWidth(colorBuffer); x++) {
+				for (int32_t y = 0; y < image_getHeight(colorBuffer); y++) {
+					for (int32_t x = 0; x < image_getWidth(colorBuffer); x++) {
 						float height = image_readPixel_clamp(heightBuffer, x, y) * 255.0f;
 						if (height < 0.0f) { height = 0.0f; }
 						if (height > 255.0f) { height = 255.0f; }

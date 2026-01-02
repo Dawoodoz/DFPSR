@@ -28,7 +28,7 @@ using namespace dsr;
 PERSISTENT_DEFINITION(FlexValue)
 
 bool FlexValue::assignValue(const ReadableString &text, const ReadableString &fromPath) {
-	int perCentIndex = string_findFirst(text, U'%');
+	int32_t perCentIndex = string_findFirst(text, U'%');
 	if (perCentIndex > -1) {
 		// Explicit %
 		ReadableString leftSide = string_before(text, perCentIndex);

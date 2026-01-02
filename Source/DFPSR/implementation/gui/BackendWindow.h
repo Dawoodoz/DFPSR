@@ -45,9 +45,9 @@ public:
 	// Events
 	List<InputEvent*> eventQueue;
 private:
-	int requestingResize = false;
-	int requestedWidth = 0;
-	int requestedHeight = 0;
+	int32_t requestingResize = false;
+	int32_t requestedWidth = 0;
+	int32_t requestedHeight = 0;
 public:
 	inline void receivedMouseEvent(MouseEventType mouseEventType, MouseKeyEnum key, IVector2D position) {
 		this->eventQueue.push(new MouseEvent(mouseEventType, key, position));
@@ -65,7 +65,7 @@ public:
 	//   When the implementation receives a resize, call receiveWindowResize with the new dimensions.
 	//     If requestingResize is already true, it will just overwrite the old request.
 	//   Next call to executeEvents will then use it to resize the canvas.
-	inline void receivedWindowResize(int width, int height) {
+	inline void receivedWindowResize(int32_t width, int32_t height) {
 		this->requestingResize = true;
 		this->requestedWidth = width;
 		this->requestedHeight = height;
@@ -75,8 +75,8 @@ public:
 	virtual ~BackendWindow() {}
 	virtual void setFullScreen(bool enabled) = 0;
 	virtual bool isFullScreen() = 0;
-	virtual int getWidth() const = 0;
-	virtual int getHeight() const = 0;
+	virtual int32_t getWidth() const = 0;
+	virtual int32_t getHeight() const = 0;
 public:
 	// Back-end interface
 	// Responsible for adding events to eventQueue
@@ -85,14 +85,14 @@ public:
 	// Canvas interface
 	virtual AlignedImageRgbaU8 getCanvas() = 0;
 	virtual void showCanvas() = 0;
-	virtual void resizeCanvas(int width, int height) = 0;
+	virtual void resizeCanvas(int32_t width, int32_t height) = 0;
 	virtual String getTitle() { return this->title; }
 	virtual void setTitle(const String &newTitle) = 0;
 public:
 	// Cursor interface
 	bool visibleCursor = true; // Written to by setCursorVisibility on success.
 	virtual bool setCursorVisibility(bool visible) { return false; } // Returns true on success.
-	virtual bool setCursorPosition(int x, int y) { return false; } // Returns true on success.
+	virtual bool setCursorPosition(int32_t x, int32_t y) { return false; } // Returns true on success.
 public:
 	// Clipboard interface
 	//   If none is replaced, both default implementations will use an internal variable.

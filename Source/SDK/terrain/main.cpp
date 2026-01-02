@@ -114,19 +114,19 @@ FVector3D worldToGrid(FVector3D worldSpace) {
 	return FVector3D(worldSpace.x, -worldSpace.z, worldSpace.y);
 }
 
-float getHeight(const ImageU8& heightMap, int u, int v) {
+float getHeight(const ImageU8& heightMap, int32_t u, int32_t v) {
 	return image_readPixel_border(heightMap, u, v) * heightPerUnit;
 }
 
-int createGridPart(Model& targetModel, const ImageU8& heightMap) {
-	int mapWidth = image_getWidth(heightMap);
-	int mapHeight = image_getHeight(heightMap);
+int32_t createGridPart(Model& targetModel, const ImageU8& heightMap) {
+	int32_t mapWidth = image_getWidth(heightMap);
+	int32_t mapHeight = image_getHeight(heightMap);
 	float scaleU = 1.0f / (mapWidth - 1.0f);
 	float scaleV = 1.0f / (mapHeight - 1.0f);
 	// Create a part for the polygons
-	int part = model_addEmptyPart(targetModel, U"grid");
-	for (int z = 0; z < mapHeight; z++) {
-		for (int x = 0; x < mapWidth; x++) {
+	int32_t part = model_addEmptyPart(targetModel, U"grid");
+	for (int32_t z = 0; z < mapHeight; z++) {
+		for (int32_t x = 0; x < mapWidth; x++) {
 			// Sample the height map and convert to world space
 			float height = getHeight(heightMap, x, z);
 			// Create a position from the 3D index
@@ -138,12 +138,12 @@ int createGridPart(Model& targetModel, const ImageU8& heightMap) {
 				//   A-B
 				//     |
 				//   D-C
-				int px = x - 1;
-				int pz = z - 1;
-				int indexA = px + pz * mapWidth;
-				int indexB = x  + pz * mapWidth;
-				int indexC = x  + z  * mapWidth;
-				int indexD = px + z  * mapWidth;
+				int32_t px = x - 1;
+				int32_t pz = z - 1;
+				int32_t indexA = px + pz * mapWidth;
+				int32_t indexB = x  + pz * mapWidth;
+				int32_t indexC = x  + z  * mapWidth;
+				int32_t indexD = px + z  * mapWidth;
 				FVector4D texA = FVector4D(px * scaleU, pz * scaleV, 0.0f, 0.0f);
 				FVector4D texB = FVector4D(x  * scaleU, pz * scaleV, 0.0f, 0.0f);
 				FVector4D texC = FVector4D(x  * scaleU, z  * scaleV, 0.0f, 0.0f);
@@ -151,13 +151,13 @@ int createGridPart(Model& targetModel, const ImageU8& heightMap) {
 				// Create a polygon unless it's at the bottom
 				if (image_readPixel_border(heightMap, x-1, z-1) > 0 || image_readPixel_border(heightMap, x, z-1) > 0 || image_readPixel_border(heightMap, x-1, z) > 0 || image_readPixel_border(heightMap, x, z) > 0) {
 					if ((x + z) % 2 == 0) {
-						int poly = model_addQuad(targetModel, part, indexA, indexB, indexC, indexD);
+						int32_t poly = model_addQuad(targetModel, part, indexA, indexB, indexC, indexD);
 						model_setTexCoord(targetModel, part, poly, 0, texA);
 						model_setTexCoord(targetModel, part, poly, 1, texB);
 						model_setTexCoord(targetModel, part, poly, 2, texC);
 						model_setTexCoord(targetModel, part, poly, 3, texD);
 					} else {
-						int poly = model_addQuad(targetModel, part, indexB, indexC, indexD, indexA);
+						int32_t poly = model_addQuad(targetModel, part, indexB, indexC, indexD, indexA);
 						model_setTexCoord(targetModel, part, poly, 0, texB);
 						model_setTexCoord(targetModel, part, poly, 1, texC);
 						model_setTexCoord(targetModel, part, poly, 2, texD);
@@ -172,12 +172,12 @@ int createGridPart(Model& targetModel, const ImageU8& heightMap) {
 
 static Model createGrid(const ImageU8& heightMap, const TextureRgbaU8& colorMap) {
 	Model model = model_create();
-	int part = createGridPart(model, heightMap);
+	int32_t part = createGridPart(model, heightMap);
 	model_setDiffuseMap(model, part, colorMap);
 	return model;
 }
 
-static inline int saturateFloat(float value) {
+static inline int32_t saturateFloat(float value) {
 	if (!(value >= 0.0f)) {
 		// NaN or negative
 		return 0;
@@ -186,7 +186,7 @@ static inline int saturateFloat(float value) {
 		return 255;
 	} else {
 		// Round to closest
-		return (int)(value + 0.5f);
+		return (int32_t)(value + 0.5f);
 	}
 }
 
@@ -219,8 +219,8 @@ ColorRgbaI32 sampleColorRampLinear(const ImageRgbaU8& colorRamp, float x) {
 	} else if (x > 255.0f) {
 		return image_readPixel_clamp(colorRamp, 255, 0);
 	} else {
-		int low = (int)x;
-		int high = low + 1;
+		int32_t low = (int32_t)x;
+		int32_t high = low + 1;
 		float weight = x - low;
 		ColorRgbaI32 lowColor = image_readPixel_clamp(colorRamp, low, 0);
 		ColorRgbaI32 highColor = image_readPixel_clamp(colorRamp, high, 0);
@@ -230,8 +230,8 @@ ColorRgbaI32 sampleColorRampLinear(const ImageRgbaU8& colorRamp, float x) {
 
 // Represents the height in a finer pixel density for material effects
 void generateBumpMap(ImageF32& targetBumpMap, const ImageU8& heightMap, const ImageU8& bumpPattern) {
-	for (int y = 0; y < image_getHeight(targetBumpMap); y++) {
-		for (int x = 0; x < image_getWidth(targetBumpMap); x++) {
+	for (int32_t y = 0; y < image_getHeight(targetBumpMap); y++) {
+		for (int32_t x = 0; x < image_getWidth(targetBumpMap); x++) {
 			// TODO: Apply gaussian blur after bilinear interpolation to hide seams.
 			float height = (
 			    sampleFixedBilinear(heightMap, x, y)
@@ -254,7 +254,7 @@ void generateBumpMap(ImageF32& targetBumpMap, const ImageU8& heightMap, const Im
 	}
 }
 
-FVector3D getNormal(const ImageF32& bumpMap, int x, int y) {
+FVector3D getNormal(const ImageF32& bumpMap, int32_t x, int32_t y) {
 	float bumpLeft = image_readPixel_clamp(bumpMap, x - 1, y);
 	float bumpRight = image_readPixel_clamp(bumpMap, x + 1, y);
 	float bumpUp = image_readPixel_clamp(bumpMap, x, y - 1);
@@ -265,8 +265,8 @@ FVector3D getNormal(const ImageF32& bumpMap, int x, int y) {
 }
 
 void generateLightMap(ImageF32& targetLightMap, const ImageF32& bumpMap, const FVector3D& sunDirection, float ambient) {
-	for (int y = 0; y < image_getHeight(targetLightMap); y++) {
-		for (int x = 0; x < image_getWidth(targetLightMap); x++) {
+	for (int32_t y = 0; y < image_getHeight(targetLightMap); y++) {
+		for (int32_t x = 0; x < image_getWidth(targetLightMap); x++) {
 			FVector3D surfaceNormal = getNormal(bumpMap, x, y);
 			float angularIntensity = std::max(0.0f, dotProduct(surfaceNormal, -sunDirection));
 			image_writePixel(targetLightMap, x, y, angularIntensity + ambient);
@@ -275,12 +275,12 @@ void generateLightMap(ImageF32& targetLightMap, const ImageF32& bumpMap, const F
 }
 
 void generateDiffuseMap(ImageRgbaU8& targetDiffuseMap, const ImageF32& bumpMap, const ImageRgbaU8& heightColorRamp) {
-	for (int y = 0; y < image_getHeight(targetDiffuseMap); y++) {
-		for (int x = 0; x < image_getWidth(targetDiffuseMap); x++) {
+	for (int32_t y = 0; y < image_getHeight(targetDiffuseMap); y++) {
+		for (int32_t x = 0; x < image_getWidth(targetDiffuseMap); x++) {
 			float height = image_readPixel_clamp(bumpMap, x, y);
 			ColorRgbaI32 rampColor = sampleColorRampLinear(heightColorRamp, height);
-			/*int rx = remTile(x);
-			int ry = remTile(y);
+			/*int32_t rx = remTile(x);
+			int32_t ry = remTile(y);
 			bool gridLine = rx == 0 || ry == 0 || rx == tileColorDensity - 1 || ry == tileColorDensity - 1;
 			if (gridLine) {
 				rampColor = ColorRgbaI32(
@@ -297,8 +297,8 @@ void generateDiffuseMap(ImageRgbaU8& targetDiffuseMap, const ImageF32& bumpMap, 
 
 // Full update of the ground
 void updateColorMap(ImageRgbaU8& targetColorMap, const ImageRgbaU8& diffuseMap, const ImageF32& lightMap) {
-	for (int y = 0; y < image_getHeight(targetColorMap); y++) {
-		for (int x = 0; x < image_getWidth(targetColorMap); x++) {
+	for (int32_t y = 0; y < image_getHeight(targetColorMap); y++) {
+		for (int32_t x = 0; x < image_getWidth(targetColorMap); x++) {
 			ColorRgbaI32 diffuse = image_readPixel_clamp(diffuseMap, x, y);
 			float light = image_readPixel_clamp(lightMap, x, y);
 			image_writePixel(targetColorMap, x, y, diffuse * light);
@@ -347,10 +347,10 @@ void dsrMain(List<String> args) {
 	ImageRgbaU8 heightRamp = image_load_RgbaU8(file_combinePaths(mediaFolder, U"RampIsland.png"));
 
 	// Get dimensions
-	const int heighMapWidth = image_getWidth(heightMap);
-	const int heighMapHeight = image_getHeight(heightMap);
-	const int colorMapWidth = heighMapWidth * tileColorDensity;
-	const int colorMapHeight = heighMapHeight * tileColorDensity;
+	const int32_t heighMapWidth = image_getWidth(heightMap);
+	const int32_t heighMapHeight = image_getHeight(heightMap);
+	const int32_t colorMapWidth = heighMapWidth * tileColorDensity;
+	const int32_t colorMapHeight = heighMapHeight * tileColorDensity;
 
 	// Create a bump map in the same 0..255 range as the height map, but using floats
 	ImageF32 bumpMap = image_create_F32(colorMapWidth, colorMapHeight);
@@ -389,8 +389,8 @@ void dsrMain(List<String> args) {
 		ImageF32 depthBuffer = window_getDepthBuffer(window);
 
 		// Get target size
-		int targetWidth = image_getWidth(colorBuffer);
-		int targetHeight = image_getHeight(colorBuffer);
+		int32_t targetWidth = image_getWidth(colorBuffer);
+		int32_t targetHeight = image_getHeight(colorBuffer);
 
 		// Paint the background color
 		startTime = time_getSeconds();

@@ -41,7 +41,7 @@ struct Triangle_DMF1 {
 struct Part_DMF1 {
 	String textures[16];
 	String shaderZero;
-	int minDetailLevel = 0, maxDetailLevel = 2;
+	int32_t minDetailLevel = 0, maxDetailLevel = 2;
 	List<Triangle_DMF1> triangles;
 	String name;
 	Part_DMF1() {}
@@ -83,21 +83,21 @@ static const DsrChar space = 32;
 static const DsrChar lineFeed = 10;
 static const DsrChar carriageReturn = 13;
 
-static const int ParserState_WaitForStatement = 0; // NameSpace -> WaitForStatement, Identifier -> WaitForIndexOrProperty
-static const int ParserState_WaitForIndexOrProperty = 1; // index -> WaitForProperty, Property -> WaitForStatement
-static const int ParserState_WaitForProperty = 2; // Property -> WaitForStatement
+static const int32_t ParserState_WaitForStatement = 0; // NameSpace -> WaitForStatement, Identifier -> WaitForIndexOrProperty
+static const int32_t ParserState_WaitForIndexOrProperty = 1; // index -> WaitForProperty, Property -> WaitForStatement
+static const int32_t ParserState_WaitForProperty = 2; // Property -> WaitForStatement
 
-static const int ParserSpace_Main = 0;
-static const int ParserSpace_Part = 1;
-static const int ParserSpace_Triangle = 2;
-static const int ParserSpace_Bone = 3;
-static const int ParserSpace_Shape = 4;
-static const int ParserSpace_Point = 5;
-static const int ParserSpace_Unhandled = 6;
+static const int32_t ParserSpace_Main = 0;
+static const int32_t ParserSpace_Part = 1;
+static const int32_t ParserSpace_Triangle = 2;
+static const int32_t ParserSpace_Bone = 3;
+static const int32_t ParserSpace_Shape = 4;
+static const int32_t ParserSpace_Point = 5;
+static const int32_t ParserSpace_Unhandled = 6;
 
 struct ParserState {
 	Model_DMF1 *model;
-	int parserState, parserSpace, propertyIndex;
+	int32_t parserState, parserSpace, propertyIndex;
 	String lastPropertyName;
 	explicit ParserState(Model_DMF1 *model) :
 	  model(model),
@@ -107,11 +107,11 @@ struct ParserState {
 };
 
 // Precondition: value >= 0.0
-static int roundIndex(double value) {
-	return (int)round(value);
+static int32_t roundIndex(double value) {
+	return (int32_t)round(value);
 }
 
-static void setProperty(ParserState &state, const String &propertyName, int index, const ReadableString &content) {
+static void setProperty(ParserState &state, const String &propertyName, int32_t index, const ReadableString &content) {
 	float value = (float)string_toDouble(content);
 	if (state.parserSpace == ParserSpace_Main) {
 		if PROPERTY_MATCH(FilterType) {
@@ -224,7 +224,7 @@ static void changeNamespace(ParserState &state, const String &newNamespace) {
 
 // Start and end are in base zero
 // End is an inclusive index
-static void readToken(ParserState &state, const String &fileContent, int start, int end) {
+static void readToken(ParserState &state, const String &fileContent, int32_t start, int32_t end) {
 	if (end >= start) {
 		if (fileContent[start] == U'(' && fileContent[end] == U')') {
 			// Property
@@ -277,8 +277,8 @@ static Model_DMF1 loadNative_DMF1(const String &fileContent) {
 		printText("The file does not start with \"DMF1\"!\n");
 		return resultModel;
 	}
-	int tokenStart = 4; // Everything before this will no longer be used
-	int readIndex = 4;
+	int32_t tokenStart = 4; // Everything before this will no longer be used
+	int32_t readIndex = 4;
 	// Scan the string and send tokens to the state machine
 	DsrChar firstCharOfToken = U'\0';
 	for (readIndex = tokenStart; readIndex < string_length(fileContent); readIndex++) {
@@ -316,13 +316,13 @@ static Model_DMF1 loadNative_DMF1(const String &fileContent) {
 	return resultModel;
 }
 
-static Model convertFromDMF1(const Model_DMF1 &nativeModel, ResourcePool &pool, int detailLevel) {
+static Model convertFromDMF1(const Model_DMF1 &nativeModel, ResourcePool &pool, int32_t detailLevel) {
 	Model result = model_create();
 	// Convert all parts from the native representation
-	for (int inputPartIndex = 0; inputPartIndex < nativeModel.parts.length(); inputPartIndex++) {
+	for (int32_t inputPartIndex = 0; inputPartIndex < nativeModel.parts.length(); inputPartIndex++) {
 		const Part_DMF1 *inputPart = &(nativeModel.parts[inputPartIndex]);
 		if (detailLevel >= inputPart->minDetailLevel && detailLevel <= inputPart->maxDetailLevel) {
-			int part = result->addEmptyPart(inputPart->name);
+			int32_t part = result->addEmptyPart(inputPart->name);
 			if (string_caseInsensitiveMatch(inputPart->shaderZero, U"M_Diffuse_0Tex")) {
 				// Color
 			} else if (string_caseInsensitiveMatch(inputPart->shaderZero, U"M_Diffuse_1Tex")) {
@@ -335,12 +335,12 @@ static Model convertFromDMF1(const Model_DMF1 &nativeModel, ResourcePool &pool, 
 			} else {
 				printText("The shader ", inputPart->shaderZero, " is not supported. Use M_Diffuse_0Tex, M_Diffuse_1Tex or M_Diffuse_2Tex.\n");
 			}
-			for (int inputTriangleIndex = 0; inputTriangleIndex < inputPart->triangles.length(); inputTriangleIndex++) {
+			for (int32_t inputTriangleIndex = 0; inputTriangleIndex < inputPart->triangles.length(); inputTriangleIndex++) {
 				const Triangle_DMF1 *inputTriangle = &(inputPart->triangles[inputTriangleIndex]);
 				const float threshold = 0.00001f;
-				int posIndexA = result->addPointIfNeeded(inputTriangle->vertices[0].position, threshold);
-				int posIndexB = result->addPointIfNeeded(inputTriangle->vertices[1].position, threshold);
-				int posIndexC = result->addPointIfNeeded(inputTriangle->vertices[2].position, threshold);
+				int32_t posIndexA = result->addPointIfNeeded(inputTriangle->vertices[0].position, threshold);
+				int32_t posIndexB = result->addPointIfNeeded(inputTriangle->vertices[1].position, threshold);
+				int32_t posIndexC = result->addPointIfNeeded(inputTriangle->vertices[2].position, threshold);
 				VertexData dataA(inputTriangle->vertices[0].texCoord, inputTriangle->vertices[0].color);
 				VertexData dataB(inputTriangle->vertices[1].texCoord, inputTriangle->vertices[1].color);
 				VertexData dataC(inputTriangle->vertices[2].texCoord, inputTriangle->vertices[2].color);
@@ -352,7 +352,7 @@ static Model convertFromDMF1(const Model_DMF1 &nativeModel, ResourcePool &pool, 
 	return result;
 }
 
-Model dsr::importFromContent_DMF1(const String &fileContent, ResourcePool &pool, int detailLevel) {
+Model dsr::importFromContent_DMF1(const String &fileContent, ResourcePool &pool, int32_t detailLevel) {
 	// Load the raw data
 	Model_DMF1 nativeModel = loadNative_DMF1(fileContent);
 	// Construct a model while loading resources

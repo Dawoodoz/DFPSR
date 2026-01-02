@@ -60,8 +60,8 @@ private:
 	bool pressScrollUp = false;
 	bool pressScrollDown = false;
 	bool holdingScrollBar = false;
-	const int scrollBarThickness = 16;
-	const int scrollButtonLength = 16;
+	const int32_t scrollBarThickness = 16;
+	const int32_t scrollButtonLength = 16;
 	int64_t knobHoldOffset = 0; // The number of pixels right or down from the center that the knob was grabbed at.
 	// Updated manually.
 	ScrollRange scrollRange; // Range of valid values.

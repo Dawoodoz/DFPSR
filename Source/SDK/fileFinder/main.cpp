@@ -21,14 +21,14 @@ void exploreFolder(const ReadableString& folderPath, const ReadableString& inden
 DSR_MAIN_CALLER(dsrMain)
 void dsrMain(List<String> args) {
 	printText("Input arguments:\n");
-	for (int a = 0; a < args.length(); a++) {
+	for (int32_t a = 0; a < args.length(); a++) {
 		printText("  args[", a, "] = ", args[a], "\n");
 	}
 	String absolutePath = file_getAbsolutePath(args[0]);
 	printText("Absolute path = ", absolutePath, "\n");
 	if (args.length() > 1) {
 		// Explore each listed folder from input arguments.
-		for (int a = 1; a < args.length(); a++) {
+		for (int32_t a = 1; a < args.length(); a++) {
 			printText("Exploring ", args[a], "\n");
 			exploreFolder(args[a], U"  ");
 		}

@@ -44,7 +44,7 @@ void dsrMain(List<String> args) {
 		[](AlignedImageRgbaU8 &canvas, TestContext &context) {
 			image_fill(canvas, ColorRgbaI32(255, 255, 255, 255));
 			font_printLine(canvas, font_getDefault(), U"Test summary:", IVector2D(40, 40), ColorRgbaI32(0, 0, 0, 255));
-			for (int t = 0; t < context.tests.length() - 1; t++) {
+			for (int32_t t = 0; t < context.tests.length() - 1; t++) {
 				font_printLine(canvas, font_getDefault(), string_combine(context.tests[t].result, U" - ", context.tests[t].name), IVector2D(60, t * 20 + 60), ColorRgbaI32(0, 0, 0, 255));
 			}
 			// TODO: Allow scrolling through the results if it gets too much to fit inside the window.

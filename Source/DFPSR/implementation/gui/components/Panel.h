@@ -46,7 +46,7 @@ private:
 	void generateGraphics();
 	// Settings fetched from the theme
 	String finalBackgroundClass; // The selected BackgroundClass/Class from layout settings or the component's default theme class "Panel".
-	int background_filter = 0; // 0 for solid, 1 for alpha filter.
+	int32_t background_filter = 0; // 0 for solid, 1 for alpha filter.
 	// Images
 	MediaMethod background;
 	OrderedImageRgbaU8 imageBackground; // Alpha is copied to the target and should be 255

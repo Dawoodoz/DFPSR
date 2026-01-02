@@ -49,7 +49,7 @@ bool BackendWindow::executeEvents() {
 		this->requestingResize = false;
 	}
 	// Look for events
-	for (int e = 0; e < this->eventQueue.length(); e++) {
+	for (int32_t e = 0; e < this->eventQueue.length(); e++) {
 		InputEvent* event = this->eventQueue[e];
 		if (event) {
 			executedEvent = true;

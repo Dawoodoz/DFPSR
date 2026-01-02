@@ -40,15 +40,15 @@ namespace dsr {
 class ViewFrustum {
 private:
 	FPlane3D planes[6];
-	int planeCount;
+	int32_t planeCount;
 public:
 	// Named indices to the different planes defining a view frustum.
-	static const int view_left   = 0;
-	static const int view_right  = 1;
-	static const int view_top    = 2;
-	static const int view_bottom = 3;
-	static const int view_near   = 4;
-	static const int view_far    = 5;
+	static const int32_t view_left   = 0;
+	static const int32_t view_right  = 1;
+	static const int32_t view_top    = 2;
+	static const int32_t view_bottom = 3;
+	static const int32_t view_near   = 4;
+	static const int32_t view_far    = 5;
 	ViewFrustum() : planeCount(0) {}
 	// Orthogonal view frustum in camera space
 	ViewFrustum(float halfWidth, float halfHeight)
@@ -71,10 +71,10 @@ public:
 		planes[view_near  ] = FPlane3D(FVector3D(0.0f, 0.0f, -1.0f), -nearClip);
 		planes[view_far   ] = FPlane3D(FVector3D(0.0f, 0.0f,  1.0f),   farClip);
 	}
-	inline int getPlaneCount() const {
+	inline int32_t getPlaneCount() const {
 		return this->planeCount;
 	}
-	inline FPlane3D getPlane(int sideIndex) const {
+	inline FPlane3D getPlane(int32_t sideIndex) const {
 		assert(sideIndex >= 0 && sideIndex < this->planeCount);
 		return planes[sideIndex];
 	}
@@ -83,13 +83,13 @@ public:
 	// Returns 0 if all points are outside of the same plane, so that an object within the convex hull can not be visible.
 	// Returns 1 if one or more points are outside of the view frustum but they are not all outside of the same plane, so it may or may not be visible.
 	// Returns 2 if all points are inside of the view frustum, so that it is certainly visible, unless hidden by something else.
-	int isConvexHullSeen(SafePointer<const FVector3D> cameraSpacePoints, int32_t pointCount) const {
+	int32_t isConvexHullSeen(SafePointer<const FVector3D> cameraSpacePoints, int32_t pointCount) const {
 		bool anyOutside = false;
-		for (int s = 0; s < this->getPlaneCount(); s++) {
+		for (int32_t s = 0; s < this->getPlaneCount(); s++) {
 			FPlane3D plane = this->getPlane(s);
 			// Check if any point is inside of the current plane.
 			bool anyInside = false;
-			for (int p = 0; p < pointCount; p++) {
+			for (int32_t p = 0; p < pointCount; p++) {
 				if (plane.inside(cameraSpacePoints[p])) {
 					anyInside = true;
 				} else {
@@ -188,17 +188,17 @@ public:
 		return this->cameraToScreen(this->worldToCamera(worldSpace));
 	}
 	// Get the number of planes in the clipping or culling frustum.
-	inline int getFrustumPlaneCount(bool clipping = false) const {
+	inline int32_t getFrustumPlaneCount(bool clipping = false) const {
 		return clipping ? this->clipFrustum.getPlaneCount() : this->cullFrustum.getPlaneCount();
 	}
 	// Get a certain plane from the clipping or culling frustum.
 	//   The plane is expressed in camera space.
-	inline FPlane3D getFrustumPlane(int sideIndex, bool clipping = false) const {
+	inline FPlane3D getFrustumPlane(int32_t sideIndex, bool clipping = false) const {
 		return clipping ? this->clipFrustum.getPlane(sideIndex) : this->cullFrustum.getPlane(sideIndex);
 	}
 	// Returns 0 iff the model inside of the bound can clearly not be visible, 1 if it intersects with the view frustum, or 2 if fully in view.
 	//   by having all corners outside of the same side in the camera's culling frustum.
-	int isBoxSeen(const FVector3D& minModelSpaceBound, const FVector3D& maxModelSpaceBound, const Transform3D &modelToWorld) const {
+	int32_t isBoxSeen(const FVector3D& minModelSpaceBound, const FVector3D& maxModelSpaceBound, const Transform3D &modelToWorld) const {
 		// Allocate memory for the corners.
 		FVector3D cornerBuffer[8];
 		SafePointer<FVector3D> corners = SafePointer<FVector3D>("corners in Camera::isBoxSeen", cornerBuffer, sizeof(cornerBuffer));

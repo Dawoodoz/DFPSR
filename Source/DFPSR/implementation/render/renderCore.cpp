@@ -33,7 +33,7 @@ class SubVertex {
 public:
 	FVector3D cs; // Camera space position based on the weights
 	float subB, subC; // Weights for second and third vertices in the parent triangle
-	int state = 0; // Used by algorithms
+	int32_t state = 0; // Used by algorithms
 	float value = 0.0f; // Used by algorithms
 	SubVertex() : subB(0.0f), subC(0.0f) {}
 	SubVertex(const FVector3D &cs, float subB, float subC) : cs(cs), subB(subB), subC(subC) {}
@@ -57,12 +57,12 @@ static float inverseLerp(float a, float b, float value) {
 	}
 }
 
-static const int maxPoints = 9; // If a triangle starts with 3 points and each of 6 planes in the view frustum can add one point each then the maximum is 9 points
+static const int32_t maxPoints = 9; // If a triangle starts with 3 points and each of 6 planes in the view frustum can add one point each then the maximum is 9 points
 class ClippedTriangle {
 private:
-	int vertexCount = 0;
+	int32_t vertexCount = 0;
 public:
-	int getVertexCount() {
+	int32_t getVertexCount() {
 		return this->vertexCount;
 	}
 	SubVertex vertices[maxPoints] = {};
@@ -72,23 +72,23 @@ public:
 		this->vertices[2] = SubVertex(triangle.position[2].cs, 0.0f, 1.0f);
 		this->vertexCount = 3;
 	}
-	void deleteVertex(int removeIndex) {
+	void deleteVertex(int32_t removeIndex) {
 		assert(removeIndex >= 0);
 		assert(removeIndex < this->vertexCount);
 		if (this->vertexCount > 0 && this->vertexCount <= maxPoints) {
-			for (int v = removeIndex; v < this->vertexCount - 1; v++) {
+			for (int32_t v = removeIndex; v < this->vertexCount - 1; v++) {
 				assert(v >= 0 && v + 1 < maxPoints);
 				this->vertices[v] = this->vertices[v + 1];
 			}
 			this->vertexCount--;
 		}
 	}
-	void insertVertex(int newIndex, const SubVertex &newVertex) {
+	void insertVertex(int32_t newIndex, const SubVertex &newVertex) {
 		// Check against buffer overflow in case of bugs from rounding errors
 		assert(newIndex >= 0);
 		assert(newIndex <= this->vertexCount);
 		if (this->vertexCount < maxPoints) {
-			for (int v = this->vertexCount - 1; v >= newIndex; v--) {
+			for (int32_t v = this->vertexCount - 1; v >= newIndex; v--) {
 				assert(v >= 0 && v + 1 < maxPoints);
 				this->vertices[v + 1] = this->vertices[v];
 			}
@@ -101,13 +101,13 @@ public:
 	}
 	// Cut away parts of the triangle that are on the positive side of the plane
 	void clip(const FPlane3D &plane) {
-		static const int state_use = 0;
-		static const int state_delete = 1;
-		static const int state_modified = 2;
+		static const int32_t state_use = 0;
+		static const int32_t state_delete = 1;
+		static const int32_t state_modified = 2;
 		if (this->vertexCount >= 3 && this->vertexCount < maxPoints) {
-			int outsideCount = 0;
-			int lastOutside = 0;
-			for (int v = 0; v < this->vertexCount; v++) {
+			int32_t outsideCount = 0;
+			int32_t lastOutside = 0;
+			for (int32_t v = 0; v < this->vertexCount; v++) {
 				assert(v >= 0 && v < maxPoints);
 				float distance = plane.signedDistance(this->vertices[v].cs);
 				this->vertices[v].value = distance;
@@ -124,9 +124,9 @@ public:
 					this->deleteAll();
 				} else if (outsideCount == 1) {
 					// Split a single vertex into two corners by interpolating with the previous and next corners						
-					int currentVertex = lastOutside;
-					int previousVertex = (lastOutside - 1 + this->vertexCount) % this->vertexCount;
-					int nextVertex = (lastOutside + 1) % this->vertexCount;
+					int32_t currentVertex = lastOutside;
+					int32_t previousVertex = (lastOutside - 1 + this->vertexCount) % this->vertexCount;
+					int32_t nextVertex = (lastOutside + 1) % this->vertexCount;
 					float previousToCurrentRatio = inverseLerp(this->vertices[previousVertex].value, this->vertices[currentVertex].value, 0.0f);
 					float currentToNextRatio = inverseLerp(this->vertices[currentVertex].value, this->vertices[nextVertex].value, 0.0f);
 					SubVertex cutStart(this->vertices[previousVertex], this->vertices[currentVertex], previousToCurrentRatio);
@@ -135,9 +135,9 @@ public:
 					insertVertex(nextVertex, cutEnd);
 				} else {
 					// Start and end of the cut
-					for (int currentVertex = 0; currentVertex < this->vertexCount; currentVertex++) {
-						int previousVertex = (currentVertex - 1 + this->vertexCount) % this->vertexCount;
-						int nextVertex = (currentVertex + 1) % this->vertexCount;
+					for (int32_t currentVertex = 0; currentVertex < this->vertexCount; currentVertex++) {
+						int32_t previousVertex = (currentVertex - 1 + this->vertexCount) % this->vertexCount;
+						int32_t nextVertex = (currentVertex + 1) % this->vertexCount;
 						if (this->vertices[currentVertex].state == state_delete) {
 							if (this->vertices[previousVertex].state == state_use) {
 								// Begin the cut
@@ -155,7 +155,7 @@ public:
 					// Delete every vertex that is marked for removal
 					// Looping backwards will avoid using altered indices while deleting
 					if (outsideCount > 2) {
-						for (int v = this->vertexCount - 1; v >= 0; v--) {
+						for (int32_t v = this->vertexCount - 1; v >= 0; v--) {
 							assert(v >= 0 && v < maxPoints);
 							if (this->vertices[v].state == state_delete) {
 								this->deleteVertex(v);
@@ -169,26 +169,26 @@ public:
 };
 
 Visibility dsr::getTriangleVisibility(const ITriangle2D &triangle, const Camera &camera, bool clipFrustum) {
-	static const int cornerCount = 3;
-	int planeCount = camera.getFrustumPlaneCount(clipFrustum);
+	static const int32_t cornerCount = 3;
+	int32_t planeCount = camera.getFrustumPlaneCount(clipFrustum);
 	VirtualStackAllocation<bool> outside(cornerCount * planeCount, "Corner outside buffer in getTriangleVIsibility");
 	// Check which corners are outside of the different planes
-	int offset = 0;
-	for (int c = 0; c < cornerCount; c++) {
+	int32_t offset = 0;
+	for (int32_t c = 0; c < cornerCount; c++) {
 		FVector3D triangleCorner = triangle.position[c].cs;
-		for (int s = 0; s < planeCount; s++) {
+		for (int32_t s = 0; s < planeCount; s++) {
 			outside[offset + s] = !(camera.getFrustumPlane(s, clipFrustum).inside(triangleCorner));
 		}
 		offset += planeCount;
 	}
 	// Do not render if all corners are outside of the same side
-	for (int s = 0; s < planeCount; s++) {
+	for (int32_t s = 0; s < planeCount; s++) {
 		if (outside[s] && outside[s + planeCount] && outside[s + 2 * planeCount]) {
 			return Visibility::Hidden; // All corners outside of the same plane
 		}
 	}
 	// Partial visibility if any corner is outside of a side
-	for (int i = 0; i < planeCount * cornerCount; i++) {
+	for (int32_t i = 0; i < planeCount * cornerCount; i++) {
 		if (outside[i]) {
 			return Visibility::Partial; // Any corner outside of a plane
 		}
@@ -196,14 +196,14 @@ Visibility dsr::getTriangleVisibility(const ITriangle2D &triangle, const Camera 
 	return Visibility::Full;
 }
 
-static const int alignX = 2;
-static const int alignY = 2;
+static const int32_t alignX = 2;
+static const int32_t alignY = 2;
 
 void dsr::executeTriangleDrawing(const TriangleDrawCommand &command, const IRect &clipBound) {
 	IRect finalClipBound = IRect::cut(command.clipBound, clipBound);
 	int32_t rowCount = command.triangle.getBufferSize(finalClipBound, alignX, alignY);
 	if (rowCount > 0) {
-		int startRow;
+		int32_t startRow;
 		// TODO: Use SafePointer in shape functions.
 		VirtualStackAllocation<RowInterval> rows(rowCount, "Row intervals in executeTriangleDrawing");
 		command.triangle.getShape(startRow, rows.getUnsafe(), finalClipBound, alignX, alignY);
@@ -243,15 +243,15 @@ static void drawSubTriangle(CommandQueue *commandQueue, const TriangleDrawData &
 // TODO: Take drawSubTriangle as a lambda to drawClippedTriangle using vertex weights as arguments and vertex data as captured variables
 static void drawClippedTriangle(CommandQueue *commandQueue, const TriangleDrawData &triangleDrawData, const Camera &camera, const ITriangle2D &triangle, const IRect &clipBound) {
 	ClippedTriangle clipped(triangle);
-	int planeCount = camera.getFrustumPlaneCount(true);
-	for (int s = 0; s < planeCount; s++) {
+	int32_t planeCount = camera.getFrustumPlaneCount(true);
+	for (int32_t s = 0; s < planeCount; s++) {
 		clipped.clip(camera.getFrustumPlane(s, true));
 	}
 	// Draw a convex triangle fan from the clipped triangle
-	for (int triangleIndex = 0; triangleIndex < clipped.getVertexCount() - 2; triangleIndex++) {
-		int indexA = 0;
-		int indexB = 1 + triangleIndex;
-		int indexC = 2 + triangleIndex;
+	for (int32_t triangleIndex = 0; triangleIndex < clipped.getVertexCount() - 2; triangleIndex++) {
+		int32_t indexA = 0;
+		int32_t indexB = 1 + triangleIndex;
+		int32_t indexC = 2 + triangleIndex;
 		drawSubTriangle(commandQueue, triangleDrawData, camera, clipBound, clipped.vertices[indexA], clipped.vertices[indexB], clipped.vertices[indexC]);
 	}
 }
@@ -286,12 +286,12 @@ void dsr::renderTriangleFromData(
   Filter filter, const TextureRgbaU8 &diffuse, const TextureRgbaU8 &light,
   const TriangleTexCoords &texCoords, const TriangleColors &colors) {
 	// Get dimensions from both buffers
-	int colorWidth = image_getWidth(targetImage);
-	int colorHeight = image_getHeight(targetImage);
-	int depthWidth = image_getWidth(depthBuffer);
-	int depthHeight = image_getHeight(depthBuffer);
+	int32_t colorWidth = image_getWidth(targetImage);
+	int32_t colorHeight = image_getHeight(targetImage);
+	int32_t depthWidth = image_getWidth(depthBuffer);
+	int32_t depthHeight = image_getHeight(depthBuffer);
 	// Combine dimensions
-	int targetWidth, targetHeight;
+	int32_t targetWidth, targetHeight;
 	if (image_exists(targetImage)) {
 		targetWidth = colorWidth;
 		targetHeight = colorHeight;
@@ -343,13 +343,13 @@ template<bool AFFINE>
 static void executeTriangleDrawingDepth(const ImageF32 &depthBuffer, const ITriangle2D& triangle, const IRect &clipBound) {
 	int32_t rowCount = triangle.getBufferSize(clipBound, 1, 1);
 	if (rowCount > 0) {
-		int startRow;
+		int32_t startRow;
 		VirtualStackAllocation<RowInterval> rows(rowCount, "Row intervals in executeTriangleDrawingDepth");
 		triangle.getShape(startRow, rows.getUnsafe(), clipBound, 1, 1);
 		Projection projection = triangle.getProjection(FVector3D(), FVector3D(), !AFFINE); // TODO: Create a weight using only depth to save time
 		RowShape shape = RowShape(startRow, rowCount, rows.getUnsafe());
 		// Draw the triangle
-		const int depthBufferStride = image_getStride(depthBuffer);
+		const int32_t depthBufferStride = image_getStride(depthBuffer);
 		SafePointer<float> depthDataRow = image_getSafePointer<float>(depthBuffer, shape.startRow);
 		for (int32_t y = shape.startRow; y < shape.startRow + shape.rowCount; y++) {
 			RowInterval row = shape.rows[y - shape.startRow];
@@ -426,15 +426,15 @@ void dsr::renderTriangleFromDataDepth(const ImageF32 &depthBuffer, const Camera 
 		} else {
 			// Draw a clipped triangle
 			ClippedTriangle clipped(triangle); // TODO: Simpler vertex clipping using only positions
-			int planeCount = camera.getFrustumPlaneCount(true);
-			for (int s = 0; s < planeCount; s++) {
+			int32_t planeCount = camera.getFrustumPlaneCount(true);
+			for (int32_t s = 0; s < planeCount; s++) {
 				clipped.clip(camera.getFrustumPlane(s, true));
 			}
 			// Draw a convex triangle fan from the clipped triangle
-			for (int triangleIndex = 0; triangleIndex < clipped.getVertexCount() - 2; triangleIndex++) {
-				int indexA = 0;
-				int indexB = 1 + triangleIndex;
-				int indexC = 2 + triangleIndex;
+			for (int32_t triangleIndex = 0; triangleIndex < clipped.getVertexCount() - 2; triangleIndex++) {
+				int32_t indexA = 0;
+				int32_t indexB = 1 + triangleIndex;
+				int32_t indexC = 2 + triangleIndex;
 				drawSubTriangleDepth(depthBuffer, camera, clipBound, clipped.vertices[indexA], clipped.vertices[indexB], clipped.vertices[indexC]);
 			}
 		}
@@ -445,10 +445,10 @@ void CommandQueue::add(const TriangleDrawCommand &command) {
 	this->buffer.push(command);
 }
 
-void CommandQueue::execute(const IRect &clipBound, int jobCount) const {
+void CommandQueue::execute(const IRect &clipBound, int32_t jobCount) const {
 	if (jobCount <= 1) {
 		// TODO: Make a setting for sorting triangles using indices within each job
-		for (int i = 0; i < this->buffer.length(); i++) {
+		for (int32_t i = 0; i < this->buffer.length(); i++) {
 			if (!this->buffer[i].occluded) {
 				executeTriangleDrawing(this->buffer[i], clipBound);
 			}
@@ -456,20 +456,20 @@ void CommandQueue::execute(const IRect &clipBound, int jobCount) const {
 	} else {
 		// Split the target region for multiple threads, with one slice per job.
 		VirtualStackAllocation<IRect> regions(jobCount, "Multi-threaded target pixel regions in CommandQueue::execute");
-		int y1 = clipBound.top();
-		for (int j = 0; j < jobCount; j++) {
-			int y2 = clipBound.top() + ((clipBound.bottom() * (j + 1)) / jobCount);
+		int32_t y1 = clipBound.top();
+		for (int32_t j = 0; j < jobCount; j++) {
+			int32_t y2 = clipBound.top() + ((clipBound.bottom() * (j + 1)) / jobCount);
 			// Align to multiples of two lines if it's not at the bottom
 			if (j < jobCount - 1) {
 				y2 = (y2 / 2) * 2;
 			}
-			int height = y2 - y1;
+			int32_t height = y2 - y1;
 			regions[j] = IRect(clipBound.left(), y1, clipBound.width(), height);
 			y1 = y2;
 		}
-		std::function<void(void *context, int jobIndex)> job = [&regions](void *context, int jobIndex) {
+		std::function<void(void *context, int32_t jobIndex)> job = [&regions](void *context, int32_t jobIndex) {
 			CommandQueue *commandQueue = (CommandQueue*)context;
-			for (int i = 0; i < commandQueue->buffer.length(); i++) {
+			for (int32_t i = 0; i < commandQueue->buffer.length(); i++) {
 				if (!commandQueue->buffer[i].occluded) {
 					executeTriangleDrawing(commandQueue->buffer[i], regions[jobIndex]);
 				}

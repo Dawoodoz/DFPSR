@@ -63,8 +63,8 @@ bool Toolbar::isContainer() const {
 }
 
 void Toolbar::generateGraphics() {
-	int width = this->location.width();
-	int height = this->location.height();
+	int32_t width = this->location.width();
+	int32_t height = this->location.height();
 	if (width < 1) { width = 1; }
 	if (height < 1) { height = 1; }
 	if (!this->hasImages) {
@@ -125,19 +125,19 @@ void Toolbar::changedAttribute(const ReadableString &name) {
 }
 
 void Toolbar::updateLocationEvent(const IRect& oldLocation, const IRect& newLocation) {
-	int widthStretch = this->region.right.getRatio() - this->region.left.getRatio();
-	int heightStretch = this->region.bottom.getRatio() - this->region.top.getRatio();
+	int32_t widthStretch = this->region.right.getRatio() - this->region.left.getRatio();
+	int32_t heightStretch = this->region.bottom.getRatio() - this->region.top.getRatio();
 	// Place members vertically if the toolbar mostly stretches vertically or if it has uniform stretch and is taller than wide.
 	bool vertical = (widthStretch < heightStretch) || ((widthStretch == heightStretch) && (newLocation.width() < newLocation.height()));
 	if (vertical) {
 		// TODO: Add scroll buttons on the sides if there is not enough space for all child components.
 		// Place each child component in order.
 		//   Each child is created within a segmented region, but can choose to add more padding or limit its height for fine adjustments.
-		int left = this->padding.value;
-		int top = this->padding.value;
-		int width = newLocation.width() - (this->padding.value * 2);
-		for (int i = 0; i < this->getChildCount(); i++) {
-			int height = this->children[i]->getDesiredDimensions().y;
+		int32_t left = this->padding.value;
+		int32_t top = this->padding.value;
+		int32_t width = newLocation.width() - (this->padding.value * 2);
+		for (int32_t i = 0; i < this->getChildCount(); i++) {
+			int32_t height = this->children[i]->getDesiredDimensions().y;
 			this->children[i]->applyLayout(IRect(left, top, width, height));
 			top += height + this->spacing.value;
 		}
@@ -145,11 +145,11 @@ void Toolbar::updateLocationEvent(const IRect& oldLocation, const IRect& newLoca
 		// TODO: Add scroll buttons on the sides if there is not enough space for all child components.
 		// Place each child component in order.
 		//   Each child is created within a segmented region, but can choose to add more padding or limit its height for fine adjustments.
-		int left = this->padding.value;
-		int top = this->padding.value;
-		int height = newLocation.height() - (this->padding.value * 2);
-		for (int i = 0; i < this->getChildCount(); i++) {
-			int width = this->children[i]->getDesiredDimensions().x;
+		int32_t left = this->padding.value;
+		int32_t top = this->padding.value;
+		int32_t height = newLocation.height() - (this->padding.value * 2);
+		for (int32_t i = 0; i < this->getChildCount(); i++) {
+			int32_t width = this->children[i]->getDesiredDimensions().x;
 			this->children[i]->applyLayout(IRect(left, top, width, height));
 			left += width + this->spacing.value;
 		}

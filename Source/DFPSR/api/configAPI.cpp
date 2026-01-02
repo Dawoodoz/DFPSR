@@ -28,23 +28,23 @@ using namespace dsr;
 void dsr::config_parse_ini(const ReadableString& content, ConfigIniCallback receiverLambda) {
 	List<String> lines = string_split(content, U'\n');
 	String block = U"";
-	for (int l = 0; l < lines.length(); l++) {
+	for (int32_t l = 0; l < lines.length(); l++) {
 		// Get the current line
 		String command = lines[l];
 		// Skip comments
-		int commentIndex = string_findFirst(command, U';');
+		int32_t commentIndex = string_findFirst(command, U';');
 		if (commentIndex > -1) {
 			string_before(command, commentIndex);
 		}
 		// Find assignments
-		int assignmentIndex = string_findFirst(command, U'=');
+		int32_t assignmentIndex = string_findFirst(command, U'=');
 		if (assignmentIndex > -1) {
 			String key = string_removeOuterWhiteSpace(string_before(command, assignmentIndex));
 			String value = string_removeOuterWhiteSpace(string_after(command, assignmentIndex));
 			receiverLambda(block, key, value);
 		} else {
-			int blockStartIndex = string_findFirst(command, U'[');
-			int blockEndIndex = string_findFirst(command, U']');
+			int32_t blockStartIndex = string_findFirst(command, U'[');
+			int32_t blockEndIndex = string_findFirst(command, U']');
 			if (blockStartIndex > -1 && blockEndIndex > -1) {
 				block = string_removeOuterWhiteSpace(string_inclusiveRange(command, blockStartIndex + 1, blockEndIndex - 1));
 			}

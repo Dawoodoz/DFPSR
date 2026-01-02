@@ -68,7 +68,7 @@ struct ColorRgbI32 {
 	}
 	// Create a color from a string.
 	explicit ColorRgbI32(const ReadableString &content) : red(0), green(0), blue(0) {
-		int givenChannels = 0;
+		int32_t givenChannels = 0;
 		string_split_callback([this, &givenChannels](ReadableString channelValue) {
 			if (givenChannels == 0) {
 				this->red = string_toInteger(channelValue);
@@ -127,7 +127,7 @@ struct ColorRgbaI32 {
 	}
 	// Create a color from a string.
 	explicit ColorRgbaI32(const ReadableString &content) : red(0), green(0), blue(0), alpha(255) {
-		int givenChannels = 0;
+		int32_t givenChannels = 0;
 		string_split_callback([this, &givenChannels](ReadableString channelValue) {
 			if (givenChannels == 0) {
 				this->red = string_toInteger(channelValue);

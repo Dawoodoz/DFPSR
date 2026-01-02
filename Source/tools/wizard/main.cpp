@@ -27,7 +27,7 @@ Component clonePanel;
 	Component acceptCloneButton;
 
 // Media
-int boomSound;
+int32_t boomSound;
 
 struct Project {
 	String projectFilePath;
@@ -110,7 +110,7 @@ static void findProjects(const ReadableString& folderPath) {
 // Returns true iff the interface needs to be redrawn.
 static bool updateInterface(bool forceUpdate) {
 	bool needToDraw = false;
-	int projectIndex = component_getProperty_integer(projectList, U"SelectedIndex", true);
+	int32_t projectIndex = component_getProperty_integer(projectList, U"SelectedIndex", true);
 	//Application name from project name?
 	if (projectIndex >= 0 && projectIndex < projects.length()) {
 		DsrProcessStatus newStatus = process_getStatus(projects[projectIndex].programHandle);
@@ -144,7 +144,7 @@ static void selectProject(int64_t projectIndex) {
 }
 
 static void populateInterface() {
-	for (int p = 0; p < projects.length(); p++) {
+	for (int32_t p = 0; p < projects.length(); p++) {
 		component_call(projectList, U"PushElement", projects[p].title);
 	}
 	selectProject(0);
@@ -227,7 +227,7 @@ void dsrMain(List<String> args) {
 	});
 	component_setPressedEvent(cloneButton, []() {
 		// Get the project index.
-		int projectIndex = component_getProperty_integer(projectList, U"SelectedIndex", true);
+		int32_t projectIndex = component_getProperty_integer(projectList, U"SelectedIndex", true);
 		// Check if the project index is valid.
 		if (projectIndex >= 0 && projectIndex < projects.length()) {
 			ReadableString projectFilePath = projects[projectIndex].projectFilePath;
@@ -269,7 +269,7 @@ void dsrMain(List<String> args) {
 	});
 	component_setPressedEvent(launchButton, []() {
 		soundEngine_playSound(boomSound, false);
-		int projectIndex = component_getProperty_integer(projectList, U"SelectedIndex", true);
+		int32_t projectIndex = component_getProperty_integer(projectList, U"SelectedIndex", true);
 		//Application name from project name?
 		if (projectIndex >= 0 && projectIndex < projects.length()) {
 			if (file_getEntryType(projects[projectIndex].executableFilePath) != EntryType::File) {

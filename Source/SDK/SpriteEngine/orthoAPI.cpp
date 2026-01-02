@@ -3,7 +3,7 @@
 
 namespace dsr {
 
-OrthoView::OrthoView(int id, const IVector2D roundedXAxis, const IVector2D roundedZAxis, int yPixelsPerTile, const FMatrix3x3 &normalToWorldSpace, Direction worldDirection)
+OrthoView::OrthoView(int32_t id, const IVector2D roundedXAxis, const IVector2D roundedZAxis, int32_t yPixelsPerTile, const FMatrix3x3 &normalToWorldSpace, Direction worldDirection)
 : id(id), worldDirection(worldDirection), normalToWorldSpace(normalToWorldSpace),
   pixelOffsetPerTileX(roundedXAxis), pixelOffsetPerTileZ(roundedZAxis), yPixelsPerTile(yPixelsPerTile) {
 	// Pixel aligned 3D transformation matrix from tile (x, y, z) to screen (x, y, h)
@@ -57,7 +57,7 @@ IVector3D OrthoView::pixelToMiniPosition(const IVector2D& pixelLocation, const I
 
 OrthoSystem::OrthoSystem() : cameraTilt(0), pixelsPerTile(0) {}
 
-OrthoSystem::OrthoSystem(float cameraTilt, int pixelsPerTile) : cameraTilt(cameraTilt), pixelsPerTile(pixelsPerTile) {
+OrthoSystem::OrthoSystem(float cameraTilt, int32_t pixelsPerTile) : cameraTilt(cameraTilt), pixelsPerTile(pixelsPerTile) {
 	this->update();
 }
 
@@ -80,7 +80,7 @@ OrthoSystem::OrthoSystem(const ReadableString& content) {
 
 void OrthoSystem::update() {
 	// Calculate y offset rounded to whole tiles to prevent random gaps in grids
-	int yPixelsPerTile = (float)this->pixelsPerTile / sqrt(this->cameraTilt * this->cameraTilt + 1);
+	int32_t yPixelsPerTile = (float)this->pixelsPerTile / sqrt(this->cameraTilt * this->cameraTilt + 1);
 
 	// Define sprite directions
 	FVector3D upAxis = FVector3D(0.0f, 1.0f, 0.0f);
@@ -96,7 +96,7 @@ void OrthoSystem::update() {
 	cameraSystems[6] = FMatrix3x3::makeAxisSystem(FVector3D( 0, this->cameraTilt,-1), upAxis);
 	cameraSystems[7] = FMatrix3x3::makeAxisSystem(FVector3D( 1, this->cameraTilt, 0), upAxis);
 
-	for (int a = 0; a < maxCameraAngles; a++) {
+	for (int32_t a = 0; a < maxCameraAngles; a++) {
 		// Define the coordinate system for normals
 		FVector3D normalSystemDirection = cameraSystems[a].zAxis;
 		normalSystemDirection.y = 0.0f;
@@ -108,8 +108,8 @@ void OrthoSystem::update() {
 		FVector2D ZAxis = approximateCamera.worldToScreen(FVector3D(0.0f, 0.0f, 1.0f)).is - halfTile;
 		this->view[a] = OrthoView(
 		  a,
-		  IVector2D((int)XAxis.x, (int)XAxis.y),
-		  IVector2D((int)ZAxis.x, (int)ZAxis.y),
+		  IVector2D((int32_t)XAxis.x, (int32_t)XAxis.y),
+		  IVector2D((int32_t)ZAxis.x, (int32_t)ZAxis.y),
 		  yPixelsPerTile,
 		  normalToWorldSpace,
 		  worldDirections[a]
@@ -117,7 +117,7 @@ void OrthoSystem::update() {
 	}
 }
 
-int ortho_roundToTile(int miniCoordinate) {
+int32_t ortho_roundToTile(int32_t miniCoordinate) {
 	return roundDown(miniCoordinate + (ortho_miniUnitsPerTile / 2), ortho_miniUnitsPerTile);
 }
 
@@ -125,7 +125,7 @@ IVector3D ortho_roundToTile(const IVector3D& miniPosition) {
 	return IVector3D(ortho_roundToTile(miniPosition.x), miniPosition.y, ortho_roundToTile(miniPosition.z));
 }
 
-float ortho_miniToFloatingTile(int miniCoordinate) {
+float ortho_miniToFloatingTile(int32_t miniCoordinate) {
 	return (float)miniCoordinate * ortho_tilesPerMiniUnit;
 }
 
@@ -137,8 +137,8 @@ FVector3D ortho_miniToFloatingTile(const IVector3D& miniPosition) {
 	);
 }
 
-int ortho_floatingTileToMini(float tileCoordinate) {
-	return (int)round((double)tileCoordinate * (double)ortho_miniUnitsPerTile);
+int32_t ortho_floatingTileToMini(float tileCoordinate) {
+	return (int32_t)round((double)tileCoordinate * (double)ortho_miniUnitsPerTile);
 }
 
 IVector3D ortho_floatingTileToMini(const FVector3D& tilePosition) {

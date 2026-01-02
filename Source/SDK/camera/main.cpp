@@ -21,7 +21,7 @@ static bool showCursor = false;
 // The window handle
 static Window window;
 
-static int createRoomPart(Model model, const FVector3D &min, const FVector3D &max) {
+static int32_t createRoomPart(Model model, const FVector3D &min, const FVector3D &max) {
 	// Add positions
 	model_addPoint(model, FVector3D(min.x, min.y, min.z)); // 0: Left-down-near
 	model_addPoint(model, FVector3D(min.x, min.y, max.z)); // 1: Left-down-far
@@ -32,7 +32,7 @@ static int createRoomPart(Model model, const FVector3D &min, const FVector3D &ma
 	model_addPoint(model, FVector3D(max.x, max.y, min.z)); // 6: Right-up-near
 	model_addPoint(model, FVector3D(max.x, max.y, max.z)); // 7: Right-up-far
 	// Create a part for the polygons
-	int part = model_addEmptyPart(model, U"cube");
+	int32_t part = model_addEmptyPart(model, U"cube");
 	// Polygons using default texture coordinates on the 4 corners of the texture
 	model_addQuad(model, part, 1, 0, 2, 3); // Left quad
 	model_addQuad(model, part, 4, 5, 7, 6); // Right quad
@@ -190,8 +190,8 @@ void dsrMain(List<String> args) {
 		ImageF32 depthBuffer = window_getDepthBuffer(window);
 
 		// Get target size
-		int targetWidth = image_getWidth(colorBuffer);
-		int targetHeight = image_getHeight(colorBuffer);
+		int32_t targetWidth = image_getWidth(colorBuffer);
+		int32_t targetHeight = image_getHeight(colorBuffer);
 
 		// Reset the mouse to the center of the canvas when getting too far out.
 		cursorOrigin = IVector2D(targetWidth / 2, targetHeight / 2);

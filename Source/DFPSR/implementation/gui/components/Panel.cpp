@@ -57,8 +57,8 @@ bool Panel::isContainer() const {
 }
 
 void Panel::generateGraphics() {
-	int width = this->location.width();
-	int height = this->location.height();
+	int32_t width = this->location.width();
+	int32_t height = this->location.height();
 	if (width < 1) { width = 1; }
 	if (height < 1) { height = 1; }
 	if (!this->hasImages) {

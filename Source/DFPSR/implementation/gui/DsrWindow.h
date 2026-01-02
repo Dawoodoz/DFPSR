@@ -50,7 +50,7 @@ private:
 	// The inner window dimensions that are synchronized with the canvas.
 	//   The backend on the contrary may have its size changed before the resize event has been fetched.
 	//   Getting the asynchronous window dimensions directly wouldn't be synchronized with the canvas.
-	int innerWidth, innerHeight;
+	int32_t innerWidth, innerHeight;
 	// The last mouse position is used to create new mouse-move events when pixelScale changes.
 	IVector2D lastMousePosition;
 public:
@@ -68,9 +68,9 @@ public:
 		Handle<T> findComponentByName(ReadableString name) const {
 			return handle_dynamicCast<T>(this->findComponentByName(name));
 		}
-		Handle<VisualComponent> findComponentByNameAndIndex(ReadableString name, int index) const;
+		Handle<VisualComponent> findComponentByNameAndIndex(ReadableString name, int32_t index) const;
 		template <typename T>
-		Handle<T> findComponentByNameAndIndex(ReadableString name, int index) const {
+		Handle<T> findComponentByNameAndIndex(ReadableString name, int32_t index) const {
 			return handle_dynamicCast<T>(this->findComponentByNameAndIndex(name, index));
 		}
 
@@ -107,12 +107,12 @@ public:
 
 private:
 	// Upscaling information
-		int pixelScale = 1;
+		int32_t pixelScale = 1;
 		AlignedImageRgbaU8 lowResolutionCanvas;
 public:
 	// Upscaling interface
-		int getPixelScale() const;
-		void setPixelScale(int scale);
+		int32_t getPixelScale() const;
+		void setPixelScale(int32_t scale);
 
 public:
 	// Graphics
@@ -132,9 +132,9 @@ public:
 		// Show the canvas when an image is ready
 		void showCanvas();
 		// Canvas width in the pre-upscale resolution
-		int getCanvasWidth();
+		int32_t getCanvasWidth();
 		// Canvas height in the pre-upscale resolution
-		int getCanvasHeight();
+		int32_t getCanvasHeight();
 
 public:
 	// Full-screen
@@ -149,9 +149,9 @@ public:
 public:
 	// Access to backend window
 		// Full width after upscaling
-		int getInnerWidth();
+		int32_t getInnerWidth();
 		// Full height after upscaling
-		int getInnerHeight();
+		int32_t getInnerHeight();
 		String getTitle();
 		void setTitle(const String &newTitle);
 };

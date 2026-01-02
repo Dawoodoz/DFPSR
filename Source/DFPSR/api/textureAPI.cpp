@@ -28,7 +28,7 @@
 
 namespace dsr {
 
-static int findLog2Size(uint32_t size) {
+static int32_t findLog2Size(uint32_t size) {
 	static const uint32_t maxLog2Size = 15; // 32768 pixels
 	for (uint32_t log2Size = 0; log2Size < maxLog2Size; log2Size++) {
 		if ((uint32_t(1u) << log2Size) >= size) {
