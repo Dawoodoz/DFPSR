@@ -85,7 +85,7 @@ public:
 	void declareAttribute(const String &name) {
 		this->attributes.push(PersistentAttribute(name));
 	}
-	int length() {
+	int32_t length() {
 		return this->attributes.length();
 	}
 };
@@ -109,8 +109,8 @@ public:
 	//   Return false if the child object was rejected
 	//   Make sure that connections that would create an infinite loop are rejected
 	virtual bool addChild(Handle<Persistent> child);
-	virtual int getChildCount() const;
-	virtual Handle<Persistent> getChild(int index) const;
+	virtual int32_t getChildCount() const;
+	virtual Handle<Persistent> getChild(int32_t index) const;
 public:
 	// Override for new compound types
 

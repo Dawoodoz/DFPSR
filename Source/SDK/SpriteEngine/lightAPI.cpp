@@ -32,12 +32,12 @@ void directedLight(const FMatrix3x3& normalToWorldSpace, OrderedImageRgbaU8& lig
 	  lightBuffer, normalBuffer, reverseLightDirection, colorR, colorG, colorB](const IRect& bound) mutable {
 		SafePointer<uint8_t> lightRow = image_getSafePointer_channels(lightBuffer, bound.top());
 		SafePointer<uint32_t> normalRow = image_getSafePointer(normalBuffer, bound.top());
-		int lightStride = image_getStride(lightBuffer);
-		int normalStride = image_getStride(normalBuffer);
-		for (int y = bound.top(); y < bound.bottom(); y++) {
+		int32_t lightStride = image_getStride(lightBuffer);
+		int32_t normalStride = image_getStride(normalBuffer);
+		for (int32_t y = bound.top(); y < bound.bottom(); y++) {
 			SafePointer<uint8_t> lightPixel = lightRow;
 			SafePointer<uint32_t> normalPixel = normalRow;
-			for (int x = bound.left(); x < bound.right(); x += laneCountX_32Bit) {
+			for (int32_t x = bound.left(); x < bound.right(); x += laneCountX_32Bit) {
 				// Read surface normals
 				U32xX normalColor = U32xX::readAligned(normalPixel, "directedLight: reading normal");
 				// TODO: Port SIMD3D to handle arbitrary vector lengths.
@@ -73,12 +73,12 @@ void addDirectedLight(const OrthoView& camera, OrderedImageRgbaU8& lightBuffer, 
 	directedLight<true>(camera.normalToWorldSpace, lightBuffer, normalBuffer, lightDirection, lightIntensity, lightColor);
 }
 
-static IRect calculateBound(const OrthoView& camera, const IVector2D& worldCenter, OrderedImageRgbaU8& lightBuffer, const FVector3D& lightSpacePosition, float lightRadius, int alignmentPixels) {
+static IRect calculateBound(const OrthoView& camera, const IVector2D& worldCenter, OrderedImageRgbaU8& lightBuffer, const FVector3D& lightSpacePosition, float lightRadius, int32_t alignmentPixels) {
 	// Get the light's 2D position in pixels
 	FVector3D rotatedPosition = camera.lightSpaceToScreenDepth.transform(lightSpacePosition);
 	IVector2D pixelCenter = IVector2D(rotatedPosition.x, rotatedPosition.y) + worldCenter;
 	// Use the light-space X axis to convert the sphere's radius into pixels
-	int pixelRadius = lightRadius * camera.lightSpaceToScreenDepth.xAxis.x;
+	int32_t pixelRadius = lightRadius * camera.lightSpaceToScreenDepth.xAxis.x;
 	// Check if the location can be seen
 	IRect imageBound = image_getBound(lightBuffer);
 	if (pixelCenter.x < -pixelRadius
@@ -92,8 +92,8 @@ static IRect calculateBound(const OrthoView& camera, const IVector2D& worldCente
 	IRect result = IRect::cut(imageBound, IRect(pixelCenter.x - pixelRadius, pixelCenter.y - pixelRadius, pixelRadius * 2.0f, pixelRadius * 2.0f));
 	// Round out to multiples of SIMD vectors
 	if (result.hasArea() && alignmentPixels > 1) {
-		int left = roundDown(result.left(), alignmentPixels);
-		int right = roundUp(result.right(), alignmentPixels);
+		int32_t left = roundDown(result.left(), alignmentPixels);
+		int32_t right = roundUp(result.right(), alignmentPixels);
 		result = IRect(left, result.top(), right - left, result.height());
 	}
 	return result;
@@ -124,8 +124,8 @@ static float getShadowTransparency(SafePointer<float> pixelData, int32_t width, 
 	// Project and round to pixels
 	float reciDepth = 1.0f / depth;
 	float scale = halfWidth * reciDepth;
-	int32_t sampleX = (int)(halfWidth + (slopeSide * scale));
-	int32_t sampleY = (int)(halfWidth - (slopeUp * scale));
+	int32_t sampleX = (int32_t)(halfWidth + (slopeSide * scale));
+	int32_t sampleY = (int32_t)(halfWidth - (slopeUp * scale));
 	// Clamp to local view coordinates
 	int32_t maxPixel = width - 1;
 	if (sampleX < 0) { sampleX = 0; }
@@ -201,9 +201,9 @@ static void addPointLightSuper(const OrthoView& camera, const IVector2D& worldCe
 			// -> (x0, n+1), (x1, n+1), (x2, n+1), (x3, n+1)
 			F32xXx3 dy1 = F32xXx3(dy);
 			// Get strides
-			int lightStride = image_getStride(lightBuffer);
-			int normalStride = image_getStride(normalBuffer);
-			int heightStride = image_getStride(heightBuffer);
+			int32_t lightStride = image_getStride(lightBuffer);
+			int32_t normalStride = image_getStride(normalBuffer);
+			int32_t heightStride = image_getStride(heightBuffer);
 			// Get pointers
 			SafePointer<uint8_t> lightRow = image_getSafePointer_channels(lightBuffer, bound.top()) + bound.left() * 4;
 			SafePointer<uint32_t> normalRow = image_getSafePointer(normalBuffer, bound.top()) + bound.left();
@@ -218,14 +218,14 @@ static void addPointLightSuper(const OrthoView& camera, const IVector2D& worldCe
 				shadowCubeCenter = (float)shadowCubeWidth * 0.5f;
 			}
 			// Loop over the pixels to add light
-			for (int y = bound.top(); y < bound.bottom(); y++) {
+			for (int32_t y = bound.top(); y < bound.bottom(); y++) {
 				// Initiate the leftmost pixels before iterating to the right
 				F32xXx3 lightBasePixelxX = lightBaseRowX;
 				SafePointer<uint8_t> lightPixel = lightRow;
 				SafePointer<uint32_t> normalPixel = normalRow;
 				SafePointer<float> heightPixel = heightRow;
 				// Iterate over 16-bit pixels 8 at a time
-				for (int x = bound.left(); x < bound.right(); x += laneCountX_32Bit) {
+				for (int32_t x = bound.left(); x < bound.right(); x += laneCountX_32Bit) {
 					// Read pixel height
 					F32xX depthOffset = F32xX::readAligned(heightPixel, "addPointLight: reading height");
 					// Extrude the pixel using positive values towards the camera to represent another height
@@ -286,21 +286,21 @@ void addPointLight(const OrthoView& camera, const IVector2D& worldCenter, Ordere
 
 void blendLight(AlignedImageRgbaU8& colorBuffer, const OrderedImageRgbaU8& diffuseBuffer, const OrderedImageRgbaU8& lightBuffer) {
 	PackOrder targetOrder = PackOrder::getPackOrder(image_getPackOrderIndex(colorBuffer));
-	int width = image_getWidth(colorBuffer);
-	int height = image_getHeight(colorBuffer);
-	threadedSplit(0, height, [colorBuffer, diffuseBuffer, lightBuffer, targetOrder, width](int startIndex, int stopIndex) mutable {
+	int32_t width = image_getWidth(colorBuffer);
+	int32_t height = image_getHeight(colorBuffer);
+	threadedSplit(0, height, [colorBuffer, diffuseBuffer, lightBuffer, targetOrder, width](int32_t startIndex, int32_t stopIndex) mutable {
 		SafePointer<uint32_t> targetRow = image_getSafePointer(colorBuffer, startIndex);
 		SafePointer<uint32_t> diffuseRow = image_getSafePointer(diffuseBuffer, startIndex);
 		SafePointer<uint32_t> lightRow = image_getSafePointer(lightBuffer, startIndex);
-		int targetStride = image_getStride(colorBuffer);
-		int diffuseStride = image_getStride(diffuseBuffer);
-		int lightStride = image_getStride(lightBuffer);
+		int32_t targetStride = image_getStride(colorBuffer);
+		int32_t diffuseStride = image_getStride(diffuseBuffer);
+		int32_t lightStride = image_getStride(lightBuffer);
 		F32xX scale = F32xX(1.0 / 128.0f);
-		for (int y = startIndex; y < stopIndex; y++) {
+		for (int32_t y = startIndex; y < stopIndex; y++) {
 			SafePointer<uint32_t> targetPixel = targetRow;
 			SafePointer<uint32_t> diffusePixel = diffuseRow;
 			SafePointer<uint32_t> lightPixel = lightRow;
-			for (int x = 0; x < width; x += laneCountX_32Bit) {
+			for (int32_t x = 0; x < width; x += laneCountX_32Bit) {
 				U32xX diffuse = U32xX::readAligned(diffusePixel, "blendLight: reading diffuse");
 				U32xX light = U32xX::readAligned(lightPixel, "blendLight: reading light");
 				F32xX red = (floatFromU32(packOrder_getRed(diffuse)) * floatFromU32(packOrder_getRed(light))) * scale;

@@ -289,7 +289,7 @@ namespace dsr {
 	}
 
 	// Calculates the largest power of two allocation size that does not overflow a pointer on the target platform.
-	constexpr int calculateBinCount() {
+	constexpr int32_t calculateBinCount() {
 		intptr_t p = 0;
 		while (true) {
 			uintptr_t result = getBinSize(p);
@@ -302,7 +302,7 @@ namespace dsr {
 	}
 
 	// The index of the last used bin.
-	static const int MAX_BIN_COUNT = calculateBinCount();
+	static const int32_t MAX_BIN_COUNT = calculateBinCount();
 
 	static BinIndex getBinIndex(uintptr_t minimumSize, intptr_t minimumBin) {
 		for (intptr_t p = minimumBin; p < MAX_BIN_COUNT; p++) {
@@ -316,7 +316,7 @@ namespace dsr {
 	}
 
 	// The index of the first used bin, which is also the number of unused bins.
-	static const int MIN_BIN_COUNT = getBinIndex(heap_getHeapAlignment(), 0);
+	static const int32_t MIN_BIN_COUNT = getBinIndex(heap_getHeapAlignment(), 0);
 
 	static const HeapFlag heapFlag_recycled = 1 << 0;
 	struct HeapHeader : public AllocationHeader {
@@ -761,7 +761,7 @@ namespace dsr {
 				}
 				// Remove the destructor so that it is not called again for the next allocation.
 				header->destructor = HeapDestructor();
-				int binIndex = header->binIndex;
+				int32_t binIndex = header->binIndex;
 				if (binIndex >= MAX_BIN_COUNT) {
 					printf("Heap error: Out of bound recycling bin index in corrupted head of freed allocation!\n");
 				} else {

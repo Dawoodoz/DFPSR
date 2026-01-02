@@ -37,8 +37,8 @@ enum class Filter { Solid, Alpha };
 namespace constants {
 
 // Used for rasterization of triangles using integer math to prevent gaps
-static const int unitsPerPixel = 256;
-static const int unitsPerHalfPixel = unitsPerPixel / 2;
+static const int32_t unitsPerPixel = 256;
+static const int32_t unitsPerHalfPixel = unitsPerPixel / 2;
 
 }
 

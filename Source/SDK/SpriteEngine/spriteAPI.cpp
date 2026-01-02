@@ -42,9 +42,9 @@ static IVector3D FVector3DToIVector3D(const FVector3D& v) {
 }
 
 struct SpriteConfig {
-	int centerX, centerY; // The sprite's origin in pixels relative to the upper left corner
-	int frameRows; // The atlas has one row for each frame
-	int propertyColumns; // The atlas has one column for each type of information
+	int32_t centerX, centerY; // The sprite's origin in pixels relative to the upper left corner
+	int32_t frameRows; // The atlas has one row for each frame
+	int32_t propertyColumns; // The atlas has one column for each type of information
 	// The 3D model's bound in tile units
 	//   The height image goes from 0 at minimum Y to 255 at maximum Y
 	FVector3D minBound, maxBound;
@@ -52,7 +52,7 @@ struct SpriteConfig {
 	List<FVector3D> points; // 3D points for the triangles to refer to by index
 	List<int32_t> triangleIndices; // Triangle indices stored in multiples of three integers
 	// Construction
-	SpriteConfig(int centerX, int centerY, int frameRows, int propertyColumns, FVector3D minBound, FVector3D maxBound)
+	SpriteConfig(int32_t centerX, int32_t centerY, int32_t frameRows, int32_t propertyColumns, FVector3D minBound, FVector3D maxBound)
 	: centerX(centerX), centerY(centerY), frameRows(frameRows), propertyColumns(propertyColumns), minBound(minBound), maxBound(maxBound) {}
 	explicit SpriteConfig(const ReadableString& content) {
 		config_parse_ini(content, [this](const ReadableString& block, const ReadableString& key, const ReadableString& value) {
@@ -76,7 +76,7 @@ struct SpriteConfig {
 					} else {
 						this->points.clear();
 						this->points.reserve(values.length() / 3);
-						for (int v = 0; v < values.length(); v += 3) {
+						for (int32_t v = 0; v < values.length(); v += 3) {
 							this->points.push(FVector3D(string_toDouble(values[v]), string_toDouble(values[v+1]), string_toDouble(values[v+2])));
 						}
 					}
@@ -87,7 +87,7 @@ struct SpriteConfig {
 					} else {
 						this->triangleIndices.clear();
 						this->triangleIndices.reserve(values.length());
-						for (int v = 0; v < values.length(); v++) {
+						for (int32_t v = 0; v < values.length(); v++) {
 							this->triangleIndices.push(string_toInteger(values[v]));
 						}
 					}
@@ -102,18 +102,18 @@ struct SpriteConfig {
 	// Add model as a persistent shadow caster in the sprite configuration
 	void appendShadow(const Model& model) {
 		points.reserve(this->points.length() + model_getNumberOfPoints(model));
-		for (int p = 0; p < model_getNumberOfPoints(model); p++) {
+		for (int32_t p = 0; p < model_getNumberOfPoints(model); p++) {
 			this->points.push(model_getPoint(model, p));
 		}
-		for (int part = 0; part < model_getNumberOfParts(model); part++) {
-			for (int poly = 0; poly < model_getNumberOfPolygons(model, part); poly++) {
-				int vertexCount = model_getPolygonVertexCount(model, part, poly);
-				int vertA = 0;
-				int indexA = model_getVertexPointIndex(model, part, poly, vertA);
-				for (int vertB = 1; vertB < vertexCount - 1; vertB++) {
-					int vertC = vertB + 1;
-					int indexB = model_getVertexPointIndex(model, part, poly, vertB);
-					int indexC = model_getVertexPointIndex(model, part, poly, vertC);
+		for (int32_t part = 0; part < model_getNumberOfParts(model); part++) {
+			for (int32_t poly = 0; poly < model_getNumberOfPolygons(model, part); poly++) {
+				int32_t vertexCount = model_getPolygonVertexCount(model, part, poly);
+				int32_t vertA = 0;
+				int32_t indexA = model_getVertexPointIndex(model, part, poly, vertA);
+				for (int32_t vertB = 1; vertB < vertexCount - 1; vertB++) {
+					int32_t vertC = vertB + 1;
+					int32_t indexB = model_getVertexPointIndex(model, part, poly, vertB);
+					int32_t indexC = model_getVertexPointIndex(model, part, poly, vertC);
 					triangleIndices.push(indexA); triangleIndices.push(indexB); triangleIndices.push(indexC);
 				}
 			}
@@ -133,7 +133,7 @@ struct SpriteConfig {
 		// Low-resolution 3D shape
 		if (this->points.length() > 0) {
 			string_append(result, U"Points=");
-			for (int p = 0; p < this->points.length(); p++) {
+			for (int32_t p = 0; p < this->points.length(); p++) {
 				if (p > 0) {
 					string_append(result, U", ");
 				}
@@ -141,7 +141,7 @@ struct SpriteConfig {
 			}
 			string_append(result, U"\n");
 			string_append(result, U"TriangleIndices=");
-			for (int i = 0; i < this->triangleIndices.length(); i+=3) {
+			for (int32_t i = 0; i < this->triangleIndices.length(); i+=3) {
 				if (i > 0) {
 					string_append(result, U", ");
 				}
@@ -156,11 +156,11 @@ struct SpriteConfig {
 static ImageF32 scaleHeightImage(const ImageRgbaU8& heightImage, float minHeight, float maxHeight, const ImageRgbaU8& colorImage) {
 	float scale = (maxHeight - minHeight) / 255.0f;
 	float offset = minHeight;
-	int width = image_getWidth(heightImage);
-	int height = image_getHeight(heightImage);
+	int32_t width = image_getWidth(heightImage);
+	int32_t height = image_getHeight(heightImage);
 	ImageF32 result = image_create_F32(width, height);
-	for (int y = 0; y < height; y++) {
-		for (int x = 0; x < width; x++) {
+	for (int32_t y = 0; y < height; y++) {
+		for (int32_t x = 0; x < width; x++) {
 			float value = image_readPixel_clamp(heightImage, x, y).red;
 			if (image_readPixel_clamp(colorImage, x, y).alpha > 127) {
 				image_writePixel(result, x, y, (value * scale) + offset);
@@ -208,9 +208,9 @@ public:
 		  ceil(configuration.maxBound.y * ortho_miniUnitsPerTile),
 		  ceil(configuration.maxBound.z * ortho_miniUnitsPerTile)
 		);
-		int width = image_getWidth(loadedAtlas) / configuration.propertyColumns;
-		int height = image_getHeight(loadedAtlas) / configuration.frameRows;
-		for (int a = 0; a < configuration.frameRows; a++) {
+		int32_t width = image_getWidth(loadedAtlas) / configuration.propertyColumns;
+		int32_t height = image_getHeight(loadedAtlas) / configuration.frameRows;
+		for (int32_t a = 0; a < configuration.frameRows; a++) {
 			ImageRgbaU8 colorImage = image_getSubImage(loadedAtlas, IRect(0, a * height, width, height));
 			ImageRgbaU8 heightImage = image_getSubImage(loadedAtlas, IRect(width, a * height, width, height));
 			ImageRgbaU8 normalImage = image_getSubImage(loadedAtlas, IRect(width * 2, a * height, width, height));
@@ -220,19 +220,19 @@ public:
 		// Create a model for rendering shadows
 		if (configuration.points.length() > 0) {
 			this->shadowModel = model_create();
-			for (int p = 0; p < configuration.points.length(); p++) {
+			for (int32_t p = 0; p < configuration.points.length(); p++) {
 				model_addPoint(this->shadowModel, configuration.points[p]);
 			}
 			model_addEmptyPart(this->shadowModel, U"Shadow");
-			for (int t = 0; t < configuration.triangleIndices.length(); t+=3) {
+			for (int32_t t = 0; t < configuration.triangleIndices.length(); t+=3) {
 				model_addTriangle(this->shadowModel, 0, configuration.triangleIndices[t], configuration.triangleIndices[t+1], configuration.triangleIndices[t+2]);
 			}
 		}
 	}
 public:
 	// TODO: Force frame count to a power of two or replace modulo with look-up tables in sprite configurations.
-	int getFrameIndex(Direction direction) {
-		const int frameFromDir[8] = {4, 1, 5, 2, 6, 3, 7, 0};
+	int32_t getFrameIndex(Direction direction) {
+		const int32_t frameFromDir[8] = {4, 1, 5, 2, 6, 3, 7, 0};
 		return frameFromDir[correctDirection(direction)] % this->frames.length();
 	}
 };
@@ -285,35 +285,35 @@ public:
 
 // Global list of all sprite types ever loaded
 List<SpriteType> spriteTypes;
-int spriteWorld_loadSpriteTypeFromFile(const String& folderPath, const String& spriteName) {
+int32_t spriteWorld_loadSpriteTypeFromFile(const String& folderPath, const String& spriteName) {
 	return spriteTypes.pushConstructGetIndex(folderPath, spriteName);
 }
-int spriteWorld_getSpriteTypeCount() {
+int32_t spriteWorld_getSpriteTypeCount() {
 	return spriteTypes.length();
 }
-String spriteWorld_getSpriteTypeName(int index) {
+String spriteWorld_getSpriteTypeName(int32_t index) {
 	return spriteTypes[index].name;
 }
 
 // Global list of all model types ever loaded
 List<ModelType> modelTypes;
-int spriteWorld_loadModelTypeFromFile(const String& folderPath, const String& visibleModelName, const String& shadowModelName) {
+int32_t spriteWorld_loadModelTypeFromFile(const String& folderPath, const String& visibleModelName, const String& shadowModelName) {
 	return modelTypes.pushConstructGetIndex(folderPath, visibleModelName, shadowModelName);
 }
-int spriteWorld_getModelTypeCount() {
+int32_t spriteWorld_getModelTypeCount() {
 	return modelTypes.length();
 }
-String spriteWorld_getModelTypeName(int index) {
+String spriteWorld_getModelTypeName(int32_t index) {
 	return modelTypes[index].name;
 }
 
-static int getSpriteFrameIndex(const SpriteInstance& sprite, OrthoView view) {
+static int32_t getSpriteFrameIndex(const SpriteInstance& sprite, OrthoView view) {
 	return spriteTypes[sprite.typeIndex].getFrameIndex(view.worldDirection + sprite.direction);
 }
 
 // Returns a 2D bounding box of affected target pixels
 static IRect drawSprite(const SpriteInstance& sprite, const OrthoView& ortho, const IVector2D& worldCenter, ImageF32 targetHeight, ImageRgbaU8 targetColor, ImageRgbaU8 targetNormal) {
-	int frameIndex = getSpriteFrameIndex(sprite, ortho);
+	int32_t frameIndex = getSpriteFrameIndex(sprite, ortho);
 	const SpriteFrame* frame = &spriteTypes[sprite.typeIndex].frames[frameIndex];
 	IVector2D screenSpace = ortho.miniTilePositionToScreenPixel(sprite.location, worldCenter) - frame->centerPoint;
 	float heightOffset = sprite.location.y * ortho_tilesPerMiniUnit;
@@ -348,12 +348,12 @@ FMatrix3x3 spriteDirections[8] = {
 };
 
 struct CubeMapF32 {
-	int resolution;           // The width and height of each shadow depth image or 0 if no shadows are casted
+	int32_t resolution;           // The width and height of each shadow depth image or 0 if no shadows are casted
 	AlignedImageF32 cubeMap;  // A vertical sequence of reciprocal depth images for the six sides of the cube
 	ImageF32 cubeMapViews[6]; // Sub-images sharing their allocations with cubeMap as sub-images
-	explicit CubeMapF32(int resolution) : resolution(resolution) {
+	explicit CubeMapF32(int32_t resolution) : resolution(resolution) {
 		this->cubeMap = image_create_F32(resolution, resolution * 6);
-		for (int s = 0; s < 6; s++) {
+		for (int32_t s = 0; s < 6; s++) {
 			this->cubeMapViews[s] = image_getSubImage(this->cubeMap, IRect(0, s * resolution, resolution, resolution));
 		}
 	}
@@ -379,7 +379,7 @@ public:
 			// Place the model relative to the light source's position, to make rendering in light-space easier
 			Transform3D modelToWorldTransform = modelInstance.location;
 			modelToWorldTransform.position = modelToWorldTransform.position - this->position;
-			for (int s = 0; s < 6; s++) {
+			for (int32_t s = 0; s < 6; s++) {
 				Camera camera = Camera::createPerspective(Transform3D(FVector3D(), ShadowCubeMapSides[s] * normalToWorld), shadowTarget.resolution, shadowTarget.resolution);
 				model_renderDepth(model, modelToWorldTransform, shadowTarget.cubeMapViews[s], camera);
 			}
@@ -391,7 +391,7 @@ public:
 			if (model_exists(model)) {
 				// Place the model relative to the light source's position, to make rendering in light-space easier
 				Transform3D modelToWorldTransform = Transform3D(ortho_miniToFloatingTile(spriteInstance.location) - this->position, spriteDirections[spriteInstance.direction]);
-				for (int s = 0; s < 6; s++) {
+				for (int32_t s = 0; s < 6; s++) {
 					Camera camera = Camera::createPerspective(Transform3D(FVector3D(), ShadowCubeMapSides[s] * normalToWorld), shadowTarget.resolution, shadowTarget.resolution);
 					model_renderDepth(model, modelToWorldTransform, shadowTarget.cubeMapViews[s], camera);
 				}
@@ -446,7 +446,7 @@ public:
 	}
 };
 
-IVector3D getBoxCorner(const IVector3D& minBound, const IVector3D& maxBound, int cornerIndex) {
+IVector3D getBoxCorner(const IVector3D& minBound, const IVector3D& maxBound, int32_t cornerIndex) {
 	assert(cornerIndex >= 0 && cornerIndex < 8);
 	return IVector3D(
 	  ((uint32_t)cornerIndex & 1u) ? maxBound.x : minBound.x,
@@ -457,7 +457,7 @@ IVector3D getBoxCorner(const IVector3D& minBound, const IVector3D& maxBound, int
 
 static bool orthoCullingTest(const OrthoView& ortho, const IVector3D& minBound, const IVector3D& maxBound, const IRect& seenRegion) {
 	IVector2D corners[8];
-	for (int c = 0; c < 8; c++) {
+	for (int32_t c = 0; c < 8; c++) {
 		corners[c] = ortho.miniTileOffsetToScreenPixel(getBoxCorner(minBound, maxBound, c));
 	}
 	if (corners[0].x < seenRegion.left()
@@ -511,10 +511,10 @@ enum class BlockState {
 };
 class BackgroundBlock {
 public:
-	static const int blockSize = 512;
-	static const int maxDistance = blockSize * 2;
+	static const int32_t blockSize = 512;
+	static const int32_t maxDistance = blockSize * 2;
 	IRect worldRegion;
-	int cameraId = 0;
+	int32_t cameraId = 0;
 	BlockState state = BlockState::Unused;
 	OrderedImageRgbaU8 diffuseBuffer;
 	OrderedImageRgbaU8 normalBuffer;
@@ -553,8 +553,8 @@ public:
 	}
 	void draw(ImageRgbaU8& diffuseTarget, ImageRgbaU8& normalTarget, ImageF32& heightTarget, const IRect& seenRegion) const {
 		if (this->state != BlockState::Unused) {
-			int left = this->worldRegion.left() - seenRegion.left();
-			int top = this->worldRegion.top() - seenRegion.top();
+			int32_t left = this->worldRegion.left() - seenRegion.left();
+			int32_t top = this->worldRegion.top() - seenRegion.top();
 			draw_copy(diffuseTarget, this->diffuseBuffer, left, top);
 			draw_copy(normalTarget, this->normalBuffer, left, top);
 			draw_copy(heightTarget, this->heightBuffer, left, top);
@@ -585,7 +585,7 @@ public:
 	List<PointLight> temporaryPointLights;
 	List<DirectedLight> temporaryDirectedLights;
 	// View
-	int cameraIndex = 0;
+	int32_t cameraIndex = 0;
 	IVector3D cameraLocation;
 	// Deferred rendering
 	OrderedImageRgbaU8 diffuseBuffer;
@@ -599,17 +599,17 @@ public:
 	DirtyRectangles dirtyBackground;
 private:
 	// Reused buffers
-	int shadowResolution;
+	int32_t shadowResolution;
 	CubeMapF32 temporaryShadowMap;
 public:
-	SpriteWorldImpl(const OrthoSystem &ortho, int shadowResolution)
+	SpriteWorldImpl(const OrthoSystem &ortho, int32_t shadowResolution)
 	: ortho(ortho), passiveSprites(ortho_miniUnitsPerTile * 64), passiveModels(ortho_miniUnitsPerTile * 64), shadowResolution(shadowResolution), temporaryShadowMap(shadowResolution) {}
 public:
 	// Post-condition: Returns the number of redrawn background blocks. (0 or 1)
-	int updateBlockAt(const IRect& blockRegion, const IRect& seenRegion) {
-		int unusedBlockIndex = -1;
+	int32_t updateBlockAt(const IRect& blockRegion, const IRect& seenRegion) {
+		int32_t unusedBlockIndex = -1;
 		// Find an existing block
-		for (int b = 0; b < this->backgroundBlocks.length(); b++) {
+		for (int32_t b = 0; b < this->backgroundBlocks.length(); b++) {
 			BackgroundBlock* currentBlockPtr = &this->backgroundBlocks[b];
 			if (currentBlockPtr->state != BlockState::Unused) {
 				// Check direction
@@ -653,9 +653,9 @@ public:
 		}
 		return 1;
 	}
-	void invalidateBlockAt(int left, int top) {
+	void invalidateBlockAt(int32_t left, int32_t top) {
 		// Find an existing block
-		for (int b = 0; b < this->backgroundBlocks.length(); b++) {
+		for (int32_t b = 0; b < this->backgroundBlocks.length(); b++) {
 			BackgroundBlock* currentBlockPtr = &this->backgroundBlocks[b];
 			// Assuming that alternative camera angles will be removed when drawing next time
 			if (currentBlockPtr->state == BlockState::Ready
@@ -669,8 +669,8 @@ public:
 	// Make sure that each pixel in seenRegion is occupied by an updated background block
 	// If maxUpdates is larger than -1, the work is scheduled to do at most maxUpdates per call.
 	// Post-condition: Returns the number of redrawn background blocks.
-	int updateBlocks(const IRect& seenRegion, int maxUpdates = -1) {
-		int updateCount = 0;
+	int32_t updateBlocks(const IRect& seenRegion, int32_t maxUpdates = -1) {
+		int32_t updateCount = 0;
 		// Round inclusive pixel indices down to containing blocks and iterate over them in strides along x and y
 		int64_t roundedLeft = roundDown(seenRegion.left(), BackgroundBlock::blockSize);
 		int64_t roundedTop = roundDown(seenRegion.top(), BackgroundBlock::blockSize);
@@ -695,14 +695,14 @@ public:
 		assert(image_getWidth(heightTarget) == seenRegion.width() && image_getHeight(heightTarget) == seenRegion.height());
 		this->dirtyBackground.setTargetResolution(seenRegion.width(), seenRegion.height());
 		// Draw passive sprites and models to blocks
-		int forcedUpdates = this->updateBlocks(seenRegion);
+		int32_t forcedUpdates = this->updateBlocks(seenRegion);
 		// If no critical updates were made to the background
 		if (forcedUpdates < 1) {
 			// Schedule drawing of up to one block from a larger region
 			this->updateBlocks(seenRegion.expanded(128), 1);
 		}
 		// Draw background blocks to the target images
-		for (int b = 0; b < this->backgroundBlocks.length(); b++) {
+		for (int32_t b = 0; b < this->backgroundBlocks.length(); b++) {
 			#ifdef DIRTY_RECTANGLE_OPTIMIZATION
 				// Optimized version
 				for (int64_t r = 0; r < this->dirtyBackground.getRectangleCount(); r++) {
@@ -722,11 +722,11 @@ public:
 		// Reset dirty rectangles so that active sprites may record changes
 		this->dirtyBackground.noneDirty();
 		// Draw active sprites to the targets
-		for (int s = 0; s < this->temporarySprites.length(); s++) {
+		for (int32_t s = 0; s < this->temporarySprites.length(); s++) {
 			IRect drawnRegion = drawSprite(this->temporarySprites[s], this->ortho.view[this->cameraIndex], -seenRegion.upperLeft(), heightTarget, diffuseTarget, normalTarget);
 			this->dirtyBackground.makeRegionDirty(drawnRegion);
 		}
-		for (int s = 0; s < this->temporaryModels.length(); s++) {
+		for (int32_t s = 0; s < this->temporaryModels.length(); s++) {
 			IRect drawnRegion = drawModel(this->temporaryModels[s], this->ortho.view[this->cameraIndex], -seenRegion.upperLeft(), heightTarget, diffuseTarget, normalTarget);
 			this->dirtyBackground.makeRegionDirty(drawnRegion);
 		}
@@ -756,8 +756,8 @@ public:
 		IVector2D worldCenter = this->findWorldCenter(colorTarget);
 
 		// Resize when the window has resized or the buffers haven't been allocated before
-		int width = image_getWidth(colorTarget);
-		int height = image_getHeight(colorTarget);
+		int32_t width = image_getWidth(colorTarget);
+		int32_t height = image_getHeight(colorTarget);
 		if (image_getWidth(this->diffuseBuffer) != width || image_getHeight(this->diffuseBuffer) != height) {
 			this->diffuseBuffer = image_create_RgbaU8(width, height);
 			this->normalBuffer = image_create_RgbaU8(width, height);
@@ -774,7 +774,7 @@ public:
 		if (this->temporaryDirectedLights.length() > 0) {
 			startTime = time_getSeconds();
 				// Overwriting any light from the previous frame
-				for (int p = 0; p < this->temporaryDirectedLights.length(); p++) {
+				for (int32_t p = 0; p < this->temporaryDirectedLights.length(); p++) {
 					this->temporaryDirectedLights[p].illuminate(this->ortho.view[this->cameraIndex], worldCenter, this->lightBuffer, this->normalBuffer, p == 0);
 				}
 			debugText("Sun light: ", (time_getSeconds() - startTime) * 1000.0, " ms\n");
@@ -785,7 +785,7 @@ public:
 		}
 
 		// Illuminate using point lights
-		for (int p = 0; p < this->temporaryPointLights.length(); p++) {
+		for (int32_t p = 0; p < this->temporaryPointLights.length(); p++) {
 			PointLight *currentLight = &this->temporaryPointLights[p];
 			if (currentLight->shadowCasting) {
 				startTime = time_getSeconds();
@@ -794,11 +794,11 @@ public:
 				currentLight->renderPassiveShadows(this->temporaryShadowMap, this->passiveSprites, ortho.view[this->cameraIndex].normalToWorldSpace);
 				currentLight->renderPassiveShadows(this->temporaryShadowMap, this->passiveModels, ortho.view[this->cameraIndex].normalToWorldSpace);
 				// Shadows from temporary sprites
-				for (int s = 0; s < this->temporarySprites.length(); s++) {
+				for (int32_t s = 0; s < this->temporarySprites.length(); s++) {
 					currentLight->renderSpriteShadow(this->temporaryShadowMap, this->temporarySprites[s], ortho.view[this->cameraIndex].normalToWorldSpace);
 				}
 				// Shadows from temporary models
-				for (int s = 0; s < this->temporaryModels.length(); s++) {
+				for (int32_t s = 0; s < this->temporaryModels.length(); s++) {
 					currentLight->renderModelShadow(this->temporaryShadowMap, this->temporaryModels[s], ortho.view[this->cameraIndex].normalToWorldSpace);
 				}
 				debugText("Cast point-light shadows: ", (time_getSeconds() - startTime) * 1000.0, " ms\n");
@@ -815,7 +815,7 @@ public:
 	}
 };
 
-SpriteWorld spriteWorld_create(OrthoSystem ortho, int shadowResolution) {
+SpriteWorld spriteWorld_create(OrthoSystem ortho, int32_t shadowResolution) {
 	return std::make_shared<SpriteWorldImpl>(ortho, shadowResolution);
 }
 
@@ -861,7 +861,7 @@ static void get3DBounds(
 	//   This make searches a lot easier for off-centered sprites and models by belonging to a coordinate independent of the design
 	worldMinBound = FVector3DToIVector3D(transform.position);
 	worldMaxBound = FVector3DToIVector3D(transform.position);
-	for (int c = 0; c < 8; c++) {
+	for (int32_t c = 0; c < 8; c++) {
 		FVector3D miniSpaceCorner = transformedCorners[c];
 		replaceWithSmaller(worldMinBound.x, (int32_t)floor(miniSpaceCorner.x));
 		replaceWithSmaller(worldMinBound.y, (int32_t)floor(miniSpaceCorner.y));
@@ -887,7 +887,7 @@ static void getScreenBounds(SpriteWorld& world, const IVector3D& worldMinBound, 
 	FVector3D firstGlobalPixelSpaceCorner = worldToGlobalPixels.transformPoint(corners[0]);
 	globalPixelMinBound = IVector2D((int32_t)floor(firstGlobalPixelSpaceCorner.x), (int32_t)floor(firstGlobalPixelSpaceCorner.y));
 	globalPixelMaxBound = IVector2D((int32_t)ceil(firstGlobalPixelSpaceCorner.x), (int32_t)ceil(firstGlobalPixelSpaceCorner.y));
-	for (int c = 0; c < 8; c++) {
+	for (int32_t c = 0; c < 8; c++) {
 		FVector3D globalPixelSpaceCorner = worldToGlobalPixels.transformPoint(corners[c]);
 		replaceWithSmaller(globalPixelMinBound.x, (int32_t)floor(globalPixelSpaceCorner.x));
 		replaceWithSmaller(globalPixelMinBound.y, (int32_t)floor(globalPixelSpaceCorner.y));
@@ -906,7 +906,7 @@ void spriteWorld_addBackgroundSprite(SpriteWorld& world, const SpriteInstance& s
 	// Add the passive sprite to the octree
 	world->passiveSprites.insert(sprite, sprite.location, worldMinBound, worldMaxBound);
 	// Find the affected passive region and make it dirty
-	int frameIndex = getSpriteFrameIndex(sprite, world->ortho.view[world->cameraIndex]);
+	int32_t frameIndex = getSpriteFrameIndex(sprite, world->ortho.view[world->cameraIndex]);
 	const SpriteFrame* frame = &spriteTypes[sprite.typeIndex].frames[frameIndex];
 	IVector2D upperLeft = world->ortho.miniTilePositionToScreenPixel(sprite.location, world->cameraIndex, IVector2D()) - frame->centerPoint;
 	IRect region = IRect(upperLeft.x, upperLeft.y, image_getWidth(frame->colorImage), image_getHeight(frame->colorImage));
@@ -1012,7 +1012,7 @@ void spriteWorld_draw(SpriteWorld& world, AlignedImageRgbaU8& colorTarget) {
 #define BOX_LINE(INDEX_A, INDEX_B) draw_line(target, corners[INDEX_A].x, corners[INDEX_A].y, corners[INDEX_B].x, corners[INDEX_B].y, color);
 void debugDrawBound(SpriteWorld& world, const IVector2D& worldCenter, AlignedImageRgbaU8& target, const ColorRgbaI32& color, const IVector3D& minBound, const IVector3D& maxBound) {
 	IVector2D corners[8];
-	for (int c = 0; c < 8; c++) {
+	for (int32_t c = 0; c < 8; c++) {
 		// TODO: Convert to real screen pixels using the camera offset.
 		corners[c] = world->ortho.view[world->cameraIndex].miniTilePositionToScreenPixel(getBoxCorner(minBound, maxBound, c), worldCenter);
 	}
@@ -1094,12 +1094,12 @@ AlignedImageF32 spriteWorld_getHeightBuffer(SpriteWorld& world) {
 	return world->heightBuffer;
 }
 
-int spriteWorld_getCameraDirectionIndex(const SpriteWorld& world) {
+int32_t spriteWorld_getCameraDirectionIndex(const SpriteWorld& world) {
 	MUST_EXIST(world, spriteWorld_getCameraDirectionIndex);
 	return world->cameraIndex;
 }
 
-void spriteWorld_setCameraDirectionIndex(SpriteWorld& world, int index) {
+void spriteWorld_setCameraDirectionIndex(SpriteWorld& world, int32_t index) {
 	MUST_EXIST(world, spriteWorld_setCameraDirectionIndex);
 	if (index != world->cameraIndex) {
 		world->cameraIndex = index;
@@ -1127,7 +1127,7 @@ static FVector2D FVector3Dto2D(FVector3D v) {
 
 // Get the pixel bound from a projected vertex point in floating pixel coordinates
 static IRect boundFromVertex(const FVector3D& screenProjection) {
-	return IRect((int)(screenProjection.x), (int)(screenProjection.y), 1, 1);
+	return IRect((int32_t)(screenProjection.x), (int32_t)(screenProjection.y), 1, 1);
 }
 
 // Returns true iff the box might be seen using a pessimistic test
@@ -1135,7 +1135,7 @@ static IRect boundingBoxToRectangle(const FVector3D& minBound, const FVector3D& 
 	FVector3D points[8];
 	transformCorners(minBound, maxBound, objectToScreenSpace, points);
 	IRect result = boundFromVertex(points[0]);
-	for (int p = 1; p < 8; p++) {
+	for (int32_t p = 1; p < 8; p++) {
 		result = IRect::merge(result, boundFromVertex(points[p]));
 	}
 	return result;
@@ -1147,10 +1147,10 @@ static IRect getBackCulledTriangleBound(const FVector3D& a, const FVector3D& b, 
 		return IRect();
 	} else {
 		// Front facing
-		int leftBound = (int)std::min(std::min(a.x, b.x), c.x);
-		int topBound = (int)std::min(std::min(a.y, b.y), c.y);
-		int rightBound = (int)(std::max(std::max(a.x, b.x), c.x)) + 1;
-		int bottomBound = (int)(std::max(std::max(a.y, b.y), c.y)) + 1;
+		int32_t leftBound = (int32_t)std::min(std::min(a.x, b.x), c.x);
+		int32_t topBound = (int32_t)std::min(std::min(a.y, b.y), c.y);
+		int32_t rightBound = (int32_t)(std::max(std::max(a.x, b.x), c.x)) + 1;
+		int32_t bottomBound = (int32_t)(std::max(std::max(a.y, b.y), c.y)) + 1;
 		return IRect(leftBound, topBound, rightBound - leftBound, bottomBound - topBound);
 	}
 }
@@ -1159,10 +1159,10 @@ static FVector3D normalFromPoints(const FVector3D& A, const FVector3D& B, const 
     return normalize(crossProduct(B - A, C - A));
 }
 
-static FVector3D getAverageNormal(const Model& model, int part, int poly) {
-	int vertexCount = model_getPolygonVertexCount(model, part, poly);
+static FVector3D getAverageNormal(const Model& model, int32_t part, int32_t poly) {
+	int32_t vertexCount = model_getPolygonVertexCount(model, part, poly);
 	FVector3D normalSum;
-	for (int t = 0; t < vertexCount - 2; t++) {
+	for (int32_t t = 0; t < vertexCount - 2; t++) {
 		normalSum = normalSum + normalFromPoints(
 		  model_getVertexPosition(model, part, poly, 0),
 		  model_getVertexPosition(model, part, poly, t + 1),
@@ -1176,11 +1176,11 @@ DenseModel DenseModel_create(const Model& original) {
 	return std::make_shared<DenseModelImpl>(original);
 }
 
-static int getTriangleCount(const Model& original) {
-	int triangleCount = 0;
-	for (int part = 0; part < model_getNumberOfParts(original); part++) {
-		for (int poly = 0; poly < model_getNumberOfPolygons(original, part); poly++) {
-			int vertexCount = model_getPolygonVertexCount(original, part, poly);
+static int32_t getTriangleCount(const Model& original) {
+	int32_t triangleCount = 0;
+	for (int32_t part = 0; part < model_getNumberOfParts(original); part++) {
+		for (int32_t poly = 0; poly < model_getNumberOfPolygons(original, part); poly++) {
+			int32_t vertexCount = model_getPolygonVertexCount(original, part, poly);
 			triangleCount += vertexCount - 2;
 		}
 	}
@@ -1192,33 +1192,33 @@ DenseModelImpl::DenseModelImpl(const Model& original)
 	// Get the bounding box
 	model_getBoundingBox(original, this->minBound, this->maxBound);
 	// Generate normals
-	int pointCount = model_getNumberOfPoints(original);
+	int32_t pointCount = model_getNumberOfPoints(original);
 	Array<FVector3D> normalPoints(pointCount, FVector3D());
 	// Calculate smooth normals in object-space, by adding each polygon's normal to each child vertex
-	for (int part = 0; part < model_getNumberOfParts(original); part++) {
-		for (int poly = 0; poly < model_getNumberOfPolygons(original, part); poly++) {
+	for (int32_t part = 0; part < model_getNumberOfParts(original); part++) {
+		for (int32_t poly = 0; poly < model_getNumberOfPolygons(original, part); poly++) {
 			FVector3D polygonNormal = getAverageNormal(original, part, poly);
-			for (int vert = 0; vert < model_getPolygonVertexCount(original, part, poly); vert++) {
-				int point = model_getVertexPointIndex(original, part, poly, vert);
+			for (int32_t vert = 0; vert < model_getPolygonVertexCount(original, part, poly); vert++) {
+				int32_t point = model_getVertexPointIndex(original, part, poly, vert);
 				normalPoints[point] = normalPoints[point] + polygonNormal;
 			}
 		}
 	}
 	// Normalize the result per vertex, to avoid having unbalanced weights when normalizing per pixel
-	for (int point = 0; point < pointCount; point++) {
+	for (int32_t point = 0; point < pointCount; point++) {
 		normalPoints[point] = normalize(normalPoints[point]);
 	}
 	// Generate a simpler triangle structure
-	int triangleIndex = 0;
-	for (int part = 0; part < model_getNumberOfParts(original); part++) {
-		for (int poly = 0; poly < model_getNumberOfPolygons(original, part); poly++) {
-			int vertexCount = model_getPolygonVertexCount(original, part, poly);
-			int vertA = 0;
-			int indexA = model_getVertexPointIndex(original, part, poly, vertA);
-			for (int vertB = 1; vertB < vertexCount - 1; vertB++) {
-				int vertC = vertB + 1;
-				int indexB = model_getVertexPointIndex(original, part, poly, vertB);
-				int indexC = model_getVertexPointIndex(original, part, poly, vertC);
+	int32_t triangleIndex = 0;
+	for (int32_t part = 0; part < model_getNumberOfParts(original); part++) {
+		for (int32_t poly = 0; poly < model_getNumberOfPolygons(original, part); poly++) {
+			int32_t vertexCount = model_getPolygonVertexCount(original, part, poly);
+			int32_t vertA = 0;
+			int32_t indexA = model_getVertexPointIndex(original, part, poly, vertA);
+			for (int32_t vertB = 1; vertB < vertexCount - 1; vertB++) {
+				int32_t vertC = vertB + 1;
+				int32_t indexB = model_getVertexPointIndex(original, part, poly, vertB);
+				int32_t indexC = model_getVertexPointIndex(original, part, poly, vertC);
 				triangles[triangleIndex] =
 				  DenseTriangle(
 					FVector4Dto3D(model_getVertexColor(original, part, poly, vertA)) * 255.0f,
@@ -1257,15 +1257,15 @@ static IRect renderDenseModel(const DenseModel& model, OrthoView view, ImageF32 
 	// Combine normal transforms
 	FMatrix3x3 modelToNormalSpace = modelToWorldSpace.transform * transpose(view.normalToWorldSpace);
 	// Get image properties
-	int diffuseStride = image_getStride(diffuseTarget);
-	int normalStride = image_getStride(normalTarget);
-	int heightStride = image_getStride(depthBuffer);
+	int32_t diffuseStride = image_getStride(diffuseTarget);
+	int32_t normalStride = image_getStride(normalTarget);
+	int32_t heightStride = image_getStride(depthBuffer);
 	// Call getters in advance to avoid call overhead in the loops
 	SafePointer<uint32_t> diffuseData = image_getSafePointer(diffuseTarget);
 	SafePointer<uint32_t> normalData = image_getSafePointer(normalTarget);
 	SafePointer<float> heightData = image_getSafePointer(depthBuffer);
 	// Render triangles
-	for (int tri = 0; tri < model->triangles.length(); tri++) {
+	for (int32_t tri = 0; tri < model->triangles.length(); tri++) {
 		DenseTriangle triangle =  model->triangles[tri];
 		// Transform positions
 		FVector3D projectedA = objectToScreenSpace.transformPoint(triangle.posA);
@@ -1290,11 +1290,11 @@ static IRect renderDenseModel(const DenseModel& model, OrthoView view, ImageF32 
 			FVector3D normalB = modelToNormalSpace.transform(triangle.normalB);
 			FVector3D normalC = modelToNormalSpace.transform(triangle.normalC);
 			// Iterate over the triangle's bounding box
-			for (int y = triangleBound.top(); y < triangleBound.bottom(); y++) {
+			for (int32_t y = triangleBound.top(); y < triangleBound.bottom(); y++) {
 				SafePointer<uint32_t> diffusePixel = diffuseRow + triangleBound.left();
 				SafePointer<uint32_t> normalPixel = normalRow + triangleBound.left();
 				SafePointer<float> heightPixel = heightRow + triangleBound.left();
-				for (int x = triangleBound.left(); x < triangleBound.right(); x++) {
+				for (int32_t x = triangleBound.left(); x < triangleBound.right(); x++) {
 					FVector2D weightBC = offsetToWeight.transform(FVector2D(x + 0.5f, y + 0.5f) - cornerA);
 					FVector3D weight = FVector3D(1.0f - (weightBC.x + weightBC.y), weightBC.x, weightBC.y);
 					// Check if the pixel is inside the triangle
@@ -1327,7 +1327,7 @@ static IRect renderDenseModel(const DenseModel& model, OrthoView view, ImageF32 
 	return pessimisticBound;
 }
 
-void sprite_generateFromModel(ImageRgbaU8& targetAtlas, String& targetConfigText, const Model& visibleModel, const Model& shadowModel, const OrthoSystem& ortho, const String& targetPath, int cameraAngles) {
+void sprite_generateFromModel(ImageRgbaU8& targetAtlas, String& targetConfigText, const Model& visibleModel, const Model& shadowModel, const OrthoSystem& ortho, const String& targetPath, int32_t cameraAngles) {
 	// Validate input
 	if (cameraAngles < 1) {
 		printText("  Need at least one camera angle to generate a sprite!\n");
@@ -1370,14 +1370,14 @@ void sprite_generateFromModel(ImageRgbaU8& targetAtlas, String& targetConfigText
 		DenseModel denseModel = DenseModel_create(visibleModel);
 		// Render the model to multiple render targets at once
 		float heightScale = 255.0f / (maxBound.y - minBound.y);
-		for (int a = 0; a < cameraAngles; a++) {
+		for (int32_t a = 0; a < cameraAngles; a++) {
 			image_fill(depthBuffer, -1000000000.0f);
 			image_fill(colorImage[a], ColorRgbaI32(0, 0, 0, 0));
 			FVector2D origin = FVector2D((float)width * 0.5f, (float)height * 0.5f);
 			renderDenseModel<true>(denseModel, ortho.view[a], depthBuffer, colorImage[a], normalImage[a], origin, Transform3D());
 			// Convert height into an 8 bit channel for saving
-			for (int y = 0; y < height; y++) {
-				for (int x = 0; x < width; x++) {
+			for (int32_t y = 0; y < height; y++) {
+				for (int32_t x = 0; x < width; x++) {
 					int32_t opacityPixel = image_readPixel_clamp(colorImage[a], x, y).alpha;
 					int32_t heightPixel = (image_readPixel_clamp(depthBuffer, x, y) - minBound.y) * heightScale;
 					image_writePixel(heightImage[a], x, y, ColorRgbaI32(heightPixel, 0, 0, opacityPixel));
@@ -1390,9 +1390,9 @@ void sprite_generateFromModel(ImageRgbaU8& targetAtlas, String& targetConfigText
 		int32_t minY = height;
 		int32_t maxX = 0;
 		int32_t maxY = 0;
-		for (int a = 0; a < cameraAngles; a++) {
-			for (int y = 0; y < height; y++) {
-				for (int x = 0; x < width; x++) {
+		for (int32_t a = 0; a < cameraAngles; a++) {
+			for (int32_t y = 0; y < height; y++) {
+				for (int32_t x = 0; x < width; x++) {
 					if (image_readPixel_border(colorImage[a], x, y).alpha) {
 						if (x < minX) minX = x;
 						if (x > maxX) maxX = x;
@@ -1413,20 +1413,20 @@ void sprite_generateFromModel(ImageRgbaU8& targetAtlas, String& targetConfigText
 			printText("  Cropping failed to find any drawn pixels!\n");
 			return;
 		}
-		for (int a = 0; a < cameraAngles; a++) {
+		for (int32_t a = 0; a < cameraAngles; a++) {
 			colorImage[a] = image_getSubImage(colorImage[a], cropRegion);
 			heightImage[a] = image_getSubImage(heightImage[a], cropRegion);
 			normalImage[a] = image_getSubImage(normalImage[a], cropRegion);
 		}
-		int croppedWidth = cropRegion.width();
-		int croppedHeight = cropRegion.height();
-		int centerX = width / 2 - cropRegion.left();
-		int centerY = height / 2 - cropRegion.top();
+		int32_t croppedWidth = cropRegion.width();
+		int32_t croppedHeight = cropRegion.height();
+		int32_t centerX = width / 2 - cropRegion.left();
+		int32_t centerY = height / 2 - cropRegion.top();
 		printText("  Cropped images of ", croppedWidth, "x", croppedHeight, " pixels with centers at (", centerX, ", ", centerY, ")\n");
 
 		// Pack everything into an image atlas
 		targetAtlas = image_create_RgbaU8(croppedWidth * 3, croppedHeight * cameraAngles);
-		for (int a = 0; a < cameraAngles; a++) {
+		for (int32_t a = 0; a < cameraAngles; a++) {
 			draw_copy(targetAtlas, colorImage[a], 0, a * croppedHeight);
 			draw_copy(targetAtlas, heightImage[a], croppedWidth, a * croppedHeight);
 			draw_copy(targetAtlas, normalImage[a], croppedWidth * 2, a * croppedHeight);
@@ -1442,14 +1442,14 @@ void sprite_generateFromModel(ImageRgbaU8& targetAtlas, String& targetConfigText
 
 // Allowing the last decimals to deviate a bit because floating-point operations are rounded differently between computers
 static bool approximateTextMatch(const ReadableString &a, const ReadableString &b, double tolerance = 0.00002) {
-	int readerA = 0, readerB = 0;
+	int32_t readerA = 0, readerB = 0;
 	while (readerA < string_length(a) && readerB < string_length(b)) {
 		DsrChar charA = a[readerA];
 		DsrChar charB = b[readerB];
 		if (character_isValueCharacter(charA) && character_isValueCharacter(charB)) {
 			// Scan forward on both sides while consuming content and comparing the actual value
-			int startA = readerA;
-			int startB = readerB;
+			int32_t startA = readerA;
+			int32_t startB = readerB;
 			// Only move forward on valid characters
 			if (a[readerA] == U'-') { readerA++; }
 			if (b[readerB] == U'-') { readerB++; }
@@ -1483,7 +1483,7 @@ static bool approximateTextMatch(const ReadableString &a, const ReadableString &
 	}
 }
 
-void sprite_generateFromModel(const Model& visibleModel, const Model& shadowModel, const OrthoSystem& ortho, const String& targetPath, int cameraAngles, bool debug) {
+void sprite_generateFromModel(const Model& visibleModel, const Model& shadowModel, const OrthoSystem& ortho, const String& targetPath, int32_t cameraAngles, bool debug) {
 	// Generate an image and a configuration file from the visible model
 	ImageRgbaU8 atlasImage; String configText;
 	sprite_generateFromModel(atlasImage, configText, visibleModel, shadowModel, ortho, targetPath, cameraAngles);
@@ -1494,7 +1494,7 @@ void sprite_generateFromModel(const Model& visibleModel, const Model& shadowMode
 		// Try loading any existing image
 		ImageRgbaU8 existingAtlasImage = image_load_RgbaU8(atlasPath, false);
 		if (image_exists(existingAtlasImage)) {
-			int difference = image_maxDifference(atlasImage, existingAtlasImage);
+			int32_t difference = image_maxDifference(atlasImage, existingAtlasImage);
 			if (difference <= 2) {
 				printText("  No significant changes against ", targetPath, ".\n");
 			} else {

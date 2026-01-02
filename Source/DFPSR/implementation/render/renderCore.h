@@ -86,7 +86,7 @@ public:
 	List<TriangleDrawCommand> buffer;
 	void add(const TriangleDrawCommand &command);
 	// Multi-threading will be disabled if jobCount equals 1.
-	void execute(const IRect &clipBound, int jobCount = 12) const;
+	void execute(const IRect &clipBound, int32_t jobCount = 12) const;
 	void clear();
 };
 

@@ -300,8 +300,8 @@ void resizeToTarget(IMAGE_TYPE& target, const IMAGE_TYPE& source, bool interpola
 	IRect scaleRegion = image_getBound(target);
 	if (image_getWidth(target) != image_getWidth(source) && image_getHeight(target) > image_getHeight(source)) {
 		// Upscaling is faster in two steps by both reusing the horizontal interpolation and vectorizing the vertical interpolation.
-		int tempWidth = image_getWidth(target);
-		int tempHeight = image_getHeight(source);
+		int32_t tempWidth = image_getWidth(target);
+		int32_t tempHeight = image_getHeight(source);
 		IRect tempScaleRegion = IRect(scaleRegion.left(), 0, scaleRegion.width(), image_getHeight(source));
 		// Create a temporary buffer.
 		IMAGE_TYPE newTempImage = createWithSamePackOrder(target, tempWidth, tempHeight);
@@ -314,7 +314,7 @@ void resizeToTarget(IMAGE_TYPE& target, const IMAGE_TYPE& source, bool interpola
 }
 
 template <bool CONVERT_COLOR>
-static inline uint32_t convertRead(const ImageRgbaU8& target, const ImageRgbaU8& source, int x, int y) {
+static inline uint32_t convertRead(const ImageRgbaU8& target, const ImageRgbaU8& source, int32_t x, int32_t y) {
 	uint32_t result = image_readPixel_clamp_packed(source, x, y);
 	if (CONVERT_COLOR) {
 		result = image_truncateAndPack(target, image_unpack(source, result));
@@ -323,11 +323,11 @@ static inline uint32_t convertRead(const ImageRgbaU8& target, const ImageRgbaU8&
 }
 
 // Used for drawing large pixels
-static inline void fillRectangle(const ImageRgbaU8& target, int pixelLeft, int pixelRight, int pixelTop, int pixelBottom, const uint32_t& packedColor) {
+static inline void fillRectangle(const ImageRgbaU8& target, int32_t pixelLeft, int32_t pixelRight, int32_t pixelTop, int32_t pixelBottom, const uint32_t& packedColor) {
 	SafePointer<uint32_t> targetRow = image_getSafePointer<uint32_t>(target, pixelTop) + pixelLeft;
-	for (int y = pixelTop; y < pixelBottom; y++) {
+	for (int32_t y = pixelTop; y < pixelBottom; y++) {
 		SafePointer<uint32_t> targetPixel = targetRow;
-		for (int x = pixelLeft; x < pixelRight; x++) {
+		for (int32_t x = pixelLeft; x < pixelRight; x++) {
 			*targetPixel = packedColor;
 			targetPixel += 1;
 		}
@@ -338,14 +338,14 @@ static inline void fillRectangle(const ImageRgbaU8& target, int pixelLeft, int p
 template <bool CONVERT_COLOR>
 static void blockMagnify_reference(
   const ImageRgbaU8& target, const ImageRgbaU8& source,
-  int pixelWidth, int pixelHeight, int clipWidth, int clipHeight) {
-	int sourceY = 0;
-	int maxSourceX = image_getWidth(source) - 1;
-	int maxSourceY = image_getHeight(source) - 1;
+  int32_t pixelWidth, int32_t pixelHeight, int32_t clipWidth, int32_t clipHeight) {
+	int32_t sourceY = 0;
+	int32_t maxSourceX = image_getWidth(source) - 1;
+	int32_t maxSourceY = image_getHeight(source) - 1;
 	if (clipWidth > image_getWidth(target)) { clipWidth = image_getWidth(target); }
 	if (clipHeight > image_getHeight(target)) { clipHeight = image_getHeight(target); }
 	for (int32_t pixelTop = 0; pixelTop < clipHeight; pixelTop += pixelHeight) {
-		int sourceX = 0;
+		int32_t sourceX = 0;
 		for (int32_t pixelLeft = 0; pixelLeft < clipWidth; pixelLeft += pixelWidth) {
 			// Read the pixel once
 			uint32_t sourceColor = convertRead<CONVERT_COLOR>(target, source, sourceX, sourceY);
@@ -366,18 +366,18 @@ static void blockMagnify_reference(
 //   * Both source and target are 16-byte aligned, but does not have to own their padding
 //   * clipWidth % 2 == 0
 //   * clipHeight % 2 == 0
-static void blockMagnify_2x2(const ImageRgbaU8& target, const ImageRgbaU8& source, int clipWidth, int clipHeight) {
+static void blockMagnify_2x2(const ImageRgbaU8& target, const ImageRgbaU8& source, int32_t clipWidth, int32_t clipHeight) {
 	SafePointer<const uint32_t> sourceRow = image_getSafePointer<uint32_t>(source);
 	SafePointer<uint32_t> targetRowA = image_getSafePointer<uint32_t>(target, 0);
 	SafePointer<uint32_t> targetRowB = image_getSafePointer<uint32_t>(target, 1);
-	int blockTargetStride = image_getStride(target) * 2;
-	for (int upperTargetY = 0; upperTargetY + 2 <= clipHeight; upperTargetY+=2) {
+	int32_t blockTargetStride = image_getStride(target) * 2;
+	for (int32_t upperTargetY = 0; upperTargetY + 2 <= clipHeight; upperTargetY+=2) {
 		// Carriage return
 		SafePointer<const uint32_t> sourcePixel = sourceRow;
 		SafePointer<uint32_t> targetPixelA = targetRowA;
 		SafePointer<uint32_t> targetPixelB = targetRowB;
 		// Write to whole multiples of 8 pixels
-		int writeLeftX = 0;
+		int32_t writeLeftX = 0;
 		while (writeLeftX + 2 <= clipWidth) {
 			// Read one pixel at a time
 			uint32_t scalarValue = *sourcePixel;
@@ -402,19 +402,19 @@ static void blockMagnify_2x2(const ImageRgbaU8& target, const ImageRgbaU8& sourc
 //   * Both source and target are 16-byte aligned, but does not have to own their padding
 //   * clipWidth % 3 == 0
 //   * clipHeight % 3 == 0
-static void blockMagnify_3x3(const ImageRgbaU8& target, const ImageRgbaU8& source, int clipWidth, int clipHeight) {
+static void blockMagnify_3x3(const ImageRgbaU8& target, const ImageRgbaU8& source, int32_t clipWidth, int32_t clipHeight) {
 	SafePointer<const uint32_t> sourceRow = image_getSafePointer<uint32_t>(source);
 	SafePointer<uint32_t> targetRowA = image_getSafePointer<uint32_t>(target, 0);
 	SafePointer<uint32_t> targetRowB = image_getSafePointer<uint32_t>(target, 1);
 	SafePointer<uint32_t> targetRowC = image_getSafePointer<uint32_t>(target, 2);
-	int blockTargetStride = image_getStride(target) * 3;
-	for (int upperTargetY = 0; upperTargetY + 3 <= clipHeight; upperTargetY+=3) {
+	int32_t blockTargetStride = image_getStride(target) * 3;
+	for (int32_t upperTargetY = 0; upperTargetY + 3 <= clipHeight; upperTargetY+=3) {
 		// Carriage return
 		SafePointer<const uint32_t> sourcePixel = sourceRow;
 		SafePointer<uint32_t> targetPixelA = targetRowA;
 		SafePointer<uint32_t> targetPixelB = targetRowB;
 		SafePointer<uint32_t> targetPixelC = targetRowC;
-		int writeLeftX = 0;
+		int32_t writeLeftX = 0;
 		while (writeLeftX + 3 <= clipWidth) {
 			// Read one pixel at a time
 			uint32_t scalarValue = *sourcePixel;
@@ -442,21 +442,21 @@ static void blockMagnify_3x3(const ImageRgbaU8& target, const ImageRgbaU8& sourc
 //   * Both source and target are 16-byte aligned, but does not have to own their padding
 //   * clipWidth % 4 == 0
 //   * clipHeight % 4 == 0
-static void blockMagnify_4x4(const ImageRgbaU8& target, const ImageRgbaU8& source, int clipWidth, int clipHeight) {
+static void blockMagnify_4x4(const ImageRgbaU8& target, const ImageRgbaU8& source, int32_t clipWidth, int32_t clipHeight) {
 	SafePointer<const uint32_t> sourceRow = image_getSafePointer<uint32_t>(source);
 	SafePointer<uint32_t> targetRowA = image_getSafePointer<uint32_t>(target, 0);
 	SafePointer<uint32_t> targetRowB = image_getSafePointer<uint32_t>(target, 1);
 	SafePointer<uint32_t> targetRowC = image_getSafePointer<uint32_t>(target, 2);
 	SafePointer<uint32_t> targetRowD = image_getSafePointer<uint32_t>(target, 3);
-	int quadTargetStride = image_getStride(target) * 4;
-	for (int upperTargetY = 0; upperTargetY + 4 <= clipHeight; upperTargetY+=4) {
+	int32_t quadTargetStride = image_getStride(target) * 4;
+	for (int32_t upperTargetY = 0; upperTargetY + 4 <= clipHeight; upperTargetY+=4) {
 		// Carriage return
 		SafePointer<const uint32_t> sourcePixel = sourceRow;
 		SafePointer<uint32_t> targetPixelA = targetRowA;
 		SafePointer<uint32_t> targetPixelB = targetRowB;
 		SafePointer<uint32_t> targetPixelC = targetRowC;
 		SafePointer<uint32_t> targetPixelD = targetRowD;
-		int writeLeftX = 0;
+		int32_t writeLeftX = 0;
 		while (writeLeftX + 4 <= clipWidth) {
 			// Read one pixel at a time
 			uint32_t scalarValue = *sourcePixel;
@@ -489,15 +489,15 @@ static void blockMagnify_4x4(const ImageRgbaU8& target, const ImageRgbaU8& sourc
 //   * Both source and target are 16-byte aligned, but does not have to own their padding
 //   * clipWidth % 5 == 0
 //   * clipHeight % 5 == 0
-static void blockMagnify_5x5(const ImageRgbaU8& target, const ImageRgbaU8& source, int clipWidth, int clipHeight) {
+static void blockMagnify_5x5(const ImageRgbaU8& target, const ImageRgbaU8& source, int32_t clipWidth, int32_t clipHeight) {
 	SafePointer<const uint32_t> sourceRow = image_getSafePointer<uint32_t>(source);
 	SafePointer<uint32_t> targetRowA = image_getSafePointer<uint32_t>(target, 0);
 	SafePointer<uint32_t> targetRowB = image_getSafePointer<uint32_t>(target, 1);
 	SafePointer<uint32_t> targetRowC = image_getSafePointer<uint32_t>(target, 2);
 	SafePointer<uint32_t> targetRowD = image_getSafePointer<uint32_t>(target, 3);
 	SafePointer<uint32_t> targetRowE = image_getSafePointer<uint32_t>(target, 4);
-	int blockTargetStride = image_getStride(target) * 5;
-	for (int upperTargetY = 0; upperTargetY + 5 <= clipHeight; upperTargetY+=5) {
+	int32_t blockTargetStride = image_getStride(target) * 5;
+	for (int32_t upperTargetY = 0; upperTargetY + 5 <= clipHeight; upperTargetY+=5) {
 		// Carriage return
 		SafePointer<const uint32_t> sourcePixel = sourceRow;
 		SafePointer<uint32_t> targetPixelA = targetRowA;
@@ -505,7 +505,7 @@ static void blockMagnify_5x5(const ImageRgbaU8& target, const ImageRgbaU8& sourc
 		SafePointer<uint32_t> targetPixelC = targetRowC;
 		SafePointer<uint32_t> targetPixelD = targetRowD;
 		SafePointer<uint32_t> targetPixelE = targetRowE;
-		int writeLeftX = 0;
+		int32_t writeLeftX = 0;
 		while (writeLeftX + 5 <= clipWidth) {
 			// Read one pixel at a time
 			uint32_t scalarValue = *sourcePixel;
@@ -539,7 +539,7 @@ static void blockMagnify_5x5(const ImageRgbaU8& target, const ImageRgbaU8& sourc
 //   * Both source and target are 16-byte aligned, but does not have to own their padding
 //   * clipWidth % 6 == 0
 //   * clipHeight % 6 == 0
-static void blockMagnify_6x6(const ImageRgbaU8& target, const ImageRgbaU8& source, int clipWidth, int clipHeight) {
+static void blockMagnify_6x6(const ImageRgbaU8& target, const ImageRgbaU8& source, int32_t clipWidth, int32_t clipHeight) {
 	SafePointer<const uint32_t> sourceRow = image_getSafePointer<uint32_t>(source);
 	SafePointer<uint32_t> targetRowA = image_getSafePointer<uint32_t>(target, 0);
 	SafePointer<uint32_t> targetRowB = image_getSafePointer<uint32_t>(target, 1);
@@ -547,8 +547,8 @@ static void blockMagnify_6x6(const ImageRgbaU8& target, const ImageRgbaU8& sourc
 	SafePointer<uint32_t> targetRowD = image_getSafePointer<uint32_t>(target, 3);
 	SafePointer<uint32_t> targetRowE = image_getSafePointer<uint32_t>(target, 4);
 	SafePointer<uint32_t> targetRowF = image_getSafePointer<uint32_t>(target, 5);
-	int blockTargetStride = image_getStride(target) * 6;
-	for (int upperTargetY = 0; upperTargetY + 6 <= clipHeight; upperTargetY+=6) {
+	int32_t blockTargetStride = image_getStride(target) * 6;
+	for (int32_t upperTargetY = 0; upperTargetY + 6 <= clipHeight; upperTargetY+=6) {
 		// Carriage return
 		SafePointer<const uint32_t> sourcePixel = sourceRow;
 		SafePointer<uint32_t> targetPixelA = targetRowA;
@@ -557,7 +557,7 @@ static void blockMagnify_6x6(const ImageRgbaU8& target, const ImageRgbaU8& sourc
 		SafePointer<uint32_t> targetPixelD = targetRowD;
 		SafePointer<uint32_t> targetPixelE = targetRowE;
 		SafePointer<uint32_t> targetPixelF = targetRowF;
-		int writeLeftX = 0;
+		int32_t writeLeftX = 0;
 		while (writeLeftX + 6 <= clipWidth) {
 			// Read one pixel at a time
 			uint32_t scalarValue = *sourcePixel;
@@ -594,7 +594,7 @@ static void blockMagnify_6x6(const ImageRgbaU8& target, const ImageRgbaU8& sourc
 //   * Both source and target are 16-byte aligned, but does not have to own their padding
 //   * clipWidth % 7 == 0
 //   * clipHeight % 7 == 0
-static void blockMagnify_7x7(const ImageRgbaU8& target, const ImageRgbaU8& source, int clipWidth, int clipHeight) {
+static void blockMagnify_7x7(const ImageRgbaU8& target, const ImageRgbaU8& source, int32_t clipWidth, int32_t clipHeight) {
 	SafePointer<const uint32_t> sourceRow = image_getSafePointer<uint32_t>(source);
 	SafePointer<uint32_t> targetRowA = image_getSafePointer<uint32_t>(target, 0);
 	SafePointer<uint32_t> targetRowB = image_getSafePointer<uint32_t>(target, 1);
@@ -603,8 +603,8 @@ static void blockMagnify_7x7(const ImageRgbaU8& target, const ImageRgbaU8& sourc
 	SafePointer<uint32_t> targetRowE = image_getSafePointer<uint32_t>(target, 4);
 	SafePointer<uint32_t> targetRowF = image_getSafePointer<uint32_t>(target, 5);
 	SafePointer<uint32_t> targetRowG = image_getSafePointer<uint32_t>(target, 6);
-	int blockTargetStride = image_getStride(target) * 7;
-	for (int upperTargetY = 0; upperTargetY + 7 <= clipHeight; upperTargetY+=7) {
+	int32_t blockTargetStride = image_getStride(target) * 7;
+	for (int32_t upperTargetY = 0; upperTargetY + 7 <= clipHeight; upperTargetY+=7) {
 		// Carriage return
 		SafePointer<const uint32_t> sourcePixel = sourceRow;
 		SafePointer<uint32_t> targetPixelA = targetRowA;
@@ -614,7 +614,7 @@ static void blockMagnify_7x7(const ImageRgbaU8& target, const ImageRgbaU8& sourc
 		SafePointer<uint32_t> targetPixelE = targetRowE;
 		SafePointer<uint32_t> targetPixelF = targetRowF;
 		SafePointer<uint32_t> targetPixelG = targetRowG;
-		int writeLeftX = 0;
+		int32_t writeLeftX = 0;
 		while (writeLeftX + 7 <= clipWidth) {
 			// Read one pixel at a time
 			uint32_t scalarValue = *sourcePixel;
@@ -654,7 +654,7 @@ static void blockMagnify_7x7(const ImageRgbaU8& target, const ImageRgbaU8& sourc
 //   * Both source and target are 16-byte aligned, but does not have to own their padding
 //   * clipWidth % 8 == 0
 //   * clipHeight % 8 == 0
-static void blockMagnify_8x8(const ImageRgbaU8& target, const ImageRgbaU8& source, int clipWidth, int clipHeight) {
+static void blockMagnify_8x8(const ImageRgbaU8& target, const ImageRgbaU8& source, int32_t clipWidth, int32_t clipHeight) {
 	SafePointer<const uint32_t> sourceRow = image_getSafePointer<uint32_t>(source);
 	SafePointer<uint32_t> targetRowA = image_getSafePointer<uint32_t>(target, 0);
 	SafePointer<uint32_t> targetRowB = image_getSafePointer<uint32_t>(target, 1);
@@ -664,8 +664,8 @@ static void blockMagnify_8x8(const ImageRgbaU8& target, const ImageRgbaU8& sourc
 	SafePointer<uint32_t> targetRowF = image_getSafePointer<uint32_t>(target, 5);
 	SafePointer<uint32_t> targetRowG = image_getSafePointer<uint32_t>(target, 6);
 	SafePointer<uint32_t> targetRowH = image_getSafePointer<uint32_t>(target, 7);
-	int blockTargetStride = image_getStride(target) * 8;
-	for (int upperTargetY = 0; upperTargetY + 8 <= clipHeight; upperTargetY+=8) {
+	int32_t blockTargetStride = image_getStride(target) * 8;
+	for (int32_t upperTargetY = 0; upperTargetY + 8 <= clipHeight; upperTargetY+=8) {
 		// Carriage return
 		SafePointer<const uint32_t> sourcePixel = sourceRow;
 		SafePointer<uint32_t> targetPixelA = targetRowA;
@@ -676,7 +676,7 @@ static void blockMagnify_8x8(const ImageRgbaU8& target, const ImageRgbaU8& sourc
 		SafePointer<uint32_t> targetPixelF = targetRowF;
 		SafePointer<uint32_t> targetPixelG = targetRowG;
 		SafePointer<uint32_t> targetPixelH = targetRowH;
-		int writeLeftX = 0;
+		int32_t writeLeftX = 0;
 		while (writeLeftX + 8 <= clipWidth) {
 			// Read one pixel at a time
 			uint32_t scalarValue = *sourcePixel;
@@ -714,20 +714,20 @@ static void blockMagnify_8x8(const ImageRgbaU8& target, const ImageRgbaU8& sourc
 	}
 }
 
-static void blackEdges(const ImageRgbaU8& target, int excludedWidth, int excludedHeight) {
+static void blackEdges(const ImageRgbaU8& target, int32_t excludedWidth, int32_t excludedHeight) {
 	// Right side
 	draw_rectangle(target, IRect(excludedWidth, 0, image_getWidth(target) - excludedWidth, excludedHeight), 0);
 	// Bottom and corner
 	draw_rectangle(target, IRect(0, excludedHeight, image_getWidth(target), image_getHeight(target) - excludedHeight), 0);
 }
 
-static void imageImpl_blockMagnify(const ImageRgbaU8& target, const ImageRgbaU8& source, int pixelWidth, int pixelHeight) {
+static void imageImpl_blockMagnify(const ImageRgbaU8& target, const ImageRgbaU8& source, int32_t pixelWidth, int32_t pixelHeight) {
 	if (pixelWidth < 1) { pixelWidth = 1; }
 	if (pixelHeight < 1) { pixelHeight = 1; }
 	bool sameOrder = image_getPackOrderIndex(target) == image_getPackOrderIndex(source);
 	// Find the part of source which fits into target with whole pixels
-	int clipWidth = roundDown(min(image_getWidth(target), image_getWidth(source) * pixelWidth), pixelWidth);
-	int clipHeight = roundDown(min(image_getHeight(target), image_getHeight(source) * pixelHeight), pixelHeight);
+	int32_t clipWidth = roundDown(min(image_getWidth(target), image_getWidth(source) * pixelWidth), pixelWidth);
+	int32_t clipHeight = roundDown(min(image_getHeight(target), image_getHeight(source) * pixelHeight), pixelHeight);
 	if (sameOrder) {
 		if (!(image_isSubImage(source) || image_isSubImage(target))) {
 			if (pixelWidth == 2 && pixelHeight == 2) {
@@ -756,41 +756,41 @@ static void imageImpl_blockMagnify(const ImageRgbaU8& target, const ImageRgbaU8&
 	blackEdges(target, clipWidth, clipHeight);
 }
 
-static void mapRgbaU8(const ImageRgbaU8& target, const ImageGenRgbaU8& lambda, int startX, int startY) {
-	const int targetWidth = image_getWidth(target);
-	const int targetHeight = image_getHeight(target);
-	const int targetStride = image_getStride(target);
+static void mapRgbaU8(const ImageRgbaU8& target, const ImageGenRgbaU8& lambda, int32_t startX, int32_t startY) {
+	const int32_t targetWidth = image_getWidth(target);
+	const int32_t targetHeight = image_getHeight(target);
+	const int32_t targetStride = image_getStride(target);
 	SafePointer<uint32_t> targetRow = image_getSafePointer<uint32_t>(target);
-	for (int y = startY; y < targetHeight + startY; y++) {
+	for (int32_t y = startY; y < targetHeight + startY; y++) {
 		SafePointer<uint32_t> targetPixel = targetRow;
-		for (int x = startX; x < targetWidth + startX; x++) {
+		for (int32_t x = startX; x < targetWidth + startX; x++) {
 			*targetPixel = image_saturateAndPack(target, lambda(x, y));
 			targetPixel += 1;
 		}
 		targetRow.increaseBytes(targetStride);
 	}
 }
-void filter_mapRgbaU8(const ImageRgbaU8 &target, const ImageGenRgbaU8& lambda, int startX, int startY) {
+void filter_mapRgbaU8(const ImageRgbaU8 &target, const ImageGenRgbaU8& lambda, int32_t startX, int32_t startY) {
 	if (image_exists(target)) {
 		mapRgbaU8(target, lambda, startX, startY);
 	}
 }
-OrderedImageRgbaU8 filter_generateRgbaU8(int width, int height, const ImageGenRgbaU8& lambda, int startX, int startY) {
+OrderedImageRgbaU8 filter_generateRgbaU8(int32_t width, int32_t height, const ImageGenRgbaU8& lambda, int32_t startX, int32_t startY) {
 	OrderedImageRgbaU8 result = image_create_RgbaU8(width, height, false);
 	filter_mapRgbaU8(result, lambda, startX, startY);
 	return result;
 }
 
-template <typename IMAGE_TYPE, typename PIXEL_TYPE, int MIN_VALUE, int MAX_VALUE>
-static void mapMonochrome(const IMAGE_TYPE& target, const ImageGenI32& lambda, int startX, int startY) {
-	const int targetWidth = image_getWidth(target);
-	const int targetHeight = image_getHeight(target);
-	const int targetStride = image_getStride(target);
+template <typename IMAGE_TYPE, typename PIXEL_TYPE, int32_t MIN_VALUE, int32_t MAX_VALUE>
+static void mapMonochrome(const IMAGE_TYPE& target, const ImageGenI32& lambda, int32_t startX, int32_t startY) {
+	const int32_t targetWidth = image_getWidth(target);
+	const int32_t targetHeight = image_getHeight(target);
+	const int32_t targetStride = image_getStride(target);
 	SafePointer<PIXEL_TYPE> targetRow = image_getSafePointer<PIXEL_TYPE>(target);
-	for (int y = startY; y < targetHeight + startY; y++) {
+	for (int32_t y = startY; y < targetHeight + startY; y++) {
 		SafePointer<PIXEL_TYPE> targetPixel = targetRow;
-		for (int x = startX; x < targetWidth + startX; x++) {
-			int output = lambda(x, y);
+		for (int32_t x = startX; x < targetWidth + startX; x++) {
+			int32_t output = lambda(x, y);
 			if (output < MIN_VALUE) { output = MIN_VALUE; }
 			if (output > MAX_VALUE) { output = MAX_VALUE; }
 			*targetPixel = output;
@@ -799,47 +799,47 @@ static void mapMonochrome(const IMAGE_TYPE& target, const ImageGenI32& lambda, i
 		targetRow.increaseBytes(targetStride);
 	}
 }
-void filter_mapU8(const ImageU8 &target, const ImageGenI32& lambda, int startX, int startY) {
+void filter_mapU8(const ImageU8 &target, const ImageGenI32& lambda, int32_t startX, int32_t startY) {
 	if (image_exists(target)) {
 		mapMonochrome<ImageU8, uint8_t, 0, 255>(target, lambda, startX, startY);
 	}
 }
-AlignedImageU8 filter_generateU8(int width, int height, const ImageGenI32& lambda, int startX, int startY) {
+AlignedImageU8 filter_generateU8(int32_t width, int32_t height, const ImageGenI32& lambda, int32_t startX, int32_t startY) {
 	AlignedImageU8 result = image_create_U8(width, height, false);
 	filter_mapU8(result, lambda, startX, startY);
 	return result;
 }
-void filter_mapU16(const ImageU16 &target, const ImageGenI32& lambda, int startX, int startY) {
+void filter_mapU16(const ImageU16 &target, const ImageGenI32& lambda, int32_t startX, int32_t startY) {
 	if (image_exists(target)) {
 		mapMonochrome<ImageU16, uint16_t, 0, 65535>(target, lambda, startX, startY);
 	}
 }
-AlignedImageU16 filter_generateU16(int width, int height, const ImageGenI32& lambda, int startX, int startY) {
+AlignedImageU16 filter_generateU16(int32_t width, int32_t height, const ImageGenI32& lambda, int32_t startX, int32_t startY) {
 	AlignedImageU16 result = image_create_U16(width, height, false);
 	filter_mapU16(result, lambda, startX, startY);
 	return result;
 }
 
-static void mapF32(const ImageF32& target, const ImageGenF32& lambda, int startX, int startY) {
-	const int targetWidth = image_getWidth(target);
-	const int targetHeight = image_getHeight(target);
-	const int targetStride = image_getStride(target);
+static void mapF32(const ImageF32& target, const ImageGenF32& lambda, int32_t startX, int32_t startY) {
+	const int32_t targetWidth = image_getWidth(target);
+	const int32_t targetHeight = image_getHeight(target);
+	const int32_t targetStride = image_getStride(target);
 	SafePointer<float> targetRow = image_getSafePointer<float>(target);
-	for (int y = startY; y < targetHeight + startY; y++) {
+	for (int32_t y = startY; y < targetHeight + startY; y++) {
 		SafePointer<float> targetPixel = targetRow;
-		for (int x = startX; x < targetWidth + startX; x++) {
+		for (int32_t x = startX; x < targetWidth + startX; x++) {
 			*targetPixel = lambda(x, y);
 			targetPixel += 1;
 		}
 		targetRow.increaseBytes(targetStride);
 	}
 }
-void filter_mapF32(const ImageF32 &target, const ImageGenF32& lambda, int startX, int startY) {
+void filter_mapF32(const ImageF32 &target, const ImageGenF32& lambda, int32_t startX, int32_t startY) {
 	if (image_exists(target)) {
 		mapF32(target, lambda, startX, startY);
 	}
 }
-AlignedImageF32 filter_generateF32(int width, int height, const ImageGenF32& lambda, int startX, int startY) {
+AlignedImageF32 filter_generateF32(int32_t width, int32_t height, const ImageGenF32& lambda, int32_t startX, int32_t startY) {
 	AlignedImageF32 result = image_create_F32(width, height, false);
 	filter_mapF32(result, lambda, startX, startY);
 	return result;
@@ -869,7 +869,7 @@ AlignedImageU8 filter_resize(const ImageU8 &source, Sampler interpolation, int32
 	}
 }
 
-void filter_blockMagnify(const ImageRgbaU8 &target, const ImageRgbaU8& source, int pixelWidth, int pixelHeight) {
+void filter_blockMagnify(const ImageRgbaU8 &target, const ImageRgbaU8& source, int32_t pixelWidth, int32_t pixelHeight) {
 	if (image_exists(target) && image_exists(source)) {
 		imageImpl_blockMagnify(target, source, pixelWidth, pixelHeight);
 	}

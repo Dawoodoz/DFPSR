@@ -3,24 +3,24 @@
 
 using namespace dsr;
 
-bool running = true;
+static bool running = true;
 
 // GUI handles
-Window window;
-Component buttonClear;
-Component buttonAdd;
-Component myListBox;
-Component textElement;
+static Window window;
+static Component buttonClear;
+static Component buttonAdd;
+static Component myListBox;
+static Component textElement;
 
 // Custom message handling
-List<String> messages;
+static List<String> messages;
 
-void showMessages() {
+static void showMessages() {
 	if (messages.length() > 0) {
 		// Summarizing all messages from the last action, which can also be used to display them in the same pop-up message.
 		String content;
 		string_append(content, U"Messages:\n");
-		for (int m = 0; m < messages.length(); m++) {
+		for (int32_t m = 0; m < messages.length(); m++) {
 			string_append(content, U"  * ", messages[m]);
 		}
 		string_append(content, U"\n");

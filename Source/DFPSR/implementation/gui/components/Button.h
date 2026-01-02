@@ -54,7 +54,7 @@ private:
 	void generateGraphics();
 	// Settings fetched from the theme
 	String finalBackgroundClass; // The selected BackgroundClass/Class from layout settings or the component's default theme class "Button".
-	int background_filter = 0; // 0 for solid, 1 for alpha filter.
+	int32_t background_filter = 0; // 0 for solid, 1 for alpha filter.
 	// Generated
 	bool hasImages = false;
 	OrderedImageRgbaU8 imageUp;

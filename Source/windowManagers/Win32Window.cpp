@@ -31,7 +31,7 @@ Link to these dependencies for MS Windows:
 	inline void unlockWindow() {}
 #endif
 
-static const int bufferCount = 2;
+static const int32_t bufferCount = 2;
 
 class Win32Window : public dsr::BackendWindow {
 public:
@@ -47,8 +47,8 @@ public:
 
 	// Double buffering to allow drawing to a canvas while displaying the previous one
 	dsr::AlignedImageRgbaU8 canvas[bufferCount];
-	int drawIndex = 0 % bufferCount;
-	int showIndex = 1 % bufferCount;
+	int32_t drawIndex = 0 % bufferCount;
+	int32_t showIndex = 1 % bufferCount;
 	bool firstFrame = true;
 
 	#ifndef DISABLE_MULTI_THREADING
@@ -58,7 +58,7 @@ public:
 
 	// Remembers the dimensions of the window from creation and resize events
 	//   This allow requesting the size of the window at any time
-	int windowWidth = 0, windowHeight = 0;
+	int32_t windowWidth = 0, windowHeight = 0;
 private:
 	// Called before the application fetches events from the input queue
 	//   Closing the window, moving the mouse, pressing a key, et cetera
@@ -69,30 +69,30 @@ private:
 	bool setCursorVisibility(bool visible) override;
 
 	// Place the cursor within the window
-	bool setCursorPosition(int x, int y) override;
+	bool setCursorPosition(int32_t x, int32_t y) override;
 private:
 	// Helper methods specific to calling XLib
 	void updateTitle_locked();
 private:
 	// Canvas methods
 	dsr::AlignedImageRgbaU8 getCanvas() override { return this->canvas[this->drawIndex]; }
-	void resizeCanvas(int width, int height) override;
+	void resizeCanvas(int32_t width, int32_t height) override;
 	// Window methods
 	void setTitle(const dsr::String &newTitle) override {
 		this->title = newTitle;
 		this->updateTitle_locked();
 	}
 	void removeOldWindow_locked();
-	void createWindowed_locked(const dsr::String& title, int width, int height);
+	void createWindowed_locked(const dsr::String& title, int32_t width, int32_t height);
 	void createFullscreen_locked();
 	void prepareWindow_locked();
-	int windowState = 0; // 0=none, 1=windowed, 2=fullscreen
+	int32_t windowState = 0; // 0=none, 1=windowed, 2=fullscreen
 public:
 	// Constructors
 	Win32Window(const Win32Window&) = delete; // Non-copyable because of pointer aliasing.
-	Win32Window(const dsr::String& title, int width, int height);
-	int getWidth() const override { return this->windowWidth; };
-	int getHeight() const override { return this->windowHeight; };
+	Win32Window(const dsr::String& title, int32_t width, int32_t height);
+	int32_t getWidth() const override { return this->windowWidth; };
+	int32_t getHeight() const override { return this->windowHeight; };
 	// Destructor
 	~Win32Window();
 	// Interface
@@ -169,7 +169,7 @@ void Win32Window::updateTitle_locked() {
 }
 
 // The method can be seen as locked, but it overrides a virtual method that is independent of threading.
-bool Win32Window::setCursorPosition(int x, int y) {
+bool Win32Window::setCursorPosition(int32_t x, int32_t y) {
 	lockWindow();
 		POINT point; point.x = x; point.y = y;
 		ClientToScreen(this->hwnd, &point);
@@ -252,7 +252,7 @@ static void registerIfNeeded() {
 	}
 }
 
-void Win32Window::createWindowed_locked(const dsr::String& title, int width, int height) {
+void Win32Window::createWindowed_locked(const dsr::String& title, int32_t width, int32_t height) {
 	// Request to resize the canvas and interface according to the new window
 	this->windowWidth = width;
 	this->windowHeight = height;
@@ -287,8 +287,8 @@ void Win32Window::createWindowed_locked(const dsr::String& title, int width, int
 
 void Win32Window::createFullscreen_locked() {
 	lockWindow();
-		int screenWidth = GetSystemMetrics(SM_CXSCREEN);
-		int screenHeight = GetSystemMetrics(SM_CYSCREEN);
+		int32_t screenWidth = GetSystemMetrics(SM_CXSCREEN);
+		int32_t screenHeight = GetSystemMetrics(SM_CYSCREEN);
 
 		// Request to resize the canvas and interface according to the new window
 		this->windowWidth = screenWidth;
@@ -319,7 +319,7 @@ void Win32Window::createFullscreen_locked() {
 	this->prepareWindow_locked();
 }
 
-Win32Window::Win32Window(const dsr::String& title, int width, int height) {
+Win32Window::Win32Window(const dsr::String& title, int32_t width, int32_t height) {
 	bool fullScreen = false;
 	if (width < 1 || height < 1) {
 		fullScreen = true;
@@ -519,7 +519,7 @@ static LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT message, WPARAM wParam, 
 	}
 	// Check that we're using the correct window instance (This might not be the case while toggling full-screen)
 	// Handle the message
-	int result = 0;
+	int32_t result = 0;
 	switch (message) {
 	case WM_QUIT:
 		PostQuitMessage(wParam);
@@ -560,7 +560,7 @@ static LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT message, WPARAM wParam, 
 		break;
 	case WM_MOUSEWHEEL:
 		{
-			int delta = GET_WHEEL_DELTA_WPARAM(wParam);
+			int32_t delta = GET_WHEEL_DELTA_WPARAM(wParam);
 			if (delta > 0) {
 				parent->receivedMouseEvent(dsr::MouseEventType::Scroll, dsr::MouseKeyEnum::ScrollUp, parent->lastMousePos);
 			} else if (delta < 0) {
@@ -604,8 +604,8 @@ static LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT message, WPARAM wParam, 
 	case WM_SIZE:
 		// If there's no size during minimization, don't try to resize the canvas
 		if (wParam != SIZE_MINIMIZED) {
-			int width = LOWORD(lParam);
-			int height = HIWORD(lParam);
+			int32_t width = LOWORD(lParam);
+			int32_t height = HIWORD(lParam);
 			parent->windowWidth = width;
 			parent->windowHeight = height;
 			parent->receivedWindowResize(width, height);
@@ -637,10 +637,10 @@ void Win32Window::prefetchEvents() {
 }
 
 // Locked because it overrides
-void Win32Window::resizeCanvas(int width, int height) {
+void Win32Window::resizeCanvas(int32_t width, int32_t height) {
 	// Create a new canvas
 	//   Even thou Windows is using RGBA pack order for the window, the bitmap format used for drawing is using BGRA order
-	for (int bufferIndex = 0; bufferIndex < bufferCount; bufferIndex++) {
+	for (int32_t bufferIndex = 0; bufferIndex < bufferCount; bufferIndex++) {
 		dsr::AlignedImageRgbaU8 previousCanvas = this->canvas[bufferIndex];
 		this->canvas[bufferIndex] = dsr::image_create_RgbaU8_native(width, height, dsr::PackOrderIndex::BGRA);
 		if (image_exists(previousCanvas)) {
@@ -686,13 +686,13 @@ void Win32Window::redraw(HWND& hwnd, bool lock, bool swap) {
 		this->showIndex = (this->showIndex + 1) % bufferCount;
 	}
 	this->prefetchEvents();
-	int displayIndex = this->showIndex;
+	int32_t displayIndex = this->showIndex;
 	std::function<void()> task = [this, displayIndex, lock]() {
 		// Let the source bitmap use a padded width to safely handle the stride
 		// Windows requires 8-byte alignment, but the image format uses larger alignment.
-		int paddedWidth = dsr::image_getStride(this->canvas[displayIndex]) / 4;
-		//int width = dsr::image_getWidth(this->canvas[displayIndex]);
-		int height = dsr::image_getHeight(this->canvas[displayIndex]);
+		int32_t paddedWidth = dsr::image_getStride(this->canvas[displayIndex]) / 4;
+		//int32_t width = dsr::image_getWidth(this->canvas[displayIndex]);
+		int32_t height = dsr::image_getHeight(this->canvas[displayIndex]);
 		InvalidateRect(this->hwnd, NULL, false);
 		PAINTSTRUCT paintStruct;
 		HDC targetContext = BeginPaint(this->hwnd, &paintStruct);
@@ -733,6 +733,6 @@ void Win32Window::showCanvas() {
 	this->redraw(this->hwnd, true, true);
 }
 
-dsr::Handle<dsr::BackendWindow> createBackendWindow(const dsr::String& title, int width, int height) {
+dsr::Handle<dsr::BackendWindow> createBackendWindow(const dsr::String& title, int32_t width, int32_t height) {
 	return dsr::handle_create<Win32Window>(title, width, height);
 }

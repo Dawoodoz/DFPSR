@@ -20,7 +20,7 @@ bool debugOccluders = false;
 // The window handle
 Window window;
 
-int createCubePart(Model model, const FVector3D &min, const FVector3D &max) {
+int32_t createCubePart(Model model, const FVector3D &min, const FVector3D &max) {
 	// Add positions
 	model_addPoint(model, FVector3D(min.x, min.y, min.z)); // 0: Left-down-near
 	model_addPoint(model, FVector3D(min.x, min.y, max.z)); // 1: Left-down-far
@@ -31,7 +31,7 @@ int createCubePart(Model model, const FVector3D &min, const FVector3D &max) {
 	model_addPoint(model, FVector3D(max.x, max.y, min.z)); // 6: Right-up-near
 	model_addPoint(model, FVector3D(max.x, max.y, max.z)); // 7: Right-up-far
 	// Create a part for the polygons
-	int part = model_addEmptyPart(model, U"cube");
+	int32_t part = model_addEmptyPart(model, U"cube");
 	// Polygons using default texture coordinates on the 4 corners of the texture
 	model_addQuad(model, part, 3, 2, 0, 1); // Left quad
 	model_addQuad(model, part, 6, 7, 5, 4); // Right quad
@@ -121,8 +121,8 @@ void dsrMain(List<String> args) {
 		ImageF32 depthBuffer = window_getDepthBuffer(window);
 
 		// Get target size
-		int targetWidth = image_getWidth(colorBuffer);
-		int targetHeight = image_getHeight(colorBuffer);
+		int32_t targetWidth = image_getWidth(colorBuffer);
+		int32_t targetHeight = image_getHeight(colorBuffer);
 
 		// Paint the background color
 		startTime = time_getSeconds();

@@ -135,12 +135,12 @@ public:
 class RowShape {
 public:
 	// A collection of row intervals telling where pixels should be drawn
-	const int startRow;
-	const int rowCount;
+	const int32_t startRow;
+	const int32_t rowCount;
 	const RowInterval *rows;
 	// Constructors
 	RowShape() : startRow(0), rowCount(0), rows(nullptr) {}
-	RowShape(int startRow, int rowCount, RowInterval* rows) : startRow(startRow), rowCount(rowCount), rows(rows) {}
+	RowShape(int32_t startRow, int32_t rowCount, RowInterval* rows) : startRow(startRow), rowCount(rowCount), rows(rows) {}
 };
 
 // Any extra information will be given to the filling method as this only gives the shape and vertex interpolation data
@@ -156,15 +156,15 @@ public:
 	bool isFrontfacing() const;
 	// Get the region to rasterize where the first and last rows may go outside of the clipBound with empty rows for alignment
 	//   Give a clipBound with top and bottom at even multiples of two if you don't want the result to go outside
-	IRect getAlignedRasterBound(const IRect& clipBound, int alignX, int alignY) const;
-	int getBufferSize(const IRect& clipBound, int alignX, int alignY) const;
+	IRect getAlignedRasterBound(const IRect& clipBound, int32_t alignX, int32_t alignY) const;
+	int32_t getBufferSize(const IRect& clipBound, int32_t alignX, int32_t alignY) const;
 	// Get the row intervals within clipBound into a buffer of a size given by getBufferSize with the same clipBound
 	// Output
 	//   rows: The exclusive row interval for each row from top to bottom
 	//   startRow: The Y coordinate of the first row
 	// Input
 	//   clipBound: The pixel region where the resulting rows may draw.
-	void getShape(int& startRow, RowInterval* rows, const IRect& clipBound, int alignX, int alignY) const;
+	void getShape(int32_t& startRow, RowInterval* rows, const IRect& clipBound, int32_t alignX, int32_t alignY) const;
 	// Returns the vertex weight projection for specified sub-vertex weights
 	Projection getProjection(const FVector3D& subB, const FVector3D& subC, bool perspective) const;
 	// Returns the vertex weight projection for default sub-vertex weights

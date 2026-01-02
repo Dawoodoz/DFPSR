@@ -29,8 +29,8 @@
 
 using namespace dsr;
 
-int BasicResourcePool::findImageRgba(const ReadableString& name) const {
-	for (int i = 0; i < this->imageRgbaList.length(); i++) {
+int32_t BasicResourcePool::findImageRgba(const ReadableString& name) const {
+	for (int32_t i = 0; i < this->imageRgbaList.length(); i++) {
 		// Warning!
 		// This may cover up bugs with case sensitive matching in the Linux file system.
 		// TODO: Make this case sensitive and enforce it on Windows or allow case insensitive loading on all systems.
@@ -41,8 +41,8 @@ int BasicResourcePool::findImageRgba(const ReadableString& name) const {
 	return -1;
 }
 
-int BasicResourcePool::findTextureRgba(const ReadableString& name) const {
-	for (int i = 0; i < this->textureRgbaList.length(); i++) {
+int32_t BasicResourcePool::findTextureRgba(const ReadableString& name) const {
+	for (int32_t i = 0; i < this->textureRgbaList.length(); i++) {
 		if (string_caseInsensitiveMatch(name, this->textureRgbaList[i].name)) {
 			return i;
 		}
@@ -54,7 +54,7 @@ const ImageRgbaU8 BasicResourcePool::fetchImageRgba(const ReadableString& name) 
 	ImageRgbaU8 result;
 	// Using "" will return an empty reference to allow removing textures
 	if (string_length(name) > 0) {
-		int existingIndex = this->findImageRgba(name);
+		int32_t existingIndex = this->findImageRgba(name);
 		if (existingIndex > -1) {
 			result = this->imageRgbaList[existingIndex].resource;
 		} else if (string_findFirst(name, U'.') > -1) {
@@ -87,8 +87,8 @@ const TextureRgbaU8 BasicResourcePool::fetchTextureRgba(const ReadableString& na
 	TextureRgbaU8 result;
 	// Using "" will return an empty reference to allow removing textures
 	if (string_length(name) > 0) {
-		int existingTextureIndex = this->findTextureRgba(name);
-		int existingImageIndex = this->findImageRgba(name);
+		int32_t existingTextureIndex = this->findTextureRgba(name);
+		int32_t existingImageIndex = this->findImageRgba(name);
 		if (existingTextureIndex > -1) {
 			result = this->textureRgbaList[existingTextureIndex].resource;
 		} else if (existingImageIndex > -1) {

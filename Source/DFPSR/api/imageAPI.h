@@ -352,7 +352,7 @@ namespace dsr {
 	// A faster and more flexible way to load compressed images from memory.
 	// If you just want to point directly to a memory location to avoid allocating many small buffers, you can use a safe pointer and a size in bytes.
 	// Failure will return an empty handle.
-	OrderedImageRgbaU8 image_decode_RgbaU8(SafePointer<const uint8_t> data, int size);
+	OrderedImageRgbaU8 image_decode_RgbaU8(SafePointer<const uint8_t> data, int32_t size);
 
 // Saving
 	// Save the image to the path specified by filename and return true iff the operation was successful.
@@ -365,12 +365,12 @@ namespace dsr {
 	// If mustWork is true, an exception will be raised on failure.
 	// If mustWork is false, failure will return false.
 	// The optional quality setting goes from 1% to 100% and is at the maximum by default.
-	bool image_save(const ImageRgbaU8 &image, const ReadableString& filename, bool mustWork = true, int quality = 100);
+	bool image_save(const ImageRgbaU8 &image, const ReadableString& filename, bool mustWork = true, int32_t quality = 100);
 	// Save the image to a memory buffer.
 	// Post-condition: Returns a buffer with the encoded image format as it would be saved to a file, or empty on failure.
 	//                 No exceptions will be raised on failure, because an error message without a filename would not explain much.
 	// The optional quality setting goes from 1% to 100% and is at the maximum by default.
-	Buffer image_encode(const ImageRgbaU8 &image, ImageFileFormat format, int quality = 90);
+	Buffer image_encode(const ImageRgbaU8 &image, ImageFileFormat format, int32_t quality = 90);
 
 // Fill all pixels with a uniform color
 	void image_fill(const ImageU8& image, int32_t color);

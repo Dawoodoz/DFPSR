@@ -61,8 +61,8 @@ bool ListBox::isContainer() const {
 	return false;
 }
 
-static const int textBorderLeft = 6;
-static const int textBorderTop = 4;
+static const int32_t textBorderLeft = 6;
+static const int32_t textBorderTop = 4;
 
 void ListBox::generateGraphics() {
 	int32_t width = this->location.width();

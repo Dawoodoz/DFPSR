@@ -22,12 +22,12 @@ Window window;
 
 static const double pi = 3.1415926535897932384626433832795;
 static const double cyclesToRadians = pi * 2.0;
-static const int toneCount = 10;
-Array<int> basicTone = Array<int>(toneCount, -1);
-int testSound;
-Array<int> playing = Array<int>(toneCount, -1);
+static const int32_t toneCount = 10;
+Array<int32_t> basicTone = Array<int32_t>(toneCount, -1);
+int32_t testSound;
+Array<int32_t> playing = Array<int32_t>(toneCount, -1);
 
-int createSine(int frequency, const ReadableString &name) {
+int32_t createSine(int32_t frequency, const ReadableString &name) {
 	return soundEngine_insertSoundBuffer(sound_generate_function(44100 / frequency, 1, 44100, [frequency](double time, uint32_t channelIndex) {
 		return sin(time * (cyclesToRadians * double(frequency))) * 0.25f;
 	}), name, false);
@@ -37,7 +37,7 @@ void createTestProject() {
 	// Loaded from file
 	testSound = soundEngine_loadSoundFromFile(U"Water.wav");
 	// Pure tones
-	for (int t = 0; t < toneCount; t++) {
+	for (int32_t t = 0; t < toneCount; t++) {
 		playing[t] = -1;
 	}
 	basicTone[0] = createSine(261, U"C 4"); // C 4
@@ -56,9 +56,9 @@ static EnvelopeSettings envelope = EnvelopeSettings(0.1, 0.2, 0.8, 0.4, 0.1, -0.
 static double previewPressTime = 1.0;
 static double previewViewTime = 4.0;
 
-static int selectedBuffer = 0;
+static int32_t selectedBuffer = 0;
 static void limitSelection() {
-	int maxIndex = soundEngine_getSoundBufferCount() - 1;
+	int32_t maxIndex = soundEngine_getSoundBufferCount() - 1;
 	if (selectedBuffer < 0) selectedBuffer = 0;
 	if (selectedBuffer > maxIndex) selectedBuffer = maxIndex;
 }
@@ -83,7 +83,7 @@ void dsrMain(List<String> args) {
 			if (key == DsrKey_Escape) {
 				running = false;
 			} else if (key >= DsrKey_1 && key <= DsrKey_9) {
-				int toneIndex = key - DsrKey_1;
+				int32_t toneIndex = key - DsrKey_1;
 				// TODO: Stop or reactivate sounds that are still fading out with the same tone to reduce the number of sound players running at the same time.
 				playing[toneIndex] = soundEngine_playSound(basicTone[toneIndex], true, 1.0f, 1.0f, envelope);
 			} else if (key == DsrKey_0) {
@@ -109,7 +109,7 @@ void dsrMain(List<String> args) {
 			}
 		} else if (event.keyboardEventType == KeyboardEventType::KeyUp) {
 			if (key >= DsrKey_1 && key <= DsrKey_9) {
-				int toneIndex = key - DsrKey_1;
+				int32_t toneIndex = key - DsrKey_1;
 				soundEngine_releaseSound(playing[toneIndex]);
 			} else if (key == DsrKey_0) {
 				soundEngine_releaseSound(playing[9]);
@@ -141,13 +141,13 @@ void dsrMain(List<String> args) {
 		// Fill the background
 		AlignedImageRgbaU8 canvas = window_getCanvas(window);
 		image_fill(canvas, ColorRgbaI32(64, 64, 64, 255));
-		int width = image_getWidth(canvas);
+		int32_t width = image_getWidth(canvas);
 		// Draw things
-		int height = 50;
-		int top = 0;
+		int32_t height = 50;
+		int32_t top = 0;
 		soundEngine_drawEnvelope(canvas, IRect(0, 0, width, height), envelope, previewPressTime, previewViewTime);
 		top += height;
-		for (int s = 0; s < soundEngine_getSoundBufferCount(); s++) {
+		for (int32_t s = 0; s < soundEngine_getSoundBufferCount(); s++) {
 			soundEngine_drawSound(canvas, IRect(0, top, width, height), s, s == selectedBuffer);
 			top += height;
 		}

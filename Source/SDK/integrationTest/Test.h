@@ -31,8 +31,8 @@ struct TestContext {
 	dsr::List<Test> tests;
 
 	// Each test consists of one or more tasks to pass.
-	int testIndex = 0; // Each test index refers to a Test in tests to be completed.
-	int taskIndex = 0; // To avoid cluttering the summary with lots of small tests, tests are divided into smaller tasks.
+	int32_t testIndex = 0; // Each test index refers to a Test in tests to be completed.
+	int32_t taskIndex = 0; // To avoid cluttering the summary with lots of small tests, tests are divided into smaller tasks.
 
 	// Call when completing a task but not a whole test.
 	void passTask();

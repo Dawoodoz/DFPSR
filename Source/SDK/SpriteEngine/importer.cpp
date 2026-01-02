@@ -6,7 +6,7 @@ namespace dsr {
 struct PlyProperty {
 	String name;
 	bool list;
-	int scale = 1; // 1 for normalized input, 255 for uchar
+	int32_t scale = 1; // 1 for normalized input, 255 for uchar
 	// Single property
 	PlyProperty(String name, ReadableString typeName) : name(name), list(false) {
 		if (string_caseInsensitiveMatch(typeName, U"UCHAR")) {
@@ -29,9 +29,9 @@ struct PlyProperty {
 };
 struct PlyElement {
 	String name; // Name of the collection
-	int count; // Size of the collection
+	int32_t count; // Size of the collection
 	List<PlyProperty> properties; // Properties on each line (list properties consume additional tokens)
-	PlyElement(const String &name, int count) : name(name), count(count) {}
+	PlyElement(const String &name, int32_t count) : name(name), count(count) {}
 };
 enum class PlyDataInput {
 	Ignore, Vertex, Face
@@ -56,16 +56,16 @@ struct PlyVertex {
 //   This coordinate system is left handed, which makes more sense when working with depth buffers.
 // If exporting from a right-handed editor, setting Y as up and Z as forward might flip the X axis to the left side.
 //   In that case, flip the X axis when calling this function.
-static void loadPlyModel(Model& targetModel, int targetPart, const ReadableString& content, bool flipX, Transform3D axisConversion) {
+static void loadPlyModel(Model& targetModel, int32_t targetPart, const ReadableString& content, bool flipX, Transform3D axisConversion) {
 	//printText("loadPlyModel:\n", content, "\n");
 	// Find the target model
-	int startPointIndex = model_getNumberOfPoints(targetModel);
+	int32_t startPointIndex = model_getNumberOfPoints(targetModel);
 	// Split lines
 	List<String> lines = string_split(content, U'\n', true);
 	List<PlyElement> elements;
 	bool readingContent = false; // True after passing end_header
-	int elementIndex = -1; // current member of elements
-	int memberIndex = 0; // current data line within the content of the current element
+	int32_t elementIndex = -1; // current member of elements
+	int32_t memberIndex = 0; // current data line within the content of the current element
 	PlyDataInput inputMode = PlyDataInput::Ignore;
 	// Temporary geometry
 	List<PlyVertex> vertices;
@@ -79,7 +79,7 @@ static void loadPlyModel(Model& targetModel, int targetPart, const ReadableStrin
 		printText("loadPlyModel: Only supporting the ascii 1.0 format!\n");
 		return;
 	}
-	for (int l = 0; l < lines.length(); l++) {
+	for (int32_t l = 0; l < lines.length(); l++) {
 		// Tokenize the current line
 		List<String> tokens = string_split(lines[l], U' ');
 		if (tokens.length() > 0 && !string_caseInsensitiveMatch(tokens[0], U"COMMENT")) {
@@ -91,15 +91,15 @@ static void loadPlyModel(Model& targetModel, int targetPart, const ReadableStrin
 						vertices.push(PlyVertex());
 					}
 					PlyElement *currentElement = &(elements[elementIndex]);
-					int tokenIndex = 0;
-					for (int propertyIndex = 0; propertyIndex < currentElement->properties.length(); propertyIndex++) {
+					int32_t tokenIndex = 0;
+					for (int32_t propertyIndex = 0; propertyIndex < currentElement->properties.length(); propertyIndex++) {
 						if (tokenIndex >= tokens.length()) {
 							printText("loadPlyModel: Undeclared properties given to ", currentElement->name, " in the data!\n");
 							break;
 						}
 						PlyProperty *currentProperty = &(currentElement->properties[propertyIndex]);
 						if (currentProperty->list) {
-							int listLength = string_toInteger(tokens[tokenIndex]);
+							int32_t listLength = string_toInteger(tokens[tokenIndex]);
 							tokenIndex++;
 							// Detect polygons
 							if (inputMode == PlyDataInput::Face && string_caseInsensitiveMatch(currentProperty->name, U"VERTEX_INDICES")) {
@@ -109,16 +109,16 @@ static void loadPlyModel(Model& targetModel, int targetPart, const ReadableStrin
 								bool flipSides = flipX;
 								if (listLength == 4) {
 									// Use a quad to save memory
-									int indexA = string_toInteger(tokens[tokenIndex]);
-									int indexB = string_toInteger(tokens[tokenIndex + 1]);
-									int indexC = string_toInteger(tokens[tokenIndex + 2]);
-									int indexD = string_toInteger(tokens[tokenIndex + 3]);
+									int32_t indexA = string_toInteger(tokens[tokenIndex]);
+									int32_t indexB = string_toInteger(tokens[tokenIndex + 1]);
+									int32_t indexC = string_toInteger(tokens[tokenIndex + 2]);
+									int32_t indexD = string_toInteger(tokens[tokenIndex + 3]);
 									FVector4D colorA = vertices[indexA].color;
 									FVector4D colorB = vertices[indexB].color;
 									FVector4D colorC = vertices[indexC].color;
 									FVector4D colorD = vertices[indexD].color;
 									if (flipSides) {
-										int polygon = model_addQuad(targetModel, targetPart,
+										int32_t polygon = model_addQuad(targetModel, targetPart,
 										  startPointIndex + indexD,
 										  startPointIndex + indexC,
 										  startPointIndex + indexB,
@@ -129,7 +129,7 @@ static void loadPlyModel(Model& targetModel, int targetPart, const ReadableStrin
 										model_setVertexColor(targetModel, targetPart, polygon, 2, colorB);
 										model_setVertexColor(targetModel, targetPart, polygon, 3, colorA);
 									} else {
-										int polygon = model_addQuad(targetModel, targetPart,
+										int32_t polygon = model_addQuad(targetModel, targetPart,
 										  startPointIndex + indexA,
 										  startPointIndex + indexB,
 										  startPointIndex + indexC,
@@ -142,16 +142,16 @@ static void loadPlyModel(Model& targetModel, int targetPart, const ReadableStrin
 									}
 								} else {
 									// Polygon generating a triangle fan
-									int indexA = string_toInteger(tokens[tokenIndex]);
-									int indexB = string_toInteger(tokens[tokenIndex + 1]);
+									int32_t indexA = string_toInteger(tokens[tokenIndex]);
+									int32_t indexB = string_toInteger(tokens[tokenIndex + 1]);
 									FVector4D colorA = vertices[indexA].color;
 									FVector4D colorB = vertices[indexB].color;
-									for (int i = 2; i < listLength; i++) {
-										int indexC = string_toInteger(tokens[tokenIndex + i]);
+									for (int32_t i = 2; i < listLength; i++) {
+										int32_t indexC = string_toInteger(tokens[tokenIndex + i]);
 										FVector4D colorC = vertices[indexC].color;
 										// Create a triangle
 										if (flipSides) {
-											int polygon = model_addTriangle(targetModel, targetPart,
+											int32_t polygon = model_addTriangle(targetModel, targetPart,
 											  startPointIndex + indexC,
 											  startPointIndex + indexB,
 											  startPointIndex + indexA
@@ -160,7 +160,7 @@ static void loadPlyModel(Model& targetModel, int targetPart, const ReadableStrin
 											model_setVertexColor(targetModel, targetPart, polygon, 1, colorB);
 											model_setVertexColor(targetModel, targetPart, polygon, 2, colorA);
 										} else {
-											int polygon = model_addTriangle(targetModel, targetPart,
+											int32_t polygon = model_addTriangle(targetModel, targetPart,
 											  startPointIndex + indexA,
 											  startPointIndex + indexB,
 											  startPointIndex + indexC
@@ -267,8 +267,8 @@ static void loadPlyModel(Model& targetModel, int targetPart, const ReadableStrin
 	}
 }
 
-void importer_loadModel(Model& targetModel, int part, const ReadableString& filename, bool flipX, Transform3D axisConversion) {
-	int lastDotIndex = string_findLast(filename, U'.');
+void importer_loadModel(Model& targetModel, int32_t part, const ReadableString& filename, bool flipX, Transform3D axisConversion) {
+	int32_t lastDotIndex = string_findLast(filename, U'.');
 	if (lastDotIndex == -1) {
 		printText("The model's filename ", filename, " does not have an extension!\n");
 	} else {

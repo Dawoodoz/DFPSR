@@ -90,9 +90,9 @@ inline void clippedWrite(SafePointer<float> upperLeft, SafePointer<float> lowerL
 }
 
 template<bool CLIP_SIDES>
-inline void clipPixels(int x, const RowInterval &upperRow, const RowInterval &lowerRow, bool &clip0, bool &clip1, bool &clip2, bool &clip3) {
+inline void clipPixels(int32_t x, const RowInterval &upperRow, const RowInterval &lowerRow, bool &clip0, bool &clip1, bool &clip2, bool &clip3) {
 	if (CLIP_SIDES) {
-		int x2 = x + 1;
+		int32_t x2 = x + 1;
 		clip0 = x >= upperRow.left && x < upperRow.right;
 		clip1 = x2 >= upperRow.left && x2 < upperRow.right;
 		clip2 = x >= lowerRow.left && x < lowerRow.right;
@@ -106,7 +106,7 @@ inline void clipPixels(int x, const RowInterval &upperRow, const RowInterval &lo
 }
 
 template<bool CLIP_SIDES, bool DEPTH_READ, bool AFFINE>
-inline void getVisibility(int x, const RowInterval &upperRow, const RowInterval &lowerRow, const FVector4D &depth, SafePointer<const float> depthDataUpper, SafePointer<const float> depthDataLower, bool &vis0, bool &vis1, bool &vis2, bool &vis3) {
+inline void getVisibility(int32_t x, const RowInterval &upperRow, const RowInterval &lowerRow, const FVector4D &depth, SafePointer<const float> depthDataUpper, SafePointer<const float> depthDataLower, bool &vis0, bool &vis1, bool &vis2, bool &vis3) {
 	// Clip pixels
 	bool clip0, clip1, clip2, clip3;
 	clipPixels<CLIP_SIDES>(x, upperRow, lowerRow, clip0, clip1, clip2, clip3);
@@ -152,7 +152,7 @@ inline void getVisibility(int x, const RowInterval &upperRow, const RowInterval 
 }
 
 template<bool CLIP_SIDES, bool COLOR_WRITE, bool DEPTH_READ, bool DEPTH_WRITE, Filter FILTER, bool AFFINE>
-inline void fillQuadSuper(void *data, PixelShadingCallback pixelShaderFunction, int x, SafePointer<uint32_t> pixelDataUpper, SafePointer<uint32_t> pixelDataLower, SafePointer<float> depthDataUpper, SafePointer<float> depthDataLower, const RowInterval &upperRow, const RowInterval &lowerRow, const PackOrder &targetPackingOrder, const FVector4D &depth, const F32x4x3 &weights) {
+inline void fillQuadSuper(void *data, PixelShadingCallback pixelShaderFunction, int32_t x, SafePointer<uint32_t> pixelDataUpper, SafePointer<uint32_t> pixelDataLower, SafePointer<float> depthDataUpper, SafePointer<float> depthDataLower, const RowInterval &upperRow, const RowInterval &lowerRow, const PackOrder &targetPackingOrder, const FVector4D &depth, const F32x4x3 &weights) {
 	// Get visibility
 	bool vis0, vis1, vis2, vis3;
 	getVisibility<CLIP_SIDES, DEPTH_READ, AFFINE>(x, upperRow, lowerRow, depth, depthDataUpper, depthDataLower, vis0, vis1, vis2, vis3);
@@ -193,13 +193,13 @@ inline void fillQuadSuper(void *data, PixelShadingCallback pixelShaderFunction, 
 // DEPTH_WRITE can be disabled to skip writing to the depth buffer so that it does not occlude following draw calls.
 // FILTER can be set to Filter::Alpha to use the output alpha as the opacity.
 template<bool CLIP_SIDES, bool COLOR_WRITE, bool DEPTH_READ, bool DEPTH_WRITE, Filter FILTER, bool AFFINE>
-inline void fillRowSuper(void *data, PixelShadingCallback pixelShaderFunction, SafePointer<uint32_t> pixelDataUpper, SafePointer<uint32_t> pixelDataLower, SafePointer<float> depthDataUpper, SafePointer<float> depthDataLower, FVector3D pWeightUpper, FVector3D pWeightLower, const FVector3D &pWeightDx, int startX, int endX, const RowInterval &upperRow, const RowInterval &lowerRow, const PackOrder &targetPackingOrder) {
+inline void fillRowSuper(void *data, PixelShadingCallback pixelShaderFunction, SafePointer<uint32_t> pixelDataUpper, SafePointer<uint32_t> pixelDataLower, SafePointer<float> depthDataUpper, SafePointer<float> depthDataLower, FVector3D pWeightUpper, FVector3D pWeightLower, const FVector3D &pWeightDx, int32_t startX, int32_t endX, const RowInterval &upperRow, const RowInterval &lowerRow, const PackOrder &targetPackingOrder) {
 	if (AFFINE) {
 		FVector3D dx2 = pWeightDx * 2.0f;
 		F32x4 vLinearDepth(pWeightUpper.x, pWeightUpper.x + pWeightDx.x, pWeightLower.x, pWeightLower.x + pWeightDx.x);
 		F32x4 weightB(pWeightUpper.y, pWeightUpper.y + pWeightDx.y, pWeightLower.y, pWeightLower.y + pWeightDx.y);
 		F32x4 weightC(pWeightUpper.z, pWeightUpper.z + pWeightDx.z, pWeightLower.z, pWeightLower.z + pWeightDx.z);
-		for (int x = startX; x < endX; x += 2) {
+		for (int32_t x = startX; x < endX; x += 2) {
 			// Get the linear depth
 			FVector4D depth = vLinearDepth.get();
 			// Calculate the weight of the first vertex from the other two
@@ -219,7 +219,7 @@ inline void fillRowSuper(void *data, PixelShadingCallback pixelShaderFunction, S
 		F32x4 vRecDepth(pWeightUpper.x, pWeightUpper.x + pWeightDx.x, pWeightLower.x, pWeightLower.x + pWeightDx.x);
 		F32x4 vRecU(pWeightUpper.y, pWeightUpper.y + pWeightDx.y, pWeightLower.y, pWeightLower.y + pWeightDx.y);
 		F32x4 vRecV(pWeightUpper.z, pWeightUpper.z + pWeightDx.z, pWeightLower.z, pWeightLower.z + pWeightDx.z);
-		for (int x = startX; x < endX; x += 2) {
+		for (int32_t x = startX; x < endX; x += 2) {
 			// Get the reciprocal depth
 			FVector4D depth = vRecDepth.get();
 			// After linearly interpolating (1 / W, U / W, V / W) based on the affine weights...
@@ -246,15 +246,15 @@ inline void fillRowSuper(void *data, PixelShadingCallback pixelShaderFunction, S
 template<bool COLOR_WRITE, bool DEPTH_READ, bool DEPTH_WRITE, Filter FILTER, bool AFFINE>
 inline void fillShapeSuper(void *data, PixelShadingCallback pixelShaderFunction, const ImageRgbaU8 &colorBuffer, const ImageF32 &depthBuffer, const ITriangle2D &triangle, const Projection &projection, const RowShape &shape) {
 	// Prepare constants
-	const int targetStride = image_getStride(colorBuffer);
-	const int depthBufferStride = image_getStride(depthBuffer);
+	const int32_t targetStride = image_getStride(colorBuffer);
+	const int32_t depthBufferStride = image_getStride(depthBuffer);
 	const FVector3D doublePWeightDx = projection.pWeightDx * 2.0f;
-	const int colorRowSize = image_getWidth(colorBuffer) * sizeof(uint32_t);
-	const int depthRowSize = image_getWidth(depthBuffer) * sizeof(float);
+	const int32_t colorRowSize = image_getWidth(colorBuffer) * sizeof(uint32_t);
+	const int32_t depthRowSize = image_getWidth(depthBuffer) * sizeof(float);
 	const PackOrder& targetPackingOrder = image_exists(colorBuffer) ? image_getPackOrder(colorBuffer) : PackOrder::getPackOrder(PackOrderIndex::RGBA);
-	const int colorHeight = image_getHeight(colorBuffer);
-	const int depthHeight = image_getHeight(depthBuffer);
-	const int maxHeight = colorHeight > depthHeight ? colorHeight : depthHeight;
+	const int32_t colorHeight = image_getHeight(colorBuffer);
+	const int32_t depthHeight = image_getHeight(depthBuffer);
+	const int32_t maxHeight = colorHeight > depthHeight ? colorHeight : depthHeight;
 
 	// Initialize row pointers for color buffer
 	SafePointer<uint32_t> pixelDataUpper, pixelDataLower, pixelDataUpperRow, pixelDataLowerRow;
@@ -271,18 +271,18 @@ inline void fillShapeSuper(void *data, PixelShadingCallback pixelShaderFunction,
 	}
 
 	for (int32_t y1 = shape.startRow; y1 < shape.startRow + shape.rowCount; y1 += 2) {
-		int y2 = y1 + 1;
+		int32_t y2 = y1 + 1;
 		RowInterval upperRow = shape.rows[y1 - shape.startRow];
 		RowInterval lowerRow = shape.rows[y2 - shape.startRow];
-		int outerStart = min(upperRow.left, lowerRow.left);
-		int outerEnd = max(upperRow.right, lowerRow.right);
-		int innerStart = max(upperRow.left, lowerRow.left);
-		int innerEnd = min(upperRow.right, lowerRow.right);
+		int32_t outerStart = min(upperRow.left, lowerRow.left);
+		int32_t outerEnd = max(upperRow.right, lowerRow.right);
+		int32_t innerStart = max(upperRow.left, lowerRow.left);
+		int32_t innerEnd = min(upperRow.right, lowerRow.right);
 		// Round exclusive intervals to multiples of two pixels
-		int outerBlockStart = roundDownEven(outerStart);
-		int outerBlockEnd = roundUpEven(outerEnd);
-		int innerBlockStart = roundUpEven(innerStart);
-		int innerBlockEnd = roundDownEven(innerEnd);
+		int32_t outerBlockStart = roundDownEven(outerStart);
+		int32_t outerBlockEnd = roundUpEven(outerEnd);
+		int32_t innerBlockStart = roundUpEven(innerStart);
+		int32_t innerBlockEnd = roundDownEven(innerEnd);
 		// Clip last row if outside on odd height
 		if (y2 >= maxHeight) {
 			lowerRow.right = lowerRow.left;
@@ -305,7 +305,7 @@ inline void fillShapeSuper(void *data, PixelShadingCallback pixelShaderFunction,
 					// Repeat the upper row to avoid reading outside
 					pixelDataLower = pixelDataUpperRow.slice("pixelDataLower (from upper)", 0, colorRowSize);
 				}
-				int startColorOffset = outerBlockStart * sizeof(uint32_t);
+				int32_t startColorOffset = outerBlockStart * sizeof(uint32_t);
 				pixelDataUpper.increaseBytes(startColorOffset);
 				pixelDataLower.increaseBytes(startColorOffset);
 			}
@@ -355,8 +355,8 @@ inline void fillShapeSuper(void *data, PixelShadingCallback pixelShaderFunction,
 					pWeightUpper = pWeightUpper + doublePWeightDx; pWeightLower = pWeightLower + doublePWeightDx;
 				}
 				// Full quads
-				int width = innerBlockEnd - innerBlockStart;
-				int quadCount = width / 2;
+				int32_t width = innerBlockEnd - innerBlockStart;
+				int32_t quadCount = width / 2;
 				fillRowSuper<false, COLOR_WRITE, DEPTH_READ, DEPTH_WRITE, FILTER, AFFINE>
 				  (data, pixelShaderFunction, pixelDataUpper, pixelDataLower, depthDataUpper, depthDataLower, pWeightUpper, pWeightLower, projection.pWeightDx, innerBlockStart, innerBlockEnd, RowInterval(), RowInterval(), targetPackingOrder);
 				if (COLOR_WRITE) { pixelDataUpper += 2 * quadCount; pixelDataLower += 2 * quadCount; }

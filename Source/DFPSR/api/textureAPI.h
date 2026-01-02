@@ -481,7 +481,7 @@ namespace dsr {
 		float offsetU = max(offsetUX, offsetUY) * source.impl_floatMaxWidth;
 		float offsetV = max(offsetVX, offsetVY) * source.impl_floatMaxHeight;
 		float offset = max(offsetU, offsetV);
-		int result = 0;
+		int32_t result = 0;
 		// TODO: Can count leading zeroes be used with integers to use all available mip levels?
 		//       It would make MIP_INSIDE useless for optimization.
 		if (offset >  2.0f) { result = 1; }

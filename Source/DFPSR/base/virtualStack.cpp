@@ -29,7 +29,7 @@
 namespace dsr {
 	// How many bytes that are allocated directly in thread local memory.
 	static const uint64_t VIRTUAL_STACK_SIZE = 262144;
-	static const int MAX_EXTRA_STACKS = 63;
+	static const int32_t MAX_EXTRA_STACKS = 63;
 
 	static const uintptr_t stackHeaderPaddedSize = memory_getPaddedSize<AllocationHeader>();
 	static const uintptr_t stackHeaderAlignmentAndMask = memory_createAlignmentAndMask((uintptr_t)alignof(AllocationHeader));

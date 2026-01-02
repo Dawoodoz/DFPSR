@@ -244,7 +244,7 @@ struct KeywordEntry {
 	MACRO_NAME(LOCATION strings)
 
 #define RETURN_TRUE_IF_SETTING_EXISTS(COLLECTION) \
-	for (int i = 0; i < COLLECTION.length(); i++) { \
+	for (int32_t i = 0; i < COLLECTION.length(); i++) { \
 		if (string_caseInsensitiveMatch(COLLECTION[i].key, key)) { \
 			return true; \
 		} \
@@ -283,7 +283,7 @@ struct ClassSettings {
 	// Post-condition: Returns true iff the key was found for the expected type.
 	// Side-effect: Writes the value of the found key iff found.
 	bool getString(String &target, const ReadableString &key) {
-		for (int i = 0; i < this->strings.length(); i++) {
+		for (int32_t i = 0; i < this->strings.length(); i++) {
 			if (string_caseInsensitiveMatch(this->strings[i].key, key)) {
 				target = this->strings[i].value;
 				return true;
@@ -294,7 +294,7 @@ struct ClassSettings {
 	// Post-condition: Returns true iff the key was found for the expected type.
 	// Side-effect: Writes the value of the found key iff found.
 	bool getImage(PersistentImage &target, const ReadableString &key) {
-		for (int i = 0; i < this->colorImages.length(); i++) {
+		for (int32_t i = 0; i < this->colorImages.length(); i++) {
 			if (string_caseInsensitiveMatch(this->colorImages[i].key, key)) {
 				target = this->colorImages[i].value;
 				return true;
@@ -305,7 +305,7 @@ struct ClassSettings {
 	// Post-condition: Returns true iff the key was found for the expected type.
 	// Side-effect: Writes the value of the found key iff found.
 	bool getScalar(FixedPoint &target, const ReadableString &key) {
-		for (int i = 0; i < this->scalars.length(); i++) {
+		for (int32_t i = 0; i < this->scalars.length(); i++) {
 			if (string_caseInsensitiveMatch(this->scalars[i].key, key)) {
 				target = this->scalars[i].value;
 				return true;
@@ -320,14 +320,14 @@ class VisualThemeImpl {
 public:
 	MediaMachine machine;
 	List<ClassSettings> settings;
-	int getClassIndex(const ReadableString& className) {
-		for (int i = 0; i < this->settings.length(); i++) { if (string_caseInsensitiveMatch(this->settings[i].className, className)) { return i; } }
+	int32_t getClassIndex(const ReadableString& className) {
+		for (int32_t i = 0; i < this->settings.length(); i++) { if (string_caseInsensitiveMatch(this->settings[i].className, className)) { return i; } }
 		return settings.pushConstructGetIndex(className);
 	}
 	VisualThemeImpl(const MediaMachine &machine, const ReadableString &styleSettings, const ReadableString &fromPath) : machine(machine) {
 		this->settings.pushConstruct(U"default");
 		config_parse_ini(styleSettings, [this, fromPath](const ReadableString& block, const ReadableString& key, const ReadableString& value) {
-			int classIndex = (string_length(block) == 0) ? 0 : this->getClassIndex(block);
+			int32_t classIndex = (string_length(block) == 0) ? 0 : this->getClassIndex(block);
 			this->settings[classIndex].setVariable(key, value, fromPath);
 		});
 	}
@@ -355,13 +355,13 @@ bool theme_exists(const VisualTheme &theme) {
 	return theme.isNotNull();
 }
 
-int theme_getClassIndex(const VisualTheme &theme, const ReadableString &className) {
+int32_t theme_getClassIndex(const VisualTheme &theme, const ReadableString &className) {
 	if (!theme_exists(theme)) {
 		return -1;
 	} else if (string_length(className) == 0) {
 		return 0;
 	} else {
-		int classIndex = theme->getClassIndex(className);
+		int32_t classIndex = theme->getClassIndex(className);
 		return (classIndex == -1) ? 0 : classIndex;
 	}
 }
@@ -378,7 +378,7 @@ OrderedImageRgbaU8 theme_getImage(const VisualTheme &theme, const ReadableString
 	if (!theme.getUnsafe()) {
 		return OrderedImageRgbaU8();
 	}
-	int classIndex = theme->getClassIndex(className);
+	int32_t classIndex = theme->getClassIndex(className);
 	PersistentImage result;
 	if ((classIndex != -1 && theme->settings[classIndex].getImage(result, settingName))
 	                     || (theme->settings[0].getImage(result, settingName))) {
@@ -393,7 +393,7 @@ FixedPoint theme_getFixedPoint(const VisualTheme &theme, const ReadableString &c
 	if (!theme.getUnsafe()) {
 		return defaultValue;
 	}
-	int classIndex = theme->getClassIndex(className);
+	int32_t classIndex = theme->getClassIndex(className);
 	FixedPoint result;
 	if ((classIndex != -1 && theme->settings[classIndex].getScalar(result, settingName))
 	                     || (theme->settings[0].getScalar(result, settingName))) {
@@ -404,7 +404,7 @@ FixedPoint theme_getFixedPoint(const VisualTheme &theme, const ReadableString &c
 	}
 }
 
-int theme_getInteger(const VisualTheme &theme, const ReadableString &className, const ReadableString &settingName, const int &defaultValue) {
+int32_t theme_getInteger(const VisualTheme &theme, const ReadableString &className, const ReadableString &settingName, const int32_t &defaultValue) {
 	return fixedPoint_round(theme_getFixedPoint(theme, className, settingName, FixedPoint::fromWhole(defaultValue)));
 }
 
@@ -412,7 +412,7 @@ ReadableString theme_getString(const VisualTheme &theme, const ReadableString &c
 	if (!theme.getUnsafe()) {
 		return defaultValue;
 	}
-	int classIndex = theme->getClassIndex(className);
+	int32_t classIndex = theme->getClassIndex(className);
 	String result;
 	if ((classIndex != -1 && theme->settings[classIndex].getString(result, settingName))
 	                     || (theme->settings[0].getString(result, settingName))) {
@@ -427,7 +427,7 @@ MediaMethod theme_getScalableImage(const VisualTheme &theme, const ReadableStrin
 	if (!theme.getUnsafe()) {
 		throwError(U"theme_getScalableImage: Can't get scalable image of class ", className, U" from a non-existing theme!\n");
 	}
-	int classIndex = theme->getClassIndex(className);
+	int32_t classIndex = theme->getClassIndex(className);
 	String methodName;
 	if ((classIndex != -1 && theme->settings[classIndex].getString(methodName, U"method"))
 	                     || (theme->settings[0].getString(methodName, U"method"))) {
@@ -439,16 +439,16 @@ MediaMethod theme_getScalableImage(const VisualTheme &theme, const ReadableStrin
 	}
 }
 
-static bool assignMediaMachineArguments(ClassSettings settings, MediaMachine &machine, int methodIndex, int inputIndex, const ReadableString &argumentName) {
+static bool assignMediaMachineArguments(ClassSettings settings, MediaMachine &machine, int32_t methodIndex, int32_t inputIndex, const ReadableString &argumentName) {
 	// Search for argumentName in colorImages.
-	for (int i = 0; i < settings.colorImages.length(); i++) {
+	for (int32_t i = 0; i < settings.colorImages.length(); i++) {
 		if (string_caseInsensitiveMatch(settings.colorImages[i].key, argumentName)) {
 			machine_setInputByIndex(machine, methodIndex, inputIndex, settings.colorImages[i].value.value);
 			return true;
 		}
 	}
 	// Search for argumentName in scalars.
-	for (int i = 0; i < settings.scalars.length(); i++) {
+	for (int32_t i = 0; i < settings.scalars.length(); i++) {
 		if (string_caseInsensitiveMatch(settings.scalars[i].key, argumentName)) {
 			machine_setInputByIndex(machine, methodIndex, inputIndex, settings.scalars[i].value);
 			return true;
@@ -458,7 +458,7 @@ static bool assignMediaMachineArguments(ClassSettings settings, MediaMachine &ma
 	return false;
 }
 
-bool theme_assignMediaMachineArguments(const VisualTheme &theme, int contextIndex, MediaMachine &machine, int methodIndex, int inputIndex, const ReadableString &argumentName) {
+bool theme_assignMediaMachineArguments(const VisualTheme &theme, int32_t contextIndex, MediaMachine &machine, int32_t methodIndex, int32_t inputIndex, const ReadableString &argumentName) {
 	if (!theme.getUnsafe()) { return false; }
 	// Check in the context first, and then in the default settings.
 	return (contextIndex > 0 && assignMediaMachineArguments(theme->settings[contextIndex], machine, methodIndex, inputIndex, argumentName))
@@ -467,7 +467,7 @@ bool theme_assignMediaMachineArguments(const VisualTheme &theme, int contextInde
 
 ComponentState theme_getStateListenerMask(const MediaMethod &scalableImage) {
 	ComponentState result = 0;
-	for (int inputIndex = 0; inputIndex < machine_getInputCount(scalableImage.machine, scalableImage.methodIndex); inputIndex++) {
+	for (int32_t inputIndex = 0; inputIndex < machine_getInputCount(scalableImage.machine, scalableImage.methodIndex); inputIndex++) {
 		String upperInputName = string_upperCase(machine_getInputName(scalableImage.machine, scalableImage.methodIndex, inputIndex));
 		if (string_match(upperInputName, U"FOCUSED")) {
 			result |= componentState_focusDirect;

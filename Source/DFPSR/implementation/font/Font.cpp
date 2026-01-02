@@ -66,8 +66,8 @@ static IRect getCharacterBound(const ImageU8& image, const IRect& searchRegion) 
 	int32_t maxX = searchRegion.left();
 	int32_t minY = searchRegion.bottom();
 	int32_t maxY = searchRegion.top();
-	for (int y = searchRegion.top(); y < searchRegion.bottom(); y++) {
-		for (int x = searchRegion.left(); x < searchRegion.right(); x++) {
+	for (int32_t y = searchRegion.top(); y < searchRegion.bottom(); y++) {
+		for (int32_t x = searchRegion.left(); x < searchRegion.right(); x++) {
 			if (image_readPixel_border(image, x, y)) {
 				if (x < minX) minX = x;
 				if (x > maxX) maxX = x;
@@ -84,8 +84,8 @@ static IRect getCharacterBound(const ImageU8& image, const IRect& searchRegion) 
 void RasterFontImpl::registerLatinOne16x16(const ImageU8& atlas) {
 	int32_t charWidth = image_getWidth(atlas) / 16;
 	int32_t charHeight = image_getWidth(atlas) / 16;
-	for (int y = 0; y < 16; y++) {
-		for (int x = 0; x < 16; x++) {
+	for (int32_t y = 0; y < 16; y++) {
+		for (int32_t x = 0; x < 16; x++) {
 			IRect searchRegion = IRect(x * charWidth, y * charHeight, charWidth, charHeight);
 			IRect croppedRegion = getCharacterBound(atlas, searchRegion);
 			if (croppedRegion.hasArea()) {

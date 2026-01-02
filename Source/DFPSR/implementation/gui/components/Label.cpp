@@ -80,6 +80,6 @@ void Label::completeAssets() {
 
 IVector2D Label::getDesiredDimensions() {
 	this->completeAssets();
-	int sizeAdder = this->padding.value * 2;
+	int32_t sizeAdder = this->padding.value * 2;
 	return IVector2D(font_getLineWidth(this->font, this->text.value) + sizeAdder, font_getSize(this->font) + sizeAdder);
 }

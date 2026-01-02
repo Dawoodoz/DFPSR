@@ -65,8 +65,8 @@ namespace dsr {
 
 // Drawing shapes
 	// TODO: Create wrappers taking left, top, width, height to reduce clutter from the IRect constructor.
-	void draw_rectangle(const ImageU8& image, const IRect& bound, int color);
-	void draw_rectangle(const ImageU16& image, const IRect& bound, int color);
+	void draw_rectangle(const ImageU8& image, const IRect& bound, int32_t color);
+	void draw_rectangle(const ImageU16& image, const IRect& bound, int32_t color);
 	void draw_rectangle(const ImageF32& image, const IRect& bound, float color);
 	void draw_rectangle(const ImageRgbaU8& image, const IRect& bound, const ColorRgbaI32& color);
 	// Draw using a color that has been packed in advance with the same pack order using the image_saturateAndPack function.
@@ -74,8 +74,8 @@ namespace dsr {
 	void draw_rectangle(const ImageRgbaU8& image, const IRect& bound, uint32_t packedColor);
 
 	// TODO: Also take two IVector2D as inlined wrapper functions.
-	void draw_line(const ImageU8& image, int32_t x1, int32_t y1, int32_t x2, int32_t y2, int color);
-	void draw_line(const ImageU16& image, int32_t x1, int32_t y1, int32_t x2, int32_t y2, int color);
+	void draw_line(const ImageU8& image, int32_t x1, int32_t y1, int32_t x2, int32_t y2, int32_t color);
+	void draw_line(const ImageU16& image, int32_t x1, int32_t y1, int32_t x2, int32_t y2, int32_t color);
 	void draw_line(const ImageF32& image, int32_t x1, int32_t y1, int32_t x2, int32_t y2, float color);
 	void draw_line(const ImageRgbaU8& image, int32_t x1, int32_t y1, int32_t x2, int32_t y2, const ColorRgbaI32& color);
 	// Draw using a color that has been packed in advance with the same pack order using the image_saturateAndPack function.

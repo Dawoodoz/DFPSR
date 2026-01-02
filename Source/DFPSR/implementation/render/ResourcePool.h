@@ -49,8 +49,8 @@ class BasicResourcePool : public ResourcePool {
 private:
 	List<namedEntry<ImageRgbaU8>> imageRgbaList;
 	List<namedEntry<TextureRgbaU8>> textureRgbaList;
-	int findImageRgba(const ReadableString& name) const;
-	int findTextureRgba(const ReadableString& name) const;
+	int32_t findImageRgba(const ReadableString& name) const;
+	int32_t findTextureRgba(const ReadableString& name) const;
 public:
 	String path;
 	explicit BasicResourcePool(const ReadableString& path) : path(path) {}

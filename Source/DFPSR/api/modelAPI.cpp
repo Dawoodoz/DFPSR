@@ -58,137 +58,137 @@ bool model_exists(const Model& model) {
 	return model.isNotNull();
 }
 
-int model_addEmptyPart(Model& model, const String &name) {
+int32_t model_addEmptyPart(Model& model, const String &name) {
 	MUST_EXIST(model,model_addEmptyPart);
 	return model->addEmptyPart(name);
 }
 
-int model_getNumberOfParts(const Model& model) {
+int32_t model_getNumberOfParts(const Model& model) {
 	MUST_EXIST(model,model_getNumberOfParts);
 	return model->getNumberOfParts();
 }
 
-void model_setPartName(Model& model, int partIndex, const String &name) {
+void model_setPartName(Model& model, int32_t partIndex, const String &name) {
 	MUST_EXIST(model,model_setPartName);
 	model->setPartName(partIndex, name);
 }
 
-String model_getPartName(const Model& model, int partIndex) {
+String model_getPartName(const Model& model, int32_t partIndex) {
 	MUST_EXIST(model,model_getPartName);
 	return model->getPartName(partIndex);
 }
 
-int model_getNumberOfPoints(const Model& model) {
+int32_t model_getNumberOfPoints(const Model& model) {
 	MUST_EXIST(model,model_getNumberOfPoints);
 	return model->getNumberOfPoints();
 }
 
-FVector3D model_getPoint(const Model& model, int pointIndex) {
+FVector3D model_getPoint(const Model& model, int32_t pointIndex) {
 	MUST_EXIST(model,model_getPoint);
 	return model->getPoint(pointIndex);
 }
 
-void model_setPoint(Model& model, int pointIndex, const FVector3D& position) {
+void model_setPoint(Model& model, int32_t pointIndex, const FVector3D& position) {
 	MUST_EXIST(model,model_setPoint);
 	model->setPoint(pointIndex, position);
 }
 
-int model_findPoint(const Model& model, const FVector3D &position, float threshold) {
+int32_t model_findPoint(const Model& model, const FVector3D &position, float threshold) {
 	MUST_EXIST(model,model_findPoint);
 	return model->findPoint(position, threshold);
 }
 
-int model_addPoint(const Model& model, const FVector3D &position) {
+int32_t model_addPoint(const Model& model, const FVector3D &position) {
 	MUST_EXIST(model,model_addPoint);
 	return model->addPoint(position);
 }
 
-int model_addPointIfNeeded(Model& model, const FVector3D &position, float threshold) {
+int32_t model_addPointIfNeeded(Model& model, const FVector3D &position, float threshold) {
 	MUST_EXIST(model,model_addPointIfNeeded);
 	return model->addPointIfNeeded(position, threshold);
 }
 
-int model_getVertexPointIndex(const Model& model, int partIndex, int polygonIndex, int vertexIndex) {
+int32_t model_getVertexPointIndex(const Model& model, int32_t partIndex, int32_t polygonIndex, int32_t vertexIndex) {
 	MUST_EXIST(model,model_getVertexPointIndex);
 	return model->getVertexPointIndex(partIndex, polygonIndex, vertexIndex);
 }
 
-void model_setVertexPointIndex(Model& model, int partIndex, int polygonIndex, int vertexIndex, int pointIndex) {
+void model_setVertexPointIndex(Model& model, int32_t partIndex, int32_t polygonIndex, int32_t vertexIndex, int32_t pointIndex) {
 	MUST_EXIST(model,model_setVertexPointIndex);
 	model->setVertexPointIndex(partIndex, polygonIndex, vertexIndex, pointIndex);
 }
 
-FVector3D model_getVertexPosition(const Model& model, int partIndex, int polygonIndex, int vertexIndex) {
+FVector3D model_getVertexPosition(const Model& model, int32_t partIndex, int32_t polygonIndex, int32_t vertexIndex) {
 	MUST_EXIST(model,model_getVertexPosition);
 	return model->getVertexPosition(partIndex, polygonIndex, vertexIndex);
 }
 
-FVector4D model_getVertexColor(const Model& model, int partIndex, int polygonIndex, int vertexIndex) {
+FVector4D model_getVertexColor(const Model& model, int32_t partIndex, int32_t polygonIndex, int32_t vertexIndex) {
 	MUST_EXIST(model,model_getVertexColor);
 	return model->getVertexColor(partIndex, polygonIndex, vertexIndex);
 }
 
-void model_setVertexColor(Model& model, int partIndex, int polygonIndex, int vertexIndex, const FVector4D& color) {
+void model_setVertexColor(Model& model, int32_t partIndex, int32_t polygonIndex, int32_t vertexIndex, const FVector4D& color) {
 	MUST_EXIST(model,model_setVertexColor);
 	model->setVertexColor(partIndex, polygonIndex, vertexIndex, color);
 }
 
-FVector4D model_getTexCoord(const Model& model, int partIndex, int polygonIndex, int vertexIndex) {
+FVector4D model_getTexCoord(const Model& model, int32_t partIndex, int32_t polygonIndex, int32_t vertexIndex) {
 	MUST_EXIST(model,model_getTexCoord);
 	return model->getTexCoord(partIndex, polygonIndex, vertexIndex);
 }
 
-void model_setTexCoord(Model& model, int partIndex, int polygonIndex, int vertexIndex, const FVector4D& texCoord) {
+void model_setTexCoord(Model& model, int32_t partIndex, int32_t polygonIndex, int32_t vertexIndex, const FVector4D& texCoord) {
 	MUST_EXIST(model,model_setTexCoord);
 	model->setTexCoord(partIndex, polygonIndex, vertexIndex, texCoord);
 }
 
-int model_addTriangle(Model& model, int partIndex, int pointA, int pointB, int pointC) {
+int32_t model_addTriangle(Model& model, int32_t partIndex, int32_t pointA, int32_t pointB, int32_t pointC) {
 	MUST_EXIST(model,model_addTriangle);
 	return model->addPolygon(Polygon(pointA, pointB, pointC), partIndex);
 }
 
-int model_addQuad(Model& model, int partIndex, int pointA, int pointB, int pointC, int pointD) {
+int32_t model_addQuad(Model& model, int32_t partIndex, int32_t pointA, int32_t pointB, int32_t pointC, int32_t pointD) {
 	MUST_EXIST(model,model_addQuad);
 	return model->addPolygon(Polygon(pointA, pointB, pointC, pointD), partIndex);
 }
 
-int model_getNumberOfPolygons(const Model& model, int partIndex) {
+int32_t model_getNumberOfPolygons(const Model& model, int32_t partIndex) {
 	MUST_EXIST(model,model_getNumberOfPolygons);
 	return model->getNumberOfPolygons(partIndex);
 }
 
-int model_getPolygonVertexCount(const Model& model, int partIndex, int polygonIndex) {
+int32_t model_getPolygonVertexCount(const Model& model, int32_t partIndex, int32_t polygonIndex) {
 	MUST_EXIST(model,model_getPolygonVertexCount);
 	return model->getPolygonVertexCount(partIndex, polygonIndex);
 }
 
-TextureRgbaU8 model_getDiffuseMap(const Model& model, int partIndex) {
+TextureRgbaU8 model_getDiffuseMap(const Model& model, int32_t partIndex) {
 	MUST_EXIST(model,model_getDiffuseMap);
 	return model->getDiffuseMap(partIndex);
 }
 
-void model_setDiffuseMap(Model& model, int partIndex, const TextureRgbaU8 &diffuseMap) {
+void model_setDiffuseMap(Model& model, int32_t partIndex, const TextureRgbaU8 &diffuseMap) {
 	MUST_EXIST(model,model_setDiffuseMap);
 	model->setDiffuseMap(diffuseMap, partIndex);
 }
 
-void model_setDiffuseMapByName(Model& model, int partIndex, ResourcePool &pool, const String &filename) {
+void model_setDiffuseMapByName(Model& model, int32_t partIndex, ResourcePool &pool, const String &filename) {
 	MUST_EXIST(model,model_setDiffuseMapByName);
 	model->setDiffuseMapByName(pool, filename, partIndex);
 }
 
-TextureRgbaU8 model_getLightMap(Model& model, int partIndex) {
+TextureRgbaU8 model_getLightMap(Model& model, int32_t partIndex) {
 	MUST_EXIST(model,model_getLightMap);
 	return model->getLightMap(partIndex);
 }
 
-void model_setLightMap(Model& model, int partIndex, const TextureRgbaU8 &lightMap) {
+void model_setLightMap(Model& model, int32_t partIndex, const TextureRgbaU8 &lightMap) {
 	MUST_EXIST(model,model_setLightMap);
 	model->setLightMap(lightMap, partIndex);
 }
 
-void model_setLightMapByName(Model& model, int partIndex, ResourcePool &pool, const String &filename) {
+void model_setLightMapByName(Model& model, int32_t partIndex, ResourcePool &pool, const String &filename) {
 	MUST_EXIST(model,model_setLightMapByName);
 	model->setLightMapByName(pool, filename, partIndex);
 }
@@ -235,18 +235,18 @@ void model_render_threaded(const Model& model, const Transform3D &modelToWorldTr
 	// Get the filter.
 	Filter filter = model->filter;
 	// Transform and project all vertices.
-	int positionCount = model->positionBuffer.length();
+	int32_t positionCount = model->positionBuffer.length();
 	VirtualStackAllocation<ProjectedPoint> projected(positionCount, "Projected points in renderer_giveTask");
-	for (int vert = 0; vert < positionCount; vert++) {
+	for (int32_t vert = 0; vert < positionCount; vert++) {
 		projected[vert] = camera.worldToScreen(modelToWorldTransform.transformPoint(model->positionBuffer[vert]));
 	}
-	for (int partIndex = 0; partIndex < model->partBuffer.length(); partIndex++) {
+	for (int32_t partIndex = 0; partIndex < model->partBuffer.length(); partIndex++) {
 		// Get a pointer to the current part.
 		Part *part = &(model->partBuffer[partIndex]);
 		// Get textures.
 		const TextureRgbaU8 diffuse = part->diffuseMap;
 		const TextureRgbaU8 light = part->lightMap;
-		for (int p = 0; p < part->polygonBuffer.length(); p++) {
+		for (int32_t p = 0; p < part->polygonBuffer.length(); p++) {
 			Polygon polygon = part->polygonBuffer[p];
 			// Render first triangle in the polygon of indices 0, 1, 2.
 			renderer_giveTask_triangle(renderer,

@@ -13,15 +13,15 @@ static FVector4D pixelToVertexColor(const ColorRgbaI32& color) {
 	return FVector4D(color.red * colorScale, color.green * colorScale, color.blue * colorScale, 1.0f);
 }
 
-static int createTriangle(Model& model, int part, int indexA, int indexB, int indexC, FVector4D colorA, FVector4D colorB, FVector4D colorC, bool flip = false) {
+static int32_t createTriangle(Model& model, int32_t part, int32_t indexA, int32_t indexB, int32_t indexC, FVector4D colorA, FVector4D colorB, FVector4D colorC, bool flip = false) {
 	if (flip) {
-		int poly = model_addTriangle(model, part, indexB, indexA, indexC);
+		int32_t poly = model_addTriangle(model, part, indexB, indexA, indexC);
 		model_setVertexColor(model, part, poly, 0, colorB);
 		model_setVertexColor(model, part, poly, 1, colorA);
 		model_setVertexColor(model, part, poly, 2, colorC);
 		return poly;
 	} else {
-		int poly = model_addTriangle(model, part, indexA, indexB, indexC);
+		int32_t poly = model_addTriangle(model, part, indexA, indexB, indexC);
 		model_setVertexColor(model, part, poly, 0, colorA);
 		model_setVertexColor(model, part, poly, 1, colorB);
 		model_setVertexColor(model, part, poly, 2, colorC);
@@ -29,22 +29,22 @@ static int createTriangle(Model& model, int part, int indexA, int indexB, int in
 	}
 }
 
-using TransformFunction = std::function<FVector3D(int pixelX, int pixelY, int displacement)>;
+using TransformFunction = std::function<FVector3D(int32_t pixelX, int32_t pixelY, int32_t displacement)>;
 
 // Returns the start point index for another side to weld against
-int createGridSide(Model& model, int part, const ImageU8& heightMap, const ImageRgbaU8& colorMap,
-  const TransformFunction& transform, bool clipZero, bool mergeSides, bool flipDepth = false, bool flipFaces = false, int otherStartPointIndex = -1) {
-	int startPointIndex = model_getNumberOfPoints(model);
-	int mapWidth = image_getWidth(heightMap);
-	int mapHeight = image_getHeight(heightMap);
-	int flipScale = flipDepth ? -1 : 1;
-	int columns = mergeSides ? mapWidth + 1 : mapWidth;
+int32_t createGridSide(Model& model, int32_t part, const ImageU8& heightMap, const ImageRgbaU8& colorMap,
+  const TransformFunction& transform, bool clipZero, bool mergeSides, bool flipDepth = false, bool flipFaces = false, int32_t otherStartPointIndex = -1) {
+	int32_t startPointIndex = model_getNumberOfPoints(model);
+	int32_t mapWidth = image_getWidth(heightMap);
+	int32_t mapHeight = image_getHeight(heightMap);
+	int32_t flipScale = flipDepth ? -1 : 1;
+	int32_t columns = mergeSides ? mapWidth + 1 : mapWidth;
 	// Create a part for the polygons
-	for (int z = 0; z < mapHeight; z++) {
-		for (int x = 0; x < columns; x++) {
+	for (int32_t z = 0; z < mapHeight; z++) {
+		for (int32_t x = 0; x < columns; x++) {
 			// Sample the height map and convert to world space
-			int cx = x % mapWidth;
-			int heightC = image_readPixel_border(heightMap, cx, z);
+			int32_t cx = x % mapWidth;
+			int32_t heightC = image_readPixel_border(heightMap, cx, z);
 			// Add the point to the model
 			if (x < mapWidth) {
 				// Create a position from the 3D index
@@ -55,23 +55,23 @@ int createGridSide(Model& model, int part, const ImageU8& heightMap, const Image
 				//   A-B
 				//     |
 				//   D-C
-				int px = x - 1;
-				int cz = z;
-				int pz = z - 1;
+				int32_t px = x - 1;
+				int32_t cz = z;
+				int32_t pz = z - 1;
 				// Sample previous heights
-				int heightA = image_readPixel_border(heightMap, px, pz);
-				int heightB = image_readPixel_border(heightMap, cx, pz);
-				int heightD = image_readPixel_border(heightMap, px, cz);
+				int32_t heightA = image_readPixel_border(heightMap, px, pz);
+				int32_t heightB = image_readPixel_border(heightMap, cx, pz);
+				int32_t heightD = image_readPixel_border(heightMap, px, cz);
 				// Tell where to weld with another side's points
 				bool weldA = otherStartPointIndex > -1 && heightA == 0;
 				bool weldB = otherStartPointIndex > -1 && heightB == 0;
 				bool weldC = otherStartPointIndex > -1 && heightC == 0;
 				bool weldD = otherStartPointIndex > -1 && heightD == 0;
 				// Get indices to points
-				int indexA = (weldA ? otherStartPointIndex : startPointIndex) + px + pz * mapWidth;
-				int indexB = (weldB ? otherStartPointIndex : startPointIndex) + cx + pz * mapWidth;
-				int indexC = (weldC ? otherStartPointIndex : startPointIndex) + cx + cz  * mapWidth;
-				int indexD = (weldD ? otherStartPointIndex : startPointIndex) + px + cz  * mapWidth;
+				int32_t indexA = (weldA ? otherStartPointIndex : startPointIndex) + px + pz * mapWidth;
+				int32_t indexB = (weldB ? otherStartPointIndex : startPointIndex) + cx + pz * mapWidth;
+				int32_t indexC = (weldC ? otherStartPointIndex : startPointIndex) + cx + cz  * mapWidth;
+				int32_t indexD = (weldD ? otherStartPointIndex : startPointIndex) + px + cz  * mapWidth;
 				// Sample colors
 				FVector4D colorA = pixelToVertexColor(image_readPixel_tile(colorMap, px, pz));
 				FVector4D colorB = pixelToVertexColor(image_readPixel_tile(colorMap, cx, pz));
@@ -92,12 +92,12 @@ int createGridSide(Model& model, int part, const ImageU8& heightMap, const Image
 					if (heightC == 0) { skipFirst = true; }
 					if (heightA == 0) { skipSecond = true; }
 				} else {
-					int cA = image_readPixel_tile(heightMap, cx - 2, cz - 2);
-					int cB = image_readPixel_tile(heightMap, cx + 1, cz - 2);
-					int cC = image_readPixel_tile(heightMap, cx + 1, cz + 1);
-					int cD = image_readPixel_tile(heightMap, cx - 2, cz + 1);
-					int diffAC = abs((cA + cC) - (heightA + heightC));
-					int diffBD = abs((cB + cD) - (heightB + heightD));
+					int32_t cA = image_readPixel_tile(heightMap, cx - 2, cz - 2);
+					int32_t cB = image_readPixel_tile(heightMap, cx + 1, cz - 2);
+					int32_t cC = image_readPixel_tile(heightMap, cx + 1, cz + 1);
+					int32_t cD = image_readPixel_tile(heightMap, cx - 2, cz + 1);
+					int32_t diffAC = abs((cA + cC) - (heightA + heightC));
+					int32_t diffBD = abs((cB + cD) - (heightB + heightD));
 					acSplit = diffBD > diffAC;
 				}
 				if (!clipZero) {
@@ -152,7 +152,7 @@ int createGridSide(Model& model, int part, const ImageU8& heightMap, const Image
 //   Merges normals between mirrored sides to let normals at displacement zero merge with the other side.
 //   mirror must be active for this to have an effect, because there's no mirrored side to weld against otherwise.
 //   clipZero must be active to hide polygons without a normal. (What is the average direction of two opposing planes?)
-void createGrid(Model& model, int part, const ImageU8& heightMap, const ImageRgbaU8& colorMap,
+void createGrid(Model& model, int32_t part, const ImageU8& heightMap, const ImageRgbaU8& colorMap,
   const TransformFunction& transform, bool clipZero, bool mergeSides, bool mirror, bool weldNormals) {
 	if (weldNormals && !mirror) {
 		printText("\n  Warning! Cannot weld normals without a mirrored side. The \"weldNormals\" will be ignored because \"mirror\" was not active.\n\n");
@@ -163,7 +163,7 @@ void createGrid(Model& model, int part, const ImageU8& heightMap, const ImageRgb
 		weldNormals = false;
 	}
 	// Generate primary side
-	int otherStartPointIndex = createGridSide(model, part, heightMap, colorMap, transform, clipZero, mergeSides);
+	int32_t otherStartPointIndex = createGridSide(model, part, heightMap, colorMap, transform, clipZero, mergeSides);
 	// Generate additional mirrored side
 	if (mirror) {
 		createGridSide(model, part, heightMap, colorMap, transform, clipZero, mergeSides, true, true, weldNormals ? otherStartPointIndex : -1);
@@ -174,16 +174,16 @@ void createGrid(Model& model, int part, const ImageU8& heightMap, const ImageRgb
 struct PartSettings {
 	Transform3D location;
 	float displacement = 1.0f, patchWidth = 1.0f, patchHeight = 1.0f, radius = 0.0f;
-	int clipZero = 0; // 1 will cut away displacements from height zero, 0 will try to display all polygons
-	int mirror = 0; // 1 will let height fields generate polygons on both sides to create solid shapes
+	int32_t clipZero = 0; // 1 will cut away displacements from height zero, 0 will try to display all polygons
+	int32_t mirror = 0; // 1 will let height fields generate polygons on both sides to create solid shapes
 	PartSettings() {}
 };
 
 struct ParserState {
 	String sourcePath;
-	int angles = 4;
+	int32_t angles = 4;
 	Model model, shadow;
-	int part = -1; // Current part index for model (No index used for shadows)
+	int32_t part = -1; // Current part index for model (No index used for shadows)
 	PartSettings partSettings;
 	explicit ParserState(const String& sourcePath) : sourcePath(sourcePath), model(model_create()), shadow(model_create()) {
 		model_addEmptyPart(this->shadow, U"shadow");
@@ -289,7 +289,7 @@ static void generateField(ParserState& state, Shape shape, const ImageU8& height
 		float heightScale = state.partSettings.patchHeight / -(image_getHeight(heightMap) - 1);
 		FVector3D localScaling = FVector3D(widthScale, offsetPerUnit, heightScale);
 		FVector3D localOrigin = FVector3D(state.partSettings.patchWidth * -0.5f, 0.0f, state.partSettings.patchHeight * 0.5f);
-		transform = [system, localOrigin, localScaling](int pixelX, int pixelY, int displacement){
+		transform = [system, localOrigin, localScaling](int32_t pixelX, int32_t pixelY, int32_t displacement){
 			return system.transformPoint(localOrigin + (FVector3D(pixelX, displacement, pixelY) * localScaling));
 		};
 	} else if (shape == Shape::Cylinder) {
@@ -300,9 +300,9 @@ static void generateField(ParserState& state, Shape shape, const ImageU8& height
 		float angleOffset = angleScale * 0.5f; // Start and end half a pixel from the seam
 		float heightScale = state.partSettings.patchHeight / -(image_getHeight(heightMap) - 1);
 		float heightOffset = state.partSettings.patchHeight * 0.5f;
-		int lastRow = image_getHeight(heightMap) - 1;
+		int32_t lastRow = image_getHeight(heightMap) - 1;
 		bool fillHoles = !mirror && !clipZero; // Automatically fill the holes to close the shape when not mirroring nor clipping the sides
-		transform = [system, angleOffset, angleScale, heightOffset, heightScale, radius, offsetPerUnit, fillHoles, lastRow](int pixelX, int pixelY, int displacement){
+		transform = [system, angleOffset, angleScale, heightOffset, heightScale, radius, offsetPerUnit, fillHoles, lastRow](int32_t pixelX, int32_t pixelY, int32_t displacement){
 			float angle = ((float)pixelX * angleScale) + angleOffset;
 			float offset = ((float)displacement * offsetPerUnit) + radius;
 			float height = ((float)pixelY * heightScale) + heightOffset;
@@ -325,7 +325,7 @@ static void generateField(ParserState& state, Shape shape, const ImageU8& height
 static void generateBasicShape(ParserState& state, Shape shape, const ReadableString& arg1, const ReadableString& arg2, const ReadableString& arg3, bool shadow) {
 	Transform3D system = state.partSettings.location;
 	Model model = shadow ? state.shadow : state.model;
-	int part = shadow ? 0 : state.part;
+	int32_t part = shadow ? 0 : state.part;
 	// All shapes are centered around the axis system's origin from -0.5 to +0.5 of any given size
 	if (shape == Shape::Box) {
 		// Parse arguments
@@ -336,7 +336,7 @@ static void generateBasicShape(ParserState& state, Shape shape, const ReadableSt
 		FVector3D upper = FVector3D(width, height, depth) * 0.5f;
 		FVector3D lower = -upper;
 		// Positions
-		int first = model_getNumberOfPoints(model);
+		int32_t first = model_getNumberOfPoints(model);
 		model_addPoint(model, system.transformPoint(FVector3D(lower.x, lower.y, lower.z))); // first + 0: Left-down-near
 		model_addPoint(model, system.transformPoint(FVector3D(lower.x, lower.y, upper.z))); // first + 1: Left-down-far
 		model_addPoint(model, system.transformPoint(FVector3D(lower.x, upper.y, lower.z))); // first + 2: Left-up-near
@@ -356,26 +356,26 @@ static void generateBasicShape(ParserState& state, Shape shape, const ReadableSt
 		// Parse arguments
 		float radius = string_toDouble(arg1);
 		float height = string_toDouble(arg2);
-		int sideCount = string_toDouble(arg3);
+		int32_t sideCount = string_toDouble(arg3);
 		// Create a bound
 		float topHeight = height * 0.5f;
 		float bottomHeight = height * -0.5f;
 		// Positions
 		float angleScale = 6.283185307 / (float)sideCount;
-		int centerTop = model_addPoint(model, system.transformPoint(FVector3D(0.0f, topHeight, 0.0f)));
-		int firstTopSide = model_getNumberOfPoints(model);
-		for (int p = 0; p < sideCount; p++) {
+		int32_t centerTop = model_addPoint(model, system.transformPoint(FVector3D(0.0f, topHeight, 0.0f)));
+		int32_t firstTopSide = model_getNumberOfPoints(model);
+		for (int32_t p = 0; p < sideCount; p++) {
 			float radians = p * angleScale;
 			model_addPoint(model, system.transformPoint(FVector3D(sin(radians) * radius, topHeight, cos(radians) * radius)));
 		}
-		int centerBottom = model_addPoint(model, system.transformPoint(FVector3D(0.0f, bottomHeight, 0.0f)));
-		int firstBottomSide = model_getNumberOfPoints(model);
-		for (int p = 0; p < sideCount; p++) {
+		int32_t centerBottom = model_addPoint(model, system.transformPoint(FVector3D(0.0f, bottomHeight, 0.0f)));
+		int32_t firstBottomSide = model_getNumberOfPoints(model);
+		for (int32_t p = 0; p < sideCount; p++) {
 			float radians = p * angleScale;
 			model_addPoint(model, system.transformPoint(FVector3D(sin(radians) * radius, bottomHeight, cos(radians) * radius)));	
 		}
-		for (int p = 0; p < sideCount; p++) {
-			int q = (p + 1) % sideCount;
+		for (int32_t p = 0; p < sideCount; p++) {
+			int32_t q = (p + 1) % sideCount;
 			// Top fan
 			model_addTriangle(model, part, centerTop, firstTopSide + p, firstTopSide + q);
 			// Bottom fan
@@ -413,7 +413,7 @@ static void parse_shape(ParserState& state, List<String>& args, bool shadow) {
 		} else {
 			bool flipX = (shape == Shape::RightHandedModel);
 			Model targetModel = shadow ? state.shadow : state.model;
-			int targetPart = shadow ? 0 : state.part;
+			int32_t targetPart = shadow ? 0 : state.part;
 			importer_loadModel(targetModel, targetPart, string_combine(state.sourcePath, args[1]), flipX, state.partSettings.location);
 		}
 	} else if (args.length() == 2) {
@@ -435,20 +435,20 @@ static void parse_shape(ParserState& state, List<String>& args, bool shadow) {
 
 static void parse_dsm(ParserState& state, const ReadableString& content) {
 	List<String> lines = string_split(content, U'\n');
-	for (int l = 0; l < lines.length(); l++) {
+	for (int32_t l = 0; l < lines.length(); l++) {
 		// Get the current line
 		ReadableString line = lines[l];
 		// Skip comments
-		int commentIndex = string_findFirst(line, U';');
+		int32_t commentIndex = string_findFirst(line, U';');
 		if (commentIndex > -1) {
 			line = string_removeOuterWhiteSpace(string_before(line, commentIndex));
 		}
 		if (string_length(line) > 0) {
 			// Find assignments
-			int assignmentIndex = string_findFirst(line, U'=');
-			int colonIndex = string_findFirst(line, U':');
-			int blockStartIndex = string_findFirst(line, U'<');
-			int blockEndIndex = string_findFirst(line, U'>');
+			int32_t assignmentIndex = string_findFirst(line, U'=');
+			int32_t colonIndex = string_findFirst(line, U':');
+			int32_t blockStartIndex = string_findFirst(line, U'<');
+			int32_t blockEndIndex = string_findFirst(line, U'>');
 			if (assignmentIndex > -1) {
 				ReadableString key = string_removeOuterWhiteSpace(string_before(line, assignmentIndex));
 				ReadableString value = string_removeOuterWhiteSpace(string_after(line, assignmentIndex));
@@ -457,7 +457,7 @@ static void parse_dsm(ParserState& state, const ReadableString& content) {
 				ReadableString command = string_removeOuterWhiteSpace(string_before(line, colonIndex));
 				ReadableString argContent = string_after(line, colonIndex);
 				List<String> args = string_split(argContent, U',');
-				for (int a = 0; a < args.length(); a++) {
+				for (int32_t a = 0; a < args.length(); a++) {
 					args[a] = string_removeOuterWhiteSpace(args[a]);
 				}
 				if (string_caseInsensitiveMatch(command, U"Visible")) {
@@ -499,7 +499,7 @@ void tool_main(const List<String> &args) {
 		String sourcePath = string_combine(args[1], file_separator());
 		String targetPath = string_combine(args[2], file_separator());
 		OrthoSystem ortho = OrthoSystem(string_load(args[3]));
-		for (int a = 4; a < args.length(); a++) {
+		for (int32_t a = 4; a < args.length(); a++) {
 			processScript(sourcePath, targetPath, ortho, args[a]);
 		}
 	}

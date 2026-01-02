@@ -60,13 +60,13 @@ bool Button::isContainer() const {
 	return false;
 }
 
-static OrderedImageRgbaU8 generateButtonImage(Button &button, MediaMethod imageGenerator, int pressed, int width, int height, ColorRgbI32 backColor, ColorRgbI32 foreColor, const ReadableString &text, RasterFont font) {
+static OrderedImageRgbaU8 generateButtonImage(Button &button, MediaMethod imageGenerator, int32_t pressed, int32_t width, int32_t height, ColorRgbI32 backColor, ColorRgbI32 foreColor, const ReadableString &text, RasterFont font) {
 	// Create a scaled image
 	OrderedImageRgbaU8 result;
  	component_generateImage(button.getTheme(), imageGenerator, width, height, backColor.red, backColor.green, backColor.blue, pressed)(result);
 	if (string_length(text) > 0) {
-		int left = (image_getWidth(result) - font_getLineWidth(font, text)) / 2;
-		int top = (image_getHeight(result) - font_getSize(font)) / 2;
+		int32_t left = (image_getWidth(result) - font_getLineWidth(font, text)) / 2;
+		int32_t top = (image_getHeight(result) - font_getSize(font)) / 2;
 		if (pressed) {
 			top += 1;
 		}
@@ -76,8 +76,8 @@ static OrderedImageRgbaU8 generateButtonImage(Button &button, MediaMethod imageG
 }
 
 void Button::generateGraphics() {
-	int width = this->location.width();
-	int height = this->location.height();
+	int32_t width = this->location.width();
+	int32_t height = this->location.height();
 	if (width < 1) { width = 1; }
 	if (height < 1) { height = 1; }
 	if (!this->hasImages) {
@@ -157,6 +157,6 @@ void Button::changedAttribute(const ReadableString &name) {
 
 IVector2D Button::getDesiredDimensions() {
 	this->completeAssets();
-	int sizeAdder = this->padding.value * 2;
+	int32_t sizeAdder = this->padding.value * 2;
 	return IVector2D(font_getLineWidth(this->font, this->text.value) + sizeAdder, font_getSize(this->font) + sizeAdder);
 }

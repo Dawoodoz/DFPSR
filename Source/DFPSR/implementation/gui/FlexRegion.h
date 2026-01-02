@@ -40,7 +40,7 @@ private:
 	int32_t offset = 0; // +- offset
 public:
 	FlexValue() {}
-	FlexValue(int ratio, int offset) : ratio(min(max(0, ratio), 100)), offset(offset) {}
+	FlexValue(int32_t ratio, int32_t offset) : ratio(min(max(0, ratio), 100)), offset(offset) {}
 public:
 	bool assignValue(const ReadableString &text, const ReadableString &fromPath) override;
 	String& toStreamIndented(String& out, const ReadableString& indentation) const override;
@@ -84,7 +84,7 @@ public:
 		this->bottom = FlexValue(0, location.bottom());
 	}
 	// Flexible region
-	FlexRegion(int leftRatio, int leftOffset, int topRatio, int topOffset, int rightRatio, int rightOffset, int bottomRatio, int bottomOffset) {
+	FlexRegion(int32_t leftRatio, int32_t leftOffset, int32_t topRatio, int32_t topOffset, int32_t rightRatio, int32_t rightOffset, int32_t bottomRatio, int32_t bottomOffset) {
 		this->left = FlexValue(leftRatio, leftOffset);
 		this->top = FlexValue(topRatio, topOffset);
 		this->right = FlexValue(rightRatio, rightOffset);

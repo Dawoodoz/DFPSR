@@ -31,23 +31,23 @@
 namespace dsr {
 
 // Get the number of threads available.
-int getThreadCount();
+int32_t getThreadCount();
 
 // Calls the same job function with indices 0 to jobIndex - 1.
 //   This removes the need for capturing the same data over and over again when each task is identical with a different index.
-void threadedWorkByIndex(std::function<void(void *context, int jobIndex)> job, void *context, int jobCount, int maxThreadCount = 0);
+void threadedWorkByIndex(std::function<void(void *context, int32_t jobIndex)> job, void *context, int32_t jobCount, int32_t maxThreadCount = 0);
 
 // Executes every function in the array of jobs from jobs[0] to jobs[jobCount - 1].
 //   The maxThreadCount argument is the maximum number of threads to use when enough threads are available.
 //     Letting maxThreadCount be 0 removes the limit and uses as many threads as possible, limited only by getThreadCount() - 1 and jobCount.
 //     Letting maxThreadCount be 1 forces single-threaded execution on the calling thread.
 //   Useful when each job to execute is different.
-void threadedWorkFromArray(SafePointer<std::function<void()>> jobs, int jobCount, int maxThreadCount = 0);
-void threadedWorkFromArray(std::function<void()>* jobs, int jobCount, int maxThreadCount = 0);
+void threadedWorkFromArray(SafePointer<std::function<void()>> jobs, int32_t jobCount, int32_t maxThreadCount = 0);
+void threadedWorkFromArray(std::function<void()>* jobs, int32_t jobCount, int32_t maxThreadCount = 0);
 
 // Executes every function in the list of jobs.
 //   Also clears the list when done.
-void threadedWorkFromList(List<std::function<void()>> jobs, int maxThreadCount = 0);
+void threadedWorkFromList(List<std::function<void()>> jobs, int32_t maxThreadCount = 0);
 
 // Calling the given function with sub-sets of the interval using multiple threads in parallel.
 //   Useful when you have lots of tiny jobs that can be grouped together into larger jobs.
@@ -63,13 +63,13 @@ void threadedWorkFromList(List<std::function<void()>> jobs, int maxThreadCount =
 //     * Do not use for manipulation of pointers, stack memory from the calling thread or anything where corrupted output may lead to a crash.
 //       Drawing pixel values is okay, because a race condition would only be some noisy pixels that can be spotted and fixed.
 //       Race conditions cannot be tested nor proven away, so assume that they will happen and do your best to avoid them.
-void threadedSplit(int startIndex, int stopIndex, std::function<void(int startIndex, int stopIndex)> task, int minimumJobSize = 128, int jobsPerThread = 2);
+void threadedSplit(int32_t startIndex, int32_t stopIndex, std::function<void(int32_t startIndex, int32_t stopIndex)> task, int32_t minimumJobSize = 128, int32_t jobsPerThread = 2);
 // Use as a place-holder if you want to disable multi-threading but easily turn it on and off for comparing performance
-void threadedSplit_disabled(int startIndex, int stopIndex, std::function<void(int startIndex, int stopIndex)> task);
+void threadedSplit_disabled(int32_t startIndex, int32_t stopIndex, std::function<void(int32_t startIndex, int32_t stopIndex)> task);
 // A more convenient version for images looping over a rectangular bound of pixels.
 //   The same left and right sides are given to each sub-bound to make memory alignment easy.
 //   The top and bottoms are subdivided so that memory access is simple for cache prediction.
-void threadedSplit(const IRect& bound, std::function<void(const IRect& bound)> task, int minimumRowsPerJob = 128, int jobsPerThread = 2);
+void threadedSplit(const IRect& bound, std::function<void(const IRect& bound)> task, int32_t minimumRowsPerJob = 128, int32_t jobsPerThread = 2);
 // Use as a place-holder if you want to disable multi-threading but easily turn it on and off for comparing performance
 void threadedSplit_disabled(const IRect& bound, std::function<void(const IRect& bound)> task);
 

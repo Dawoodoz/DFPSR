@@ -83,7 +83,7 @@ inline bool imageIsPadded(const IMAGE_TYPE &image) {
 }
 
 // Loading from data pointer
-OrderedImageRgbaU8 image_decode_RgbaU8(SafePointer<const uint8_t> data, int size) {
+OrderedImageRgbaU8 image_decode_RgbaU8(SafePointer<const uint8_t> data, int32_t size) {
 	if (data.isNotNull()) {
 		return image_stb_decode_RgbaU8(data, size);
 	} else {
@@ -107,7 +107,7 @@ OrderedImageRgbaU8 image_load_RgbaU8(const ReadableString& filename, bool mustEx
 	return result;
 }
 
-Buffer image_encode(const ImageRgbaU8 &image, ImageFileFormat format, int quality) {
+Buffer image_encode(const ImageRgbaU8 &image, ImageFileFormat format, int32_t quality) {
 	if (image_exists(image)) {
 		ImageRgbaU8 orderedImage;
 		if (image_getPackOrderIndex(image) != PackOrderIndex::RGBA) {
@@ -131,7 +131,7 @@ Buffer image_encode(const ImageRgbaU8 &image, ImageFileFormat format, int qualit
 
 static ImageFileFormat detectImageFileExtension(const ReadableString& filename) {
 	ImageFileFormat result = ImageFileFormat::Unknown;
-	int lastDotIndex = string_findLast(filename, U'.');
+	int32_t lastDotIndex = string_findLast(filename, U'.');
 	if (lastDotIndex != -1) {
 		String extension = string_upperCase(file_getExtension(filename));
 		if (string_match(extension, U"JPG") || string_match(extension, U"JPEG")) {
@@ -147,7 +147,7 @@ static ImageFileFormat detectImageFileExtension(const ReadableString& filename) 
 	return result;
 }
 
-bool image_save(const ImageRgbaU8 &image, const ReadableString& filename, bool mustWork, int quality) {
+bool image_save(const ImageRgbaU8 &image, const ReadableString& filename, bool mustWork, int32_t quality) {
 	ImageFileFormat extension = detectImageFileExtension(filename);
 	Buffer buffer;
 	if (extension == ImageFileFormat::Unknown) {
@@ -242,13 +242,13 @@ ImageRgbaU8 image_removePadding(const ImageRgbaU8& image) {
 	}
 }
 
-static void extractChannel(SafePointer<uint8_t> targetData, int targetStride, SafePointer<const uint8_t> sourceData, int sourceStride, int sourceChannels, int channelIndex, int width, int height) {
+static void extractChannel(SafePointer<uint8_t> targetData, int32_t targetStride, SafePointer<const uint8_t> sourceData, int32_t sourceStride, int32_t sourceChannels, int32_t channelIndex, int32_t width, int32_t height) {
 	SafePointer<const uint8_t> sourceRow = sourceData + channelIndex;
 	SafePointer<uint8_t> targetRow = targetData;
-	for (int y = 0; y < height; y++) {
+	for (int32_t y = 0; y < height; y++) {
 		SafePointer<const uint8_t> sourceElement = sourceRow;
 		SafePointer<uint8_t> targetElement = targetRow;
-		for (int x = 0; x < width; x++) {
+		for (int32_t x = 0; x < width; x++) {
 			*targetElement = *sourceElement; // Copy one channel from the soruce
 			sourceElement += sourceChannels; // Jump to the same channel in the next source pixel
 			targetElement += 1; // Jump to the next monochrome target pixel
@@ -260,7 +260,7 @@ static void extractChannel(SafePointer<uint8_t> targetData, int targetStride, Sa
 
 static AlignedImageU8 getChannel(const ImageRgbaU8 image, int32_t channelIndex) {
 	// Warning for debug mode
-	static int channelCount = 4;
+	static int32_t channelCount = 4;
 	assert(0 <= channelIndex && channelIndex < channelCount);
 	AlignedImageU8 result = image_create_U8(image_getWidth(image), image_getHeight(image));
 	extractChannel(image_getSafePointer<uint8_t>(result), image_getStride(result), image_getSafePointer<uint8_t>(image), image_getStride(image), channelCount, channelIndex, image_getWidth(image), image_getHeight(image));
@@ -296,17 +296,17 @@ AlignedImageU8 image_get_alpha(const ImageRgbaU8& image) {
 	}
 }
 
-static inline int32_t readColor(const ImageU8& channel, int x, int y) {
+static inline int32_t readColor(const ImageU8& channel, int32_t x, int32_t y) {
 	return image_accessPixel(channel, x, y);
 }
-static inline int32_t readColor(int32_t color, int x, int y) {
+static inline int32_t readColor(int32_t color, int32_t x, int32_t y) {
 	return color;
 }
 template <typename R, typename G, typename B, typename A>
 static OrderedImageRgbaU8 pack_template(int32_t width, int32_t height, R red, G green, B blue, A alpha) {
 	OrderedImageRgbaU8 result = image_create_RgbaU8(width, height);
-	for (int y = 0; y < height; y++) {
-		for (int x = 0; x < width; x++) {
+	for (int32_t y = 0; y < height; y++) {
+		for (int32_t x = 0; x < width; x++) {
 			ColorRgbaI32 color = ColorRgbaI32(readColor(red, x, y), readColor(green, x, y), readColor(blue, x, y), readColor(alpha, x, y));
 			image_writePixel(result, x, y, color);
 		}
@@ -384,27 +384,27 @@ String image_toAscii(const ImageU8& image, const String& alphabet) {
 	}
 	String result;
 	char alphabetMap[256];
-	int alphabetSize = string_length(alphabet);
-	int width = image_getWidth(image);
-	int height = image_getHeight(image);
+	int32_t alphabetSize = string_length(alphabet);
+	int32_t width = image_getWidth(image);
+	int32_t height = image_getHeight(image);
 	string_reserve(result, ((width + 4) * height) + alphabetSize + 5);
 	double scale = (double)(alphabetSize - 1) / 255.0;
 	double output = 0.49;
-	for (int rawValue = 0; rawValue < 256; rawValue++) {
-		int charIndex = (int)output;
+	for (int32_t rawValue = 0; rawValue < 256; rawValue++) {
+		int32_t charIndex = (int32_t)output;
 		if (charIndex < 0) charIndex = 0;
 		if (charIndex > alphabetSize - 1) charIndex = alphabetSize - 1;
 		alphabetMap[rawValue] = alphabet[charIndex];
 		output += scale;
 	}
 	string_appendChar(result, U'<');
-	for (int charIndex = 0; charIndex < alphabetSize; charIndex++) {
+	for (int32_t charIndex = 0; charIndex < alphabetSize; charIndex++) {
 		string_appendChar(result, alphabet[charIndex]);
 	}
 	string_append(result, U">\n");
-	for (int y = 0; y < height; y++) {
+	for (int32_t y = 0; y < height; y++) {
 		string_appendChar(result, U'<');
-		for (int x = 0; x < width; x++) {
+		for (int32_t x = 0; x < width; x++) {
 			string_appendChar(result, alphabetMap[image_readPixel_clamp(image, x, y)]);
 		}
 		string_append(result, U">\n");
@@ -422,14 +422,14 @@ AlignedImageU8 image_fromAscii(const String& content) {
 	char alphabet[128];
 	uint8_t alphabetMap[128];
 	char current;
-	int x = 0;
-	int y = -1;
-	int width = 0;
-	int height = 0;
-	int alphabetSize = 0;
-	int contentSize = string_length(content);
+	int32_t x = 0;
+	int32_t y = -1;
+	int32_t width = 0;
+	int32_t height = 0;
+	int32_t alphabetSize = 0;
+	int32_t contentSize = string_length(content);
 	bool quoted = false;
-	int i = 0;
+	int32_t i = 0;
 	while (i < contentSize && ((current = content[i]) != '\0')) {
 		if (quoted) {
 			if (y < 0) {
@@ -466,14 +466,14 @@ AlignedImageU8 image_fromAscii(const String& content) {
 		alphabetMap[i] = 0;
 	}
 	for (i = 0; i < alphabetSize; i++) {
-		int code = (int)(alphabet[i]);
+		int32_t code = (int32_t)(alphabet[i]);
 		if (code < 32 || code > 126) {
 			throwError(U"Ascii image contained non-printable standard ascii! Use codes 32 to 126.");
 		}
 		if (alphabetMap[code] > 0) {
 			throwError(U"A character in the alphabet was used more than once!");
 		}
-		int value = (int)(((double)i) * (255.0f / ((double)(alphabetSize - 1))));
+		int32_t value = (int32_t)(((double)i) * (255.0f / ((double)(alphabetSize - 1))));
 		if (value < 0) value = 0;
 		if (value > 255) value = 255;
 		alphabetMap[code] = value;
@@ -495,7 +495,7 @@ AlignedImageU8 image_fromAscii(const String& content) {
 				y++;
 				x = 0;
 			} else if (y >= 0) {
-				int code = (int)current;
+				int32_t code = (int32_t)current;
 				if (code < 0) code = 0;
 				if (code > 127) code = 127;
 				image_writePixel(result, x, y, alphabetMap[code]);
@@ -509,7 +509,7 @@ AlignedImageU8 image_fromAscii(const String& content) {
 	return result;
 }
 
-template <typename IMAGE_TYPE, int CHANNELS, typename ELEMENT_TYPE>
+template <typename IMAGE_TYPE, int32_t CHANNELS, typename ELEMENT_TYPE>
 ELEMENT_TYPE maxDifference_template(const IMAGE_TYPE& imageA, const IMAGE_TYPE& imageB) {
 	if (image_getWidth(imageA) != image_getWidth(imageB) || image_getHeight(imageA) != image_getHeight(imageB)) {
 		return std::numeric_limits<ELEMENT_TYPE>::max();
@@ -519,11 +519,11 @@ ELEMENT_TYPE maxDifference_template(const IMAGE_TYPE& imageA, const IMAGE_TYPE& 
 		ELEMENT_TYPE maxDifference = 0;
 		SafePointer<const ELEMENT_TYPE> rowDataA = image_getSafePointer<ELEMENT_TYPE>(imageA);
 		SafePointer<const ELEMENT_TYPE> rowDataB = image_getSafePointer<ELEMENT_TYPE>(imageB);
-		for (int y = 0; y < image_getHeight(imageA); y++) {
+		for (int32_t y = 0; y < image_getHeight(imageA); y++) {
 			SafePointer<const ELEMENT_TYPE> pixelDataA = rowDataA;
 			SafePointer<const ELEMENT_TYPE> pixelDataB = rowDataB;
-			for (int x = 0; x < image_getWidth(imageA); x++) {
-				for (int c = 0; c < CHANNELS; c++) {
+			for (int32_t x = 0; x < image_getWidth(imageA); x++) {
+				for (int32_t c = 0; c < CHANNELS; c++) {
 					ELEMENT_TYPE difference = absDiff(*pixelDataA, *pixelDataB);
 					if (difference > maxDifference) {
 						maxDifference = difference;

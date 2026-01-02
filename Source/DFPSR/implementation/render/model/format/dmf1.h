@@ -29,7 +29,7 @@
 
 namespace dsr {
 
-Model importFromContent_DMF1(const String &fileContent, ResourcePool &pool, int detailLevel);
+Model importFromContent_DMF1(const String &fileContent, ResourcePool &pool, int32_t detailLevel);
 
 }
 

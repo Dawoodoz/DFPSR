@@ -63,8 +63,8 @@ private:
 	// Settings fetched from the theme
 	String finalHeadClass; // The selected HeadClass/Class from layout settings or the component's default theme class "MenuTop" or "MenuSub" based on ownership.
 	String finalListClass; // The selected ListClass from layout settings or the component's default theme class "MenuList".
-	int menuHead_filter = 0; // 0 for solid, 1 for alpha filter.
-	int menuList_filter = 0; // 0 for solid, 1 for alpha filter.
+	int32_t menuHead_filter = 0; // 0 for solid, 1 for alpha filter.
+	int32_t menuList_filter = 0; // 0 for solid, 1 for alpha filter.
 public:
 	Menu();
 public:

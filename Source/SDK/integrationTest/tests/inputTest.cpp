@@ -8,7 +8,7 @@ using namespace dsr;
 #define TASK_IS(INDEX) context.taskIndex == INDEX
 #define EVENT_TYPE_IS(TYPE) event.mouseEventType == MouseEventType::TYPE
 
-void inputTests_populate(List<Test> &target, int buttonCount, bool relative, bool verticalScroll) {
+void inputTests_populate(List<Test> &target, int32_t buttonCount, bool relative, bool verticalScroll) {
 	if (buttonCount >= 3) {
 		target.pushConstruct(
 			U"Mouse button test"

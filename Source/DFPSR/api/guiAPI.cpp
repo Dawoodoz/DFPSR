@@ -32,7 +32,7 @@
 using namespace dsr;
 
 // To be implemented outside of the core framework
-Handle<dsr::BackendWindow> createBackendWindow(const dsr::String& title, int width, int height);
+Handle<dsr::BackendWindow> createBackendWindow(const dsr::String& title, int32_t width, int32_t height);
 
 #define MUST_EXIST(OBJECT, METHOD) if (OBJECT.isNull()) { throwError("The " #OBJECT " handle was null in " #METHOD "\n"); }
 
@@ -107,7 +107,7 @@ Component dsr::component_findChildByName(const Component& parent, const Readable
 	return parent->findChildByName(name);
 }
 
-Component dsr::component_findChildByNameAndIndex(const Component& parent, const ReadableString& name, int index, bool mustExist) {
+Component dsr::component_findChildByNameAndIndex(const Component& parent, const ReadableString& name, int32_t index, bool mustExist) {
 	MUST_EXIST(parent, component_findChildByNameAndIndex);
 	return parent->findChildByNameAndIndex(name, index);
 }
@@ -121,7 +121,7 @@ Component dsr::window_findComponentByName(const Window& window, const ReadableSt
 	return result;
 }
 
-Component dsr::window_findComponentByNameAndIndex(const Window& window, const ReadableString& name, int index, bool mustExist) {
+Component dsr::window_findComponentByNameAndIndex(const Window& window, const ReadableString& name, int32_t index, bool mustExist) {
 	MUST_EXIST(window, window_findComponentByNameAndIndex);
 	Component result = window->findComponentByNameAndIndex(name, index);
 	if (mustExist && result.isNull()) {
@@ -130,7 +130,7 @@ Component dsr::window_findComponentByNameAndIndex(const Window& window, const Re
 	return result;
 }
 
-int dsr::component_getChildCount(const Component& parent) {
+int32_t dsr::component_getChildCount(const Component& parent) {
 	if (parent.getUnsafe()) {
 		return parent->getChildCount();
 	} else {
@@ -138,7 +138,7 @@ int dsr::component_getChildCount(const Component& parent) {
 	}
 }
 
-Component dsr::component_getChild(const Component& parent, int childIndex) {
+Component dsr::component_getChild(const Component& parent, int32_t childIndex) {
 	if (parent.getUnsafe()) {
 		return handle_dynamicCast<VisualComponent>(parent->getChild(childIndex));
 	} else {
@@ -146,20 +146,20 @@ Component dsr::component_getChild(const Component& parent, int childIndex) {
 	}
 }
 
-static void findAllComponentsByName(const Component& component, const ReadableString& name, std::function<void(Component, int)> callback) {
+static void findAllComponentsByName(const Component& component, const ReadableString& name, std::function<void(Component, int32_t)> callback) {
 	if (component_exists(component)) {
 		// Check if the current component matches
 		if (string_match(component->getName(), name)) {
 			callback(component, component->getIndex());
 		}
 		// Search among child components
-		int childCount = component_getChildCount(component);
-		for (int childIndex = childCount - 1; childIndex >= 0; childIndex--) {
+		int32_t childCount = component_getChildCount(component);
+		for (int32_t childIndex = childCount - 1; childIndex >= 0; childIndex--) {
 			findAllComponentsByName(component_getChild(component, childIndex), name, callback);
 		}
 	}
 }
-void dsr::window_findAllComponentsByName(const Window& window, const ReadableString& name, std::function<void(Component, int)> callback) {
+void dsr::window_findAllComponentsByName(const Window& window, const ReadableString& name, std::function<void(Component, int32_t)> callback) {
 	MUST_EXIST(window, window_findAllComponentsByName);
 	findAllComponentsByName(window->getRootComponent(), name, callback);
 }
@@ -182,11 +182,11 @@ void dsr::window_showCanvas(const Window& window) {
 	window->showCanvas();
 }
 
-int dsr::window_getPixelScale(const Window& window) {
+int32_t dsr::window_getPixelScale(const Window& window) {
 	MUST_EXIST(window, window_getPixelScale);
 	return window->getPixelScale();
 }
-void dsr::window_setPixelScale(const Window& window, int scale) {
+void dsr::window_setPixelScale(const Window& window, int32_t scale) {
 	MUST_EXIST(window, window_setPixelScale);
 	window->setPixelScale(scale);
 }
@@ -201,9 +201,9 @@ bool dsr::window_getCursorVisibility(const Window& window) {
 	return window->backend->visibleCursor;
 }
 
-bool dsr::window_setCursorPosition(const Window& window, int x, int y) {
+bool dsr::window_setCursorPosition(const Window& window, int32_t x, int32_t y) {
 	MUST_EXIST(window, window_setCursorPosition);
-	int pixelScale = window->getPixelScale();
+	int32_t pixelScale = window->getPixelScale();
 	return window->backend->setCursorPosition(x * pixelScale, y * pixelScale);
 }
 
@@ -225,19 +225,19 @@ AlignedImageF32 dsr::window_getDepthBuffer(const Window& window) {
 	return window->getDepthBuffer();
 }
 
-int dsr::window_getCanvasWidth(const Window& window) {
+int32_t dsr::window_getCanvasWidth(const Window& window) {
 	MUST_EXIST(window, window_getCanvasWidth);
 	return window->getCanvasWidth();
 }
-int dsr::window_getCanvasHeight(const Window& window) {
+int32_t dsr::window_getCanvasHeight(const Window& window) {
 	MUST_EXIST(window, window_getCanvasHeight);
 	return window->getCanvasHeight();
 }
-int dsr::window_getInnerWidth(const Window& window) {
+int32_t dsr::window_getInnerWidth(const Window& window) {
 	MUST_EXIST(window, window_getInnerWidth);
 	return window->getInnerWidth();
 }
-int dsr::window_getInnerHeight(const Window& window) {
+int32_t dsr::window_getInnerHeight(const Window& window) {
 	MUST_EXIST(window, window_getInnerHeight);
 	return window->getInnerHeight();
 }
@@ -483,7 +483,7 @@ void dsr::component_detachFromParent(const Component& component) {
 	component->detach = true;
 }
 
-Component dsr::component_create(const Component& parent, const ReadableString& className, const ReadableString& identifierName, int index) {
+Component dsr::component_create(const Component& parent, const ReadableString& className, const ReadableString& identifierName, int32_t index) {
 	// Making sure that the default components exist before trying to create a component manually.
 	gui_initialize();
 	// Creating a component from the name

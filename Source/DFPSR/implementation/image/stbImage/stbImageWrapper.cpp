@@ -11,12 +11,12 @@
 
 namespace dsr {
 
-OrderedImageRgbaU8 image_stb_decode_RgbaU8(SafePointer<const uint8_t> data, int size) {
+OrderedImageRgbaU8 image_stb_decode_RgbaU8(SafePointer<const uint8_t> data, int32_t size) {
 	#ifdef SAFE_POINTER_CHECKS
 		// If the safe pointer has debug information, use it to assert that size is within bound.
 		data.assertInside("image_stb_decode_RgbaU8 (data)", data.getUnsafe(), (size_t)size);
 	#endif
-	int width, height, bpp;
+	int32_t width, height, bpp;
 	uint8_t *rawPixelData = stbi_load_from_memory(data.getUnsafe(), size, &width, &height, &bpp, 4);
 	if (rawPixelData == nullptr) {
 		return OrderedImageRgbaU8(); // Return null
@@ -24,7 +24,7 @@ OrderedImageRgbaU8 image_stb_decode_RgbaU8(SafePointer<const uint8_t> data, int 
 	// Create a padded buffer
 	OrderedImageRgbaU8 result = image_create_RgbaU8(width, height);
 	// Copy the data
-	int rowSize = width * 4;
+	int32_t rowSize = width * 4;
 	int32_t targetStride = image_getStride(result);
 	const uint8_t *sourceRow = rawPixelData;
 	uint8_t* targetRow = image_dangerous_getData(result);
@@ -41,15 +41,15 @@ OrderedImageRgbaU8 image_stb_decode_RgbaU8(SafePointer<const uint8_t> data, int 
 }
 
 // Pre-condition: Images that STB image don't have stride implementations for must be given unpadded images.
-Buffer image_stb_encode(const ImageRgbaU8 &image, ImageFileFormat format, int quality) {
-	int width = image_getWidth(image);
-	int height = image_getHeight(image);
+Buffer image_stb_encode(const ImageRgbaU8 &image, ImageFileFormat format, int32_t quality) {
+	int32_t width = image_getWidth(image);
+	int32_t height = image_getHeight(image);
 	List<uint8_t> targetList;
 	// Reserve enough memory for an uncompressed file to reduce the need for reallcation.
 	targetList.reserve(width * height * 4 + 2048);
-	stbi_write_func* writer = [](void* context, void* data, int size) {
+	stbi_write_func* writer = [](void* context, void* data, int32_t size) {
 		List<uint8_t>* target = (List<uint8_t>*)context;
-		for (int i = 0; i < size; i++) {
+		for (int32_t i = 0; i < size; i++) {
 			target->push(((uint8_t*)data)[i]);
 		}
 	};

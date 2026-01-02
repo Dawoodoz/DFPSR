@@ -94,12 +94,12 @@ inline MouseEvent operator-(const MouseEvent &old, const IVector2D &offset) {
 	result.position = result.position - offset;
 	return result;
 }
-inline MouseEvent operator*(const MouseEvent &old, int scale) {
+inline MouseEvent operator*(const MouseEvent &old, int32_t scale) {
 	MouseEvent result = old;
 	result.position = result.position * scale;
 	return result;
 }
-inline MouseEvent operator/(const MouseEvent &old, int scale) {
+inline MouseEvent operator/(const MouseEvent &old, int32_t scale) {
 	MouseEvent result = old;
 	result.position = result.position / scale;
 	return result;
@@ -122,15 +122,15 @@ public:
 
 // The callback types.
 using EmptyCallback = std::function<void()>;
-using IndexCallback = std::function<void(int index)>;
-using SizeCallback = std::function<void(int width, int height)>;
+using IndexCallback = std::function<void(int32_t index)>;
+using SizeCallback = std::function<void(int32_t width, int32_t height)>;
 using KeyboardCallback = std::function<void(const KeyboardEvent& event)>;
 using MouseCallback = std::function<void(const MouseEvent& event)>;
 
 // The default functions to call until a callback has been selected.
 static EmptyCallback emptyCallback = []() {};
 static IndexCallback indexCallback = [](int64_t index) {};
-static SizeCallback sizeCallback = [](int width, int height) {};
+static SizeCallback sizeCallback = [](int32_t width, int32_t height) {};
 static KeyboardCallback keyboardCallback = [](const KeyboardEvent& event) {};
 static MouseCallback mouseCallback = [](const MouseEvent& event) {};
 

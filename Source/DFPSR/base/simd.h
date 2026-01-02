@@ -4084,9 +4084,9 @@
 
 	// How many lanes do the longest available vector have for a specified lane size.
 	//   Used to iterate indices and pointers using whole elements.
-	static const int laneCountX_32Bit = DSR_DEFAULT_VECTOR_SIZE / 4;
-	static const int laneCountX_16Bit = DSR_DEFAULT_VECTOR_SIZE / 2;
-	static const int laneCountX_8Bit = DSR_DEFAULT_VECTOR_SIZE;
+	static const int32_t laneCountX_32Bit = DSR_DEFAULT_VECTOR_SIZE / 4;
+	static const int32_t laneCountX_16Bit = DSR_DEFAULT_VECTOR_SIZE / 2;
+	static const int32_t laneCountX_8Bit = DSR_DEFAULT_VECTOR_SIZE;
 
 	// TODO: Let SVE define completely separate types for dynamic vectors.
 	// The F vector using the longest SIMD length that is efficient to use when only processing float values, even if no integer types are available in the same size.
@@ -4105,7 +4105,7 @@
 		using F32xF = F32x4;
 	#endif
 	// Used to iterate over float pointers when using F32xF.
-	static const int laneCountF = DSR_FLOAT_VECTOR_SIZE / 4;
+	static const int32_t laneCountF = DSR_FLOAT_VECTOR_SIZE / 4;
 
 	// Define traits.
 	DSR_APPLY_PROPERTY(DsrTrait_Any_U8 , U8x16)

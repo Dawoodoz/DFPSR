@@ -60,7 +60,7 @@ VisualTheme theme_getDefault();
 // Returns true iff theme exists, otherwise false.
 bool theme_exists(const VisualTheme &theme);
 // Returns the index of className in theme, 0 if it did not exist in theme or -1 if theme does not exist.
-int theme_getClassIndex(const VisualTheme &theme, const ReadableString &className);
+int32_t theme_getClassIndex(const VisualTheme &theme, const ReadableString &className);
 // Returns true iff className exists in theme.
 bool theme_class_exists(const VisualTheme &theme, const ReadableString &className);
 // Returns suggestedClassName if it exists in theme, fallbackClassName otherwise.
@@ -88,7 +88,7 @@ OrderedImageRgbaU8 theme_getImage(const VisualTheme &theme, const ReadableString
 //   Use theme_getClassIndex if you are unsure of why defaultValue was returned, because it will not throw exceptions.
 FixedPoint theme_getFixedPoint(const VisualTheme &theme, const ReadableString &className, const ReadableString &settingName, const FixedPoint &defaultValue);
 // Get FixedPoint and truncate to an integer, which should leave 16 bits of useful range.
-int theme_getInteger(const VisualTheme &theme, const ReadableString &className, const ReadableString &settingName, const int &defaultValue);
+int32_t theme_getInteger(const VisualTheme &theme, const ReadableString &className, const ReadableString &settingName, const int32_t &defaultValue);
 // Get a string from className in theme using settingName, the default value if not found, or throw an exception if theme does not exist.
 //   Looks for string assignments to settingName after [className] first, then before the first [] block, and then returns defaultValue if not found at all.
 //   The matches for className and settingName are both case insensitive.
@@ -97,7 +97,7 @@ ReadableString theme_getString(const VisualTheme &theme, const ReadableString &c
 
 // Called by VisualComponent to assign input arguments to functions in the media machine that were not given by the component itself.
 // Post-condition: Returns true if argumentName was identified and assigned as input to inputIndex of methodIndex in machine.
-bool theme_assignMediaMachineArguments(const VisualTheme &theme, int contextIndex, MediaMachine &machine, int methodIndex, int inputIndex, const ReadableString &argumentName);
+bool theme_assignMediaMachineArguments(const VisualTheme &theme, int32_t contextIndex, MediaMachine &machine, int32_t methodIndex, int32_t inputIndex, const ReadableString &argumentName);
 
 // Post-condition:
 //   Returns a bit-mask for the direct states that have corresponding input arguments in the method.

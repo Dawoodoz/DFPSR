@@ -50,7 +50,7 @@ bool machine_exists(const MediaMachine& machine);
 //   * The machine must exist.
 //     machine_exists(machine)
 // Returns the index to the method who's name matches methodName with case insensitivity in machine, or -1 if it does not exist in machine.
-int machine_findMethod(const MediaMachine& machine, const ReadableString& methodName);
+int32_t machine_findMethod(const MediaMachine& machine, const ReadableString& methodName);
 
 // Assign an input argument of a method before your call to machine_executeMethod.
 // Pre-condition:
@@ -61,10 +61,10 @@ int machine_findMethod(const MediaMachine& machine, const ReadableString& method
 //   * inputIndex must refer to an input of the method in machine.
 //     0 <= inputIndex < machine_getInputCount(machine, methodIndex)
 // Side-effect: Sets the input at inputIndex in machine's method at methodIndex to input.
-void machine_setInputByIndex(MediaMachine& machine, int methodIndex, int inputIndex, int32_t input);
-void machine_setInputByIndex(MediaMachine& machine, int methodIndex, int inputIndex, const FixedPoint& input);
-void machine_setInputByIndex(MediaMachine& machine, int methodIndex, int inputIndex, const AlignedImageU8& input);
-void machine_setInputByIndex(MediaMachine& machine, int methodIndex, int inputIndex, const OrderedImageRgbaU8& input);
+void machine_setInputByIndex(MediaMachine& machine, int32_t methodIndex, int32_t inputIndex, int32_t input);
+void machine_setInputByIndex(MediaMachine& machine, int32_t methodIndex, int32_t inputIndex, const FixedPoint& input);
+void machine_setInputByIndex(MediaMachine& machine, int32_t methodIndex, int32_t inputIndex, const AlignedImageU8& input);
+void machine_setInputByIndex(MediaMachine& machine, int32_t methodIndex, int32_t inputIndex, const OrderedImageRgbaU8& input);
 
 // Call a method in the media machine, reading from input registers and writing to output registers.
 // Pre-condition:
@@ -74,7 +74,7 @@ void machine_setInputByIndex(MediaMachine& machine, int methodIndex, int inputIn
 //   * methodIndex must refer to the method to call in machine.
 //     0 <= methodIndex < machine_getMethodCount(machine)
 // Side-effect: Writes the results to output arguments.
-void machine_executeMethod(MediaMachine& machine, int methodIndex);
+void machine_executeMethod(MediaMachine& machine, int32_t methodIndex);
 
 // Read output register at outputIndex
 // Pre-condition:
@@ -85,15 +85,15 @@ void machine_executeMethod(MediaMachine& machine, int methodIndex);
 //   * The output index must be within range.
 //     0 <= outputIndex < machine_getOutputCount(machine, methodIndex)
 // Post-condition: Returns the output at outputIndex.
-FixedPoint machine_getFixedPointOutputByIndex(const MediaMachine& machine, int methodIndex, int outputIndex);
-AlignedImageU8 machine_getImageU8OutputByIndex(const MediaMachine& machine, int methodIndex, int outputIndex);
-OrderedImageRgbaU8 machine_getImageRgbaU8OutputByIndex(const MediaMachine& machine, int methodIndex, int outputIndex);
+FixedPoint machine_getFixedPointOutputByIndex(const MediaMachine& machine, int32_t methodIndex, int32_t outputIndex);
+AlignedImageU8 machine_getImageU8OutputByIndex(const MediaMachine& machine, int32_t methodIndex, int32_t outputIndex);
+OrderedImageRgbaU8 machine_getImageRgbaU8OutputByIndex(const MediaMachine& machine, int32_t methodIndex, int32_t outputIndex);
 
 // Pre-condition:
 //   * The machine must exist.
 //     machine_exists(machine)
 // Post-condition: Returns the number of methods in machine.
-int machine_getMethodCount(const MediaMachine& machine);
+int32_t machine_getMethodCount(const MediaMachine& machine);
 
 // Pre-condition:
 //   * The machine must exist.
@@ -101,7 +101,7 @@ int machine_getMethodCount(const MediaMachine& machine);
 //   * methodIndex must refer to the method that you want to get the name from.
 //     0 <= methodIndex < machine_getMethodCount(machine)
 // Post-condition: Returns the name of the method at methodIndex in machine.
-String machine_getMethodName(const MediaMachine& machine, int methodIndex);
+String machine_getMethodName(const MediaMachine& machine, int32_t methodIndex);
 
 // Pre-condition:
 //   * The machine must exist.
@@ -109,7 +109,7 @@ String machine_getMethodName(const MediaMachine& machine, int methodIndex);
 //   * methodIndex must refer to the method that you want to get the input count from.
 //     0 <= methodIndex < machine_getMethodCount(machine)
 // Post-condition: Returns the input argument count for the method at methodIndex in machine.
-int machine_getInputCount(const MediaMachine& machine, int methodIndex);
+int32_t machine_getInputCount(const MediaMachine& machine, int32_t methodIndex);
 
 // Pre-condition:
 //   * The machine must exist.
@@ -117,7 +117,7 @@ int machine_getInputCount(const MediaMachine& machine, int methodIndex);
 //   * methodIndex must refer to the method that you want to get the output count from.
 //     0 <= methodIndex < machine_getMethodCount(machine)
 // Post-condition: Returns the output argument count for the method at methodIndex in machine.
-int machine_getOutputCount(const MediaMachine& machine, int methodIndex);
+int32_t machine_getOutputCount(const MediaMachine& machine, int32_t methodIndex);
 
 // Pre-condition:
 //   * The machine must exist.
@@ -127,7 +127,7 @@ int machine_getOutputCount(const MediaMachine& machine, int methodIndex);
 //   * The inputIndex must refer to the input argument that you want to get the name of.
 //     0 <= inputIndex < machine_getInputCount(machine, methodIndex)
 // Post-condition: Returns the input argument name at inputIndex for the method at methodIndex in machine.
-String machine_getInputName(const MediaMachine& machine, int methodIndex, int inputIndex);
+String machine_getInputName(const MediaMachine& machine, int32_t methodIndex, int32_t inputIndex);
 
 // Pre-condition:
 //   * The machine must exist.
@@ -137,14 +137,14 @@ String machine_getInputName(const MediaMachine& machine, int methodIndex, int in
 //   * The outputIndex must refer to the output argument that you want to get the name of.
 //     0 <= outputIndex < machine_getOutputCount(machine, methodIndex)
 // Post-condition: Returns the output argument name at outputIndex for the method at methodIndex in machine.
-String machine_getOutputName(const MediaMachine& machine, int methodIndex, int outputIndex);
+String machine_getOutputName(const MediaMachine& machine, int32_t methodIndex, int32_t outputIndex);
 
 // Helper function counting the number of arguments given to it.
-inline constexpr int machine_argCount() {
+inline constexpr int32_t machine_argCount() {
 	return 0;
 }
 template<typename HEAD, typename... TAIL>
-inline constexpr int machine_argCount(HEAD& first, TAIL&... args) {
+inline constexpr int32_t machine_argCount(HEAD& first, TAIL&... args) {
 	return machine_argCount(args...) + 1;
 }
 
@@ -155,42 +155,42 @@ private:
 	//   because it may not be used after other calls to the machine.
 	// It is only used to assign outputs with the () operator.
 	MediaMachine &machine;
-	int methodIndex;
-	void writeResult(int outputIndex, int8_t& target) {
+	int32_t methodIndex;
+	void writeResult(int32_t outputIndex, int8_t& target) {
 		target = fixedPoint_round(machine_getFixedPointOutputByIndex(this->machine, this->methodIndex, outputIndex));
 	}
-	void writeResult(int outputIndex, int16_t& target) {
+	void writeResult(int32_t outputIndex, int16_t& target) {
 		target = fixedPoint_round(machine_getFixedPointOutputByIndex(this->machine, this->methodIndex, outputIndex));
 	}
-	void writeResult(int outputIndex, int32_t& target) {
+	void writeResult(int32_t outputIndex, int32_t& target) {
 		target = fixedPoint_round(machine_getFixedPointOutputByIndex(this->machine, this->methodIndex, outputIndex));
 	}
-	void writeResult(int outputIndex, int64_t& target) {
+	void writeResult(int32_t outputIndex, int64_t& target) {
 		target = fixedPoint_round(machine_getFixedPointOutputByIndex(this->machine, this->methodIndex, outputIndex));
 	}
-	void writeResult(int outputIndex, FixedPoint& target) {
+	void writeResult(int32_t outputIndex, FixedPoint& target) {
 		target = machine_getFixedPointOutputByIndex(this->machine, this->methodIndex, outputIndex);
 	}
-	void writeResult(int outputIndex, AlignedImageU8& target) {
+	void writeResult(int32_t outputIndex, AlignedImageU8& target) {
 		target = machine_getImageU8OutputByIndex(this->machine, this->methodIndex, outputIndex);
 	}
-	void writeResult(int outputIndex, OrderedImageRgbaU8& target) {
+	void writeResult(int32_t outputIndex, OrderedImageRgbaU8& target) {
 		target = machine_getImageRgbaU8OutputByIndex(this->machine, this->methodIndex, outputIndex);
 	}
-	inline void writeResults(int firstInputIndex) {}
+	inline void writeResults(int32_t firstInputIndex) {}
 	template<typename HEAD, typename... TAIL>
-	inline void writeResults(int firstInputIndex, HEAD& first, TAIL&... args) {
+	inline void writeResults(int32_t firstInputIndex, HEAD& first, TAIL&... args) {
 		this->writeResult(firstInputIndex, first);
 		this->writeResults(firstInputIndex + 1, args...);
 	}
 public:
-	MediaResult(MediaMachine& machine, int methodIndex)
+	MediaResult(MediaMachine& machine, int32_t methodIndex)
  	: machine(machine), methodIndex(methodIndex) {}
 	// Write target references within () after a call to assign multiple outputs
 	template <typename... ARGS>
 	void operator () (ARGS&... args) {
-		int givenCount = machine_argCount(args...);
-		int expectedCount = machine_getOutputCount(this->machine, this->methodIndex);
+		int32_t givenCount = machine_argCount(args...);
+		int32_t expectedCount = machine_getOutputCount(this->machine, this->methodIndex);
 		if (givenCount != expectedCount) {
 			throwError("The call to ", machine_getMethodName(this->machine, this->methodIndex), " expected ", expectedCount, " outputs, but ", givenCount, " references were assigned.\n");
 		}
@@ -208,26 +208,26 @@ public:
 class MediaMethod {
 public:
 	MediaMachine machine;
-	int methodIndex; // Index of the method being called.
-	int contextIndex; // Index used to know from which context implicit variables are being fetched.
+	int32_t methodIndex; // Index of the method being called.
+	int32_t contextIndex; // Index used to know from which context implicit variables are being fetched.
 private:
-	inline void setInputs(int firstInputIndex) {}
+	inline void setInputs(int32_t firstInputIndex) {}
 	template<typename HEAD, typename... TAIL>
-	inline void setInputs(int firstInputIndex, const HEAD &first, TAIL&&... args) {
+	inline void setInputs(int32_t firstInputIndex, const HEAD &first, TAIL&&... args) {
 		machine_setInputByIndex(this->machine, this->methodIndex, firstInputIndex, first);
 		this->setInputs(firstInputIndex + 1, args...);
 	}
 public:
 	MediaMethod()
  	: methodIndex(-1), contextIndex(0) {}
-	MediaMethod(const MediaMachine& machine, int methodIndex, int contextIndex)
+	MediaMethod(const MediaMachine& machine, int32_t methodIndex, int32_t contextIndex)
  	: machine(machine), methodIndex(methodIndex), contextIndex(contextIndex) {}
 	// MediaMethod can be called like a function using arguments, returning MediaResult for assigning outputs by reference. 
 	// Useful when you know the arguments in advance.
 	template <typename... ARGS>
 	MediaResult operator () (ARGS&&... args) {
-		int givenCount = machine_argCount(args...);
-		int expectedCount = machine_getInputCount(this->machine, this->methodIndex);
+		int32_t givenCount = machine_argCount(args...);
+		int32_t expectedCount = machine_getInputCount(this->machine, this->methodIndex);
 		if (givenCount != expectedCount) {
 			throwError("The call to ", machine_getMethodName(this->machine, this->methodIndex), " expected ", expectedCount, " inputs, but ", givenCount, " values were given.\n");
 		}
@@ -239,11 +239,11 @@ public:
 	// The function setInputAction should simply make a call to machine_setInputByIndex with the provided machine, methodIndex, inputIndex and the value corresponding to argumentName in setInputAction.
 	// If you don't recognize argumentName, then throw an exception because default input arguments are currently not implemented.
 	// Useful when the called function can be extended or reduced with only the arguments needed.
-	MediaResult callUsingKeywords(std::function<void(MediaMachine &machine, int methodIndex, int inputIndex, const ReadableString &argumentName)> setInputAction);
+	MediaResult callUsingKeywords(std::function<void(MediaMachine &machine, int32_t methodIndex, int32_t inputIndex, const ReadableString &argumentName)> setInputAction);
 };
 
 // Post-condition: Returns a MediaMethod structure, which can be stored as a reference counting function pointer that keeps the virtual machine alive.
-MediaMethod machine_getMethod(MediaMachine& machine, const ReadableString& methodName, int contextIndex, bool mustExist = true);
+MediaMethod machine_getMethod(MediaMachine& machine, const ReadableString& methodName, int32_t contextIndex, bool mustExist = true);
 
 }
 

@@ -36,7 +36,7 @@
 namespace dsr {
 
 // A reusable method for calling the media machine that allow providing additional variables as style flags.
-MediaResult component_generateImage(VisualTheme theme, MediaMethod &method, int width, int height, int red, int green, int blue, int pressed = 0, int focused = 0, int hovered = 0);
+MediaResult component_generateImage(VisualTheme theme, MediaMethod &method, int32_t width, int32_t height, int32_t red, int32_t green, int32_t blue, int32_t pressed = 0, int32_t focused = 0, int32_t hovered = 0);
 
 class VisualComponent : public Persistent {
 PERSISTENT_DECLARATION(VisualComponent)
@@ -52,7 +52,7 @@ public: // Relations
 	List<Handle<VisualComponent>> children;
 	// Remember the component used for a drag event.
 	//   Ensures that mouse down events are followed by mouse up events on the same component.
-	int holdCount = 0;
+	int32_t holdCount = 0;
 	// Marked for removal from the parent when set to true.
 	bool detach = false;
 	// Applying deferred actions before drawing.
@@ -136,8 +136,8 @@ public:
 	bool getVisible() const;
 	void setName(const String& newName);
 	String getName() const;
-	void setIndex(int index);
-	int getIndex() const;
+	void setIndex(int32_t index);
+	int32_t getIndex() const;
 public: // Internal events that component classes override to know when something has changed.
 	// Called after the component has been created, moved or resized.
 	virtual void updateLocationEvent(const IRect& oldLocation, const IRect& newLocation);
@@ -202,8 +202,8 @@ public:
 	// Called with any persistent type when constructing child components from text
 	bool addChild(Handle<Persistent> child) override;
 	// Called when saving to text
-	int getChildCount() const override;
-	Handle<Persistent> getChild(int index) const override;
+	int32_t getChildCount() const override;
+	Handle<Persistent> getChild(int32_t index) const override;
 
 	// Returns true iff child is a member of the component
 	//   Searches recursively
@@ -213,7 +213,7 @@ public:
 	// Find the first child component with the requested name using a case sensitive match.
 	//   Returns: A shared pointer to the child or null if not found.
 	Handle<VisualComponent> findChildByName(ReadableString name) const;
-	Handle<VisualComponent> findChildByNameAndIndex(ReadableString name, int index) const;
+	Handle<VisualComponent> findChildByNameAndIndex(ReadableString name, int32_t index) const;
 	// Detach the component from any parent
 	void detachFromParent();
 
