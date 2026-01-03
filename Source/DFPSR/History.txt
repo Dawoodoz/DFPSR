@@ -79,3 +79,9 @@ Changes from version 0.2.0 to version 0.3.0 (Performance, safety and template im
 		Replace 'tools/clean.sh' with 'tools/buildScripts/clean.sh'.
 	* sound_streamToSpeakers uses int32_t instead of int.
 		Replace 'int' with 'int32_t' in your sound engine's callback.
+
+Changes from version 0.3.0
+	* More int types were replaced with int32_t to be consistent in making the size explicit.
+		While many compilers see int and int32_t as the same type and will not complain, the names are not guaranteed to always refer to the same type.
+		Replace 'int' with 'int32_t' in your entire project if you have any problems with int types not being accepted.
+		
