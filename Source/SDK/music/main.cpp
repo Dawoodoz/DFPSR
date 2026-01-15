@@ -65,6 +65,9 @@ static void limitSelection() {
 
 DSR_MAIN_CALLER(dsrMain)
 void dsrMain(List<String> args) {
+	// Go to the application's folder, so that files can easily be loaded using relative paths.
+	file_setCurrentPath(file_getApplicationFolder());
+
 	// Start sound thread
 	printText("Initializing sound\n");
 	soundEngine_initialize();
