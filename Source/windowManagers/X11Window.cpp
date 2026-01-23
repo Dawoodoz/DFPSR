@@ -768,7 +768,7 @@ static int32_t destroyXImage(XImage *image) {
 void X11Window::resizeCanvas(int32_t width, int32_t height) {
 	lockWindow();
 		if (this->display) {
-			unsigned int32_t defaultDepth = DefaultDepth(this->display, XDefaultScreen(this->display));
+			int defaultDepth = DefaultDepth(this->display, XDefaultScreen(this->display));
 			// Get the old canvas
 			dsr::AlignedImageRgbaU8 oldCanvas = this->canvas[this->showIndex];
 			for (int32_t b = 0; b < bufferCount; b++) {
