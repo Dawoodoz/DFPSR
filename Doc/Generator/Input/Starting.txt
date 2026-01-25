@@ -22,9 +22,6 @@ Enabling SSSE3 (-mssse3) can give a performance boost in image processing and sh
 Enabling AVX2 (-mavx2) can make texture sampling faster by enabling the gather instructions and 256-bit integer operations.
 
 *
-Truecolor (8 bits per channel) is a minimum requirement to create a window.
-
-*
 Windows XP (from year 2001) is the oldest supported version of MS-Windows because CreateProcessW is used to start other applications.
 The file API also assumes access to Unicode versions of functions from Windows 2000.
 
@@ -77,7 +74,40 @@ The Wizard.DsrProj build script will then build all SDK examples and templates, 
 *
 Make sure to manually erase object files in your temporary folder once in a while, because the build system in Source/tools/builder keeps everything for maximum build speed.
 ---
-Title2: Create your own cross-platform project
+Title2: Buliding the wizard application on MacOS
+
+*
+Go to the Source\tools\wizard folder in a terminal.
+
+*
+Give permission to execute the build script.
+<PRE><BLOCKQUOTE>chmod +x build_macos.sh</BLOCKQUOTE></PRE>
+
+*
+Run the build script.
+<PRE><BLOCKQUOTE>./build_macos.sh</BLOCKQUOTE></PRE>
+
+If asked to install development tools during this process, accept to have a C++ compiler installed.
+
+---
+Title2: Create a new project project using the wizard application
+
+The easiest way to create a new application is to use the wizard application that you compiled according to the instructions above.
+
+*
+Select a project that you want to use as a template.
+
+*
+Press the clone button.
+
+*
+Enter the path for your new project as the target path. The new project should ideally be placed right next to the DFPSR folder, so that you can easily preserve the relative paths across computers and see the folder containing a specific version of the DFPSR library and the projects depending on it as a time capsule.
+
+*
+Press "Begin cloning" to copy the template and attempt to update relative paths.
+
+---
+Title2: Create a new project manually
 
 *
 Copy the folder of a template program to where you want it.
@@ -126,37 +156,3 @@ StartupNotify=false
 CodeEnd:
 
 You can also begin your main function with file_setCurrentPath(file_getApplicationFolder()); to move into the application's folder automatically, which is supported on both Windows and Linux, but not guaranteed to work on all Posix systems because the symbolic link /proc/self/exe is not a part of the Posix standard.
----
-Title2: Compiling a CodeBlocks project on Microsoft Windows
-
-Create a project from existing code:
-
-*
-Download a mingw edition of CodeBlocks from their website. <A href="http://www.codeblocks.org/downloads/26#windows">www.codeblocks.org/downloads</A>
-
-*
-Start CodeBlocks with administrator rights and create a new project.
-If not starting as an administrator, certain parts of the file system may lack necessary permissions needed for creating executable binaries.
-Can create a Win32 project, just to quickly get the correct libraries for Win32Window.cpp (-lgdi32 -luser32 -lkernel32 -lcomctl32).
-You can then throw away the template main file, because you probably want to start with a template using dsrMain to get input arguments converted into List<String> with Unicode support on multiple platforms.
-
-*
-Select C++ 14 with G++ from the GCC toolchain, so that it will be compatible with the framework.
-Also -O2 or higher optimization, unless you want terrible performance.
-This should be done for both debug and release.
-
-*
-Import all source files from <B>dfpsr/Source/DFPSR</B>.
-
-*
-Import all source files from <B>the project you want to build</B>.
-
-*
-Import <B>dfpsr/Source/windowManagers/Win32Window.cpp</B> if needed by the project (linking with -lgdi32 -luser32 -lkernel32 -lcomctl32).
-
-*
-Import <B>dfpsr/Source/soundManagers/WinMMSound.cpp</B> if needed by the project (linking with -lwinmm).
-
-*
-Build and run the project in debug mode, to check that your settings are correct and the compiler works.
----

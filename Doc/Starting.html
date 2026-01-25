@@ -51,10 +51,6 @@ Enabling AVX2 (-mavx2) can make texture sampling faster by enabling the gather i
 
 </P><P>
 <IMG SRC="Images/SmallDot.png">
-Truecolor (8 bits per channel) is a minimum requirement to create a window.
-
-</P><P>
-<IMG SRC="Images/SmallDot.png">
 Windows XP (from year 2001) is the oldest supported version of MS-Windows because CreateProcessW is used to start other applications.
 The file API also assumes access to Unicode versions of functions from Windows 2000.
 
@@ -117,7 +113,49 @@ The Wizard.DsrProj build script will then build all SDK examples and templates, 
 <IMG SRC="Images/SmallDot.png">
 Make sure to manually erase object files in your temporary folder once in a while, because the build system in Source/tools/builder keeps everything for maximum build speed.
 </P><IMG SRC="Images/Border.png"><P>
-</P><H2> Create your own cross-platform project</H2><P>
+</P><H2> Buliding the wizard application on MacOS</H2><P>
+</P><P>
+<IMG SRC="Images/SmallDot.png">
+Go to the Source\tools\wizard folder in a terminal.
+
+</P><P>
+<IMG SRC="Images/SmallDot.png">
+Give permission to execute the build script.
+<PRE><BLOCKQUOTE>chmod +x build_macos.sh</BLOCKQUOTE></PRE>
+
+</P><P>
+<IMG SRC="Images/SmallDot.png">
+Run the build script.
+<PRE><BLOCKQUOTE>./build_macos.sh</BLOCKQUOTE></PRE>
+
+</P><P>
+If asked to install development tools during this process, accept to have a C++ compiler installed.
+
+</P><P>
+</P><IMG SRC="Images/Border.png"><P>
+</P><H2> Create a new project project using the wizard application</H2><P>
+</P><P>
+The easiest way to create a new application is to use the wizard application that you compiled according to the instructions above.
+
+</P><P>
+<IMG SRC="Images/SmallDot.png">
+Select a project that you want to use as a template.
+
+</P><P>
+<IMG SRC="Images/SmallDot.png">
+Press the clone button.
+
+</P><P>
+<IMG SRC="Images/SmallDot.png">
+Enter the path for your new project as the target path. The new project should ideally be placed right next to the DFPSR folder, so that you can easily preserve the relative paths across computers and see the folder containing a specific version of the DFPSR library and the projects depending on it as a time capsule.
+
+</P><P>
+<IMG SRC="Images/SmallDot.png">
+Press "Begin cloning" to copy the template and attempt to update relative paths.
+
+</P><P>
+</P><IMG SRC="Images/Border.png"><P>
+</P><H2> Create a new project manually</H2><P>
 </P><P>
 <IMG SRC="Images/SmallDot.png">
 Copy the folder of a template program to where you want it.
@@ -171,47 +209,5 @@ StartupNotify=false
 </BLOCKQUOTE></PRE>
 </P><P>
 You can also begin your main function with file_setCurrentPath(file_getApplicationFolder()); to move into the application's folder automatically, which is supported on both Windows and Linux, but not guaranteed to work on all Posix systems because the symbolic link /proc/self/exe is not a part of the Posix standard.
-</P><IMG SRC="Images/Border.png"><P>
-</P><H2> Compiling a CodeBlocks project on Microsoft Windows</H2><P>
-</P><P>
-Create a project from existing code:
-
-</P><P>
-<IMG SRC="Images/SmallDot.png">
-Download a mingw edition of CodeBlocks from their website. <A href="http://www.codeblocks.org/downloads/26#windows">www.codeblocks.org/downloads</A>
-
-</P><P>
-<IMG SRC="Images/SmallDot.png">
-Start CodeBlocks with administrator rights and create a new project.
-If not starting as an administrator, certain parts of the file system may lack necessary permissions needed for creating executable binaries.
-Can create a Win32 project, just to quickly get the correct libraries for Win32Window.cpp (-lgdi32 -luser32 -lkernel32 -lcomctl32).
-You can then throw away the template main file, because you probably want to start with a template using dsrMain to get input arguments converted into List<String> with Unicode support on multiple platforms.
-
-</P><P>
-<IMG SRC="Images/SmallDot.png">
-Select C++ 14 with G++ from the GCC toolchain, so that it will be compatible with the framework.
-Also -O2 or higher optimization, unless you want terrible performance.
-This should be done for both debug and release.
-
-</P><P>
-<IMG SRC="Images/SmallDot.png">
-Import all source files from <B>dfpsr/Source/DFPSR</B>.
-
-</P><P>
-<IMG SRC="Images/SmallDot.png">
-Import all source files from <B>the project you want to build</B>.
-
-</P><P>
-<IMG SRC="Images/SmallDot.png">
-Import <B>dfpsr/Source/windowManagers/Win32Window.cpp</B> if needed by the project (linking with -lgdi32 -luser32 -lkernel32 -lcomctl32).
-
-</P><P>
-<IMG SRC="Images/SmallDot.png">
-Import <B>dfpsr/Source/soundManagers/WinMMSound.cpp</B> if needed by the project (linking with -lwinmm).
-
-</P><P>
-<IMG SRC="Images/SmallDot.png">
-Build and run the project in debug mode, to check that your settings are correct and the compiler works.
-</P><IMG SRC="Images/Border.png"><P>
 </P>
 </BODY> </HTML>
