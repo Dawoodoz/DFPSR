@@ -159,7 +159,9 @@ DsrChar dsr::character_upperCase(DsrChar character) {
 		return U'Ǳ'; // Ǆ (497)
 	} else if (character == U'ǵ') { // ǵ (501) Latin Extended-B
 		return U'Ǵ'; // Ǵ (500)
-	// Unhandled: Ƕ Ƿ
+	} else if (character == U'ȡ') { // ȡ (545) Latin Extended-B
+		// This character overshadows the range below as an exception.
+		return character; // TODO: Can we remove the d's curl when converting to upper case?
 	} else if (U'Ǹ' <= character && character <= U'ȳ') { // Ǹ (504) to ȳ (563) Latin Extended-B
 		return character & ~DsrChar(1);
 	} else {
@@ -229,13 +231,16 @@ DsrChar dsr::character_lowerCase(DsrChar character) {
 	} else if (U'Ǎ' <= character && character <= U'ǜ' && character & 1) { // Odd from Ǎ (461) to ǜ (476) Latin Extended-B Pinyin
 		return character + 1;
 	} else if (U'Ǟ' <= character && character <= U'ǯ') { // Ǟ (478) to ǯ (495) Latin Extended-B
-		return character & DsrChar(1);
+		return character | DsrChar(1);
 	} else if (character == U'Ǳ' || character == U'ǲ') { // Ǆ, ǅ (497, 498) Latin Extended-B
 		return U'ǳ'; // Ǆǳ499)
 	} else if (character == U'Ǵ') { // Ǵ (500) Latin Extended-B
 		return U'ǵ'; // ǵ (501)
+	} else if (character == U'Ƞ') { // Ƞ (544) Latin Extended-B
+		// This character overshadows the range below as an exception.
+		return U'ƞ'; // ƞ (414)
 	} else if (U'Ǹ' <= character && character <= U'ȳ') { // Ǹ (504) to ȳ (563) Latin Extended-B
-		return character & DsrChar(1);
+		return character | DsrChar(1);
 	} else {
 		return character;
 	}
