@@ -190,233 +190,90 @@ DsrChar dsr::character_upperCase(DsrChar character) {
 			return U'Ȿ'; // Ȿ (11390)
 		} else if (character == U'ɀ') { // ɀ (576)
 			return U'Ɀ'; // Ɀ (11391)
+		} else if (character == U'ɂ') { // ɂ (578)
+			return U'Ɂ'; // Ɂ (577)
+		} else if (U'ɇ' <= character && character <= U'ɏ' && odd) { // ɇ (583) to ɏ (591)
+			return character - 1; // Ɇ (582) to  Ɏ (590)
+		} else if (character == U'ɐ') { // ɐ (592)
+			return U'Ɐ'; // Ɐ (11375)
+		} else if (character == U'ɑ') { // ɑ (593)
+			return U'Ɑ'; // Ɑ (11373)
+		} else if (character == U'ɒ') { // ɒ (594)
+			return U'Ɒ'; // Ɒ (11376)
+		} else if (character == U'ɓ') { // ɓ (595)
+			return U'Ɓ'; // Ɓ (385)
+		} else if (character == U'ɔ') { // ɔ (596)
+			return U'Ɔ'; // Ɔ (390)
+		} else if (character == U'ɖ') { // ɖ (598)
+			return U'Ɖ'; // Ɖ (393)
+		} else if (character == U'ɗ') { // ɗ (599)
+			return U'Ɗ'; // Ɗ (394)
+		} else if (character == U'ɘ') { // ɘ (600)
+			return U'Ǝ'; // Ǝ (398)
+		} else if (character == U'ə') { // ə (601)
+			return U'Ə'; // Ə (399)
+		} else if (character == U'ɛ') { // ɛ (603)
+			return U'Ɛ'; // Ɛ (400)
+		} else if (character == U'ɠ') { // ɠ (608)
+			return U'Ɠ'; // Ɠ (403)
+		} else if (character == U'ɣ') { // ɣ (611)
+			return U'Ɣ'; // Ɣ (404)
+		} else if (character == U'ɥ') { // ɥ (613)
+			return U'Ɥ'; // Ɥ (42893)
+		} else if (character == U'ɨ') { // ɨ (616)
+			return U'Ɨ'; // Ɨ (407)
+		} else if (character == U'ɩ') { // ɩ (617)
+			return U'Ɩ'; // Ɩ (406)
+		} else if (character == U'ɪ') { // ɪ (618)
+			return U'Ɪ'; // Ɪ (42926)
+		} else if (character == U'ɯ') { // ɯ (623)
+			return U'Ɯ'; // Ɯ (412)
+		} else if (character == U'ɱ') { // ɱ (625)
+			return U'Ɱ'; // Ɱ (11374)
+		} else if (character == U'ɲ') { // ɲ (626)
+			return U'Ɲ'; // Ɲ (413)
+		} else if (character == U'ɵ') { // ɵ (629)
+			return U'Ɵ'; // Ɵ (415)
+		} else if (character == U'ɽ') { // ɽ (637)
+			return U'Ɽ'; // Ɽ (11364)
+		} else if (character == U'ʀ') { // ʀ (640)
+			return U'Ʀ'; // Ʀ (422)
+		} else if (character == U'ʈ') { // ʈ (648)
+			return U'Ʈ'; // Ʈ (430)
+		} else if (character == U'ʉ') { // ʉ (649)
+			return U'Ʉ'; // Ʉ (580)
+		} else if (character == U'ʊ') { // ʊ (650)
+			return U'Ʊ'; // Ʊ (433)
+		} else if (character == U'ʋ') { // ʋ (651)
+			return U'Ʋ'; // Ʋ (434)
+		} else if (character == U'ʌ') { // ʌ (652)
+			return U'Ʌ'; // Ʌ (581)
+		} else if (character == U'ʒ') { // ʒ (658)
+			return U'Ʒ'; // Ʒ (439)
+		} else if (character == U'ʔ') { // ʔ (660)
+			return U'ˀ'; // ˀ (704)
+		} else if (character == U'ά') { // ά (940)
+			return U'Ά'; // Ά (902)
+		} else if (character == U'έ') { // έ (941)
+			return U'Έ'; // Έ (904)
+		} else if (character == U'ή') { // ή (942)
+			return U'Ή'; // Ή (905)
+		} else if (character == U'ί') { // ί (943)
+			return U'Ί'; // Ί (906)
+		} else if (U'α' <= character && character <= U'ρ') { // α (945) to ρ (961)
+			return character - 32;// Α (913) to Ρ (929)
+		} else if (U'σ' <= character && character <= U'ϋ') { // σ (963) to ϋ (971)
+			return character - 32;// Σ (931) to Ϋ (939)
+		} else if (character == U'ό') { // ό (972)
+			return U'Ό'; // Ό (908)
+		} else if (character == U'ύ') { // ύ (973)
+			return U'Ύ'; // Ύ (910)
+		} else if (character == U'ώ') { // ώ (974)
+			return U'Ώ'; // Ώ (911)
+		} else if (U'ϣ' <= character && character <= U'ϯ' && odd) { // ϣ (995) to ϯ (1007)
+			return character - 1;// Ϣ (994) to Ϯ (1006)
 
 					// TODO: Compress into ranges.
-					} else if (character == U'ɂ') { // ɂ (578)
-						return U'Ɂ'; // Ɂ (577)
-						return character - 1;
-					} else if (character == U'ɇ') { // ɇ (583)
-						return U'Ɇ'; // Ɇ (582)
-						return character - 1;
-					} else if (character == U'ɉ') { // ɉ (585)
-						return U'Ɉ'; // Ɉ (584)
-						return character - 1;
-					} else if (character == U'ɋ') { // ɋ (587)
-						return U'Ɋ'; // Ɋ (586)
-						return character - 1;
-					} else if (character == U'ɍ') { // ɍ (589)
-						return U'Ɍ'; // Ɍ (588)
-						return character - 1;
-					} else if (character == U'ɏ') { // ɏ (591)
-						return U'Ɏ'; // Ɏ (590)
-						return character - 1;
-					} else if (character == U'ɐ') { // ɐ (592)
-						return U'Ɐ'; // Ɐ (11375)
-						return character + 10783;
-					} else if (character == U'ɑ') { // ɑ (593)
-						return U'Ɑ'; // Ɑ (11373)
-						return character + 10780;
-					} else if (character == U'ɒ') { // ɒ (594)
-						return U'Ɒ'; // Ɒ (11376)
-						return character + 10782;
-					} else if (character == U'ɓ') { // ɓ (595)
-						return U'Ɓ'; // Ɓ (385)
-						return character - 210;
-					} else if (character == U'ɔ') { // ɔ (596)
-						return U'Ɔ'; // Ɔ (390)
-						return character - 206;
-					} else if (character == U'ɖ') { // ɖ (598)
-						return U'Ɖ'; // Ɖ (393)
-						return character - 205;
-					} else if (character == U'ɗ') { // ɗ (599)
-						return U'Ɗ'; // Ɗ (394)
-						return character - 205;
-					} else if (character == U'ɘ') { // ɘ (600)
-						return U'Ǝ'; // Ǝ (398)
-						return character - 202;
-					} else if (character == U'ə') { // ə (601)
-						return U'Ə'; // Ə (399)
-						return character - 202;
-					} else if (character == U'ɛ') { // ɛ (603)
-						return U'Ɛ'; // Ɛ (400)
-						return character - 203;
-					} else if (character == U'ɠ') { // ɠ (608)
-						return U'Ɠ'; // Ɠ (403)
-						return character - 205;
-					} else if (character == U'ɣ') { // ɣ (611)
-						return U'Ɣ'; // Ɣ (404)
-						return character - 207;
-					} else if (character == U'ɥ') { // ɥ (613)
-						return U'Ɥ'; // Ɥ (42893)
-						return character + 42280;
-					} else if (character == U'ɨ') { // ɨ (616)
-						return U'Ɨ'; // Ɨ (407)
-						return character - 209;
-					} else if (character == U'ɩ') { // ɩ (617)
-						return U'Ɩ'; // Ɩ (406)
-						return character - 211;
-					} else if (character == U'ɪ') { // ɪ (618)
-						return U'Ɪ'; // Ɪ (42926)
-						return character + 42308;
-					} else if (character == U'ɯ') { // ɯ (623)
-						return U'Ɯ'; // Ɯ (412)
-						return character - 211;
-					} else if (character == U'ɱ') { // ɱ (625)
-						return U'Ɱ'; // Ɱ (11374)
-						return character + 10749;
-					} else if (character == U'ɲ') { // ɲ (626)
-						return U'Ɲ'; // Ɲ (413)
-						return character - 213;
-					} else if (character == U'ɵ') { // ɵ (629)
-						return U'Ɵ'; // Ɵ (415)
-						return character - 214;
-					} else if (character == U'ɽ') { // ɽ (637)
-						return U'Ɽ'; // Ɽ (11364)
-						return character + 10727;
-					} else if (character == U'ʀ') { // ʀ (640)
-						return U'Ʀ'; // Ʀ (422)
-						return character - 218;
-					} else if (character == U'ʈ') { // ʈ (648)
-						return U'Ʈ'; // Ʈ (430)
-						return character - 218;
-					} else if (character == U'ʉ') { // ʉ (649)
-						return U'Ʉ'; // Ʉ (580)
-						return character - 69;
-					} else if (character == U'ʊ') { // ʊ (650)
-						return U'Ʊ'; // Ʊ (433)
-						return character - 217;
-					} else if (character == U'ʋ') { // ʋ (651)
-						return U'Ʋ'; // Ʋ (434)
-						return character - 217;
-					} else if (character == U'ʌ') { // ʌ (652)
-						return U'Ʌ'; // Ʌ (581)
-						return character - 71;
-					} else if (character == U'ʒ') { // ʒ (658)
-						return U'Ʒ'; // Ʒ (439)
-						return character - 219;
-					} else if (character == U'ʔ') { // ʔ (660)
-						return U'ˀ'; // ˀ (704)
-						return character + 44;
-					} else if (character == U'ά') { // ά (940)
-						return U'Ά'; // Ά (902)
-						return character - 38;
-					} else if (character == U'έ') { // έ (941)
-						return U'Έ'; // Έ (904)
-						return character - 37;
-					} else if (character == U'ή') { // ή (942)
-						return U'Ή'; // Ή (905)
-						return character - 37;
-					} else if (character == U'ί') { // ί (943)
-						return U'Ί'; // Ί (906)
-						return character - 37;
-					} else if (character == U'α') { // α (945)
-						return U'Α'; // Α (913)
-						return character - 32;
-					} else if (character == U'β') { // β (946)
-						return U'Β'; // Β (914)
-						return character - 32;
-					} else if (character == U'γ') { // γ (947)
-						return U'Γ'; // Γ (915)
-						return character - 32;
-					} else if (character == U'δ') { // δ (948)
-						return U'Δ'; // Δ (916)
-						return character - 32;
-					} else if (character == U'ε') { // ε (949)
-						return U'Ε'; // Ε (917)
-						return character - 32;
-					} else if (character == U'ζ') { // ζ (950)
-						return U'Ζ'; // Ζ (918)
-						return character - 32;
-					} else if (character == U'η') { // η (951)
-						return U'Η'; // Η (919)
-						return character - 32;
-					} else if (character == U'θ') { // θ (952)
-						return U'Θ'; // Θ (920)
-						return character - 32;
-					} else if (character == U'ι') { // ι (953)
-						return U'Ι'; // Ι (921)
-						return character - 32;
-					} else if (character == U'κ') { // κ (954)
-						return U'Κ'; // Κ (922)
-						return character - 32;
-					} else if (character == U'λ') { // λ (955)
-						return U'Λ'; // Λ (923)
-						return character - 32;
-					} else if (character == U'μ') { // μ (956)
-						return U'Μ'; // Μ (924)
-						return character - 32;
-					} else if (character == U'ν') { // ν (957)
-						return U'Ν'; // Ν (925)
-						return character - 32;
-					} else if (character == U'ξ') { // ξ (958)
-						return U'Ξ'; // Ξ (926)
-						return character - 32;
-					} else if (character == U'ο') { // ο (959)
-						return U'Ο'; // Ο (927)
-						return character - 32;
-					} else if (character == U'π') { // π (960)
-						return U'Π'; // Π (928)
-						return character - 32;
-					} else if (character == U'ρ') { // ρ (961)
-						return U'Ρ'; // Ρ (929)
-						return character - 32;
-					} else if (character == U'σ') { // σ (963)
-						return U'Σ'; // Σ (931)
-						return character - 32;
-					} else if (character == U'τ') { // τ (964)
-						return U'Τ'; // Τ (932)
-						return character - 32;
-					} else if (character == U'υ') { // υ (965)
-						return U'Υ'; // Υ (933)
-						return character - 32;
-					} else if (character == U'φ') { // φ (966)
-						return U'Φ'; // Φ (934)
-						return character - 32;
-					} else if (character == U'χ') { // χ (967)
-						return U'Χ'; // Χ (935)
-						return character - 32;
-					} else if (character == U'ψ') { // ψ (968)
-						return U'Ψ'; // Ψ (936)
-						return character - 32;
-					} else if (character == U'ω') { // ω (969)
-						return U'Ω'; // Ω (937)
-						return character - 32;
-					} else if (character == U'ϊ') { // ϊ (970)
-						return U'Ϊ'; // Ϊ (938)
-						return character - 32;
-					} else if (character == U'ϋ') { // ϋ (971)
-						return U'Ϋ'; // Ϋ (939)
-						return character - 32;
-					} else if (character == U'ό') { // ό (972)
-						return U'Ό'; // Ό (908)
-						return character - 64;
-					} else if (character == U'ύ') { // ύ (973)
-						return U'Ύ'; // Ύ (910)
-						return character - 63;
-					} else if (character == U'ώ') { // ώ (974)
-						return U'Ώ'; // Ώ (911)
-						return character - 63;
-					} else if (character == U'ϣ') { // ϣ (995)
-						return U'Ϣ'; // Ϣ (994)
-						return character - 1;
-					} else if (character == U'ϥ') { // ϥ (997)
-						return U'Ϥ'; // Ϥ (996)
-						return character - 1;
-					} else if (character == U'ϧ') { // ϧ (999)
-						return U'Ϧ'; // Ϧ (998)
-						return character - 1;
-					} else if (character == U'ϩ') { // ϩ (1001)
-						return U'Ϩ'; // Ϩ (1000)
-						return character - 1;
-					} else if (character == U'ϫ') { // ϫ (1003)
-						return U'Ϫ'; // Ϫ (1002)
-						return character - 1;
-					} else if (character == U'ϭ') { // ϭ (1005)
-						return U'Ϭ'; // Ϭ (1004)
-						return character - 1;
-					} else if (character == U'ϯ') { // ϯ (1007)
-						return U'Ϯ'; // Ϯ (1006)
-						return character - 1;
 					} else if (character == U'а') { // а (1072)
 						return U'А'; // А (1040)
 						return character - 32;
