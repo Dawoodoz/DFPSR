@@ -88,6 +88,84 @@ String Printable::toString() const {
 
 Printable::~Printable() {}
 
+/*
+Code generator used to create character transforming functions from arbitrary reference functions.
+Paste the result into functions that provide character, odd and even before the returning if statement begins.
+
+static void generateCharacterRange(String &result, DsrChar firstIn, DsrChar lastIn, int64_t stride, int64_t offset) {
+	DsrChar firstOut = firstIn + offset;
+	DsrChar lastOut = lastIn + offset;
+	if (string_length(result) == 0) {
+		string_append(result, U"	");
+	} else {
+		string_append(result, U"	} else ");
+	}
+	if (firstIn == lastIn) {
+		string_append(result, U"if (character == U'", firstIn, "') { // ", firstIn, U" (", (uint32_t)firstIn, U")\n");
+		string_append(result, U"		return U'", firstOut, "'; // ", firstOut, U" (", (uint32_t)firstOut, U")\n");
+	} else {
+		string_append(result, U"if (U'", firstIn, "' <= character && character <= U'", lastIn, U"'");
+		if (stride == 2) {
+			if (firstIn & DsrChar(1)) {
+				// Odd interval
+				string_append(result, U" && odd");
+			} else {
+				// Even interval
+				string_append(result, U" && even");
+			}
+		} else if (stride != 1) {
+			throwError(U"Unsupported stride ", stride, U"!\n");
+		}
+		string_append(result, U") { // ", firstIn, U" (", (uint32_t)firstIn, U") to ", lastIn, U" (", (uint32_t)lastIn, U")\n");
+		if (firstOut > firstIn) {
+			string_append(result, U"		return character + ", offset, ";");
+		} else if (firstOut < firstIn) {
+			string_append(result, U"		return character - ", -offset, ";");
+		}
+		string_append(result, U"// ", firstOut, U" (", (uint32_t)firstOut, U") to ", lastOut, U" (", (uint32_t)lastOut, U")\n");
+	}
+}
+// Pre-condition: The transform function must change at least one character.
+static String generateCharacterMapping(std::function<DsrChar(const DsrChar character)> transform, DsrChar first, DsrChar last) {
+	String result;
+	int64_t rangeStart = -1;
+	int64_t rangeEnd = -1;
+	int64_t lastOffset = -1;
+	int64_t currentStride = -1;
+	for (int64_t c = first; c <= last; c++) {
+		int64_t t = transform(c);
+		if (c != t) {
+			int64_t offset = int64_t(t) - int64_t(c);
+			int64_t step = c - rangeEnd;
+			// Check if we should break apart the previous range.
+			if ((currentStride != -1 && step != currentStride)
+			 || step > 2
+			 || (lastOffset != -1 && offset != lastOffset)) {
+				if (rangeStart != -1) {
+					generateCharacterRange(result, rangeStart, rangeEnd, currentStride, lastOffset);
+				}
+				rangeStart = c;
+				rangeEnd = c;
+				lastOffset = offset;
+				currentStride = -1;
+			} else {
+				rangeEnd = c;
+				lastOffset = offset;
+				currentStride = step;
+			}
+		}
+	}
+	// Generate the last range, while assuming that we have at least one character to modify.
+	if (rangeStart != -1) {
+		generateCharacterRange(result, rangeStart, rangeEnd, currentStride, lastOffset);
+	}
+	string_append(result, U"	} else {\n");
+	string_append(result, U"		return character;\n");
+	string_append(result, U"	}\n");
+	return result;
+}
+*/
+
 DsrChar dsr::character_upperCase(DsrChar character) {
 	if (character < 256) {
 		if (U'a' <= character && character <= U'z') { // a (97) to z (122)
