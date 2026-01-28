@@ -30,6 +30,7 @@
 #include "../../math/LVector.h"
 #include "../../math/FPlane3D.h"
 #include "../../math/Transform3D.h"
+#include "../../collection/FixedArray.h"
 #include "../math/scalar.h"
 #include "constants.h"
 #include "ProjectedPoint.h"
@@ -39,7 +40,7 @@ namespace dsr {
 
 class ViewFrustum {
 private:
-	FPlane3D planes[6];
+	FixedArray<FPlane3D, 6> planes;
 	int32_t planeCount;
 public:
 	// Named indices to the different planes defining a view frustum.
