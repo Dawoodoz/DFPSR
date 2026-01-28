@@ -29,6 +29,7 @@
 #include "../collection/List.h"
 #include "../collection/Array.h"
 #include "../collection/Field.h"
+#include "../collection/FixedArray.h"
 
 namespace dsr {
 
@@ -36,7 +37,7 @@ namespace dsr {
 template<typename T>
 bool operator==(const List<T>& a, const List<T>& b) {
 	if (a.length() != b.length()) return false;
-	for (int64_t i = 0; i < a.length(); i++) {
+	for (intptr_t i = 0; i < a.length(); i++) {
 		if (!(a[i] == b[i])) return false;
 	}
 	return true;
@@ -46,7 +47,17 @@ bool operator==(const List<T>& a, const List<T>& b) {
 template<typename T>
 bool operator==(const Array<T>& a, const Array<T>& b) {
 	if (a.length() != b.length()) return false;
-	for (int64_t i = 0; i < a.length(); i++) {
+	for (intptr_t i = 0; i < a.length(); i++) {
+		if (!(a[i] == b[i])) return false;
+	}
+	return true;
+}
+
+// Returns true iff a and b are equal in content according to T's equality operator.
+// If the lengths do not match, the call will not be compiled.
+template<typename T, intptr_t LENGTH>
+bool operator==(const FixedArray<T, LENGTH>& a, const FixedArray<T, LENGTH>& b) {
+	for (intptr_t i = 0; i < LENGTH; i++) {
 		if (!(a[i] == b[i])) return false;
 	}
 	return true;
@@ -57,8 +68,8 @@ template<typename T>
 bool operator==(const Field<T>& a, const Field<T>& b) {
 	if (a.width() != b.width()
 	 || a.height() != b.height()) return false;
-	for (int64_t y = 0; y < a.height(); y++) {
-		for (int64_t x = 0; x < a.width(); x++) {
+	for (intptr_t y = 0; y < a.height(); y++) {
+		for (intptr_t x = 0; x < a.width(); x++) {
 			if (!(a.unsafe_readAccess(x, y) == b.unsafe_readAccess(x, y))) return false;
 		}
 	}
@@ -71,6 +82,9 @@ template<typename T> bool operator!=(const List<T>& a, const List<T>& b) { retur
 // Returns false iff a and b are equal in length and content according to T's equality operator.
 template<typename T> bool operator!=(const Array<T>& a, const Array<T>& b) { return !(a == b); }
 
+// Returns false iff a and b are equal in content according to T's equality operator.
+template<typename T, intptr_t LENGTH> bool operator!=(const FixedArray<T, LENGTH>& a, const FixedArray<T, LENGTH>& b) { return !(a == b); }
+
 // Returns false iff a and b have the same dimensions and content according to T's equality operator.
 template<typename T> bool operator!=(const Field<T>& a, const Field<T>& b) { return !(a == b); }
 
@@ -78,8 +92,8 @@ template<typename T> bool operator!=(const Field<T>& a, const Field<T>& b) { ret
 template<typename T>
 String& print_collection_1D_multiline(String& target, const T& collection, const ReadableString& indentation) {
 	string_append(target, indentation, U"{\n");
-	int64_t maxIndex = collection.length() - 1;
-	for (int64_t i = 0; i <= maxIndex; i++) {
+	intptr_t maxIndex = collection.length() - 1;
+	for (intptr_t i = 0; i <= maxIndex; i++) {
 		string_toStreamIndented(target, collection[i], indentation + "\t");
 		if (i < maxIndex) {
 			string_append(target, U",");
@@ -105,15 +119,21 @@ String& string_toStreamIndented(String& target, const Array<T>& collection, cons
 	return print_collection_1D_multiline(target, collection, indentation);
 }
 
+// Printing a generic FixedArray of elements for easy debugging, using the same syntax as when printing List.
+template<typename T, intptr_t LENGTH>
+String& string_toStreamIndented(String& target, const FixedArray<T, LENGTH>& collection, const ReadableString& indentation) {
+	return print_collection_1D_multiline(target, collection, indentation);
+}
+
 // Printing a generic Field of elements for easy debugging.
 template<typename T>
 String& string_toStreamIndented(String& target, const Field<T>& collection, const ReadableString& indentation) {
 	string_append(target, indentation, U"{\n");
-	int64_t maxX = collection.width() - 1;
-	int64_t maxY = collection.height() - 1;
-	for (int64_t y = 0; y <= maxY; y++) {
+	intptr_t maxX = collection.width() - 1;
+	intptr_t maxY = collection.height() - 1;
+	for (intptr_t y = 0; y <= maxY; y++) {
 		string_append(target, indentation, U"\t{\n");
-		for (int64_t x = 0; x <= maxX; x++) {
+		for (intptr_t x = 0; x <= maxX; x++) {
 			string_toStreamIndented(target, collection.unsafe_readAccess(IVector2D(x, y)), indentation + "\t\t");
 			if (x < maxX) {
 				string_append(target, U",");
@@ -130,7 +150,7 @@ String& string_toStreamIndented(String& target, const Field<T>& collection, cons
 	return target;
 }
 
-// TODO: Implement functional sort, concatenation, union, search and conversion algorithms for List, Array and Field.
+// TODO: Implement functional sort, concatenation, union, search and conversion algorithms for List, Array, Field and FixedArray.
 //       in a separate "algorithm" API that does not have to be exposed in headers when using the collection types.
 
 }
