@@ -391,9 +391,24 @@ namespace dsr {
 	ImageRgbaU8 image_removePadding(const ImageRgbaU8& image);
 
 // Ascii images
+	// Convert a grayscale image into an ascii image using the given alphabet.
+	//   Since all 256 characters cannot be in the alphabet, the encoding is lossy.
+	// Each line is stored within <> to prevent text editors from removing meaningful white space.
+	// The first line contains the given alphabet as a gradient from black to white.
+	// Preconditions:
+	//   alphabet may not have extended ascii, non printable, '\', '"', '>' or linebreak
+	//   width <= stride
+	//   size of monochromeImage = height * stride
+	// Example alphabet: " .,-_':;!+~=^?*abcdefghijklmnopqrstuvwxyz()[]{}|&@#0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 	String image_toAscii(const ImageU8& image, const String &alphabet);
+	// A simplified version using a default alphabet.
 	String image_toAscii(const ImageU8& image);
+	// Generate an image from Ascii art embedded in text.
 	AlignedImageU8 image_fromAscii(const String &content);
+	// When implicit conversion from const char* to String is not allowed according to settings.h, image_fromAscii will need an overload for accepting the type directly.
+	#ifdef BAN_IMPLICIT_ASCII_CONVERSION
+		AlignedImageU8 image_fromAscii(const char *content);
+	#endif
 
 // Comparisons
 	// Get the maximum pixelwise difference between two images of the same format, or the highest possible value on failure

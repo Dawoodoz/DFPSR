@@ -369,15 +369,6 @@ if (image_exists(FIRST) && image_exists(SECOND) && image_exists(THIRD) && image_
 }
 OrderedImageRgbaU8 image_pack(const ImageU8& red, const ImageU8& green, const ImageU8& blue, const ImageU8& alpha) { PACK4(red, green, blue, alpha) }
 
-// Convert a grayscale image into an ascii image using the given alphabet.
-//   Since all 256 characters cannot be in the alphabet, the encoding is lossy.
-// Each line is stored within <> to prevent text editors from removing meaningful white space.
-// The first line contains the given alphabet as a gradient from black to white.
-// Preconditions:
-//   alphabet may not have extended ascii, non printable, '\', '"', '>' or linebreak
-//   width <= stride
-//   size of monochromeImage = height * stride
-// Example alphabet: " .,-_':;!+~=^?*abcdefghijklmnopqrstuvwxyz()[]{}|&@#0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 String image_toAscii(const ImageU8& image, const String& alphabet) {
 	if (!image_exists(image)) {
 		return U"null";
@@ -508,6 +499,13 @@ AlignedImageU8 image_fromAscii(const String& content) {
 	}
 	return result;
 }
+
+#ifdef BAN_IMPLICIT_ASCII_CONVERSION
+	AlignedImageU8 image_fromAscii(const char *content) {
+		// It is slightly redundant to allocate a temporary Unicode String, but saves instruction memory by only needing one implementation to handle both real Ascii and Ascii art embedded in Unicode.
+		return image_fromAscii(string_fromAscii(content));
+	}
+#endif
 
 template <typename IMAGE_TYPE, int32_t CHANNELS, typename ELEMENT_TYPE>
 ELEMENT_TYPE maxDifference_template(const IMAGE_TYPE& imageA, const IMAGE_TYPE& imageB) {
