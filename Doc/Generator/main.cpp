@@ -44,7 +44,7 @@ void processContent(String &target, String content) {
 	string_split_callback([&target](ReadableString section) {
 		//printText(U"Processing: ", section, U"\n");
 		if (string_length(section) == 0) {
-			//printText(U"    Break\n");+
+			//printText(U"    Break\n");
 			string_append(target, U"\n</P><P>\n");
 		} else if (string_match(section, U"*")) {
 			//printText(U"    Dot\n");
