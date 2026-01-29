@@ -133,8 +133,17 @@ using namespace dsr;
 		string_append(*target, title, U"\n");
 		string_append(*target, U" _______________________________________________________________________\n");
 		string_append(*target, U"/\n");
-		string_append(*target, U"|  SafePointer operation: ", methodName, U"\n");
-		string_append(*target, U"|  Pointer name: ", pointerName, U"\n");
+		#ifdef BAN_IMPLICIT_ASCII_CONVERSION
+			string_append(*target, U"|  SafePointer operation: ");
+			impl_toStreamIndented_ascii(*target, methodName, U"");
+			string_append(*target, U"\n");
+			string_append(*target, U"|  Pointer name: ");
+			impl_toStreamIndented_ascii(*target, pointerName, U"");
+			string_append(*target, U"\n");
+		#else
+			string_append(*target, U"|  SafePointer operation: ", methodName, U"\n");
+			string_append(*target, U"|  Pointer name: ", pointerName, U"\n");
+		#endif
 		#ifdef EXTRA_SAFE_POINTER_CHECKS
 			if (pointerHeader != nullptr) {
 				string_append(*target, U"|  Allocation name    : ", allocationName.getPointer(), U"\n");

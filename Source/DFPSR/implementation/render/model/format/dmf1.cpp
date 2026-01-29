@@ -74,7 +74,7 @@ struct Model_DMF1 {
 };
 
 #define LoopForward(min, var, max) for(var = min; var <= max; var++)
-#define PARSER_NOINDEX if (index != 0) { printText("This version of the engine does not have an index for the property ", propertyName, ".\n"); }
+#define PARSER_NOINDEX if (index != 0) { printText(U"This version of the engine does not have an index for the property ", propertyName, U".\n"); }
 #define PROPERTY_MATCH(NAME) (string_caseInsensitiveMatch(propertyName, U ## #NAME))
 #define CONTENT_MATCH(NAME) (string_caseInsensitiveMatch(content, U ## #NAME))
 
@@ -138,13 +138,13 @@ static void setProperty(ParserState &state, const String &propertyName, int32_t 
 	} else if (state.parserSpace == ParserSpace_Part) {
 		Part_DMF1* lastPart = state.model->getLastPart();
 		if (!lastPart) {
-			printText("Failed to find the last part!\n");
+			printText(U"Failed to find the last part!\n");
 		} else if PROPERTY_MATCH(Name) {
 			PARSER_NOINDEX
 			lastPart->name = content;
 		} else if PROPERTY_MATCH(Texture) {
 			if (index < 0 || index >= 16) {
-				printText("Texture index ", index, " is out of bound 0..15\n");
+				printText(U"Texture index ", index, U" is out of bound 0..15\n");
 			} else {
 				lastPart->textures[index] = content;
 			}
@@ -162,13 +162,13 @@ static void setProperty(ParserState &state, const String &propertyName, int32_t 
 	} else if (state.parserSpace == ParserSpace_Triangle) {
 		Part_DMF1* lastPart = state.model->getLastPart();
 		if (!lastPart) {
-			printText("Failed to find the last part!\n");
+			printText(U"Failed to find the last part!\n");
 		} else {
 			Triangle_DMF1 *lastTriangle = lastPart->getLastTriangle();
 			if (!lastTriangle) {
-				printText("Cannot define vertex data after failing to create a triangle!\n");
+				printText(U"Cannot define vertex data after failing to create a triangle!\n");
 			} else if (index < 0 || index > 2) {
-				printText("Triangle vertex index ", index, " is out of bound 0..2!\n");
+				printText(U"Triangle vertex index ", index, U" is out of bound 0..2!\n");
 			} else {
 				if PROPERTY_MATCH(X) {
 					lastTriangle->vertices[index].position.x = value;
@@ -209,7 +209,7 @@ static void changeNamespace(ParserState &state, const String &newNamespace) {
 			state.model->getLastPart()->addEmptyTriangle();
 			state.parserSpace = ParserSpace_Triangle;
 		} else {
-			printText("Triangles must be created as members of a part!\n");
+			printText(U"Triangles must be created as members of a part!\n");
 		}
 	} else if (string_caseInsensitiveMatch(newNamespace, U"Bone")) {
 		state.parserSpace = ParserSpace_Bone; // A bone for animation
@@ -233,33 +233,33 @@ static void readToken(ParserState &state, const String &fileContent, int32_t sta
 				state.parserState = ParserState_WaitForStatement;
 				state.propertyIndex = 0; // Reset index for the next property
 			} else {
-				printText("Unexpected property!\n");
+				printText(U"Unexpected property!\n");
 			}
 		} else if (fileContent[start] == U'[' && fileContent[end] == U']') {
 			// Index
 			if (state.parserState == ParserState_WaitForIndexOrProperty) {
 				state.propertyIndex = roundIndex(string_toDouble(string_inclusiveRange(fileContent, start + 1, end - 1)));
 			} else {
-				printText("Unexpected index!\n");
+				printText(U"Unexpected index!\n");
 			}
 		} else if (fileContent[start] == U'<' && fileContent[end] == U'>') {
 			// Namespace
 			if (state.parserState == ParserState_WaitForStatement) {
 				if (end - start > 258) {
-					printText("Name of namespace is too long!\n");
+					printText(U"Name of namespace is too long!\n");
 				} else {
 					// Change namespace and create things
 					changeNamespace(state, string_inclusiveRange(fileContent, start + 1, end - 1));
 				}
 			} else {
-				printText("Change of namespace before finishing the last statement!\n");
+				printText(U"Change of namespace before finishing the last statement!\n");
 			}
 		} else {
 			// Identifier
 			if (state.parserState == ParserState_WaitForStatement) {
 				// Global property
 				if (end - start > 258) {
-					printText("Name of property is too long!\n");
+					printText(U"Name of property is too long!\n");
 				} else {
 					state.lastPropertyName = string_inclusiveRange(fileContent, start, end);
 					state.parserState = ParserState_WaitForIndexOrProperty;
@@ -274,7 +274,7 @@ static Model_DMF1 loadNative_DMF1(const String &fileContent) {
 	Model_DMF1 resultModel;
 	ParserState state(&resultModel);
 	if (string_length(fileContent) < 4 || (fileContent[0] != 'D' || fileContent[1] != 'M' || fileContent[2] != 'F' || fileContent[3] != '1')) {
-		printText("The file does not start with \"DMF1\"!\n");
+		printText(U"The file does not start with \"DMF1\"!\n");
 		return resultModel;
 	}
 	int32_t tokenStart = 4; // Everything before this will no longer be used
@@ -311,7 +311,7 @@ static Model_DMF1 loadNative_DMF1(const String &fileContent) {
 	}
 	readToken(state, fileContent, tokenStart, readIndex - 1);
 	if (state.parserState != ParserState_WaitForStatement) {
-		printText("The last statement in the model was not finished.\n");
+		printText(U"The last statement in the model was not finished.\n");
 	}
 	return resultModel;
 }
@@ -333,7 +333,7 @@ static Model convertFromDMF1(const Model_DMF1 &nativeModel, ResourcePool &pool, 
 				result->setDiffuseMapByName(pool, inputPart->textures[0], part);
 				result->setLightMapByName(pool, inputPart->textures[1], part);
 			} else {
-				printText("The shader ", inputPart->shaderZero, " is not supported. Use M_Diffuse_0Tex, M_Diffuse_1Tex or M_Diffuse_2Tex.\n");
+				printText(U"The shader ", inputPart->shaderZero, U" is not supported. Use M_Diffuse_0Tex, M_Diffuse_1Tex or M_Diffuse_2Tex.\n");
 			}
 			for (int32_t inputTriangleIndex = 0; inputTriangleIndex < inputPart->triangles.length(); inputTriangleIndex++) {
 				const Triangle_DMF1 *inputTriangle = &(inputPart->triangles[inputTriangleIndex]);

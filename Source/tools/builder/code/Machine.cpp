@@ -191,7 +191,7 @@ static NameFilter generateFilterFromPattern(const dsr::ReadableString &pattern) 
 			}
 		};
 	} else {
-		throwError(U"Can not use '", pattern, "' as a name pattern, because the matching expression may not use more than one '*' character!\n");
+		throwError(U"Can not use '", pattern, U"' as a name pattern, because the matching expression may not use more than one '*' character!\n");
 		return [](const ReadableString &filename) -> bool {
 			return false;
 		};
@@ -208,7 +208,7 @@ static void findFiles(const dsr::ReadableString &inPath, NameFilter filter, std:
 			findFiles(entryPath, filter, action);
 		}
 	})) {
-		printText("Failed to look for files in '", inPath, "'\n");
+		printText(U"Failed to look for files in '", inPath, U"'\n");
 	}
 }
 
@@ -295,7 +295,7 @@ static void interpretLine(Machine &target, const List<String> &tokens, int64_t s
 							currentTokenIndex += 2;
 						}
 					} else {
-						throwError(U"Unexpected key '", key, "' in 'projects' command!\n");
+						throwError(U"Unexpected key '", key, U"' in 'projects' command!\n");
 					}
 				}
 				if (string_length(arg_from) == 0 && string_length(arg_in) == 0) {

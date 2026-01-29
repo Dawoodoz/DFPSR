@@ -69,10 +69,10 @@ OrthoSystem::OrthoSystem(const ReadableString& content) {
 			} else if (string_caseInsensitiveMatch(key, U"PixelsPerTile")) {
 				this->pixelsPerTile = string_toInteger(value);
 			} else {
-				printText("Unrecognized key \"", key, "\" in orthogonal camera configuration file.\n");
+				printText(U"Unrecognized key \"", key, U"\" in orthogonal camera configuration file.\n");
 			}
 		} else {
-			printText("Unrecognized block \"", block, "\" in orthogonal camera configuration file.\n");
+			printText(U"Unrecognized block \"", block, U"\" in orthogonal camera configuration file.\n");
 		}
 	});
 	this->update();

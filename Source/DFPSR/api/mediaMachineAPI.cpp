@@ -80,7 +80,7 @@ public:
 				this->OrderedImageRgbaU8Memory.accessByStackIndex(targetStackIndex) = this->OrderedImageRgbaU8Memory.accessByGlobalIndex(sourceArg.value.getMantissa(), sourceFramePointer);
 			break;
 			default:
-				throwError("Storing element of unhandled type!\n");
+				throwError(U"Storing element of unhandled type!\n");
 			break;
 		}
 	}
@@ -97,7 +97,7 @@ public:
 				this->OrderedImageRgbaU8Memory.accessByGlobalIndex(globalIndex, targetFramePointer) = this->OrderedImageRgbaU8Memory.accessByStackIndex(sourceStackIndex);
 			break;
 			default:
-				throwError("Loading element of unhandled type!\n");
+				throwError(U"Loading element of unhandled type!\n");
 			break;
 		}
 	}
@@ -117,7 +117,7 @@ static const VMTypeDef mediaMachineTypes[] = {
 	},
 	[](PlanarMemory& memory, Variable& variable, int32_t globalIndex, int32_t* framePointer, bool fullContent) {
 		FixedPoint value = MEDIA_MEMORY.FixedPointMemory.accessByGlobalIndex(globalIndex, framePointer[DataType_FixedPoint]);
-		printText(variable.name, "(", value, ")");
+		printText(variable.name, U"(", value, U")");
 	}),
 	VMTypeDef(U"ImageU8", DataType_ImageU8, false,
 	[](VirtualMachine& machine, int32_t globalIndex, const ReadableString& defaultValueText){
@@ -127,15 +127,15 @@ static const VMTypeDef mediaMachineTypes[] = {
 	},
 	[](PlanarMemory& memory, Variable& variable, int32_t globalIndex, int32_t* framePointer, bool fullContent) {
 		AlignedImageU8 value = MEDIA_MEMORY.AlignedImageU8Memory.accessByGlobalIndex(globalIndex, framePointer[DataType_ImageU8]);
-		printText(variable.name, " ImageU8");
+		printText(variable.name, U" ImageU8");
 		if (image_exists(value)) {
 			if (fullContent) {
-				printText(":\n", image_toAscii(value, U" .:*ixXM"));
+				printText(U":\n", image_toAscii(value, U" .:*ixXM"));
 			} else {
-				printText("(", image_getWidth(value), "x", image_getHeight(value), ")");
+				printText(U"(", image_getWidth(value), U"x", image_getHeight(value), U")");
 			}
 		} else {
-			printText("(nothing)");
+			printText(U"(nothing)");
 		}
 	}),
 	VMTypeDef(U"ImageRgbaU8", DataType_ImageRgbaU8, false,
@@ -146,12 +146,12 @@ static const VMTypeDef mediaMachineTypes[] = {
 	},
 	[](PlanarMemory& memory, Variable& variable, int32_t globalIndex, int32_t* framePointer, bool fullContent) {
 		OrderedImageRgbaU8 value = MEDIA_MEMORY.OrderedImageRgbaU8Memory.accessByGlobalIndex(globalIndex, framePointer[DataType_ImageRgbaU8]);
-		printText(variable.name, " ImageRgbaU8");
+		printText(variable.name, U" ImageRgbaU8");
 		if (image_exists(value)) {
 			// TODO: image_toAscii for multi-channel images
-			printText("(", image_getWidth(value), "x", image_getHeight(value), ")");
+			printText(U"(", image_getWidth(value), U"x", image_getHeight(value), U")");
 		} else {
-			printText("(nothing)");
+			printText(U"(nothing)");
 		}
 	})
 };
@@ -323,7 +323,7 @@ static const InsSig mediaMachineInstructions[] = {
 			int32_t width = INT_VALUE(1);
 			int32_t height = INT_VALUE(2);
 			if (width < 1 || height < 1) {
-				throwError("Images must allocate at least one pixel to be created.");
+				throwError(U"Images must allocate at least one pixel to be created.");
 			}
 			IMAGE_U8_REF(0) = image_create_U8(width, height);
 			NEXT_INSTRUCTION
@@ -337,7 +337,7 @@ static const InsSig mediaMachineInstructions[] = {
 			int32_t width = INT_VALUE(1);
 			int32_t height = INT_VALUE(2);
 			if (width < 1 || height < 1) {
-				throwError("Images must allocate at least one pixel to be created.");
+				throwError(U"Images must allocate at least one pixel to be created.");
 			}
 			IMAGE_RGBAU8_REF(0) = image_create_RgbaU8(width, height);
 			NEXT_INSTRUCTION
@@ -1045,14 +1045,14 @@ static const InsSig mediaMachineInstructions[] = {
 
 static void checkMachine(const MediaMachine& machine) {
 	if (machine.isNull()) {
-		throwError("The given media machine does not exist!");
+		throwError(U"The given media machine does not exist!");
 	}
 }
 
 static void checkMethodIndex(const MediaMachine& machine, int32_t methodIndex) {
 	checkMachine(machine);
 	if (methodIndex < 0 || methodIndex >= machine->methods.length()) {
-		throwError("Invalid method index ", methodIndex, " of 0..", (machine->methods.length() - 1), "!");
+		throwError(U"Invalid method index ", methodIndex, U" of 0..", (machine->methods.length() - 1), U"!");
 	}
 }
 
@@ -1071,24 +1071,24 @@ void machine_executeMethod(MediaMachine& machine, int32_t methodIndex) {
 template <typename T>
 static void setInputByIndex(MemoryPlane<T>& stack, int32_t framePointer, Method& method, DataType givenType, int32_t inputIndex, const T& value) {
 	if (inputIndex < 0 || inputIndex >= method.inputCount) {
-		throwError("Invalid input index ", inputIndex, " of 0..", (method.inputCount - 1), ".");
+		throwError(U"Invalid input index ", inputIndex, U" of 0..", (method.inputCount - 1), U".");
 	}
 	Variable* variable = &method.locals[inputIndex];
 	DataType expected = variable->typeDescription->dataType;
 	if (givenType != expected) {
-		throwError("Cannot assign ", getMediaTypeName(givenType), " to ", variable->name, " of ", getMediaTypeName(expected), ".");
+		throwError(U"Cannot assign ", getMediaTypeName(givenType), U" to ", variable->name, U" of ", getMediaTypeName(expected), U".");
 	}
 	stack.accessByStackIndex(framePointer + variable->typeLocalIndex) = value;
 }
 template <typename T>
 static T& accessOutputByIndex(MemoryPlane<T>& stack, int32_t framePointer, Method& method, DataType wantedType, int32_t outputIndex) {
 	if (outputIndex < 0 || outputIndex >= method.outputCount) {
-		throwError("Invalid output index ", outputIndex, " of 0..", (method.outputCount - 1), ".");
+		throwError(U"Invalid output index ", outputIndex, U" of 0..", (method.outputCount - 1), U".");
 	}
 	Variable* variable = &method.locals[method.inputCount + outputIndex];
 	DataType foundType = variable->typeDescription->dataType;
 	if (wantedType != foundType) {
-		throwError("Cannot get ", variable->name, " of ", getMediaTypeName(wantedType), " as ", getMediaTypeName(wantedType), ".");
+		throwError(U"Cannot get ", variable->name, U" of ", getMediaTypeName(wantedType), U" as ", getMediaTypeName(wantedType), U".");
 	}
 	return stack.accessByStackIndex(framePointer + variable->typeLocalIndex);
 }
@@ -1097,28 +1097,28 @@ static T& accessOutputByIndex(MemoryPlane<T>& stack, int32_t framePointer, Metho
 //   Indexed arguments are confirmed to be inputs during compilation of the script
 void machine_setInputByIndex(MediaMachine& machine, int32_t methodIndex, int32_t inputIndex, int32_t input) {
 	#ifdef VIRTUAL_MACHINE_DEBUG_PRINT
-		printText("Input ", inputIndex, " of ", machine->methods[methodIndex].inputCount, " (", machine->methods[methodIndex].locals[inputIndex].name, ") to ", machine->methods[methodIndex].name, " = ", input, "\n");
+		printText(U"Input ", inputIndex, U" of ", machine->methods[methodIndex].inputCount, U" (", machine->methods[methodIndex].locals[inputIndex].name, U") to ", machine->methods[methodIndex].name, U" = ", input, U"\n");
 	#endif
 	checkMethodIndex(machine, methodIndex);
 	setInputByIndex(((MediaMemory*)machine->memory.getUnsafe())->FixedPointMemory, machine->memory->current.framePointer[DataType_FixedPoint], machine->methods[methodIndex], DataType_FixedPoint, inputIndex, FixedPoint::fromWhole(input));
 }
 void machine_setInputByIndex(MediaMachine& machine, int32_t methodIndex, int32_t inputIndex, const FixedPoint& input) {
 	#ifdef VIRTUAL_MACHINE_DEBUG_PRINT
-		printText("Input ", inputIndex, " of ", machine->methods[methodIndex].inputCount, " (", machine->methods[methodIndex].locals[inputIndex].name, ") to ", machine->methods[methodIndex].name, " = ", input, "\n");
+		printText(U"Input ", inputIndex, U" of ", machine->methods[methodIndex].inputCount, U" (", machine->methods[methodIndex].locals[inputIndex].name, U") to ", machine->methods[methodIndex].name, U" = ", input, U"\n");
 	#endif
 	checkMethodIndex(machine, methodIndex);
 	setInputByIndex(((MediaMemory*)machine->memory.getUnsafe())->FixedPointMemory, machine->memory->current.framePointer[DataType_FixedPoint], machine->methods[methodIndex], DataType_FixedPoint, inputIndex, input);
 }
 void machine_setInputByIndex(MediaMachine& machine, int32_t methodIndex, int32_t inputIndex, const AlignedImageU8& input) {
 	#ifdef VIRTUAL_MACHINE_DEBUG_PRINT
-		printText("Input ", inputIndex, " of ", machine->methods[methodIndex].inputCount, " (", machine->methods[methodIndex].locals[inputIndex].name, ") to ", machine->methods[methodIndex].name, " = monochrome image of ", image_getWidth(input), "x", image_getHeight(input), " pixels\n");
+		printText(U"Input ", inputIndex, U" of ", machine->methods[methodIndex].inputCount, U" (", machine->methods[methodIndex].locals[inputIndex].name, U") to ", machine->methods[methodIndex].name, U" = monochrome image of ", image_getWidth(input), U"x", image_getHeight(input), U" pixels\n");
 	#endif
 	checkMethodIndex(machine, methodIndex);
 	setInputByIndex(((MediaMemory*)machine->memory.getUnsafe())->AlignedImageU8Memory, machine->memory->current.framePointer[DataType_ImageU8], machine->methods[methodIndex], DataType_ImageU8, inputIndex, input);
 }
 void machine_setInputByIndex(MediaMachine& machine, int32_t methodIndex, int32_t inputIndex, const OrderedImageRgbaU8& input) {
 	#ifdef VIRTUAL_MACHINE_DEBUG_PRINT
-		printText("Input ", inputIndex, " of ", machine->methods[methodIndex].inputCount, " (", machine->methods[methodIndex].locals[inputIndex].name, ") to ", machine->methods[methodIndex].name, " = rgba image of ", image_getWidth(input), "x", image_getHeight(input), " pixels\n");
+		printText(U"Input ", inputIndex, U" of ", machine->methods[methodIndex].inputCount, U" (", machine->methods[methodIndex].locals[inputIndex].name, U") to ", machine->methods[methodIndex].name, U" = rgba image of ", image_getWidth(input), U"x", image_getHeight(input), U" pixels\n");
 	#endif
 	checkMethodIndex(machine, methodIndex);
 	setInputByIndex(((MediaMemory*)machine->memory.getUnsafe())->OrderedImageRgbaU8Memory, machine->memory->current.framePointer[DataType_ImageRgbaU8], machine->methods[methodIndex], DataType_ImageRgbaU8, inputIndex, input);

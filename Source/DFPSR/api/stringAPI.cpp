@@ -1,6 +1,6 @@
 ﻿// zlib open source license
 //
-// Copyright (c) 2017 to 2025 David Forsgren Piuva
+// Copyright (c) 2017 to 2026 David Forsgren Piuva
 // 
 // This software is provided 'as-is', without any express or implied
 // warranty. In no event will the authors be held liable for any damages
@@ -1445,7 +1445,6 @@ static void atomic_append_ascii(String &target, const char* source) { APPEND(tar
 static void atomic_append_readable(String &target, const ReadableString& source) { APPEND(target, source, source.view.length, 0xFFFFFFFF); }
 static void atomic_append_utf32(String &target, const DsrChar* source) { APPEND(target, source, strlen_utf32(source), 0xFFFFFFFF); }
 void dsr::string_appendChar(String& target, DsrChar value) { APPEND(target, &value, 1, 0xFFFFFFFF); }
-
 String& dsr::impl_toStreamIndented_ascii(String& target, const char *value, const ReadableString& indentation) {
 	atomic_append_readable(target, indentation);
 	atomic_append_ascii(target, value);

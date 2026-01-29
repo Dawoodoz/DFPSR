@@ -69,11 +69,11 @@ void dsrMain(List<String> args) {
 	file_setCurrentPath(file_getApplicationFolder());
 
 	// Start sound thread
-	printText("Initializing sound\n");
+	printText(U"Initializing sound\n");
 	soundEngine_initialize();
 
 	// Create something to test
-	printText("Creating test project\n");
+	printText(U"Creating test project\n");
 	createTestProject();
 
 	// Create a window
@@ -160,6 +160,6 @@ void dsrMain(List<String> args) {
 		window_showCanvas(window);
 	}
 	// Close sound thread
-	printText("Terminating sound\n");
+	printText(U"Terminating sound\n");
 	soundEngine_terminate();
 }

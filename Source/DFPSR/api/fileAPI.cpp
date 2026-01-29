@@ -818,7 +818,7 @@ DsrProcess process_execute(const ReadableString& programPath, List<String> argum
 			return handle_create<DsrProcessImpl>(pid).setName("DSR Process"); // Success
 		} else {
 			if (mustWork) {
-				throwError(U"Failed to call ", programPath, U"! Got error code ", error, " from posix_spawn.\n");
+				throwError(U"Failed to call ", programPath, U"! Got error code ", error, U" from posix_spawn.\n");
 			}
 			return DsrProcess(); // Failure
 		}

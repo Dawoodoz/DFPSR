@@ -225,7 +225,7 @@ static String debugTokens(const List<TokenInfo> &info, int64_t infoStart, const 
 		if (t > startTokenIndex) {
 			string_appendChar(result, U' ');
 		}
-		string_append(result, "[", info[infoIndex].depth, ",", info[infoIndex].symbolIndex, ",", tokens[t], "]");
+		string_append(result, U"[", info[infoIndex].depth, U",", info[infoIndex].symbolIndex, U",", tokens[t], U"]");
 	}
 	return result;
 }

@@ -294,7 +294,7 @@ static void copyFolder_deferred(FileOperations &operations, const ReadableString
 				copyFolder_deferred(operations, entryPath, file_combinePaths(targetPath, entryName));
 			}
 		})) {
-			printText("Failed to explore ", sourcePath, "\n");
+			printText(U"Failed to explore ", sourcePath, U"\n");
 		}
 	}
 }

@@ -14,7 +14,7 @@ namespace dsr {
 inline FVector3D parseFVector3D(const ReadableString& content) {
 	List<String> args = string_split(content, U',');
 	if (args.length() != 3) {
-		printText("Expected a vector of three decimal values.\n");
+		printText(U"Expected a vector of three decimal values.\n");
 		return FVector3D();
 	} else {
 		return FVector3D(string_toDouble(args[0]), string_toDouble(args[1]), string_toDouble(args[2]));

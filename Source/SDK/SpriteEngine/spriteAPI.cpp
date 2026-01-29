@@ -72,7 +72,7 @@ struct SpriteConfig {
 				} else if (string_caseInsensitiveMatch(key, U"Points")) {
 					List<String> values = string_split(value, U',');
 					if (values.length() % 3 != 0) {
-						throwError("Points contained ", values.length(), " values, which is not evenly divisible by three!");
+						throwError(U"Points contained ", values.length(), U" values, which is not evenly divisible by three!");
 					} else {
 						this->points.clear();
 						this->points.reserve(values.length() / 3);
@@ -83,7 +83,7 @@ struct SpriteConfig {
 				} else if (string_caseInsensitiveMatch(key, U"TriangleIndices")) {
 					List<String> values = string_split(value, U',');
 					if (values.length() % 3 != 0) {
-						throwError("TriangleIndices contained ", values.length(), " values, which is not evenly divisible by three!");
+						throwError(U"TriangleIndices contained ", values.length(), U" values, which is not evenly divisible by three!");
 					} else {
 						this->triangleIndices.clear();
 						this->triangleIndices.reserve(values.length());
@@ -92,10 +92,10 @@ struct SpriteConfig {
 						}
 					}
 				} else {
-					printText("Unrecognized key \"", key, "\" in sprite configuration file.\n");
+					printText(U"Unrecognized key \"", key, U"\" in sprite configuration file.\n");
 				}
 			} else {
-				printText("Unrecognized block \"", block, "\" in sprite configuration file.\n");
+				printText(U"Unrecognized block \"", block, U"\" in sprite configuration file.\n");
 			}
 		});
 	}
@@ -123,12 +123,12 @@ struct SpriteConfig {
 		// General information
 		String result = string_combine(
 			U"; Sprite configuration file\n",
-			U"CenterX=", this->centerX, "\n",
-			U"CenterY=", this->centerY, "\n",
-			U"FrameRows=", this->frameRows, "\n",
-			U"PropertyColumns=", this->propertyColumns, "\n",
-			U"MinBound=", this->minBound, "\n",
-			U"MaxBound=", this->maxBound, "\n"
+			U"CenterX=", this->centerX, U"\n",
+			U"CenterY=", this->centerY, U"\n",
+			U"FrameRows=", this->frameRows, U"\n",
+			U"PropertyColumns=", this->propertyColumns, U"\n",
+			U"MinBound=", this->minBound, U"\n",
+			U"MaxBound=", this->maxBound, U"\n"
 		);
 		// Low-resolution 3D shape
 		if (this->points.length() > 0) {
@@ -777,11 +777,11 @@ public:
 				for (int32_t p = 0; p < this->temporaryDirectedLights.length(); p++) {
 					this->temporaryDirectedLights[p].illuminate(this->ortho.view[this->cameraIndex], worldCenter, this->lightBuffer, this->normalBuffer, p == 0);
 				}
-			debugText("Sun light: ", (time_getSeconds() - startTime) * 1000.0, " ms\n");
+			debugText(U"Sun light: ", (time_getSeconds() - startTime) * 1000.0, U" ms\n");
 		} else {
 			startTime = time_getSeconds();
 				image_fill(this->lightBuffer, ColorRgbaI32(0)); // Set light to black
-			debugText("Clear light: ", (time_getSeconds() - startTime) * 1000.0, " ms\n");
+			debugText(U"Clear light: ", (time_getSeconds() - startTime) * 1000.0, U" ms\n");
 		}
 
 		// Illuminate using point lights
@@ -801,17 +801,17 @@ public:
 				for (int32_t s = 0; s < this->temporaryModels.length(); s++) {
 					currentLight->renderModelShadow(this->temporaryShadowMap, this->temporaryModels[s], ortho.view[this->cameraIndex].normalToWorldSpace);
 				}
-				debugText("Cast point-light shadows: ", (time_getSeconds() - startTime) * 1000.0, " ms\n");
+				debugText(U"Cast point-light shadows: ", (time_getSeconds() - startTime) * 1000.0, U" ms\n");
 			}
 			startTime = time_getSeconds();
 			currentLight->illuminate(this->ortho.view[this->cameraIndex], worldCenter, this->lightBuffer, this->normalBuffer, this->heightBuffer, this->temporaryShadowMap);
-			debugText("Illuminate from point-light: ", (time_getSeconds() - startTime) * 1000.0, " ms\n");
+			debugText(U"Illuminate from point-light: ", (time_getSeconds() - startTime) * 1000.0, U" ms\n");
 		}
 
 		// Draw the final image to the target by multiplying diffuse with light
 		startTime = time_getSeconds();
 			blendLight(colorTarget, this->diffuseBuffer, this->lightBuffer);
-		debugText("Blend light: ", (time_getSeconds() - startTime) * 1000.0, " ms\n");
+		debugText(U"Blend light: ", (time_getSeconds() - startTime) * 1000.0, U" ms\n");
 	}
 };
 
@@ -819,7 +819,7 @@ SpriteWorld spriteWorld_create(OrthoSystem ortho, int32_t shadowResolution) {
 	return std::make_shared<SpriteWorldImpl>(ortho, shadowResolution);
 }
 
-#define MUST_EXIST(OBJECT, METHOD) if (OBJECT.get() == nullptr) { throwError("The " #OBJECT " handle was null in " #METHOD "\n"); }
+#define MUST_EXIST(OBJECT, METHOD) if (OBJECT.get() == nullptr) { throwError(U"The " #OBJECT U" handle was null in " #METHOD U"\n"); }
 
 // Get the eight corners of an axis-aligned bounding box
 static void getCorners(const FVector3D& minBound, const FVector3D& maxBound, FVector3D* resultCorners) {
@@ -898,7 +898,7 @@ static void getScreenBounds(SpriteWorld& world, const IVector3D& worldMinBound, 
 
 void spriteWorld_addBackgroundSprite(SpriteWorld& world, const SpriteInstance& sprite) {
 	MUST_EXIST(world, spriteWorld_addBackgroundSprite);
-	if (sprite.typeIndex < 0 || sprite.typeIndex >= spriteTypes.length()) { throwError(U"Sprite type index ", sprite.typeIndex, " is out of bound!\n"); }
+	if (sprite.typeIndex < 0 || sprite.typeIndex >= spriteTypes.length()) { throwError(U"Sprite type index ", sprite.typeIndex, U" is out of bound!\n"); }
 	// Get world aligned 3D bounds based on the local bounding box
 	IVector3D worldMinBound = sprite.location, worldMaxBound = sprite.location;
 	get3DBounds(world, Transform3D(IVector3DToFVector3D(sprite.location), spriteDirections[sprite.direction]), IVector3DToFVector3D(spriteTypes[sprite.typeIndex].minBoundMini), IVector3DToFVector3D(spriteTypes[sprite.typeIndex].maxBoundMini), worldMinBound, worldMaxBound);
@@ -915,7 +915,7 @@ void spriteWorld_addBackgroundSprite(SpriteWorld& world, const SpriteInstance& s
 
 void spriteWorld_addBackgroundModel(SpriteWorld& world, const ModelInstance& instance) {
 	MUST_EXIST(world, spriteWorld_addBackgroundModel);
-	if (instance.typeIndex < 0 || instance.typeIndex >= modelTypes.length()) { throwError(U"Model type index ", instance.typeIndex, " is out of bound!\n"); }
+	if (instance.typeIndex < 0 || instance.typeIndex >= modelTypes.length()) { throwError(U"Model type index ", instance.typeIndex, U" is out of bound!\n"); }
 	// Get the origin and outer bounds
 	ModelType *type = &(modelTypes[instance.typeIndex]);
 	// Transform the bounds
@@ -975,7 +975,7 @@ void spriteWorld_removeBackgroundModels(SpriteWorld& world, const IVector3D& sea
 
 void spriteWorld_addTemporarySprite(SpriteWorld& world, const SpriteInstance& sprite) {
 	MUST_EXIST(world, spriteWorld_addTemporarySprite);
-	if (sprite.typeIndex < 0 || sprite.typeIndex >= spriteTypes.length()) { throwError(U"Sprite type index ", sprite.typeIndex, " is out of bound!\n"); }
+	if (sprite.typeIndex < 0 || sprite.typeIndex >= spriteTypes.length()) { throwError(U"Sprite type index ", sprite.typeIndex, U" is out of bound!\n"); }
 	// Add the temporary sprite
 	world->temporarySprites.push(sprite);
 }
@@ -1330,13 +1330,13 @@ static IRect renderDenseModel(const DenseModel& model, OrthoView view, ImageF32 
 void sprite_generateFromModel(ImageRgbaU8& targetAtlas, String& targetConfigText, const Model& visibleModel, const Model& shadowModel, const OrthoSystem& ortho, const String& targetPath, int32_t cameraAngles) {
 	// Validate input
 	if (cameraAngles < 1) {
-		printText("  Need at least one camera angle to generate a sprite!\n");
+		printText(U"  Need at least one camera angle to generate a sprite!\n");
 		return;
 	} else if (!model_exists(visibleModel)) {
-		printText("  There's nothing to render, because visible model does not exist!\n");
+		printText(U"  There's nothing to render, because visible model does not exist!\n");
 		return;
 	} else if (model_getNumberOfParts(visibleModel) == 0) {
-		printText("  There's nothing to render in the visible model, because there are no parts in the visible model!\n");
+		printText(U"  There's nothing to render in the visible model, because there are no parts in the visible model!\n");
 		return;
 	} else {
 		// Measure the bounding cylinder for determining the uncropped image size
@@ -1344,11 +1344,11 @@ void sprite_generateFromModel(ImageRgbaU8& targetAtlas, String& targetConfigText
 		model_getBoundingBox(visibleModel, minBound, maxBound);
 		// Check if generating a bound failed
 		if (minBound.x > maxBound.x) {
-			printText("  There's nothing visible in the model, because the 3D bounding box had no points to be created from!\n");
+			printText(U"  There's nothing visible in the model, because the 3D bounding box had no points to be created from!\n");
 			return;
 		}
 
-		printText("  Representing height from ", minBound.y, " to ", maxBound.y, " encoded using 8-bits\n");
+		printText(U"  Representing height from ", minBound.y, U" to ", maxBound.y, U" encoded using 8-bits\n");
 
 		// Calculate initial image size
 		float worstCaseDiameter = (std::max(maxBound.x, -minBound.x) + std::max(maxBound.y, -minBound.y) + std::max(maxBound.z, -minBound.z)) * 2;
@@ -1404,13 +1404,13 @@ void sprite_generateFromModel(ImageRgbaU8& targetAtlas, String& targetConfigText
 		}
 		// Check if cropping failed
 		if (minX > maxX) {
-			printText("  There's nothing visible in the model, because cropping the final images returned nothing!\n");
+			printText(U"  There's nothing visible in the model, because cropping the final images returned nothing!\n");
 			return;
 		}
 
 		IRect cropRegion = IRect(minX, minY, (maxX + 1) - minX, (maxY + 1) - minY);
 		if (cropRegion.width() < 1 || cropRegion.height() < 1) {
-			printText("  Cropping failed to find any drawn pixels!\n");
+			printText(U"  Cropping failed to find any drawn pixels!\n");
 			return;
 		}
 		for (int32_t a = 0; a < cameraAngles; a++) {
@@ -1422,7 +1422,7 @@ void sprite_generateFromModel(ImageRgbaU8& targetAtlas, String& targetConfigText
 		int32_t croppedHeight = cropRegion.height();
 		int32_t centerX = width / 2 - cropRegion.left();
 		int32_t centerY = height / 2 - cropRegion.top();
-		printText("  Cropped images of ", croppedWidth, "x", croppedHeight, " pixels with centers at (", centerX, ", ", centerY, ")\n");
+		printText(U"  Cropped images of ", croppedWidth, U"x", croppedHeight, U" pixels with centers at (", centerX, U", ", centerY, U")\n");
 
 		// Pack everything into an image atlas
 		targetAtlas = image_create_RgbaU8(croppedWidth * 3, croppedHeight * cameraAngles);
@@ -1496,26 +1496,26 @@ void sprite_generateFromModel(const Model& visibleModel, const Model& shadowMode
 		if (image_exists(existingAtlasImage)) {
 			int32_t difference = image_maxDifference(atlasImage, existingAtlasImage);
 			if (difference <= 2) {
-				printText("  No significant changes against ", targetPath, ".\n");
+				printText(U"  No significant changes against ", targetPath, U".\n");
 			} else {
 				image_save(atlasImage, atlasPath);
-				printText("  Updated ", targetPath, " with a deviation of ", difference, ".\n");
+				printText(U"  Updated ", targetPath, U" with a deviation of ", difference, U".\n");
 			}
 		} else {
 			// Only save if there was no existing image or it differed significantly from the new result
 			// This comparison is made to avoid flooding version history with changes from invisible differences in color rounding
 			image_save(atlasImage, atlasPath);
-			printText("  Saved atlas to ", targetPath, ".\n");
+			printText(U"  Saved atlas to ", targetPath, U".\n");
 		}
 
 		// Save the configuration
 		String configPath = targetPath + U".ini";
 		String oldConfixText = string_load(configPath, false);
 		if (approximateTextMatch(configText, oldConfixText)) {
-			printText("  No significant changes against ", targetPath, ".\n\n");
+			printText(U"  No significant changes against ", targetPath, U".\n\n");
 		} else {
 			string_save(targetPath + U".ini", configText);
-			printText("  Saved sprite config to ", targetPath, ".\n\n");
+			printText(U"  Saved sprite config to ", targetPath, U".\n\n");
 		}
 
 		if (debug) {

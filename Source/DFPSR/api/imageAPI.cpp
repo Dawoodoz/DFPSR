@@ -151,7 +151,7 @@ bool image_save(const ImageRgbaU8 &image, const ReadableString& filename, bool m
 	ImageFileFormat extension = detectImageFileExtension(filename);
 	Buffer buffer;
 	if (extension == ImageFileFormat::Unknown) {
-		if (mustWork) { throwError(U"The extension *.", file_getExtension(filename), " in ", filename, " is not a supported image format.\n"); }
+		if (mustWork) { throwError(U"The extension *.", file_getExtension(filename), U" in ", filename, U" is not a supported image format.\n"); }
 		return false;
 	} else {
 		buffer = image_encode(image, extension, quality);
@@ -159,7 +159,7 @@ bool image_save(const ImageRgbaU8 &image, const ReadableString& filename, bool m
 	if (buffer_exists(buffer)) {
 		return file_saveBuffer(filename, buffer, mustWork);
 	} else {
-		if (mustWork) { throwError(U"Failed to encode an image that was going to be saved as ", filename, "\n"); }
+		if (mustWork) { throwError(U"Failed to encode an image that was going to be saved as ", filename, U"\n"); }
 		return false;
 	}
 }
@@ -328,7 +328,7 @@ OrderedImageRgbaU8 image_pack(int32_t red, int32_t green, int32_t blue, const Im
 #define PACK2(FIRST,SECOND) \
 if (image_exists(FIRST) && image_exists(SECOND)) { \
 	if (image_getWidth(FIRST) != image_getWidth(SECOND) || image_getHeight(FIRST) != image_getHeight(SECOND)) { \
-		throwError("Cannot pack two channels of different size!\n"); \
+		throwError(U"Cannot pack two channels of different size!\n"); \
 	} \
 	return pack_template(image_getWidth(FIRST), image_getHeight(FIRST), red, green, blue, alpha); \
 } else { \
@@ -345,7 +345,7 @@ OrderedImageRgbaU8 image_pack(int32_t red, int32_t green, const ImageU8& blue, c
 if (image_exists(FIRST) && image_exists(SECOND) && image_exists(THIRD)) { \
 	if (image_getWidth(FIRST) != image_getWidth(SECOND) || image_getHeight(FIRST) != image_getHeight(SECOND) \
 	 || image_getWidth(FIRST) != image_getWidth(THIRD) || image_getHeight(FIRST) != image_getHeight(THIRD)) { \
-		throwError("Cannot pack three channels of different size!\n"); \
+		throwError(U"Cannot pack three channels of different size!\n"); \
 	} \
 	return pack_template(image_getWidth(FIRST), image_getHeight(FIRST), red, green, blue, alpha); \
 } else { \
@@ -361,7 +361,7 @@ if (image_exists(FIRST) && image_exists(SECOND) && image_exists(THIRD) && image_
 	if (image_getWidth(FIRST) != image_getWidth(SECOND) || image_getHeight(FIRST) != image_getHeight(SECOND) \
 	 || image_getWidth(FIRST) != image_getWidth(THIRD) || image_getHeight(FIRST) != image_getHeight(THIRD) \
  	 || image_getWidth(FIRST) != image_getWidth(FOURTH) || image_getHeight(FIRST) != image_getHeight(FOURTH)) { \
-		throwError("Cannot pack four channels of different size!\n"); \
+		throwError(U"Cannot pack four channels of different size!\n"); \
 	} \
 	return pack_template(image_getWidth(FIRST), image_getHeight(FIRST), red, green, blue, alpha); \
 } else { \

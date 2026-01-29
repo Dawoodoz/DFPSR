@@ -63,11 +63,11 @@ public:
 	}
 	// Element access
 	T& operator[] (const intptr_t index) {
-		impl_baseZeroBoundCheck(index, LENGTH, "FixedArray index");
+		impl_baseZeroBoundCheck(index, LENGTH, U"FixedArray index");
 		return this->impl_elements[index];
 	}
 	const T& operator[] (const intptr_t index) const {
-		impl_baseZeroBoundCheck(index, LENGTH, "FixedArray index");
+		impl_baseZeroBoundCheck(index, LENGTH, U"FixedArray index");
 		return this->impl_elements[index];
 	}
 	inline intptr_t length() const {

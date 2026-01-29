@@ -53,7 +53,7 @@ bool PersistentImage::assignValue(const ReadableString &text, const ReadableStri
 		// Create an image from the text
 		int32_t colonIndex = string_findFirst(text, U':');
 		if (colonIndex == -1) {
-			printText("Missing colon when creating PersistentImage from text!\n");
+			printText(U"Missing colon when creating PersistentImage from text!\n");
 			return false;
 		}
 		ReadableString leftSide = string_before(text, colonIndex);
@@ -65,7 +65,7 @@ bool PersistentImage::assignValue(const ReadableString &text, const ReadableStri
 			// Read dimensions and a sequence of pixels as hexadecimals
 			int32_t xIndex = string_findFirst(text, U'x');
 			if (xIndex == -1 || xIndex > colonIndex) {
-				printText("Missing x when parsing embedded PersistentImage from text!\n");
+				printText(U"Missing x when parsing embedded PersistentImage from text!\n");
 				return false;
 			}
 			int32_t width = string_toInteger(string_before(leftSide, xIndex));
@@ -99,7 +99,7 @@ static void writeHexaDecimal(String &out, uint8_t value) {
 String& PersistentImage::toStreamIndented(String &out, const ReadableString &indentation) const {
 	string_append(out, indentation);
 	if (string_length(this->path)) {
-		string_append(out, "File:", this->path);
+		string_append(out, U"File:", this->path);
 	} else if (image_exists(this->value)) {
 		int32_t width = image_getWidth(this->value);
 		int32_t height = image_getHeight(this->value);

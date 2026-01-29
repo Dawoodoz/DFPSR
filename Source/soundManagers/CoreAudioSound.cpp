@@ -62,19 +62,19 @@ static void initializeSound() {
 	audioComponentDescription.componentManufacturer = kAudioUnitManufacturer_Apple;
 	AudioComponent audioOutputDevice = AudioComponentFindNext(nullptr, &audioComponentDescription);
 	if (audioOutputDevice == nullptr) {
-		throwError("Failed to find any CoreAudio output device!\n");
+		throwError(U"Failed to find any CoreAudio output device!\n");
 		return;
 	}
 	errorCode = AudioComponentInstanceNew(audioOutputDevice, &audioUnit);
 	if (errorCode != 0) {
-		throwError("Failed to create the CoreAudio audio unit! Error code: ", errorCode, "!\n");
+		throwError(U"Failed to create the CoreAudio audio unit! Error code: ", errorCode, U"!\n");
 		return;
 	}
 	AURenderCallbackStruct audioUnitCallbackStruct;
 	audioUnitCallbackStruct.inputProc = coreAudioCallback;
 	errorCode = AudioUnitSetProperty(audioUnit, kAudioUnitProperty_SetRenderCallback, kAudioUnitScope_Input, 0, &audioUnitCallbackStruct, sizeof(audioUnitCallbackStruct));
 	if (errorCode != 0) {
-		throwError("Failed to assign the CoreAudio audio unit callback! Error code: ", errorCode, "!\n");
+		throwError(U"Failed to assign the CoreAudio audio unit callback! Error code: ", errorCode, U"!\n");
 		return;
 	}
 	AudioStreamBasicDescription audioStreamBasicDescription;
@@ -88,17 +88,17 @@ static void initializeSound() {
 	audioStreamBasicDescription.mBytesPerPacket = engineChannels * sizeof(int16_t);
 	errorCode = AudioUnitSetProperty(audioUnit, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Input, 0, &audioStreamBasicDescription, sizeof(audioStreamBasicDescription));
 	if (errorCode != 0) {
-		throwError("Failed to set the CoreAudio audio properties! Error code: ", errorCode, "!\n");
+		throwError(U"Failed to set the CoreAudio audio properties! Error code: ", errorCode, U"!\n");
 		return;
 	}
 	errorCode = AudioUnitInitialize(audioUnit);
 	if (errorCode != 0) {
-		throwError("Failed to initialize the CoreAudio audio unit! Error code: ", errorCode, "!\n");
+		throwError(U"Failed to initialize the CoreAudio audio unit! Error code: ", errorCode, U"!\n");
 		return;
 	}
 	errorCode = AudioOutputUnitStart(audioUnit);
 	if (errorCode != 0) {
-		throwError("Failed to start the CoreAudio audio unit! Error code: ", errorCode, "!\n");
+		throwError(U"Failed to start the CoreAudio audio unit! Error code: ", errorCode, U"!\n");
 		return;
 	}
 	playing = true;

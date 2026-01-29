@@ -1,6 +1,6 @@
 ﻿// zlib open source license
 //
-// Copyright (c) 2017 to 2025 David Forsgren Piuva
+// Copyright (c) 2017 to 2026 David Forsgren Piuva
 // 
 // This software is provided 'as-is', without any express or implied
 // warranty. In no event will the authors be held liable for any damages
@@ -259,7 +259,9 @@ String& impl_toStreamIndented_uint64(String& target, const uint64_t &value, cons
 // Resolving ambiguity without access to constexpr in if statements by disabling type safety with unsafeCast.
 template <typename T, DSR_ENABLE_IF(
     DSR_UTF32_LITERAL(T)
+#ifndef BAN_IMPLICIT_ASCII_CONVERSION
  || DSR_ASCII_LITERAL(T)
+#endif
  || DSR_INHERITS_FROM(T, Printable)
  || DSR_SAME_TYPE(T, String)
  || DSR_SAME_TYPE(T, ReadableString)
@@ -287,8 +289,10 @@ template <typename T, DSR_ENABLE_IF(
 inline String& string_toStreamIndented(String& target, const T &value, const ReadableString& indentation) {
 	if (DSR_UTF32_LITERAL(T)) {
 		impl_toStreamIndented_utf32(target, unsafeCast<char32_t*>(value), indentation);
+	#ifndef BAN_IMPLICIT_ASCII_CONVERSION
 	} else if (DSR_ASCII_LITERAL(T)) {
 		impl_toStreamIndented_ascii(target, unsafeCast<char*>(value), indentation);
+	#endif
 	} else if (DSR_INHERITS_FROM(T, Printable)) {
 		unsafeCast<Printable>(value).toStreamIndented(target, indentation);
 	} else if (DSR_SAME_TYPE(T, String)) {

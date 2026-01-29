@@ -75,7 +75,7 @@ String& PersistentStringList::toStreamIndented(String& out, const ReadableString
 	string_append(out, indentation);
 	for (int32_t i = 0; i < this->value.length(); i++) {
 		if (i > 0) {
-			string_append(out, ", ");
+			string_append(out, U", ");
 		}
 		string_append(out, string_mangleQuote(this->value[i]));
 	}

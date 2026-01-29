@@ -30,7 +30,7 @@
 #include "../base/virtualStack.h"
 #include <limits>
 
-#define MUST_EXIST(OBJECT, METHOD) if (OBJECT.isNull()) { throwError("The " #OBJECT " handle was null in " #METHOD "\n"); }
+#define MUST_EXIST(OBJECT, METHOD) if (OBJECT.isNull()) { throwError(U"The " #OBJECT U" handle was null in " #METHOD U"\n"); }
 
 namespace dsr {
 
@@ -151,7 +151,7 @@ struct RendererImpl {
 	RendererImpl() {}
 	void beginFrame(ImageRgbaU8& colorBuffer, ImageF32& depthBuffer) {
 		if (this->receiving) {
-			throwError("Called renderer_begin on the same renderer twice without ending the previous batch!\n");
+			throwError(U"Called renderer_begin on the same renderer twice without ending the previous batch!\n");
 		}
 		this->receiving = true;
 		this->colorBuffer = colorBuffer;
@@ -244,7 +244,7 @@ struct RendererImpl {
 	}
 	void occludeFromExistingTriangles() {
 		if (!this->receiving) {
-			throwError("Cannot call renderer_occludeFromExistingTriangles without first calling renderer_begin!\n");
+			throwError(U"Cannot call renderer_occludeFromExistingTriangles without first calling renderer_begin!\n");
 		}
 		prepareForOcclusion();
 		// Generate a depth grid to remove many small triangles behind larger triangles
@@ -270,7 +270,7 @@ struct RendererImpl {
 	// Fills the occlusion grid using the box, so that things behind it can skip rendering
 	void occludeFromBox(const FVector3D& minimum, const FVector3D& maximum, const Transform3D &modelToWorldTransform, const Camera &camera, bool debugSilhouette) {
 		if (!this->receiving) {
-			throwError("Cannot call renderer_occludeFromBox without first calling renderer_begin!\n");
+			throwError(U"Cannot call renderer_occludeFromBox without first calling renderer_begin!\n");
 		}
 		prepareForOcclusion();
 		static const int32_t pointCount = 8;
@@ -343,7 +343,7 @@ struct RendererImpl {
 	// Must be the same camera as when occluders filled the grid with occlusion depth
 	bool isBoxOccluded(const FVector3D &minimum, const FVector3D &maximum, const Transform3D &modelToWorldTransform, const Camera &camera) const {
 		if (!this->receiving) {
-			throwError("Cannot call renderer_isBoxVisible without first calling renderer_begin and giving occluder shapes to the pass!\n");
+			throwError(U"Cannot call renderer_isBoxVisible without first calling renderer_begin and giving occluder shapes to the pass!\n");
 		}
 		FVector3D corners[8];
 		GENERATE_BOX_CORNERS(corners, minimum, maximum)
@@ -352,7 +352,7 @@ struct RendererImpl {
 	}
 	void endFrame(bool debugWireframe) {
 		if (!this->receiving) {
-			throwError("Called renderer_end without renderer_begin!\n");
+			throwError(U"Called renderer_end without renderer_begin!\n");
 		}
 		this->receiving = false;
 		// Mark occluded triangles to prevent them from being rendered
@@ -405,10 +405,10 @@ struct RendererImpl {
 		// Make sure that the depth grid exists with the correct dimensions.
 		this->prepareForOcclusion();
 		if (!this->receiving) {
-			throwError("Cannot call renderer_occludeFromTopRows without first calling renderer_begin!\n");
+			throwError(U"Cannot call renderer_occludeFromTopRows without first calling renderer_begin!\n");
 		}
 		if (!image_exists(this->depthBuffer)) {
-			throwError("Cannot call renderer_occludeFromTopRows without having given a depth buffer in renderer_begin!\n");
+			throwError(U"Cannot call renderer_occludeFromTopRows without having given a depth buffer in renderer_begin!\n");
 		}
 		SafePointer<float> depthRow = image_getSafePointer(this->depthBuffer);
 		int32_t depthStride = image_getStride(this->depthBuffer);
