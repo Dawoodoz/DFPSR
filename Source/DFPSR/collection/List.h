@@ -36,6 +36,7 @@ namespace dsr {
 // TODO:
 // * Allow storing names of lists in debug mode for better error messages, using the same setName method as used in Handle.
 // * Allow getting a SafePointer to all elements for faster loops without bound checks in release mode.
+//   This needs to be marked as unsafe with a warning about potential invalidation of pointers from reallocation.
 
 // Because elements are returned by reference, the list can not know when an element is modified.
 //   Therefore it must clone the entire content when assigned by value for consistent behavior during reallocation.

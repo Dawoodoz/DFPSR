@@ -10,6 +10,7 @@ Anything with "impl" in the name is expected to change at any time, so don't do 
 Anything that requires defining DFPSR_INTERNAL_ACCESS before a header is also considered internal.
 
 ---
+Title2: Read first
 
 *
 <- Starting.html | Getting started
@@ -36,6 +37,9 @@ Title2: APIs
 Title2: Techniques
 
 *
+<- ChoosingStorage.html | Choosing storage
+
+*
 <- ImageProcessing.html | Image processing
 
 ---
@@ -52,4 +56,4 @@ Title2: Technical details
 
 *
 <- Security.html | Security
----
+---
