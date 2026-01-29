@@ -100,14 +100,14 @@ void dsrMain(List<String> args) {
 	//   Triggered by mouse, keyboard, list changes and initialization
 	component_setSelectEvent(myListBox, [](int64_t index) {
 		String content = component_call(myListBox, U"GetSelectedText");
-		printText("Select event: content is (", content, ") at index ", index, "\n");
+		printText(U"Select event: content is (", content, U") at index ", index, U"\n");
 	});
 	// Only triggered by mouse presses like any other component
 	component_setPressedEvent(myListBox, []() {
 		int64_t index = component_getProperty_integer(myListBox, U"SelectedIndex", false, 0);
 		//int64_t index = string_toInteger(component_call(myListBox, U"GetSelectedIndex")); // There is also a getter for the index
 		String content = component_call(myListBox, U"GetSelectedText");
-		printText("Pressed event: content is (", content, ") at index ", index, "\n");
+		printText(U"Pressed event: content is (", content, U") at index ", index, U"\n");
 	});
 
 	// Execute
