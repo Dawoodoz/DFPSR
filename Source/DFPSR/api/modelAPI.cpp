@@ -31,7 +31,7 @@
 #include "../base/virtualStack.h"
 #include <limits>
 
-#define MUST_EXIST(OBJECT, METHOD) if (OBJECT.isNull()) { throwError("The " #OBJECT " handle was null in " #METHOD "\n"); }
+#define MUST_EXIST(OBJECT, METHOD) if (OBJECT.isNull()) { throwError(U"The " #OBJECT U" handle was null in " #METHOD U"\n"); }
 
 namespace dsr {
 
@@ -220,7 +220,7 @@ void model_render_threaded(const Model& model, const Transform3D &modelToWorldTr
 	// Check the renderer's state.
 	#ifndef NDEBUG
 		if (!renderer_takesTriangles(renderer)) {
-			throwError("Cannot call renderer_giveTask before renderer_begin!\n");
+			throwError(U"Cannot call renderer_giveTask before renderer_begin!\n");
 		}
 	#endif
 	// Culling.

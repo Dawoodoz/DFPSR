@@ -395,12 +395,12 @@ void dsrMain(List<String> args) {
 		// Paint the background color
 		startTime = time_getSeconds();
 		image_fill(colorBuffer, ColorRgbaI32(0, 0, 0, 0)); // Setting each channel to the same value can use memset for faster filling
-		printText("Fill sky: ", (time_getSeconds() - startTime) * 1000.0, " ms\n");
+		printText(U"Fill sky: ", (time_getSeconds() - startTime) * 1000.0, U" ms\n");
 
 		// Clear the depth buffer
 		startTime = time_getSeconds();
 		image_fill(depthBuffer, 0.0f); // Infinite reciprocal depth using default zero
-		printText("Clear depth: ", (time_getSeconds() - startTime) * 1000.0, " ms\n");
+		printText(U"Clear depth: ", (time_getSeconds() - startTime) * 1000.0, U" ms\n");
 
 		// Create a camera
 		const double speed = 0.2f;
@@ -416,21 +416,21 @@ void dsrMain(List<String> args) {
 		renderer_begin(worker, colorBuffer, depthBuffer);
 		startTime = time_getSeconds();
 		renderer_giveTask(worker, ground, Transform3D(), camera);
-		printText("Project triangles: ", (time_getSeconds() - startTime) * 1000.0, " ms\n");
+		printText(U"Project triangles: ", (time_getSeconds() - startTime) * 1000.0, U" ms\n");
 		startTime = time_getSeconds();
 		renderer_end(worker);
-		printText("Rasterize triangles: ", (time_getSeconds() - startTime) * 1000.0, " ms\n");
+		printText(U"Rasterize triangles: ", (time_getSeconds() - startTime) * 1000.0, U" ms\n");
 
 		if (showBuffers) {
 			startTime = time_getSeconds();
 			//draw_copy(colorBuffer, colorMap, mousePos.x, mousePos.y);
 			//draw_copy(colorBuffer, heightMap, mousePos.x, mousePos.y);
 			draw_copy(colorBuffer, bumpMap, mousePos.x, mousePos.y);
-			printText("Show buffers: ", (time_getSeconds() - startTime) * 1000.0, " ms\n");
+			printText(U"Show buffers: ", (time_getSeconds() - startTime) * 1000.0, U" ms\n");
 		}
 
 		window_showCanvas(window);
 	}
 
-	printText("\nTerminating the application.\n");
+	printText(U"\nTerminating the application.\n");
 }

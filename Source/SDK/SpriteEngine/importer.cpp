@@ -23,7 +23,7 @@ struct PlyProperty {
 			this->scale = 1;
 		}
 		if (string_caseInsensitiveMatch(lengthTypeName, U"FLOAT")) {
-			printText("loadPlyModel: Using floating-point numbers to describe the length of a list is nonsense!\n");
+			printText(U"loadPlyModel: Using floating-point numbers to describe the length of a list is nonsense!\n");
 		}
 	}
 };
@@ -70,13 +70,13 @@ static void loadPlyModel(Model& targetModel, int32_t targetPart, const ReadableS
 	// Temporary geometry
 	List<PlyVertex> vertices;
 	if (lines.length() < 2) {
-		printText("loadPlyModel: Failed to identify line-breaks in the PLY file!\n");
+		printText(U"loadPlyModel: Failed to identify line-breaks in the PLY file!\n");
 		return;
 	} else if (!string_caseInsensitiveMatch(string_removeOuterWhiteSpace(lines[0]), U"PLY")) {
-		printText("loadPlyModel: Failed to identify the file as PLY!\n");
+		printText(U"loadPlyModel: Failed to identify the file as PLY!\n");
 		return;
 	} else if (!string_caseInsensitiveMatch(string_removeOuterWhiteSpace(lines[1]), U"FORMAT ASCII 1.0")) {
-		printText("loadPlyModel: Only supporting the ascii 1.0 format!\n");
+		printText(U"loadPlyModel: Only supporting the ascii 1.0 format!\n");
 		return;
 	}
 	for (int32_t l = 0; l < lines.length(); l++) {
@@ -94,7 +94,7 @@ static void loadPlyModel(Model& targetModel, int32_t targetPart, const ReadableS
 					int32_t tokenIndex = 0;
 					for (int32_t propertyIndex = 0; propertyIndex < currentElement->properties.length(); propertyIndex++) {
 						if (tokenIndex >= tokens.length()) {
-							printText("loadPlyModel: Undeclared properties given to ", currentElement->name, " in the data!\n");
+							printText(U"loadPlyModel: Undeclared properties given to ", currentElement->name, U" in the data!\n");
 							break;
 						}
 						PlyProperty *currentProperty = &(currentElement->properties[propertyIndex]);
@@ -104,7 +104,7 @@ static void loadPlyModel(Model& targetModel, int32_t targetPart, const ReadableS
 							// Detect polygons
 							if (inputMode == PlyDataInput::Face && string_caseInsensitiveMatch(currentProperty->name, U"VERTEX_INDICES")) {
 								if (vertices.length() == 0) {
-									printText("loadPlyModel: This ply importer does not support feeding polygons before vertices! Using vertices before defining them would require an additional intermediate representation.\n");
+									printText(U"loadPlyModel: This ply importer does not support feeding polygons before vertices! Using vertices before defining them would require an additional intermediate representation.\n");
 								}
 								bool flipSides = flipX;
 								if (listLength == 4) {
@@ -219,7 +219,7 @@ static void loadPlyModel(Model& targetModel, int32_t targetPart, const ReadableS
 						// Done with the file
 						if (l < lines.length() - 1) {
 							// Remaining lines will be ignored with a warning
-							printText("loadPlyModel: Ignored ", (lines.length() - 1) - l, " undeclared lines at file end!\n");
+							printText(U"loadPlyModel: Ignored ", (lines.length() - 1) - l, U" undeclared lines at file end!\n");
 						}
 						return;
 					} else {
@@ -234,7 +234,7 @@ static void loadPlyModel(Model& targetModel, int32_t targetPart, const ReadableS
 						elementIndex = 0;
 						memberIndex = 0;
 						if (elements.length() < 2) {
-							printText("loadPlyModel: Need at least two elements to defined faces and vertices in the model!\n");
+							printText(U"loadPlyModel: Need at least two elements to defined faces and vertices in the model!\n");
 							return;
 						}
 						// Identify the first element by name
@@ -245,9 +245,9 @@ static void loadPlyModel(Model& targetModel, int32_t targetPart, const ReadableS
 						elementIndex = elements.pushGetIndex(PlyElement(tokens[1], string_toInteger(tokens[2])));
 					} else if (string_caseInsensitiveMatch(tokens[0], U"PROPERTY")) {
 						if (elementIndex < 0) {
-							printText("loadPlyModel: Cannot declare a property without an element!\n");
+							printText(U"loadPlyModel: Cannot declare a property without an element!\n");
 						} else if (readingContent) {
-							printText("loadPlyModel: Cannot declare a property outside of the header!\n");
+							printText(U"loadPlyModel: Cannot declare a property outside of the header!\n");
 						} else {
 							if (tokens.length() == 3) {
 								// Single property
@@ -256,7 +256,7 @@ static void loadPlyModel(Model& targetModel, int32_t targetPart, const ReadableS
 								// Integer followed by that number of properties as a list
 								elements[elementIndex].properties.push(PlyProperty(tokens[4], tokens[3], tokens[2]));
 							} else {
-								printText("loadPlyModel: Unable to parse property!\n");
+								printText(U"loadPlyModel: Unable to parse property!\n");
 								return;
 							}
 						}
@@ -270,7 +270,7 @@ static void loadPlyModel(Model& targetModel, int32_t targetPart, const ReadableS
 void importer_loadModel(Model& targetModel, int32_t part, const ReadableString& filename, bool flipX, Transform3D axisConversion) {
 	int32_t lastDotIndex = string_findLast(filename, U'.');
 	if (lastDotIndex == -1) {
-		printText("The model's filename ", filename, " does not have an extension!\n");
+		printText(U"The model's filename ", filename, U" does not have an extension!\n");
 	} else {
 		ReadableString extension = string_after(filename, lastDotIndex);
 		if (string_caseInsensitiveMatch(extension, U"PLY")) {
@@ -279,7 +279,7 @@ void importer_loadModel(Model& targetModel, int32_t part, const ReadableString& 
 			// Parse the file from the string
 			loadPlyModel(targetModel, part, content, flipX, axisConversion);
 		} else {
-			printText("The extension ", extension, " in ", filename, " is not yet supported! You can implement an importer and call it from the loadModel function in tool.cpp.\n");
+			printText(U"The extension ", extension, U" in ", filename, U" is not yet supported! You can implement an importer and call it from the loadModel function in tool.cpp.\n");
 		}
 	}
 }

@@ -155,11 +155,11 @@ int32_t createGridSide(Model& model, int32_t part, const ImageU8& heightMap, con
 void createGrid(Model& model, int32_t part, const ImageU8& heightMap, const ImageRgbaU8& colorMap,
   const TransformFunction& transform, bool clipZero, bool mergeSides, bool mirror, bool weldNormals) {
 	if (weldNormals && !mirror) {
-		printText("\n  Warning! Cannot weld normals without a mirrored side. The \"weldNormals\" will be ignored because \"mirror\" was not active.\n\n");
+		sendWarning(U"Cannot weld normals without a mirrored side. The \"weldNormals\" will be ignored because \"mirror\" was not active.\n\n");
 		weldNormals = false;
 	}
 	if (weldNormals && !clipZero) {
-		printText("\n  Warning! Cannot weld normals without clipping zero displacement. The \"weldNormals\" will be ignored because \"clipZero\" was not active.\n\n");
+		sendWarning(U"Cannot weld normals without clipping zero displacement. The \"weldNormals\" will be ignored because \"clipZero\" was not active.\n\n");
 		weldNormals = false;
 	}
 	// Generate primary side
@@ -196,41 +196,41 @@ static void parse_scope(ParserState& state, const ReadableString& key) {
 	state.part = -1;
 	if (string_caseInsensitiveMatch(key, U"PART")) {
 		// Enter a new part's scope
-		printText("  New part begins\n");
+		printText(U"  New part begins\n");
 		state.part = model_addEmptyPart(state.model, U"part");
 	} else {
-		printText("  Unrecognized scope ", key, " within <>.\n");
+		sendWarning(U"  Unrecognized scope ", key, U" within <>.\n");
 	}
 }
 
 #define MATCH_ASSIGN_GLOBAL(NAME,ACCESS,PARSER,DESCRIPTION) \
 if (string_caseInsensitiveMatch(key, NAME)) { \
 	ACCESS = PARSER(value); \
-	printText("  ", #DESCRIPTION, " = ", ACCESS, "\n"); \
+	printText(U"  ", U###DESCRIPTION, U" = ", ACCESS, U"\n"); \
 }
 #define MATCH_ASSIGN(BLOCK,NAME,ACCESS,PARSER,DESCRIPTION) \
 if (string_caseInsensitiveMatch(key, NAME)) { \
 	if (state.BLOCK == -1) { \
-		printText("    Cannot assign ", DESCRIPTION, " without a ", #BLOCK, ".\n"); \
+		sendWarning(U"    Cannot assign ", DESCRIPTION, U" without a ", U###BLOCK, U".\n"); \
 	} else { \
 		ACCESS = PARSER(value); \
-		printText("    ", #DESCRIPTION, " = ", ACCESS, "\n"); \
+		printText(U"    ", U###DESCRIPTION, U" = ", ACCESS, U"\n"); \
 	} \
 }
 static void parse_assignment(ParserState& state, const ReadableString& key, const ReadableString& value) {
-	MATCH_ASSIGN_GLOBAL(U"Angles", state.angles, string_toInteger, "camera angle count")
-	else MATCH_ASSIGN(part, U"Origin", state.partSettings.location.position, parseFVector3D, "origin")
-	else MATCH_ASSIGN(part, U"XAxis", state.partSettings.location.transform.xAxis, parseFVector3D, "X-Axis")
-	else MATCH_ASSIGN(part, U"YAxis", state.partSettings.location.transform.yAxis, parseFVector3D, "Y-Axis")
-	else MATCH_ASSIGN(part, U"ZAxis", state.partSettings.location.transform.zAxis, parseFVector3D, "Z-Axis")
-	else MATCH_ASSIGN(part, U"Displacement", state.partSettings.displacement, string_toDouble, "displacement")
-	else MATCH_ASSIGN(part, U"ClipZero", state.partSettings.clipZero, string_toInteger, "zero clipping")
-	else MATCH_ASSIGN(part, U"Mirror", state.partSettings.mirror, string_toInteger, "mirror flag")
-	else MATCH_ASSIGN(part, U"PatchWidth", state.partSettings.patchWidth, string_toDouble, "patch width")
-	else MATCH_ASSIGN(part, U"PatchHeight", state.partSettings.patchHeight, string_toDouble, "patch height")
-	else MATCH_ASSIGN(part, U"Radius", state.partSettings.radius, string_toDouble, "radius")
+	MATCH_ASSIGN_GLOBAL(U"Angles", state.angles, string_toInteger, U"camera angle count")
+	else MATCH_ASSIGN(part, U"Origin", state.partSettings.location.position, parseFVector3D, U"origin")
+	else MATCH_ASSIGN(part, U"XAxis", state.partSettings.location.transform.xAxis, parseFVector3D, U"X-Axis")
+	else MATCH_ASSIGN(part, U"YAxis", state.partSettings.location.transform.yAxis, parseFVector3D, U"Y-Axis")
+	else MATCH_ASSIGN(part, U"ZAxis", state.partSettings.location.transform.zAxis, parseFVector3D, U"Z-Axis")
+	else MATCH_ASSIGN(part, U"Displacement", state.partSettings.displacement, string_toDouble, U"displacement")
+	else MATCH_ASSIGN(part, U"ClipZero", state.partSettings.clipZero, string_toInteger, U"zero clipping")
+	else MATCH_ASSIGN(part, U"Mirror", state.partSettings.mirror, string_toInteger, U"mirror flag")
+	else MATCH_ASSIGN(part, U"PatchWidth", state.partSettings.patchWidth, string_toDouble, U"patch width")
+	else MATCH_ASSIGN(part, U"PatchHeight", state.partSettings.patchHeight, string_toDouble, U"patch height")
+	else MATCH_ASSIGN(part, U"Radius", state.partSettings.radius, string_toDouble, U"radius")
 	else {
-		printText("    Tried to assign ", value, " to unrecognized key ", key, ".\n");
+		sendWarning(U"    Tried to assign ", value, U" to unrecognized key ", key, U".\n");
 	}
 }
 
@@ -249,7 +249,7 @@ static Shape ShapeFromName(const ReadableString& name) {
 	} else if (string_caseInsensitiveMatch(name, U"RIGHTHANDEDMODEL")) {
 		return Shape::RightHandedModel;
 	} else {
-		throwError("Unhandled shape \"", name, "\"!\n");
+		throwError(U"Unhandled shape \"", name, U"\"!\n");
 		return Shape::None;
 	}
 }
@@ -312,7 +312,7 @@ static void generateField(ParserState& state, Shape shape, const ImageU8& height
 			return system.transformPoint(FVector3D(-sin(angle) * offset, height, cos(angle) * offset));
 		};
 	} else {
-		printText("Field generation is not implemented for ", nameOfShape(shape), "!\n");
+		sendWarning(U"Field generation is not implemented for ", nameOfShape(shape), U"!\n");
 		return;
 	}
 	if (shadow) {
@@ -384,7 +384,7 @@ static void generateBasicShape(ParserState& state, Shape shape, const ReadableSt
 			model_addQuad(model, part, firstTopSide + q, firstTopSide + p, firstBottomSide + p, firstBottomSide + q);
 		}
 	} else {
-		printText("Basic shape generation is not implemented for ", nameOfShape(shape), "!\n");
+		sendWarning(U"Basic shape generation is not implemented for ", nameOfShape(shape), U"!\n");
 		return;
 	}
 }
@@ -402,14 +402,14 @@ ImageRgbaU8 debugTexture = createDebugTexture();
 
 static void parse_shape(ParserState& state, List<String>& args, bool shadow) {
 	if (state.part == -1) {
-		printText("    Cannot generate a ", args[0], " without a part.\n");
+		sendWarning(U"    Cannot generate a ", args[0], U" without a part.\n");
 	}
 	Shape shape = ShapeFromName(args[0]);
 	if (shape == Shape::LeftHandedModel || shape == Shape::RightHandedModel) {
 		if (args.length() > 2) {
-			printText("    Too many arguments when trying to load a model. Just give one file name without spaces.\n");
+			sendWarning(U"    Too many arguments when trying to load a model. Just give one file name without spaces.\n");
 		} else if (args.length() < 2) {
-			printText("    Loading a model requires a filename.\n");
+			sendWarning(U"    Loading a model requires a filename.\n");
 		} else {
 			bool flipX = (shape == Shape::RightHandedModel);
 			Model targetModel = shadow ? state.shadow : state.model;
@@ -429,7 +429,7 @@ static void parse_shape(ParserState& state, List<String>& args, bool shadow) {
 		// Shape, Width, Height, Depth
 		generateBasicShape(state, shape, args[1], args[2], args[3], shadow);
 	} else {
-		printText("    The ", args[0], " shape needs at least a height map to know the number of vertices to generate. A color map can also be given.\n");
+		sendWarning(U"    The ", args[0], U" shape needs at least a height map to know the number of vertices to generate. A color map can also be given.\n");
 	}
 }
 
@@ -465,13 +465,13 @@ static void parse_dsm(ParserState& state, const ReadableString& content) {
 				} else if (string_caseInsensitiveMatch(command, U"Shadow")) {
 					parse_shape(state, args, true);
 				} else {
-					printText("    Unrecognized command ", command, ".\n");
+					sendWarning(U"    Unrecognized command ", command, U".\n");
 				}
 			} else if (blockStartIndex > -1 && blockEndIndex > -1) {
 				String block = string_removeOuterWhiteSpace(string_inclusiveRange(line, blockStartIndex + 1, blockEndIndex - 1));
 				parse_scope(state, block);
 			} else {
-				printText("Unrecognized content \"", line, "\" on line ", l + 1, ".\n");
+				sendWarning(U"Unrecognized content \"", line, U"\" on line ", l + 1, U".\n");
 			}
 		}
 	}
@@ -482,7 +482,7 @@ void processScript(const String& sourcePath, const String& targetPath, OrthoSyst
 	ParserState state = ParserState(sourcePath);
 	// Parse the script to fill the state with a model and additional render settings
 	String scriptPath = string_combine(state.sourcePath, scriptName, U".dsm");
-	printText("Generating ", scriptPath, "\n");
+	printText(U"Generating ", scriptPath, U"\n");
 	parse_dsm(state, string_load(scriptPath));
 	// Render the model
 	sprite_generateFromModel(state.model, state.shadow, ortho, targetPath + scriptName, state.angles, false);
@@ -494,7 +494,7 @@ void processScript(const String& sourcePath, const String& targetPath, OrthoSyst
 // The following arguments are plain names of the scripts to process without any path nor extension.
 void tool_main(const List<String> &args) {
 	if (args.length() < 5) {
-		printText("Nothing to process. Terminating sprite generation tool.\n");
+		printText(U"Nothing to process. Terminating sprite generation tool.\n");
 	} else {
 		String sourcePath = string_combine(args[1], file_separator());
 		String targetPath = string_combine(args[2], file_separator());

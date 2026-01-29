@@ -409,14 +409,14 @@ struct VirtualMachine {
 		Variable* variable = getResource(name, methodIndex);
 		if (variable) {
 			if (variable->typeDescription->dataType != dataType) {
-				throwError("The machine's resource named \"", variable->name, "\" had the unexpected type \"", variable->typeDescription->name, "\"!\n");
+				throwError(U"The machine's resource named \"", variable->name, U"\" had the unexpected type \"", variable->typeDescription->name, U"\"!\n");
 			} else if (access != variable->access && access != AccessType::Any) {
-				throwError("The machine's resource named \"", variable->name, "\" is not delared as \"", getName(access), "\"!\n");
+				throwError(U"The machine's resource named \"", variable->name, U"\" is not delared as \"", getName(access), U"\"!\n");
 			} else {
 				return variable->getStackIndex(this->memory->current.framePointer[dataType]);
 			}
 		} else {
-			throwError("The machine cannot find any resource named \"", name, "\"!\n");
+			throwError(U"The machine cannot find any resource named \"", name, U"\"!\n");
 		}
 		return -1;
 	}

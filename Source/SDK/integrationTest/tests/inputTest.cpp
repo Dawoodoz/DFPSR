@@ -58,7 +58,7 @@ void inputTests_populate(List<Test> &target, int32_t buttonCount, bool relative,
 			}
 		,
 			[](const KeyboardEvent& event, TestContext &context) {
-				sendWarning(U"Detected a keyboard event with ", event.dsrKey, " instead of a mouse button!\n");
+				sendWarning(U"Detected a keyboard event with ", event.dsrKey, U" instead of a mouse button!\n");
 			}
 		,
 			false
@@ -169,12 +169,12 @@ void inputTests_populate(List<Test> &target, int32_t buttonCount, bool relative,
 			image_fill(canvas, ColorRgbaI32(255, 255, 255, 255));
 			// TODO: Draw a keyboard showing which key is expected and which key was detected.
 			if (context.taskIndex < DsrKey::DsrKey_Unhandled) {
-				font_printLine(canvas, font_getDefault(), string_combine(U"Press down ", (DsrKey)context.taskIndex, " on your physical or virtual keyboard."), IVector2D(40, 40), ColorRgbaI32(0, 0, 0, 255));
+				font_printLine(canvas, font_getDefault(), string_combine(U"Press down ", (DsrKey)context.taskIndex, U" on your physical or virtual keyboard."), IVector2D(40, 40), ColorRgbaI32(0, 0, 0, 255));
 			}
 		}
 	,
 		[](const MouseEvent& event, TestContext &context) {
-			sendWarning(U"Detected a mouse event with ", event.key, " instead of a keyboard event!\n");
+			sendWarning(U"Detected a mouse event with ", event.key, U" instead of a keyboard event!\n");
 		}
 	,
 		[](const KeyboardEvent& event, TestContext &context) {

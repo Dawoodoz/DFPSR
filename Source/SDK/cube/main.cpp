@@ -130,7 +130,7 @@ void dsrMain(List<String> args) {
 		//       Round the start location up to 16-bytes and the end location down to 16-bytes
 		//       Use regular assignments for the non-padding leftover pixels in sub-images
 		image_fill(colorBuffer, ColorRgbaI32(160, 180, 200, 255));
-		printText("Fill sky: ", (time_getSeconds() - startTime) * 1000.0, " ms\n");
+		printText(U"Fill sky: ", (time_getSeconds() - startTime) * 1000.0, U" ms\n");
 
 		// Update the depth buffer
 		startTime = time_getSeconds();
@@ -140,7 +140,7 @@ void dsrMain(List<String> args) {
 		} else {
 			image_fill(depthBuffer, 0.0f); // Infinite reciprocal depth using zero
 		}
-		printText("Clear depth: ", (time_getSeconds() - startTime) * 1000.0, " ms\n");
+		printText(U"Clear depth: ", (time_getSeconds() - startTime) * 1000.0, U" ms\n");
 
 		// Create a camera
 		const double speed = 0.2f;
@@ -174,11 +174,11 @@ void dsrMain(List<String> args) {
 		renderer_giveTask(worker, cubeModel, cubeLocation, camera);
 		// Complete render batch
 		renderer_end(worker, debugDrawnTriangles);
-		printText("Draw world: ", (time_getSeconds() - startTime) * 1000.0, " ms\n");
+		printText(U"Draw world: ", (time_getSeconds() - startTime) * 1000.0, U" ms\n");
 
 		startTime = time_getSeconds();
 		window_drawComponents(window);
-		printText("Draw GUI: ", (time_getSeconds() - startTime) * 1000.0, " ms\n");
+		printText(U"Draw GUI: ", (time_getSeconds() - startTime) * 1000.0, U" ms\n");
 
 		window_showCanvas(window);
 	}

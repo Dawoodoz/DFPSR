@@ -26,13 +26,13 @@
 
 namespace dsr {
 
-void impl_nonZeroLengthCheck(int64_t length, const char* property) {
+void impl_nonZeroLengthCheck(int64_t length, const char32_t* property) {
 	if (length <= 0) {
 		throwError(property, U" may not be zero!\n");
 	}
 }
 
-void impl_baseZeroBoundCheck(int64_t index, int64_t length, const char* property) {
+void impl_baseZeroBoundCheck(int64_t index, int64_t length, const char32_t* property) {
 	if (index < 0 || index >= length) {
 		throwError(property, U" ", index, U" is out of bound 0..", (length - 1), U"!\n");
 	}

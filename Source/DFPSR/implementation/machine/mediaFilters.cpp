@@ -32,24 +32,24 @@ static void assertSameSize(const T& imageA, const U& imageB) {
 	if (!image_exists(imageA) || !image_exists(imageB)) {
 		if (image_exists(imageA)) {
 			// Left side exists, so there's no right side
-			throwError("Media filter: Non-existing right side input image.\n");
+			throwError(U"Media filter: Non-existing right side input image.\n");
 		} else if (image_exists(imageB)) {
 			// Right side exists, so there's no left side
-			throwError("Media filter: Non-existing left side input image.\n");
+			throwError(U"Media filter: Non-existing left side input image.\n");
 		} else {
 			// Neither input exists
-			throwError("Media filter: Non-existing input images.\n");
+			throwError(U"Media filter: Non-existing input images.\n");
 		}
 	} else if (image_getWidth(imageA) != image_getWidth(imageB)
 	       || image_getHeight(imageA) != image_getHeight(imageB)) {
-		throwError("Media filter: Taking input images of different dimensions, ", image_getWidth(imageA), "x", image_getHeight(imageA), " and ", image_getWidth(imageB), "x", image_getHeight(imageB), ".\n");
+		throwError(U"Media filter: Taking input images of different dimensions, ", image_getWidth(imageA), U"x", image_getHeight(imageA), U" and ", image_getWidth(imageB), U"x", image_getHeight(imageB), U".\n");
 	}
 }
 
 template <typename T>
 static void assertExisting(const T& image) {
 	if (!image_exists(image)) {
-		throwError("Media filter: Non-existing input image.\n");
+		throwError(U"Media filter: Non-existing input image.\n");
 	}
 }
 
@@ -64,7 +64,7 @@ template <typename T, typename U>
 static void allocateToSameSize(T& targetImage, const U& inputImage) {
 	if (!image_exists(targetImage) || image_getWidth(targetImage) != image_getWidth(inputImage) || image_getHeight(targetImage) != image_getHeight(inputImage)) {
 		if (!image_exists(inputImage)) {
-			throwError("Media filter: Cannot allocate to size of non-existing input image.\n");
+			throwError(U"Media filter: Cannot allocate to size of non-existing input image.\n");
 		}
 		targetImage = image_create_U8(image_getWidth(inputImage), image_getHeight(inputImage));
 	}

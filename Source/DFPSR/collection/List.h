@@ -162,11 +162,11 @@ public:
 	}
 	// Post-condition: Returns the element at index from the range 0..length-1.
 	T& operator[] (intptr_t index) {
-		impl_baseZeroBoundCheck(index, this->impl_length, "List index");
+		impl_baseZeroBoundCheck(index, this->impl_length, U"List index");
 		return this->impl_elements[index];
 	}
 	const T& operator[] (intptr_t index) const {
-		impl_baseZeroBoundCheck(index, this->impl_length, "List index");
+		impl_baseZeroBoundCheck(index, this->impl_length, U"List index");
 		return this->impl_elements[index];
 	}
 	// Post-condition: Returns the number of elements in the array list.
@@ -185,22 +185,22 @@ public:
 	intptr_t lastIndex() const { return this->impl_length - 1; }
 	// Post-condition: Returns a reference to the first element.
 	T& first() {
-		impl_nonZeroLengthCheck(this->impl_length, "Length");
+		impl_nonZeroLengthCheck(this->impl_length, U"Length");
 		return this->impl_elements[0];
 	}
 	// Post-condition: Returns a reference to the first element.
 	const T& first() const {
-		impl_nonZeroLengthCheck(this->impl_length, "Length");
+		impl_nonZeroLengthCheck(this->impl_length, U"Length");
 		return this->impl_elements[0];
 	}
 	// Post-condition: Returns a reference to the last element.
 	T& last() {
-		impl_nonZeroLengthCheck(this->impl_length, "Length");
+		impl_nonZeroLengthCheck(this->impl_length, U"Length");
 		return this->impl_elements[this->lastIndex()];
 	}
 	// Post-condition: Returns a reference to the last element.
 	const T& last() const {
-		impl_nonZeroLengthCheck(this->impl_length, "Length");
+		impl_nonZeroLengthCheck(this->impl_length, U"Length");
 		return this->impl_elements[this->lastIndex()];
 	}
 	// Side-effect: Removes all elements by setting the count to zero.
@@ -210,8 +210,8 @@ public:
 	// Side-effect: Swap the order of two elements.
 	//   Useful for moving and sorting elements.
 	void swap(intptr_t indexA, intptr_t indexB) {
-		impl_baseZeroBoundCheck(indexA, this->impl_length, "Swap index A");
-		impl_baseZeroBoundCheck(indexB, this->impl_length, "Swap index B");
+		impl_baseZeroBoundCheck(indexA, this->impl_length, U"Swap index A");
+		impl_baseZeroBoundCheck(indexB, this->impl_length, U"Swap index B");
 		std::swap(this->impl_elements[indexA], this->impl_elements[indexB]);
 	}
 	T& push(const T& newValue) {

@@ -32,11 +32,11 @@ VirtualMachine::VirtualMachine(const ReadableString& code, const Handle<PlanarMe
 : memory(memory), machineInstructions(machineInstructions), machineInstructionCount(machineInstructionCount),
   machineTypes(machineTypes), machineTypeCount(machineTypeCount) {
 	#ifdef VIRTUAL_MACHINE_DEBUG_PRINT
-		printText("Starting media machine.\n");
+		printText(U"Starting media machine.\n");
 	#endif
 	this->methods.pushConstruct(U"<init>", 0, this->machineTypeCount);
 	#ifdef VIRTUAL_MACHINE_DEBUG_PRINT
-		printText("Reading assembly.\n");
+		printText(U"Reading assembly.\n");
 	#endif
 	string_split_callback([this](ReadableString currentLine) {
 		// If the line has a comment, then skip everything from #
@@ -52,12 +52,12 @@ VirtualMachine::VirtualMachine(const ReadableString& code, const Handle<PlanarMe
 			List<String> arguments = string_split(argumentLine, U',', true);
 			this->interpretMachineWord(command, arguments);
 		} else if (string_length(currentLine) > 0) {
-			throwError("Unexpected line \"", currentLine, "\".\n");
+			throwError(U"Unexpected line \"", currentLine, U"\".\n");
 		}
 	}, code, U'\n');
 	// Calling "<init>" to execute global commands
 	#ifdef VIRTUAL_MACHINE_DEBUG_PRINT
-		printText("Initializing global machine state.\n");
+		printText(U"Initializing global machine state.\n");
 	#endif
 	this->executeMethod(0);
 }
@@ -107,15 +107,15 @@ void VirtualMachine::interpretCommand(const ReadableString& operation, const Lis
 	for (int32_t s = 0; s < machineInstructionCount; s++) {
 		const InsSig* signature = &machineInstructions[s];
 		if (string_caseInsensitiveMatch(signature->name, operation)) {
-			string_append(message, "  * ", signature->name, "(");
+			string_append(message, U"  * ", signature->name, U"(");
 			for (int32_t a = 0; a < signature->arguments.length(); a++) {
 				if (a > 0) {
-					string_append(message, ", ");
+					string_append(message, U", ");
 				}
 				const ArgSig* argument = &signature->arguments[a];
 				string_append(message, argument->name);
 			}
-			string_append(message, ")\n");
+			string_append(message, U")\n");
 		}
 	}
 	throwError(message);
@@ -129,7 +129,7 @@ Variable* VirtualMachine::declareVariable_aux(const VMTypeDef& typeDef, int32_t 
 
 	// Assert correctness
 	if (global && (access == AccessType::Input || access == AccessType::Output)) {
-		throwError("Cannot declare inputs or outputs globally!\n");
+		throwError(U"Cannot declare inputs or outputs globally!\n");
 	}
 
 	// Count how many variables the method has of each type
@@ -138,12 +138,12 @@ Variable* VirtualMachine::declareVariable_aux(const VMTypeDef& typeDef, int32_t 
 	// Count inputs for calling the method
 	if (access == AccessType::Input) {
 		if (this->methods[methodIndex].declaredNonInput) {
-			throwError("Cannot declare input \"", name, "\" after a non-input has been declared. Declare inputs, outputs and locals in order.\n");
+			throwError(U"Cannot declare input \"", name, U"\" after a non-input has been declared. Declare inputs, outputs and locals in order.\n");
 		}
 		this->methods[methodIndex].inputCount++;
 	} else if (access == AccessType::Output) {
 		if (this->methods[methodIndex].declaredLocals) {
-			throwError("Cannot declare output \"", name, "\" after a local has been declared. Declare inputs, outputs and locals in order.\n");
+			throwError(U"Cannot declare output \"", name, U"\" after a local has been declared. Declare inputs, outputs and locals in order.\n");
 		}
 		this->methods[methodIndex].outputCount++;
 		this->methods[methodIndex].declaredNonInput = true;
@@ -164,18 +164,18 @@ Variable* VirtualMachine::declareVariable_aux(const VMTypeDef& typeDef, int32_t 
 
 Variable* VirtualMachine::declareVariable(int32_t methodIndex, AccessType access, const ReadableString& typeName, const ReadableString& name, bool initialize, const ReadableString& defaultValueText) {
 	if (this->getResource(name, methodIndex)) {
-		throwError("A resource named \"", name, "\" already exists! Be aware that resource names are case insensitive.\n");
+		throwError(U"A resource named \"", name, U"\" already exists! Be aware that resource names are case insensitive.\n");
 		return nullptr;
 	} else {
 		// Loop over type definitions to find a match
 		const VMTypeDef* typeDef = getMachineType(typeName);
 		if (typeDef) {
 			if (string_length(defaultValueText) > 0 && !typeDef->allowDefaultValue) {
-				throwError("The variable \"", name, "\" doesn't have an immediate constructor for \"", typeName, "\".\n");
+				throwError(U"The variable \"", name, U"\" doesn't have an immediate constructor for \"", typeName, U"\".\n");
 			}
 			return this->declareVariable_aux(*typeDef, methodIndex, access, name, initialize, defaultValueText);
 		} else {
-			throwError("Cannot declare variable of unknown type \"", typeName, "\"!\n");
+			throwError(U"Cannot declare variable of unknown type \"", typeName, U"\"!\n");
 			return nullptr;
 		}
 	}
@@ -196,27 +196,27 @@ VMA VirtualMachine::VMAfromText(int32_t methodIndex, const ReadableString& conte
 			ReadableString typeName = string_removeOuterWhiteSpace(string_inclusiveRange(content, leftIndex + 1, rightIndex - 1));
 			ReadableString remainder = string_removeOuterWhiteSpace(string_after(content, rightIndex));
 			if (string_length(remainder) > 0) {
-				throwError("No code allowed after > for in-place temp declarations!\n");
+				throwError(U"No code allowed after > for in-place temp declarations!\n");
 			}
 			Variable* resource = this->declareVariable(methodIndex, AccessType::Hidden, typeName, name, false, U"");
 			if (resource) {
 				return VMA(resource->typeDescription->dataType, resource->getGlobalIndex());
 			} else {
-				throwError("The resource \"", name, "\" could not be declared as \"", typeName, "\"!\n");
+				throwError(U"The resource \"", name, U"\" could not be declared as \"", typeName, U"\"!\n");
 				return VMA(FixedPoint());
 			}
 		} else if (leftIndex > -1) {
-			throwError("Using < without > for in-place temp allocation.\n");
+			throwError(U"Using < without > for in-place temp allocation.\n");
 			return VMA(FixedPoint());
 		} else if (rightIndex > -1) {
-			throwError("Using > without < for in-place temp allocation.\n");
+			throwError(U"Using > without < for in-place temp allocation.\n");
 			return VMA(FixedPoint());
 		} else {
 			Variable* resource = getResource(content, methodIndex);
 			if (resource) {
 				return VMA(resource->typeDescription->dataType, resource->getGlobalIndex());
 			} else {
-				throwError("The resource \"", content, "\" could not be found! Make sure that it's declared before being used.\n");
+				throwError(U"The resource \"", content, U"\" could not be found! Make sure that it's declared before being used.\n");
 				return VMA(FixedPoint());
 			}
 		}
@@ -235,7 +235,7 @@ void VirtualMachine::addReturnInstruction() {
 		if (memory.callStack.length() > 0) {
 			// Return to caller
 			#ifdef VIRTUAL_MACHINE_DEBUG_PRINT
-				printText("Returning from \"", machine.methods[memory.current.methodIndex].name, "\" to caller \"", machine.methods[memory.callStack.last().methodIndex].name, "\"\n");
+				printText(U"Returning from \"", machine.methods[memory.current.methodIndex].name, U"\" to caller \"", machine.methods[memory.callStack.last().methodIndex].name, U"\"\n");
 				machine.debugPrintMemory();
 			#endif
 			memory.current = memory.callStack.last();
@@ -243,7 +243,7 @@ void VirtualMachine::addReturnInstruction() {
 			memory.current.programCounter++;
 		} else {
 			#ifdef VIRTUAL_MACHINE_DEBUG_PRINT
-				printText("Returning from \"", machine.methods[memory.current.methodIndex].name, "\"\n");
+				printText(U"Returning from \"", machine.methods[memory.current.methodIndex].name, U"\"\n");
 			#endif
 			// Leave the virtual machine
 			memory.current.programCounter = -1;

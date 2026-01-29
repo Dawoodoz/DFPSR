@@ -34,7 +34,7 @@ using namespace dsr;
 // To be implemented outside of the core framework
 Handle<dsr::BackendWindow> createBackendWindow(const dsr::String& title, int32_t width, int32_t height);
 
-#define MUST_EXIST(OBJECT, METHOD) if (OBJECT.isNull()) { throwError("The " #OBJECT " handle was null in " #METHOD "\n"); }
+#define MUST_EXIST(OBJECT, METHOD) if (OBJECT.isNull()) { throwError(U"The " #OBJECT U" handle was null in " #METHOD U"\n"); }
 
 Window dsr::window_create(const String& title, int32_t width, int32_t height) {
 	if (width < 1) { width = 1; }
@@ -88,7 +88,7 @@ Component dsr::component_createWithInterfaceFromString(Component& parent, const 
 	MUST_EXIST(parent, component_createWithInterfaceFromString);
 	Component result = handle_dynamicCast<VisualComponent>(createPersistentClassFromText(content, fromPath));
 	if (result.isNull()) {
-		throwError(U"component_createWithInterfaceFromString: The component could not be created!\n\nLayout:\n", content, "\n");
+		throwError(U"component_createWithInterfaceFromString: The component could not be created!\n\nLayout:\n", content, U"\n");
 	}
 	parent->addChildComponent(result);
 	return result;
@@ -116,7 +116,7 @@ Component dsr::window_findComponentByName(const Window& window, const ReadableSt
 	MUST_EXIST(window, window_findComponentByName);
 	Component result = window->findComponentByName(name);
 	if (mustExist && result.isNull()) {
-		throwError(U"window_findComponentByName: No child component named ", name, " found!");
+		throwError(U"window_findComponentByName: No child component named ", name, U" found!");
 	}
 	return result;
 }
@@ -125,7 +125,7 @@ Component dsr::window_findComponentByNameAndIndex(const Window& window, const Re
 	MUST_EXIST(window, window_findComponentByNameAndIndex);
 	Component result = window->findComponentByNameAndIndex(name, index);
 	if (mustExist && result.isNull()) {
-		throwError(U"window_findComponentByName: No child component named ", name, " with index ", index, " found!");
+		throwError(U"window_findComponentByName: No child component named ", name, U" with index ", index, U" found!");
 	}
 	return result;
 }
@@ -307,7 +307,7 @@ ReturnCode dsr::component_setProperty(const Component& component, const Readable
 	Persistent* target = component->findAttribute(propertyName);
 	if (target == nullptr) {
 		if (mustAssign) {
-			throwError("component_setProperty: ", propertyName, " in ", component->getClassName(), " could not be found.\n");
+			throwError(U"component_setProperty: ", propertyName, U" in ", component->getClassName(), U" could not be found.\n");
 		}
 		return ReturnCode::KeyNotFound;
 	} else {
@@ -316,7 +316,7 @@ ReturnCode dsr::component_setProperty(const Component& component, const Readable
 			return ReturnCode::Good;
 		} else {
 			if (mustAssign) {
-				throwError("component_setProperty: The input ", value, " could not be assigned to property ", propertyName, " because of incorrect format.\n");
+				throwError(U"component_setProperty: The input ", value, U" could not be assigned to property ", propertyName, U" because of incorrect format.\n");
 			}
 			return ReturnCode::ParsingFailure;
 		}
@@ -331,7 +331,7 @@ String dsr::component_getProperty(const Component& component, const ReadableStri
 	Persistent* target = component->findAttribute(propertyName);
 	if (target == nullptr) {
 		if (mustExist) {
-			throwError("component_getProperty: ", propertyName, " in ", component->getClassName(), " could not be found.\n");
+			throwError(U"component_getProperty: ", propertyName, U" in ", component->getClassName(), U" could not be found.\n");
 		}
 		return U"";
 	} else {
@@ -344,12 +344,12 @@ ReturnCode dsr::component_setProperty_string(const Component& component, const R
 	PersistentString* stringTarget = dynamic_cast<PersistentString*>(target);
 	if (target == nullptr) {
 		if (mustAssign) {
-			throwError("component_setProperty_string: ", propertyName, " in ", component->getClassName(), " could not be found.\n");
+			throwError(U"component_setProperty_string: ", propertyName, U" in ", component->getClassName(), U" could not be found.\n");
 		}
 		return ReturnCode::KeyNotFound;
 	} else if (stringTarget == nullptr) {
 		if (mustAssign) {
-			throwError("component_setProperty_string: ", propertyName, " in ", component->getClassName(), " was a ", target->getClassName(), " instead of a string.\n");
+			throwError(U"component_setProperty_string: ", propertyName, U" in ", component->getClassName(), U" was a ", target->getClassName(), U" instead of a string.\n");
 		}
 		return ReturnCode::KeyNotFound;
 	} else {
@@ -364,12 +364,12 @@ String dsr::component_getProperty_string(const Component& component, const Reada
 	PersistentString* stringTarget = dynamic_cast<PersistentString*>(target);
 	if (target == nullptr) {
 		if (mustExist) {
-			throwError("component_getProperty_string: ", propertyName, " in ", component->getClassName(), " could not be found.\n");
+			throwError(U"component_getProperty_string: ", propertyName, U" in ", component->getClassName(), U" could not be found.\n");
 		}
 		return U"";
 	} else if (stringTarget == nullptr) {
 		if (mustExist) {
-			throwError("component_getProperty_string: ", propertyName, " in ", component->getClassName(), " was a ", target->getClassName(), " instead of a string.\n");
+			throwError(U"component_getProperty_string: ", propertyName, U" in ", component->getClassName(), U" was a ", target->getClassName(), U" instead of a string.\n");
 		}
 		return U"";
 	} else {
@@ -381,7 +381,7 @@ ReturnCode dsr::component_setProperty_integer(const Component& component, const 
 	Persistent* target = component->findAttribute(propertyName);
 	if (target == nullptr) {
 		if (mustAssign) {
-			throwError("component_setProperty_integer: ", propertyName, " in ", component->getClassName(), " could not be found.\n");
+			throwError(U"component_setProperty_integer: ", propertyName, U" in ", component->getClassName(), U" could not be found.\n");
 		}
 		return ReturnCode::KeyNotFound;
 	} else {
@@ -397,7 +397,7 @@ ReturnCode dsr::component_setProperty_integer(const Component& component, const 
 			return ReturnCode::Good;
 		} else {
 			if (mustAssign) {
-				throwError("component_setProperty_integer: ", propertyName, " in ", component->getClassName(), " was a ", target->getClassName(), " instead of an integer or boolean.\n");
+				throwError(U"component_setProperty_integer: ", propertyName, U" in ", component->getClassName(), U" was a ", target->getClassName(), U" instead of an integer or boolean.\n");
 			}
 			return ReturnCode::KeyNotFound;
 		}
@@ -408,7 +408,7 @@ int64_t dsr::component_getProperty_integer(const Component& component, const Rea
 	Persistent* target = component->findAttribute(propertyName);
 	if (target == nullptr) {
 		if (mustExist) {
-			throwError("component_getProperty_integer: ", propertyName, " in ", component->getClassName(), " could not be found.\n");
+			throwError(U"component_getProperty_integer: ", propertyName, U" in ", component->getClassName(), U" could not be found.\n");
 		}
 		return defaultValue;
 	} else {
@@ -420,7 +420,7 @@ int64_t dsr::component_getProperty_integer(const Component& component, const Rea
 			return booleanTarget->value;
 		} else {
 			if (mustExist) {
-				throwError("component_getProperty_integer: ", propertyName, " in ", component->getClassName(), " was a ", target->getClassName(), " instead of an integer or boolean.\n");
+				throwError(U"component_getProperty_integer: ", propertyName, U" in ", component->getClassName(), U" was a ", target->getClassName(), U" instead of an integer or boolean.\n");
 			}
 			return defaultValue;
 		}
@@ -432,7 +432,7 @@ ReturnCode dsr::component_setProperty_image(const Component& component, const Re
 	Persistent* target = component->findAttribute(propertyName);
 	if (target == nullptr) {
 		if (mustAssign) {
-			throwError("component_setProperty_image: ", propertyName, " in ", component->getClassName(), " could not be found.\n");
+			throwError(U"component_setProperty_image: ", propertyName, U" in ", component->getClassName(), U" could not be found.\n");
 		}
 		return ReturnCode::KeyNotFound;
 	} else {
@@ -443,7 +443,7 @@ ReturnCode dsr::component_setProperty_image(const Component& component, const Re
 			return ReturnCode::Good;
 		} else {
 			if (mustAssign) {
-				throwError("component_setProperty_image: ", propertyName, " in ", component->getClassName(), " was a ", target->getClassName(), " instead of an image.\n");
+				throwError(U"component_setProperty_image: ", propertyName, U" in ", component->getClassName(), U" was a ", target->getClassName(), U" instead of an image.\n");
 			}
 			return ReturnCode::KeyNotFound;
 		}
@@ -454,7 +454,7 @@ OrderedImageRgbaU8 dsr::component_getProperty_image(const Component& component, 
 	Persistent* target = component->findAttribute(propertyName);
 	if (target == nullptr) {
 		if (mustExist) {
-			throwError("component_getProperty_image: ", propertyName, " in ", component->getClassName(), " could not be found.\n");
+			throwError(U"component_getProperty_image: ", propertyName, U" in ", component->getClassName(), U" could not be found.\n");
 		}
 		return OrderedImageRgbaU8();
 	} else {
@@ -463,7 +463,7 @@ OrderedImageRgbaU8 dsr::component_getProperty_image(const Component& component, 
 			return imageTarget->value;
 		} else {
 			if (mustExist) {
-				throwError("component_getProperty_image: ", propertyName, " in ", component->getClassName(), " was a ", target->getClassName(), " instead of an image.\n");
+				throwError(U"component_getProperty_image: ", propertyName, U" in ", component->getClassName(), U" was a ", target->getClassName(), U" instead of an image.\n");
 			}
 			return OrderedImageRgbaU8();
 		}

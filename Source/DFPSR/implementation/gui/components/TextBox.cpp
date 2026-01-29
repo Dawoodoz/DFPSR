@@ -530,7 +530,7 @@ void TextBox::loadFont() {
 		this->font = font_getDefault();
 	}
 	if (!font_exists(this->font)) {
-		throwError("Failed to load the default font for a ListBox!\n");
+		throwError(U"Failed to load the default font for a ListBox!\n");
 	}
 }
 

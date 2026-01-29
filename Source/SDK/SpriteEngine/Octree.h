@@ -140,7 +140,7 @@ public:
 		// Make sure that the origin is inside of the owned bound by creating new parents until the point is covered
 		while (!this->insideOwnedBound(leaf.origin)) {
 			if (this->minOwnedBound.x < -100000000 || this->maxOwnedBound.x > 100000000) {
-				throwError("Cannot expand (", this->minOwnedBound, ")..(", this->maxOwnedBound, ") to include ", leaf.origin, "! The origin must be given to the correct side of the octree's root.\n");
+				throwError(U"Cannot expand (", this->minOwnedBound, U")..(", this->maxOwnedBound, U") to include ", leaf.origin, U"! The origin must be given to the correct side of the octree's root.\n");
 			}
 			// Create a new parent node containing the old one
 			OctreeNode newParent = OctreeNode(*this, this->getInnerBranchIndex(), this->minOwnedBound * 2, this->maxOwnedBound * 2);

@@ -192,7 +192,7 @@ public:
 		int32_t givenCount = machine_argCount(args...);
 		int32_t expectedCount = machine_getOutputCount(this->machine, this->methodIndex);
 		if (givenCount != expectedCount) {
-			throwError("The call to ", machine_getMethodName(this->machine, this->methodIndex), " expected ", expectedCount, " outputs, but ", givenCount, " references were assigned.\n");
+			throwError(U"The call to ", machine_getMethodName(this->machine, this->methodIndex), U" expected ", expectedCount, U" outputs, but ", givenCount, U" references were assigned.\n");
 		}
 		this->writeResults(0, args...);
 	}
@@ -229,7 +229,7 @@ public:
 		int32_t givenCount = machine_argCount(args...);
 		int32_t expectedCount = machine_getInputCount(this->machine, this->methodIndex);
 		if (givenCount != expectedCount) {
-			throwError("The call to ", machine_getMethodName(this->machine, this->methodIndex), " expected ", expectedCount, " inputs, but ", givenCount, " values were given.\n");
+			throwError(U"The call to ", machine_getMethodName(this->machine, this->methodIndex), U" expected ", expectedCount, U" inputs, but ", givenCount, U" values were given.\n");
 		}
 		this->setInputs(0, args...);
 		machine_executeMethod(this->machine, this->methodIndex);

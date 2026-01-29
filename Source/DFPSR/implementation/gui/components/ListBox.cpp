@@ -192,7 +192,7 @@ void ListBox::loadFont() {
 		this->font = font_getDefault();
 	}
 	if (!font_exists(this->font)) {
-		throwError("Failed to load the default font for a ListBox!\n");
+		throwError(U"Failed to load the default font for a ListBox!\n");
 	}
 }
 
@@ -276,7 +276,7 @@ String ListBox::call(const ReadableString &methodName, const ReadableString &arg
 		// Remove an element who's index is given in the only input argument
 		int64_t index = string_toInteger(arguments);
 		if (index < 0 || index >= this->list.value.length()) {
-			throwError("Index (", arguments, " = ", index, ") out of bound in RemoveElement!\n");
+			throwError(U"Index (", arguments, U" = ", index, U") out of bound in RemoveElement!\n");
 		}
 		this->list.value.remove(index);
 		this->limitSelection(true);

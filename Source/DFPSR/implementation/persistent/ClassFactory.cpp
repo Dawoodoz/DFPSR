@@ -76,10 +76,10 @@ Handle<Persistent> Persistent::getChild(int32_t index) const {
 void Persistent::setProperty(const ReadableString &key, const ReadableString &value, const ReadableString &fromPath) {
 	Persistent* target = this->findAttribute(key);
 	if (target == nullptr) {
-		printText("setProperty: ", key, " in ", this->getClassName(), " could not be found.\n");
+		printText(U"setProperty: ", key, U" in ", this->getClassName(), U" could not be found.\n");
 	} else {
 		if (!target->assignValue(value, fromPath)) {
-			printText("setProperty: The input ", value, " could not be assigned to property ", key, " because of incorrect format.\n");
+			printText(U"setProperty: The input ", value, U" could not be assigned to property ", key, U" because of incorrect format.\n");
 		}
 	}
 }
@@ -91,7 +91,7 @@ Persistent* Persistent::findAttribute(const ReadableString &name) {
 void Persistent::declareAttributes(StructureDefinition &target) const {}
 
 bool Persistent::assignValue(const ReadableString &content, const ReadableString &fromPath) {
-	printText("Warning! assignValue is not implemented for ", this->getClassName(), ".\n");
+	printText(U"Warning! assignValue is not implemented for ", this->getClassName(), U".\n");
 	return false;
 }
 
@@ -107,7 +107,7 @@ String& Persistent::toStreamIndented(String& out, const ReadableString& indentat
 		String name = structure->attributes[i].name;
 		Persistent* value = ((Persistent*)this)->findAttribute(name); // Override const
 		if (value == nullptr) {
-			printText("Warning! ", name, " in ", structure->name, " was declared but not found from findAttribute.\n");
+			printText(U"Warning! ", name, U" in ", structure->name, U" was declared but not found from findAttribute.\n");
 		} else {
 			string_append(out, nextIndentation, name, U" = ");
 			value->toStream(out);

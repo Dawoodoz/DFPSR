@@ -33,8 +33,8 @@
 namespace dsr {
 
 // Helper functions for collections.
-void impl_nonZeroLengthCheck(int64_t length, const char* property);
-void impl_baseZeroBoundCheck(int64_t index, int64_t length, const char* property);
+void impl_nonZeroLengthCheck(int64_t length, const char32_t* property);
+void impl_baseZeroBoundCheck(int64_t index, int64_t length, const char32_t* property);
 
 }
 
