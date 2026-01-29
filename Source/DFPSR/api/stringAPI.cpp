@@ -69,8 +69,16 @@ ReadableString::ReadableString(const DsrChar *content)
 : view(content, strlen_utf32(content)) {}
 
 String::String() {}
-String::String(const char* source) { atomic_append_ascii(*this, source); }
+#ifndef BAN_IMPLICIT_ASCII_CONVERSION
+	String::String(const char* source) { atomic_append_ascii(*this, source); }
+#endif
 String::String(const DsrChar* source) { atomic_append_utf32(*this, source); }
+
+String dsr::string_fromAscii(const char *text) {
+	String result;
+	atomic_append_ascii(result, text);
+	return result;
+}
 
 String& Printable::toStream(String& target) const {
 	return this->toStreamIndented(target, U"");

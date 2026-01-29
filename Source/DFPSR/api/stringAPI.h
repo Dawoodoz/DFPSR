@@ -30,6 +30,7 @@
 #include "../base/SafePointer.h"
 #include "../base/DsrTraits.h"
 #include "../collection/List.h"
+#include "../settings.h"
 
 // Define DSR_INTERNAL_ACCESS before any include to get internal access to exposed types
 #ifdef DSR_INTERNAL_ACCESS
@@ -157,7 +158,9 @@ class String : public ReadableString {
 public:
 	// Constructors.
 	String();
-	String(const char* source);
+	#ifndef BAN_IMPLICIT_ASCII_CONVERSION
+		String(const char* source);
+	#endif
 	String(const DsrChar* source);
 	// Destructor.
 	~String() {}
@@ -475,6 +478,8 @@ void string_fromDouble(String& target, double value, int decimalCount = 6, bool 
 inline String string_fromDouble(double value, int decimalCount = 6, bool removeTrailingZeroes = true, DsrChar decimalCharacter = U'.', DsrChar negationCharacter = U'-') {
 	String result; string_fromDouble(result, value, decimalCount, removeTrailingZeroes, decimalCharacter, negationCharacter); return result;
 }
+// When BAN_IMPLICIT_ASCII_CONVERSION is defined, this is the only constructor for creating a String from "" instead of U"".
+String string_fromAscii(const char *text);
 // Loading will try to find a byte order mark and can handle UTF-8 and UTF-16.
 //   Failure to find a byte order mark will assume that the file's content is raw Latin-1,
 //   because automatic detection would cause random behaviour.

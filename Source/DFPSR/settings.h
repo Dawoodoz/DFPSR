@@ -11,6 +11,9 @@
 		#define DSR_HARD_EXIT_ON_ERROR
 	#endif
 
+	// Enable to ban any implicit string conversion from Ascii to Unicode, so that accidentally writing "" instead of U"" does not create temporary heap allocations.
+	//#define BAN_IMPLICIT_ASCII_CONVERSION
+
 	// If EXTRA_SAFE_POINTER_CHECKS is defined, debug mode will let SafePointer perform thread and allocation identity checks.
 	//     Makes sure that the accessed memory has not been freed, recycled or shared with the wrong thread.
 	//     This will make memory access super slow but catch more memory errors when basic bound checks are not enough.
