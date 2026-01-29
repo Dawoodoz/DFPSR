@@ -94,7 +94,7 @@ String& print_collection_1D_multiline(String& target, const T& collection, const
 	string_append(target, indentation, U"{\n");
 	intptr_t maxIndex = collection.length() - 1;
 	for (intptr_t i = 0; i <= maxIndex; i++) {
-		string_toStreamIndented(target, collection[i], indentation + "\t");
+		string_toStreamIndented(target, collection[i], indentation + U"\t");
 		if (i < maxIndex) {
 			string_append(target, U",");
 		}
@@ -134,7 +134,7 @@ String& string_toStreamIndented(String& target, const Field<T>& collection, cons
 	for (intptr_t y = 0; y <= maxY; y++) {
 		string_append(target, indentation, U"\t{\n");
 		for (intptr_t x = 0; x <= maxX; x++) {
-			string_toStreamIndented(target, collection.unsafe_readAccess(IVector2D(x, y)), indentation + "\t\t");
+			string_toStreamIndented(target, collection.unsafe_readAccess(IVector2D(x, y)), indentation + U"\t\t");
 			if (x < maxX) {
 				string_append(target, U",");
 			}

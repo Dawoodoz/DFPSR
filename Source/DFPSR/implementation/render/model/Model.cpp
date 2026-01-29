@@ -31,15 +31,15 @@
 
 using namespace dsr;
 
-#define CHECK_PART_INDEX(PART_INDEX, EXIT_STMT) if (PART_INDEX < 0 || PART_INDEX >= this->partBuffer.length()) { printText("Part index ", PART_INDEX, " is out of range 0..", this->partBuffer.length() - 1, "!\n"); EXIT_STMT; }
-#define CHECK_POLYGON_INDEX(PART_PTR, POLYGON_INDEX, EXIT_STMT) if (POLYGON_INDEX < 0 || POLYGON_INDEX >= PART_PTR->polygonBuffer.length()) { printText("Polygon index ", POLYGON_INDEX, " is out of range 0..", PART_PTR->polygonBuffer.length() - 1, "!\n"); EXIT_STMT; }
-#define CHECK_POINT_INDEX(POINT_INDEX, EXIT_STMT) if (POINT_INDEX < 0 || POINT_INDEX >= this->positionBuffer.length()) { printText("Position index ", POINT_INDEX, " is out of range 0..", this->positionBuffer.length() - 1, "!\n"); EXIT_STMT; }
+#define CHECK_PART_INDEX(PART_INDEX, EXIT_STMT) if (PART_INDEX < 0 || PART_INDEX >= this->partBuffer.length()) { printText(U"Part index ", PART_INDEX, U" is out of range 0..", this->partBuffer.length() - 1, U"!\n"); EXIT_STMT; }
+#define CHECK_POLYGON_INDEX(PART_PTR, POLYGON_INDEX, EXIT_STMT) if (POLYGON_INDEX < 0 || POLYGON_INDEX >= PART_PTR->polygonBuffer.length()) { printText(U"Polygon index ", POLYGON_INDEX, U" is out of range 0..", PART_PTR->polygonBuffer.length() - 1, U"!\n"); EXIT_STMT; }
+#define CHECK_POINT_INDEX(POINT_INDEX, EXIT_STMT) if (POINT_INDEX < 0 || POINT_INDEX >= this->positionBuffer.length()) { printText(U"Position index ", POINT_INDEX, U" is out of range 0..", this->positionBuffer.length() - 1, U"!\n"); EXIT_STMT; }
 #define CHECK_PART_POLYGON_INDEX(PART_INDEX, POLYGON_INDEX, EXIT_STMT) { \
 	CHECK_PART_INDEX(PART_INDEX, EXIT_STMT); \
 	const Part *PartPtr = &(this->partBuffer[PART_INDEX]); \
 	CHECK_POLYGON_INDEX(PartPtr, POLYGON_INDEX, EXIT_STMT); \
 }
-#define CHECK_VERTEX_INDEX(VERTEX_INDEX, EXIT_STMT) if (VERTEX_INDEX < 0 || VERTEX_INDEX > 3) { printText("Vertex index ", VERTEX_INDEX, " is out of the fixed range 0..3 for triangles and quads!\n"); EXIT_STMT; }
+#define CHECK_VERTEX_INDEX(VERTEX_INDEX, EXIT_STMT) if (VERTEX_INDEX < 0 || VERTEX_INDEX > 3) { printText(U"Vertex index ", VERTEX_INDEX, U" is out of the fixed range 0..3 for triangles and quads!\n"); EXIT_STMT; }
 
 Polygon::Polygon(const Vertex &vertA, const Vertex &vertB, const Vertex &vertC) {
 	this->pointIndices[0] = vertA.pointIndex;
@@ -230,7 +230,7 @@ void ModelImpl::setPartName(int32_t partIndex, const String &name) {
 	this->partBuffer[partIndex].name = name;
 }
 String ModelImpl::getPartName(int32_t partIndex) const {
-	CHECK_PART_INDEX(partIndex, return "");
+	CHECK_PART_INDEX(partIndex, return U"");
 	return this->partBuffer[partIndex].name;
 }
 TextureRgbaU8 ModelImpl::getDiffuseMap(int32_t partIndex) const {

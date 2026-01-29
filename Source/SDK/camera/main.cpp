@@ -168,7 +168,7 @@ void dsrMain(List<String> args) {
 
 	// Create a room model
 	Model roomModel = createRoomModel(roomMinimum, roomMaximum);
-	model_setDiffuseMapByName(roomModel, 0, pool, "Grid");
+	model_setDiffuseMapByName(roomModel, 0, pool, U"Grid");
 
 	// Create a renderer for multi-threading
 	Renderer worker = renderer_create();

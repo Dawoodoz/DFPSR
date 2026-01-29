@@ -33,7 +33,7 @@ public:
 	PERSISTENT_DECLARATION(PersistentString)
 	String value;
 public:
-	PersistentString() : value("") {}
+	PersistentString() : value(U"") {}
 	// Because the constructor from text is used for serialization, an explicit constructor must be used to avoid mangling
 	static PersistentString unmangled(const ReadableString &text);
 public:

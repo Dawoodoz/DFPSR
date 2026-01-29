@@ -128,11 +128,11 @@ Handle<VisualComponent> DsrWindow::getRootComponent() const {
 
 void DsrWindow::resetInterface() {
 	// Create an empty main panel
-	this->mainPanel = handle_dynamicCast<VisualComponent>(createPersistentClass("Panel"));
+	this->mainPanel = handle_dynamicCast<VisualComponent>(createPersistentClass(U"Panel"));
 	if (this->mainPanel.isNull()) {
 		throwError(U"DsrWindow::resetInterface: The window's Panel could not be created!");
 	}
-	this->mainPanel->setName("mainPanel");
+	this->mainPanel->setName(U"mainPanel");
 	// Inherit handle to backend window to access the clipboard.
 	this->mainPanel->window = this->backend;
 	this->applyLayout();
@@ -144,7 +144,7 @@ void DsrWindow::loadInterfaceFromString(String layout, const ReadableString &fro
 	// Re-assign the backend window handle
 	setBackendWindowHandle(this->mainPanel, this->backend);
 	if (this->mainPanel.isNull()) {
-		throwError(U"DsrWindow::loadInterfaceFromString: The window's root component could not be created!\n\nLayout:\n", layout, "\n");
+		throwError(U"DsrWindow::loadInterfaceFromString: The window's root component could not be created!\n\nLayout:\n", layout, U"\n");
 	}
 	this->applyLayout();
 }
