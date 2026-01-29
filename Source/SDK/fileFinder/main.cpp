@@ -9,33 +9,33 @@ using namespace dsr;
 
 void exploreFolder(const ReadableString& folderPath, const ReadableString& indentation) {
 	if (!file_getFolderContent(folderPath, [indentation](const ReadableString& entryPath, const ReadableString& entryName, EntryType entryType) {
-		printText(indentation, "* Entry: ", entryName, " as ", entryType, "\n");
+		printText(indentation, U"* Entry: ", entryName, U" as ", entryType, U"\n");
 		if (entryType == EntryType::Folder) {
-			exploreFolder(entryPath, indentation + "  ");
+			exploreFolder(entryPath, indentation + U"  ");
 		}
 	})) {
-		printText("Failed to explore ", folderPath, "\n");
+		printText(U"Failed to explore ", folderPath, U"\n");
 	}
 }
 
 DSR_MAIN_CALLER(dsrMain)
 void dsrMain(List<String> args) {
-	printText("Input arguments:\n");
+	printText(U"Input arguments:\n");
 	for (int32_t a = 0; a < args.length(); a++) {
-		printText("  args[", a, "] = ", args[a], "\n");
+		printText(U"  args[", a, U"] = ", args[a], U"\n");
 	}
 	String absolutePath = file_getAbsolutePath(args[0]);
-	printText("Absolute path = ", absolutePath, "\n");
+	printText(U"Absolute path = ", absolutePath, U"\n");
 	if (args.length() > 1) {
 		// Explore each listed folder from input arguments.
 		for (int32_t a = 1; a < args.length(); a++) {
-			printText("Exploring ", args[a], "\n");
+			printText(U"Exploring ", args[a], U"\n");
 			exploreFolder(args[a], U"  ");
 		}
 	} else {
 		// Test program on the current path when nothing was entered.
 		String applicationFolder = file_getApplicationFolder();
-		printText("Exploring ", applicationFolder, " because no folders were given.\n");
+		printText(U"Exploring ", applicationFolder, U" because no folders were given.\n");
 		exploreFolder(applicationFolder, U"  ");
 	}
 }

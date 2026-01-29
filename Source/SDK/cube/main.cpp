@@ -100,7 +100,7 @@ void dsrMain(List<String> args) {
 
 	// Create a cube model
 	Model cubeModel = createCubeModel(FVector3D(-0.5f), FVector3D(0.5f));
-	model_setDiffuseMapByName(cubeModel, 0, pool, "RGB");
+	model_setDiffuseMapByName(cubeModel, 0, pool, U"RGB");
 	model_setFilter(cubeModel, Filter::Alpha);
 
 	// Import models

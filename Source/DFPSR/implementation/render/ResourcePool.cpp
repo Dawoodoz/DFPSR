@@ -52,31 +52,31 @@ int32_t BasicResourcePool::findTextureRgba(const ReadableString& name) const {
 
 const ImageRgbaU8 BasicResourcePool::fetchImageRgba(const ReadableString& name) {
 	ImageRgbaU8 result;
-	// Using "" will return an empty reference to allow removing textures
+	// Using U"" will return an empty reference to allow removing textures
 	if (string_length(name) > 0) {
 		int32_t existingIndex = this->findImageRgba(name);
 		if (existingIndex > -1) {
 			result = this->imageRgbaList[existingIndex].resource;
 		} else if (string_findFirst(name, U'.') > -1) {
-			throwError("The image \"", name, "\" had a forbidden dot in the name. Images in resource pools are fetched without the extension to allow changing image format without changing what it's called in other resources.\n");
+			throwError(U"The image \"", name, U"\" had a forbidden dot in the name. Images in resource pools are fetched without the extension to allow changing image format without changing what it's called in other resources.\n");
 		} else if (string_findFirst(name, U'/') > -1 && string_findFirst(name, U'\\') > -1) {
-			throwError("The image \"", name, "\" contained a path separator, which is not allowed because of ambiguity. The same file can have multiple paths to the same folder and multiple files can have the same name in different folders.\n");
+			throwError(U"The image \"", name, U"\" contained a path separator, which is not allowed because of ambiguity. The same file can have multiple paths to the same folder and multiple files can have the same name in different folders.\n");
 		} else {
 			// Look for a png image
 			const String extensionless = file_combinePaths(this->path, name);
-			result = image_load_RgbaU8(extensionless + ".png", false);
+			result = image_load_RgbaU8(extensionless + U".png", false);
 			// Look for gif
 			if (!image_exists(result)) {
-				result = image_load_RgbaU8(extensionless + ".gif", false);
+				result = image_load_RgbaU8(extensionless + U".gif", false);
 			}
 			// Look for jpg
 			if (!image_exists(result)) {
-				result = image_load_RgbaU8(extensionless + ".jpg", false);
+				result = image_load_RgbaU8(extensionless + U".jpg", false);
 			}
 			if (image_exists(result)) {
 				this->imageRgbaList.push(namedEntry<ImageRgbaU8>(name, result));
 			} else {
-				printText("The image ", extensionless, ".* couldn't be loaded as either png, gif nor jpg!\n");
+				printText(U"The image ", extensionless, U".* couldn't be loaded as either png, gif nor jpg!\n");
 			}
 		}
 	}
@@ -85,7 +85,7 @@ const ImageRgbaU8 BasicResourcePool::fetchImageRgba(const ReadableString& name) 
 
 const TextureRgbaU8 BasicResourcePool::fetchTextureRgba(const ReadableString& name, int32_t resolutions) {
 	TextureRgbaU8 result;
-	// Using "" will return an empty reference to allow removing textures
+	// Using U"" will return an empty reference to allow removing textures
 	if (string_length(name) > 0) {
 		int32_t existingTextureIndex = this->findTextureRgba(name);
 		int32_t existingImageIndex = this->findImageRgba(name);
