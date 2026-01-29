@@ -23,6 +23,7 @@
 
 // If you get segmentation faults despite using SafePointer, make sure to compile a debug version of the program to activate safety checks.
 //   In debug mode, bound checks make sure that memory access do not go a single bit outside of the allowed region.
+//   The allowed region will unually include padding for SIMD vectorization.
 
 // If SafePointer is constructed with a pointer to the allocation head and its allocation identity (when the memory is allocated by the framework), more safety checks are done in debug mode.
 //   The allocation identity is a 64-bit nonce stored in both the allocation's head and SafePointer, making sure that the memory accessed has not been freed or reused for something else.
@@ -47,10 +48,10 @@ namespace dsr {
 template<typename T>
 class SafePointer {
 private:
-	// A pointer from permittedStart to permittedEnd
-	//   Mutable because only the data being pointed to is write protected in a const SafePointer
+	// This pointer is the only member that will remain in release mode, ensuring zero overhead in the final release.
 	T *data;
 public:
+	// Additional information about the pointer is included in debug mode for tighter bound checks and error messages that actually hint what the error might be.
 	#ifdef SAFE_POINTER_CHECKS
 		// Points to the first accessible byte, which should have the same alignment as the data pointer.
 		T *permittedStart;
