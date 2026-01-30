@@ -5,14 +5,7 @@
   Follow include "", but not include <> when listing types.
 */
 
-// Only fileAPI.h is needed to also get stringAPI, bufferAPI, SafePointer.h and List.h.
-// Needs to compile and link with:
-//   DFPSR/collection/collections.cpp
-//   DFPSR/api/fileAPI.cpp
-//   DFPSR/api/bufferAPI.cpp
-//   DFPSR/api/stringAPI.cpp
-//   DFPSR/base/SafePointer.cpp
-#include "../../Source/DFPSR/includeEssentials.h"
+#include "../../DFPSR/includeEssentials.h"
 
 using namespace dsr;
 
@@ -133,12 +126,15 @@ void processFolder(const ReadableString& sourceFolderPath, const ReadableString&
 			// TODO: Create new output folders if needed for nested output.
 			//processFolder(sourcePath, file_combinePaths(targetFolderPath, entryName));
 		} else if (entryType == EntryType::File) {
-			ReadableString extensionless = getExtensionless(entryName);
-			String targetPath = file_combinePaths(targetFolderPath, extensionless + U".html");
-			printText(U"Generating ", targetPath, U" from ", sourcePath, U" using the style ", resourceFolderPath, U"\n");
-			String content = string_load(sourcePath);
-			String result = generateHtml(content);
-			string_save(file_combinePaths(targetFolderPath, targetPath), result);
+			ReadableString inputExtension = file_getExtension(entryName);
+			if (string_caseInsensitiveMatch(inputExtension, U"TXT")) {
+				ReadableString extensionless = getExtensionless(entryName);
+				String targetPath = file_combinePaths(targetFolderPath, extensionless + U".html");
+				printText(U"Generating ", targetPath, U" from ", sourcePath, U" using the style ", resourceFolderPath, U"\n");
+				String content = string_load(sourcePath);
+				String result = generateHtml(content);
+				string_save(file_combinePaths(targetFolderPath, targetPath), result);
+			}
 		}
 	});
 }
