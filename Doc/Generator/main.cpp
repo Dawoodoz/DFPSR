@@ -59,10 +59,10 @@ void processContent(String &target, String content) {
 				ReadableString link = string_removeOuterWhiteSpace(string_before(arguments, splitIndex));
 				ReadableString text = string_removeOuterWhiteSpace(string_after(arguments, splitIndex));
 				//printText(U"    Link to ", link, U" as ", text, U"\n");
-				string_append(target, U"<A href=\"", link, "\">", text, "</A>");
+				string_append(target, U"<A href=\"", link, U"\">", text, U"</A>");
 			} else {
 				//printText(U"    Link to ", arguments, U"\n");
-				string_append(target, U"<A href=\"", arguments, "\">", arguments, "</A>");
+				string_append(target, U"<A href=\"", arguments, U"\">", arguments, U"</A>");
 			}
 		} else if (string_beginsWith(section, U"Image:")) {
 			ReadableString arguments = string_from(section, 6);
@@ -71,10 +71,10 @@ void processContent(String &target, String content) {
 				ReadableString image = string_removeOuterWhiteSpace(string_before(arguments, splitIndex));
 				ReadableString text = string_removeOuterWhiteSpace(string_after(arguments, splitIndex));
 				//printText(U"    Image at ", image, U" as ", text, U"\n");
-				string_append(target, U"<IMG SRC=\"", image, "\" ALT=\"", text, "\">\n");
+				string_append(target, U"<IMG SRC=\"", image, U"\" ALT=\"", text, U"\">\n");
 			} else {
 				//printText(U"    Image at ", arguments, U"\n");
-				string_append(target, U"<IMG SRC=\"", arguments, "\" ALT=\"\">\n");
+				string_append(target, U"<IMG SRC=\"", arguments, U"\" ALT=\"\">\n");
 			}
 		} else if (string_beginsWith(section, U"Title:")) {
 			ReadableString title = string_from(section, 6);
