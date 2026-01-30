@@ -1,0 +1,68 @@
+﻿<- Manual.html | Back to main page
+
+Title: Choosing storage
+
+The terms "safe" and "unsafe" are relative to the context.
+A low level pointer is considered safe from having bound checks in debug mode, because it is supposed to be bruteforce tested in debug mode to catch all bugs.
+A high level collection is considered unsafe if it does not have bound checks in release mode, because collections are used for more complex control flow where bruteforce testing might not be enough.
+
+---
+Title2: Buffer and SafePointer
+
+*
+Source/DFPSR/api/bufferAPI.h
+
+*
+Source/DFPSR/base/SafePointer.h
+
+The fastest way to access data is to use Buffer and SafePointer.
+Buffer replaces raw memory allocations, is responsible for ownership using automatic reference counting, and is padded and aligned for SIMD vectorization by default.
+SafePointer replaces raw pointers with zero overhead in release mode and safety checks in debug mode.
+
+Image: Images/Warning.png | Warning
+While Buffer aligns the start for you, it does not know which data types you are storing inside of it.
+Make sure that the innermost types (such as integers and floats) are aligned by their own size to ensure good performance and avoid crashes on certain processors that do not support unaligned access.
+
+---
+Title2: FixedArray
+
+*
+Source/DFPSR/collection/FixedArray
+
+For small fixed size allocations, FixedArray is the simplest of all collections by allocating all data directly in the head without pointing anywhere else in the memory.
+The [] operator is bound checked by default in release mode, but if you only want bound checks in debug mode, you can call unsafe_readAccess or unsafe_writeAccess instead.
+
+---
+Title2: Array
+
+*
+Source/DFPSR/collection/Array
+
+When you know the size to allocate ahead of time but it is large or you do not know it in compile time, Array allows dynamically allocating the data.
+The [] operator is bound checked by default in release mode, but if you only want bound checks in debug mode, you can call unsafe_readAccess or unsafe_writeAccess instead.
+To change the size, assign a new array in its place constructed with different dimensions.
+
+---
+Title2: Field
+
+*
+Source/DFPSR/collection/Field
+
+Field is a slow but convenient wrapper around Array that simplifies two-dimensional storage.
+Rows are not padded, which preserves memory but makes access slower.
+Ideal for reference implementations, quick prototypes and things that will not become a performance bottleneck.
+If you only need to store unsigned integers or floats, consider using multiple images instead, for easy visualization of results.
+
+---
+Title2: List
+
+*
+Source/DFPSR/collection/List
+
+List is an array based list with continuous memory.
+The [] operator is always bound checked.
+
+Image: Images/Warning.png | Warning
+Reserving memory or adding elements to List may cause reallocation of the buffer, which may invalidate any pointers and references to the data.
+Never change the size of a list while iterating over the elements using pointers.
+Deleting elements from List should be done by looping backwards by index, so that the loop is always entering regions not affected by element removal.
