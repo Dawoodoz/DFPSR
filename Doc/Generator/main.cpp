@@ -12,7 +12,7 @@
 //   DFPSR/api/bufferAPI.cpp
 //   DFPSR/api/stringAPI.cpp
 //   DFPSR/base/SafePointer.cpp
-#include "../../Source/DFPSR/api/fileAPI.h"
+#include "../../Source/DFPSR/includeEssentials.h"
 
 using namespace dsr;
 
