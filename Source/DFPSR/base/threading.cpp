@@ -49,7 +49,7 @@ int32_t getThreadCount() {
 	#endif
 }
 
-void threadedWorkByIndex(std::function<void(void *context, int32_t jobIndex)> job, void *context, int32_t jobCount, int32_t maxThreadCount) {
+void threadedWorkByIndex(Callback<void(void *context, int32_t jobIndex)> job, void *context, int32_t jobCount, int32_t maxThreadCount) {
 	#ifdef DISABLE_MULTI_THREADING
 		// Reference implementation
 		for (int32_t i = 0; i < jobCount; i++) {
@@ -79,6 +79,7 @@ void threadedWorkByIndex(std::function<void(void *context, int32_t jobIndex)> jo
 			} else {
 				// A shared counter protected by getTaskLock.
 				int32_t nextJobIndex = 0;
+				// std::async can not replace std::function with a custom implementation, so Callback is not used here.
 				DestructibleVirtualStackAllocation<std::function<void()>> workers(workerCount);
 				DestructibleVirtualStackAllocation<std::future<void>> helpers(helperCount);
 				for (int32_t w = 0; w < workerCount; w++) {
@@ -113,7 +114,7 @@ void threadedWorkByIndex(std::function<void(void *context, int32_t jobIndex)> jo
 	#endif
 }
 
-void threadedWorkFromArray(std::function<void()>* jobs, int32_t jobCount, int32_t maxThreadCount) {
+void threadedWorkFromArray(Callback<void()>* jobs, int32_t jobCount, int32_t maxThreadCount) {
 	#ifdef DISABLE_MULTI_THREADING
 		// Reference implementation
 		for (int32_t i = 0; i < jobCount; i++) {
@@ -143,6 +144,7 @@ void threadedWorkFromArray(std::function<void()>* jobs, int32_t jobCount, int32_
 			} else {
 				// A shared counter protected by getTaskLock.
 				int32_t nextJobIndex = 0;
+				// std::async can not replace std::function with a custom implementation, so Callback is not used here.
 				DestructibleVirtualStackAllocation<std::function<void()>> workers(workerCount);
 				DestructibleVirtualStackAllocation<std::future<void>> helpers(helperCount);
 				for (int32_t w = 0; w < workerCount; w++) {
@@ -177,18 +179,18 @@ void threadedWorkFromArray(std::function<void()>* jobs, int32_t jobCount, int32_
 	#endif
 }
 
-void threadedWorkFromArray(SafePointer<std::function<void()>> jobs, int32_t jobCount, int32_t maxThreadCount) {
+void threadedWorkFromArray(SafePointer<Callback<void()>> jobs, int32_t jobCount, int32_t maxThreadCount) {
 	threadedWorkFromArray(jobs.getUnsafe(), jobCount, maxThreadCount);
 }
 
-void threadedWorkFromList(List<std::function<void()>> jobs, int32_t maxThreadCount) {
+void threadedWorkFromList(List<Callback<void()>> jobs, int32_t maxThreadCount) {
 	if (jobs.length() > 0) {
 		threadedWorkFromArray(&jobs[0], jobs.length(), maxThreadCount);
 	}
 	jobs.clear();
 }
 
-void threadedSplit(int32_t startIndex, int32_t stopIndex, std::function<void(int32_t startIndex, int32_t stopIndex)> task, int32_t minimumJobSize, int32_t jobsPerThread) {
+void threadedSplit(int32_t startIndex, int32_t stopIndex, Callback<void(int32_t startIndex, int32_t stopIndex)> task, int32_t minimumJobSize, int32_t jobsPerThread) {
 	#ifndef DISABLE_MULTI_THREADING
 		int32_t totalCount = stopIndex - startIndex;
 		int32_t maxJobs = totalCount / minimumJobSize;
@@ -203,7 +205,7 @@ void threadedSplit(int32_t startIndex, int32_t stopIndex, std::function<void(int
 		task(startIndex, stopIndex);
 	} else {
 		// Use multiple threads
-		DestructibleVirtualStackAllocation<std::function<void()>> jobs(jobCount);
+		DestructibleVirtualStackAllocation<Callback<void()>> jobs(jobCount);
 		int32_t givenRow = startIndex;
 		for (int32_t s = 0; s < jobCount; s++) {
 			int32_t remainingJobs = jobCount - s;
@@ -220,11 +222,11 @@ void threadedSplit(int32_t startIndex, int32_t stopIndex, std::function<void(int
 	}
 }
 
-void threadedSplit_disabled(int32_t startIndex, int32_t stopIndex, std::function<void(int32_t startIndex, int32_t stopIndex)> task) {
+void threadedSplit_disabled(int32_t startIndex, int32_t stopIndex, Callback<void(int32_t startIndex, int32_t stopIndex)> task) {
 	task(startIndex, stopIndex);
 }
 
-void threadedSplit(const IRect& bound, std::function<void(const IRect& bound)> task, int32_t minimumRowsPerJob, int32_t jobsPerThread) {
+void threadedSplit(const IRect& bound, Callback<void(const IRect& bound)> task, int32_t minimumRowsPerJob, int32_t jobsPerThread) {
 	#ifndef DISABLE_MULTI_THREADING
 		int32_t maxJobs = bound.height() / minimumRowsPerJob;
 		int32_t jobCount = getThreadCount() * jobsPerThread;
@@ -238,7 +240,7 @@ void threadedSplit(const IRect& bound, std::function<void(const IRect& bound)> t
 		task(bound);
 	} else {
 		// Use multiple threads
-		DestructibleVirtualStackAllocation<std::function<void()>> jobs(jobCount);
+		DestructibleVirtualStackAllocation<Callback<void()>> jobs(jobCount);
 		int32_t givenRow = bound.top();
 		for (int32_t s = 0; s < jobCount; s++) {
 			int32_t remainingJobs = jobCount - s;
@@ -255,7 +257,7 @@ void threadedSplit(const IRect& bound, std::function<void(const IRect& bound)> t
 	}
 }
 
-void threadedSplit_disabled(const IRect& bound, std::function<void(const IRect& bound)> task) {
+void threadedSplit_disabled(const IRect& bound, Callback<void(const IRect& bound)> task) {
 	task(bound);
 }
 

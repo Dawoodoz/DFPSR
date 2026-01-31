@@ -134,7 +134,7 @@ static void generateCharacterRange(String &result, DsrChar firstIn, DsrChar last
 	}
 }
 // Pre-condition: The transform function must change at least one character.
-static String generateCharacterMapping(std::function<DsrChar(const DsrChar character)> transform, DsrChar first, DsrChar last) {
+static String generateCharacterMapping(Callback<DsrChar(const DsrChar character)> transform, DsrChar first, DsrChar last) {
 	String result;
 	int64_t rangeStart = -1;
 	int64_t rangeEnd = -1;
@@ -965,11 +965,11 @@ void dsr::string_fromDouble(String& target, double value, int decimalCount, bool
 
 // A function definition for receiving a stream of bytes
 //   Instead of using std's messy inheritance
-using ByteWriterFunction = std::function<void(uint8_t value)>;
+using ByteWriterFunction = Callback<void(uint8_t value)>;
 
 // A function definition for receiving a stream of UTF-32 characters
 //   Instead of using std's messy inheritance
-using UTF32WriterFunction = std::function<void(DsrChar character)>;
+using UTF32WriterFunction = Callback<void(DsrChar character)>;
 
 // Filter out unwanted characters for improved portability
 static void feedCharacter(const UTF32WriterFunction &receiver, DsrChar character) {
@@ -1486,7 +1486,7 @@ static std::ostream& toStream(std::ostream& out, const ReadableString &source) {
 	return out;
 }
 
-static const std::function<void(const ReadableString &message, MessageType type)> defaultMessageAction = [](const ReadableString &message, MessageType type) {
+static const Callback<void(const ReadableString &message, MessageType type)> defaultMessageAction = [](const ReadableString &message, MessageType type) {
 	if (type == MessageType::Error) {
 		#ifdef DSR_HARD_EXIT_ON_ERROR
 			// Print the error.
@@ -1506,7 +1506,7 @@ static const std::function<void(const ReadableString &message, MessageType type)
 	}
 };
 
-static std::function<void(const ReadableString &message, MessageType type)> globalMessageAction = defaultMessageAction;
+static Callback<void(const ReadableString &message, MessageType type)> globalMessageAction = defaultMessageAction;
 
 void dsr::string_sendMessage(const ReadableString &message, MessageType type) {
 	globalMessageAction(message, type);
@@ -1516,7 +1516,7 @@ void dsr::string_sendMessage_default(const ReadableString &message, MessageType 
 	defaultMessageAction(message, type);
 }
 
-void dsr::string_assignMessageHandler(std::function<void(const ReadableString &message, MessageType type)> newHandler) {
+void dsr::string_assignMessageHandler(Callback<void(const ReadableString &message, MessageType type)> newHandler) {
 	globalMessageAction = newHandler;
 }
 
@@ -1524,7 +1524,7 @@ void dsr::string_unassignMessageHandler() {
 	globalMessageAction = defaultMessageAction;
 }
 
-void dsr::string_split_callback(std::function<void(ReadableString separatedText)> action, const ReadableString& source, DsrChar separator, bool removeWhiteSpace) {
+void dsr::string_split_callback(Callback<void(ReadableString separatedText)> action, const ReadableString& source, DsrChar separator, bool removeWhiteSpace) {
 	intptr_t sectionStart = 0;
 	for (intptr_t i = 0; i < source.view.length; i++) {
 		DsrChar c = source[i];

@@ -790,7 +790,7 @@ namespace dsr {
 		unlockMemory();
 	}
 
-	static void forAllHeapAllocations(HeapMemory &heap, std::function<void(AllocationHeader * header, void * allocation)> callback) {
+	static void forAllHeapAllocations(HeapMemory &heap, Callback<void(AllocationHeader * header, void * allocation)> callback) {
 		uint8_t * current = heap.allocationPointer;
 		while (current < heap.bottom) {
 			HeapHeader *header = (HeapHeader*)current;
@@ -802,7 +802,7 @@ namespace dsr {
 		}
 	}
 
-	void heap_forAllHeapAllocations(std::function<void(AllocationHeader * header, void * allocation)> callback) {
+	void heap_forAllHeapAllocations(Callback<void(AllocationHeader * header, void * allocation)> callback) {
 		HeapMemory *currentHeap = defaultHeap.lastHeap;
 		while (currentHeap != nullptr) {
 			forAllHeapAllocations(*currentHeap, callback);

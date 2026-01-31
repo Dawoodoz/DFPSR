@@ -23,14 +23,14 @@ namespace dsr {
 	//   Call sound_streamToSpeakers with desired channels and sampleRate from a separate thread.
 	//   Handle callbacks to soundOutput by feeding the next packed sound samples and letting it return false when done.
 	//   Close the thread and let the sound engine clean up resources.
-	bool sound_streamToSpeakers(int32_t channels, int32_t sampleRate, std::function<bool(dsr::SafePointer<float> target, int32_t length)> soundOutput);
+	bool sound_streamToSpeakers(int32_t channels, int32_t sampleRate, Callback<bool(dsr::SafePointer<float> target, int32_t length)> soundOutput);
 
 	// Wrapper for sound_streamToSpeakers to allow working with a fixed size period for better determinism across different hardware.
 	//   The target elements should be filled for indices 0 to (periodSamplesPerChannel * channels) - 1
 	// This allow using SIMD vectorization with a perfectly aligned period size without wasting any padding, even if the hardware's period size is an odd number.
 	// A fixed period can also be used for perfect timing when playing music.
 	// Pre-condition: periodSamplesPerChannel must be a power of two.
-	bool sound_streamToSpeakers_fixed(int32_t channels, int32_t sampleRate, int32_t periodSamplesPerChannel, std::function<bool(dsr::SafePointer<float> target)> soundOutput);
+	bool sound_streamToSpeakers_fixed(int32_t channels, int32_t sampleRate, int32_t periodSamplesPerChannel, Callback<bool(dsr::SafePointer<float> target)> soundOutput);
 
 	// A sound buffer with packed channels of 32-bit floats.
 	// The duration in seconds equals samplesPerChannel / sampleRate
@@ -55,7 +55,7 @@ namespace dsr {
 
 	inline SafePointer<float> sound_getSafePointer(const SoundBuffer &sound) { return buffer_getSafeData<float>(sound.impl_samples, "Sound buffer"); }
 
-	SoundBuffer sound_generate_function(uint32_t samplesPerChannel, uint32_t channelCount, uint32_t sampleRate, std::function<float(double time, uint32_t channelIndex)> generator);
+	SoundBuffer sound_generate_function(uint32_t samplesPerChannel, uint32_t channelCount, uint32_t sampleRate, Callback<float(double time, uint32_t channelIndex)> generator);
 
 	enum class RiffWaveFormat {
 		RawU8,
