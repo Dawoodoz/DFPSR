@@ -134,7 +134,7 @@ static void generateCharacterRange(String &result, DsrChar firstIn, DsrChar last
 	}
 }
 // Pre-condition: The transform function must change at least one character.
-static String generateCharacterMapping(std::function<DsrChar(const DsrChar character)> transform, DsrChar first, DsrChar last) {
+static String generateCharacterMapping(const TemporaryCallback<DsrChar(const DsrChar character)> &transform, DsrChar first, DsrChar last) {
 	String result;
 	int64_t rangeStart = -1;
 	int64_t rangeEnd = -1;
@@ -965,11 +965,11 @@ void dsr::string_fromDouble(String& target, double value, int decimalCount, bool
 
 // A function definition for receiving a stream of bytes
 //   Instead of using std's messy inheritance
-using ByteWriterFunction = std::function<void(uint8_t value)>;
+using ByteWriterFunction = TemporaryCallback<void(uint8_t value)>;
 
 // A function definition for receiving a stream of UTF-32 characters
 //   Instead of using std's messy inheritance
-using UTF32WriterFunction = std::function<void(DsrChar character)>;
+using UTF32WriterFunction = TemporaryCallback<void(DsrChar character)>;
 
 // Filter out unwanted characters for improved portability
 static void feedCharacter(const UTF32WriterFunction &receiver, DsrChar character) {
@@ -1119,17 +1119,11 @@ String dsr::string_dangerous_decodeFromData(const void* data, CharacterEncoding 
 	String result;
 	// Measure the size of the result by scanning the content in advance
 	intptr_t characterCount = 0;
-	UTF32WriterFunction measurer = [&characterCount](DsrChar character) {
-		characterCount++;
-	};
-	feedStringFromRawData(measurer, (const uint8_t*)data, encoding);
+	feedStringFromRawData([&characterCount](DsrChar character) { characterCount++; }, (const uint8_t*)data, encoding);
 	// Pre-allocate the correct amount of memory based on the simulation
 	string_reserve(result, characterCount);
 	// Stream output to the result string
-	UTF32WriterFunction receiver = [&result](DsrChar character) {
-		string_appendChar(result, character);
-	};
-	feedStringFromRawData(receiver, (const uint8_t*)data, encoding);
+	feedStringFromRawData([&result](DsrChar character) { string_appendChar(result, character); }, (const uint8_t*)data, encoding);
 	return result;
 }
 
@@ -1137,17 +1131,11 @@ String dsr::string_loadFromMemory(Buffer fileContent) {
 	String result;
 	// Measure the size of the result by scanning the content in advance
 	intptr_t characterCount = 0;
-	UTF32WriterFunction measurer = [&characterCount](DsrChar character) {
-		characterCount++;
-	};
-	feedStringFromFileBuffer(measurer, fileContent.getUnsafe(), fileContent.getUsedSize());
+	feedStringFromFileBuffer([&characterCount](DsrChar character) { characterCount++; }, fileContent.getUnsafe(), fileContent.getUsedSize());
 	// Pre-allocate the correct amount of memory based on the simulation
 	string_reserve(result, characterCount);
 	// Stream output to the result string
-	UTF32WriterFunction receiver = [&result](DsrChar character) {
-		string_appendChar(result, character);
-	};
-	feedStringFromFileBuffer(receiver, fileContent.getUnsafe(), fileContent.getUsedSize());
+	feedStringFromFileBuffer([&result](DsrChar character) { string_appendChar(result, character); }, fileContent.getUnsafe(), fileContent.getUsedSize());
 	return result;
 }
 
@@ -1308,17 +1296,10 @@ bool dsr::string_save(const ReadableString& filename, const ReadableString& cont
 
 Buffer dsr::string_saveToMemory(const ReadableString& content, CharacterEncoding characterEncoding, LineEncoding lineEncoding, bool writeByteOrderMark, bool writeNullTerminator) {
 	intptr_t byteCount = 0;
-	ByteWriterFunction counter = [&byteCount](uint8_t value) {
-		byteCount++;
-	};
-	ENCODE_TEXT(counter, content, characterEncoding, lineEncoding, writeByteOrderMark, writeNullTerminator);
+	ENCODE_TEXT([&byteCount](uint8_t value) { byteCount++; }, content, characterEncoding, lineEncoding, writeByteOrderMark, writeNullTerminator);
 	Buffer result = buffer_create(byteCount).setName("Buffer holding an encoded string");
 	SafePointer<uint8_t> byteWriter = buffer_getSafeData<uint8_t>(result, "Buffer for string encoding");
-	ByteWriterFunction receiver = [&byteWriter](uint8_t value) {
-		*byteWriter = value;
-		byteWriter += 1;
-	};
-	ENCODE_TEXT(receiver, content, characterEncoding, lineEncoding, writeByteOrderMark, writeNullTerminator);
+	ENCODE_TEXT([&byteWriter](uint8_t value) { *byteWriter = value; byteWriter += 1; }, content, characterEncoding, lineEncoding, writeByteOrderMark, writeNullTerminator);
 	return result;
 }
 
@@ -1486,7 +1467,7 @@ static std::ostream& toStream(std::ostream& out, const ReadableString &source) {
 	return out;
 }
 
-static const std::function<void(const ReadableString &message, MessageType type)> defaultMessageAction = [](const ReadableString &message, MessageType type) {
+static void defaultMessageAction(const ReadableString &message, MessageType type) {
 	if (type == MessageType::Error) {
 		#ifdef DSR_HARD_EXIT_ON_ERROR
 			// Print the error.
@@ -1504,9 +1485,9 @@ static const std::function<void(const ReadableString &message, MessageType type)
 			toStream(std::cout, message);
 		printMutex.unlock();
 	}
-};
+}
 
-static std::function<void(const ReadableString &message, MessageType type)> globalMessageAction = defaultMessageAction;
+static DsrMessageHandler globalMessageAction = &defaultMessageAction;
 
 void dsr::string_sendMessage(const ReadableString &message, MessageType type) {
 	globalMessageAction(message, type);
@@ -1516,15 +1497,15 @@ void dsr::string_sendMessage_default(const ReadableString &message, MessageType 
 	defaultMessageAction(message, type);
 }
 
-void dsr::string_assignMessageHandler(std::function<void(const ReadableString &message, MessageType type)> newHandler) {
+void dsr::string_assignMessageHandler(DsrMessageHandler newHandler) {
 	globalMessageAction = newHandler;
 }
 
 void dsr::string_unassignMessageHandler() {
-	globalMessageAction = defaultMessageAction;
+	globalMessageAction = &defaultMessageAction;
 }
 
-void dsr::string_split_callback(std::function<void(ReadableString separatedText)> action, const ReadableString& source, DsrChar separator, bool removeWhiteSpace) {
+void dsr::string_split_callback(const TemporaryCallback<void(ReadableString separatedText)> &action, const ReadableString& source, DsrChar separator, bool removeWhiteSpace) {
 	intptr_t sectionStart = 0;
 	for (intptr_t i = 0; i < source.view.length; i++) {
 		DsrChar c = source[i];

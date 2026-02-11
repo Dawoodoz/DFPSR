@@ -26,7 +26,6 @@
 
 #include <cstdint>
 #include <memory>
-#include <functional>
 #include "../base/SafePointer.h"
 #include "../settings.h"
 #include "../base/Handle.h"

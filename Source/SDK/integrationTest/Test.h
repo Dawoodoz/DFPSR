@@ -3,9 +3,9 @@
 
 struct TestContext;
 
-using DrawContextCallback = std::function<void(dsr::AlignedImageRgbaU8 &canvas, TestContext &context)>;
-using MouseContextCallback = std::function<void(const dsr::MouseEvent &event, TestContext &context)>;
-using KeyboardContextCallback = std::function<void(const dsr::KeyboardEvent &event, TestContext &context)>;
+using DrawContextCallback = dsr::StorableCallback<void(dsr::AlignedImageRgbaU8 &canvas, TestContext &context)>;
+using MouseContextCallback = dsr::StorableCallback<void(const dsr::MouseEvent &event, TestContext &context)>;
+using KeyboardContextCallback = dsr::StorableCallback<void(const dsr::KeyboardEvent &event, TestContext &context)>;
 
 enum class Grade {
 	Waiting,

@@ -24,6 +24,7 @@
 #include <cassert>
 #include "renderCore.h"
 #include "../../base/virtualStack.h"
+#include "../../base/TemporaryCallback.h"
 #include "shader/RgbaMultiply.h"
 #include "constants.h"
 
@@ -467,15 +468,14 @@ void CommandQueue::execute(const IRect &clipBound, int32_t jobCount) const {
 			regions[j] = IRect(clipBound.left(), y1, clipBound.width(), height);
 			y1 = y2;
 		}
-		std::function<void(void *context, int32_t jobIndex)> job = [&regions](void *context, int32_t jobIndex) {
+		threadedWorkByIndex([&regions](void *context, int32_t jobIndex) {
 			CommandQueue *commandQueue = (CommandQueue*)context;
 			for (int32_t i = 0; i < commandQueue->buffer.length(); i++) {
 				if (!commandQueue->buffer[i].occluded) {
 					executeTriangleDrawing(commandQueue->buffer[i], regions[jobIndex]);
 				}
 			}
-		};
-		threadedWorkByIndex(job, (void*)this, jobCount);
+		}, (void*)this, jobCount);
 	}
 }
 

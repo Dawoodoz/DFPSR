@@ -34,6 +34,12 @@ Title2: APIs
 <- Images.html | Image API
 
 ---
+Title2: Types
+
+*
+<- Callbacks.html | Callbacks
+
+---
 Title2: Techniques
 
 *

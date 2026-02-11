@@ -4,6 +4,8 @@
 
 #include "bufferAPI.h"
 #include "stringAPI.h"
+#include "../base/TemporaryCallback.h"
+#include "../base/StorableCallback.h"
 
 namespace dsr {
 	// Call this function from a separate thread in a sound engine to initialize the sound system, call back with sound output requests and terminate when the callback returns false.
@@ -19,18 +21,19 @@ namespace dsr {
 	//       The F vector can be larger than the X vector if building for a SIMD extension that only supports the widest vector length for floating-point operations.
 	//     Padding elements will not add to the time passed in the sound engine, for only played elements increment time.
 	//   length: The number of samples per channel. The total number of elements to write into target is channels * length.
+	//   Uses the StorableCallback type instead of TemporaryCallback, because some systems use interrupts instead of polling and need it stored globally.
 	// How to use:
 	//   Call sound_streamToSpeakers with desired channels and sampleRate from a separate thread.
 	//   Handle callbacks to soundOutput by feeding the next packed sound samples and letting it return false when done.
 	//   Close the thread and let the sound engine clean up resources.
-	bool sound_streamToSpeakers(int32_t channels, int32_t sampleRate, std::function<bool(dsr::SafePointer<float> target, int32_t length)> soundOutput);
+	bool sound_streamToSpeakers(int32_t channels, int32_t sampleRate, const StorableCallback<bool(dsr::SafePointer<float> target, int32_t length)> &soundOutput);
 
 	// Wrapper for sound_streamToSpeakers to allow working with a fixed size period for better determinism across different hardware.
 	//   The target elements should be filled for indices 0 to (periodSamplesPerChannel * channels) - 1
 	// This allow using SIMD vectorization with a perfectly aligned period size without wasting any padding, even if the hardware's period size is an odd number.
 	// A fixed period can also be used for perfect timing when playing music.
 	// Pre-condition: periodSamplesPerChannel must be a power of two.
-	bool sound_streamToSpeakers_fixed(int32_t channels, int32_t sampleRate, int32_t periodSamplesPerChannel, std::function<bool(dsr::SafePointer<float> target)> soundOutput);
+	bool sound_streamToSpeakers_fixed(int32_t channels, int32_t sampleRate, int32_t periodSamplesPerChannel, const StorableCallback<bool(dsr::SafePointer<float> fixedTarget)> &soundOutput);
 
 	// A sound buffer with packed channels of 32-bit floats.
 	// The duration in seconds equals samplesPerChannel / sampleRate
@@ -55,7 +58,7 @@ namespace dsr {
 
 	inline SafePointer<float> sound_getSafePointer(const SoundBuffer &sound) { return buffer_getSafeData<float>(sound.impl_samples, "Sound buffer"); }
 
-	SoundBuffer sound_generate_function(uint32_t samplesPerChannel, uint32_t channelCount, uint32_t sampleRate, std::function<float(double time, uint32_t channelIndex)> generator);
+	SoundBuffer sound_generate_function(uint32_t samplesPerChannel, uint32_t channelCount, uint32_t sampleRate, const TemporaryCallback<float(double time, uint32_t channelIndex)> &generator);
 
 	enum class RiffWaveFormat {
 		RawU8,

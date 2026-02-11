@@ -1,6 +1,7 @@
 ﻿
 #include "../testTools.h"
 #include "../../DFPSR/collection/List.h"
+#include "../../DFPSR/base/StorableCallback.h"
 
 static void targetByReference(List<int32_t> &target, int32_t value) {
 	target.push(value);
@@ -49,9 +50,9 @@ START_TEST(List)
 		ASSERT_EQUAL(integers.length(), 2);
 		ASSERT_EQUAL(integers[0], 5);
 		ASSERT_EQUAL(integers[1], 86);
-		std::function<void(int32_t value)> method = [&integers](int32_t value) {
+		StorableCallback<void(int32_t value)> method([&integers](int32_t value) {
 			integers.push(value);
-		};
+		});
 		method(24);
 		ASSERT_EQUAL(integers.length(), 3);
 		ASSERT_EQUAL(integers[0], 5);

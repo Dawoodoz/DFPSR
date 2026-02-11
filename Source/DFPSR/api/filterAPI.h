@@ -26,7 +26,7 @@
 #define DFPSR_API_FILTER
 
 #include "../implementation/image/Image.h"
-#include <functional>
+#include "../base/TemporaryCallback.h"
 
 namespace dsr {
 
@@ -51,9 +51,9 @@ namespace dsr {
 //   Create images from Lambda expressions when speed is not critical.
 //     Capture images within [] and sample pixels from them using image_readPixel_border, image_readPixel_clamp and image_readPixel_tile.
 	// Lambda expressions for generating integer images.
-	using ImageGenRgbaU8 = std::function<ColorRgbaI32(int32_t x, int32_t y)>;
-	using ImageGenI32 = std::function<int32_t(int32_t x, int32_t y)>; // Used for U8 and U16 images using different saturations.
-	using ImageGenF32 = std::function<float(int32_t x, int32_t y)>;
+	using ImageGenRgbaU8 = TemporaryCallback<ColorRgbaI32(int32_t x, int32_t y)>;
+	using ImageGenI32 = TemporaryCallback<int32_t(int32_t x, int32_t y)>; // Used for U8 and U16 images using different saturations.
+	using ImageGenF32 = TemporaryCallback<float(int32_t x, int32_t y)>;
 	// In-place image generation to an existing image.
 	//   The pixel at the upper left corner gets (startX, startY) as x and y arguments to the function.
 	void filter_mapRgbaU8(const ImageRgbaU8 &target, const ImageGenRgbaU8& lambda, int32_t startX = 0, int32_t startY = 0);

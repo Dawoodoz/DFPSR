@@ -14,12 +14,12 @@ enum class LeafAction {
 
 // Used for recursively selecting parts of the tree to enter
 // bool(const IVector3D& minBound, const IVector3D& maxBound)
-using OcTreeFilter = std::function<bool(const IVector3D&, const IVector3D&)>;
+using OcTreeFilter = StorableCallback<bool(const IVector3D&, const IVector3D&)>;
 
 // Used to read data from the tree
 // void(T& content, const IVector3D origin, const IVector3D minBound, const IVector3D maxBound)
 template <typename T>
-using OcTreeLeafOperation = std::function<LeafAction(T&, const IVector3D, const IVector3D, const IVector3D)>;
+using OcTreeLeafOperation = StorableCallback<LeafAction(T&, const IVector3D, const IVector3D, const IVector3D)>;
 
 // A leaf
 template <typename T>
@@ -77,7 +77,7 @@ public:
 	//   Leaves that are too large may stay at the parent node
 	bool divided = false;
 	// One optional child node for each of the 8 sections in the octree
-	std::shared_ptr<OctreeNode<T>> childNodes[8]; // Used for branching when getting too crowded with direct leaves
+	Handle<OctreeNode<T>> childNodes[8]; // Used for branching when getting too crowded with direct leaves
 	// The leaves that have not yet been assigned to a specific child node
 	List<OctreeLeaf<T>> leaves;
 public:
@@ -101,7 +101,7 @@ public:
 	// Create from first child node
 	OctreeNode(const OctreeNode<T>& firstBranch, int32_t firstBranchIndex, const IVector3D& minOwnedBound, const IVector3D& maxOwnedBound)
 	: minOwnedBound(minOwnedBound), maxOwnedBound(maxOwnedBound), minLeafBound(firstBranch.minLeafBound), maxLeafBound(firstBranch.maxLeafBound), divided(true) {
-		this->childNodes[firstBranchIndex] = std::make_shared<OctreeNode<T>>(firstBranch);
+		this->childNodes[firstBranchIndex] = handle_create<OctreeNode<T>>(firstBranch);
 	}
 public:
 	bool insideLeafBound(const IVector3D& origin) {
@@ -149,7 +149,7 @@ public:
 		}
 		// Try inserting into any child node
 		for (int32_t n = 0; n < 8; n++) {
-			if (this->childNodes[n].get() != nullptr && this->childNodes[n]->insideOwnedBound(leaf.origin)) {
+			if (this->childNodes[n].isNotNull() && this->childNodes[n]->insideOwnedBound(leaf.origin)) {
 				this->childNodes[n]->insert(leaf);
 				return; // Avoid inserting into multiple nodes
 			}
@@ -159,9 +159,9 @@ public:
 			// Create a new branch for the leaf
 			IVector3D middle = (this->minOwnedBound + this->maxOwnedBound) / 2;
 			int32_t newBranchIndex = Octree_getBranchIndex(leaf.origin.x >= middle.x, leaf.origin.y >= middle.y, leaf.origin.z >= middle.z);
-			assert(this->childNodes[newBranchIndex].get() == nullptr);
+			assert(this->childNodes[newBranchIndex].isNull());
 			IBox3D childRegion = splitBound(IBox3D(this->minOwnedBound, this->maxOwnedBound), newBranchIndex);
-			this->childNodes[newBranchIndex] = std::make_shared<OctreeNode<T>>(leaf, childRegion.min, childRegion.max);
+			this->childNodes[newBranchIndex] = handle_create<OctreeNode<T>>(leaf, childRegion.min, childRegion.max);
 		} else {
 			// Add the leaf
 			this->leaves.push(leaf);
@@ -187,7 +187,7 @@ public:
 			}
 			// Search in the other branches recursively
 			for (int32_t n = 0; n < 8; n++) {
-				if (this->childNodes[n].get() != nullptr) {
+				if (this->childNodes[n].isNotNull()) {
 					this->childNodes[n]->find(boundFilter, leafOperation);
 				}
 			}
@@ -200,7 +200,7 @@ template <typename T>
 class Octree {
 private:
 	// One start node for each direction to simplify expansion
-	std::shared_ptr<OctreeNode<T>> childNodes[8];
+	Handle<OctreeNode<T>> childNodes[8];
 	// Settings
 	int32_t initialSize; // Should be around the average total world size to create the most balanced trees
 public:
@@ -210,9 +210,9 @@ public:
 	// Precondition: minBound <= origin <= maxBound
 	void insert(const T& leaf, const IVector3D& origin, const IVector3D& minBound, const IVector3D& maxBound) {
 		int32_t sideIndex = Octree_getBranchIndex(origin.x >= 0, origin.y >= 0, origin.z >= 0);
-		if (this->childNodes[sideIndex].get() == nullptr) {
+		if (this->childNodes[sideIndex].isNull()) {
 			// Calculate minimum required size
-			int32_t requiredSize = std::max(abs(origin.x), std::max(abs(origin.y), abs(origin.z)));
+			int32_t requiredSize = max(abs(origin.x), abs(origin.y), abs(origin.z));
 			// Calculate final cube size to be stored directly inside of the root
 			int32_t size = this->initialSize;
 			while(size < requiredSize) {
@@ -228,7 +228,7 @@ public:
 			  origin.y < 0 ? 0 : size,
 			  origin.z < 0 ? 0 : size
 			);
-			this->childNodes[sideIndex] = std::make_shared<OctreeNode<T>>(OctreeLeaf<T>(leaf, origin, minBound, maxBound), minOwnedBound, maxOwnedBound);
+			this->childNodes[sideIndex] = handle_create<OctreeNode<T>>(OctreeLeaf<T>(leaf, origin, minBound, maxBound), minOwnedBound, maxOwnedBound);
 		} else {
 			this->childNodes[sideIndex]->insert(OctreeLeaf<T>(leaf, origin, minBound, maxBound));
 		}
@@ -236,7 +236,7 @@ public:
 	// Find leaves using a custom filter
 	void map(const OcTreeFilter& boundFilter, const OcTreeLeafOperation<T>& leafOperation) {
 		for (int32_t sideIndex = 0; sideIndex < 8; sideIndex++) {
-			if (this->childNodes[sideIndex].get() != nullptr) {
+			if (this->childNodes[sideIndex].isNotNull()) {
 				this->childNodes[sideIndex]->find(boundFilter, leafOperation);
 			}
 		}

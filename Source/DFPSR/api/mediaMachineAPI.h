@@ -26,6 +26,7 @@
 
 #include "../implementation/image/Image.h"
 #include "../base/Handle.h"
+#include "../base/TemporaryCallback.h"
 #include "../math/FixedPoint.h"
 
 namespace dsr {
@@ -239,7 +240,7 @@ public:
 	// The function setInputAction should simply make a call to machine_setInputByIndex with the provided machine, methodIndex, inputIndex and the value corresponding to argumentName in setInputAction.
 	// If you don't recognize argumentName, then throw an exception because default input arguments are currently not implemented.
 	// Useful when the called function can be extended or reduced with only the arguments needed.
-	MediaResult callUsingKeywords(std::function<void(MediaMachine &machine, int32_t methodIndex, int32_t inputIndex, const ReadableString &argumentName)> setInputAction);
+	MediaResult callUsingKeywords(const TemporaryCallback<void(MediaMachine &machine, int32_t methodIndex, int32_t inputIndex, const ReadableString &argumentName)> &setInputAction);
 };
 
 // Post-condition: Returns a MediaMethod structure, which can be stored as a reference counting function pointer that keeps the virtual machine alive.

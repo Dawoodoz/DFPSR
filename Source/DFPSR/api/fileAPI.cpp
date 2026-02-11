@@ -586,7 +586,7 @@ EntryType file_getEntryType(const ReadableString &path) {
 	return result;
 }
 
-bool file_getFolderContent(const ReadableString& folderPath, std::function<void(const ReadableString& entryPath, const ReadableString& entryName, EntryType entryType)> action) {
+bool file_getFolderContent(const ReadableString& folderPath, const TemporaryCallback<void(const ReadableString& entryPath, const ReadableString& entryName, EntryType entryType)> &action) {
 	String optimizedPath = file_optimizePath(folderPath, LOCAL_PATH_SYNTAX);
 	#ifdef USE_MICROSOFT_WINDOWS
 		String pattern = file_combinePaths(optimizedPath, U"*.*", LOCAL_PATH_SYNTAX);
@@ -639,7 +639,7 @@ bool file_getFolderContent(const ReadableString& folderPath, std::function<void(
 	return true;
 }
 
-void file_getPathEntries(const ReadableString& path, std::function<void(ReadableString, int64_t, int64_t)> action) {
+void file_getPathEntries(const ReadableString& path, const TemporaryCallback<void(ReadableString, int64_t, int64_t)> &action) {
 	int64_t sectionStart = 0;
 	int64_t length = string_length(path);
 	for (int64_t i = 0; i < string_length(path); i++) {

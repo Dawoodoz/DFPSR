@@ -566,7 +566,11 @@ namespace dsr {
 		if (header != nullptr) {
 			lockMemory();
 			if (((HeapHeader *)header)->useCount == 0) {
-				printf("Heap error: Decreasing a count that is already zero!\n");
+				#ifdef SAFE_POINTER_CHECKS
+					printf("Heap error: Decreasing a count that is already zero in %s!\n", header->name);
+				#else
+					printf("Heap error: Decreasing a count that is already zero!\n");
+				#endif
 			} else {
 				((HeapHeader *)header)->useCount--;
 				if (((HeapHeader *)header)->useCount == 0) {
@@ -582,7 +586,11 @@ namespace dsr {
 			HeapHeader *header = headerFromAllocation(allocation);
 			lockMemory();
 			if (((HeapHeader *)header)->useCount == 0) {
-				printf("Heap error: Decreasing a count that is already zero!\n");
+				#ifdef SAFE_POINTER_CHECKS
+					printf("Heap error: Decreasing a count that is already zero in %s!\n", header->name);
+				#else
+					printf("Heap error: Decreasing a count that is already zero!\n");
+				#endif
 			} else {
 				((HeapHeader *)header)->useCount--;
 				if (((HeapHeader *)header)->useCount == 0) {
@@ -790,7 +798,7 @@ namespace dsr {
 		unlockMemory();
 	}
 
-	static void forAllHeapAllocations(HeapMemory &heap, std::function<void(AllocationHeader * header, void * allocation)> callback) {
+	static void forAllHeapAllocations(HeapMemory &heap, const TemporaryCallback<void(AllocationHeader * header, void * allocation)> &callback) {
 		uint8_t * current = heap.allocationPointer;
 		while (current < heap.bottom) {
 			HeapHeader *header = (HeapHeader*)current;
@@ -802,7 +810,7 @@ namespace dsr {
 		}
 	}
 
-	void heap_forAllHeapAllocations(std::function<void(AllocationHeader * header, void * allocation)> callback) {
+	void heap_forAllHeapAllocations(const TemporaryCallback<void(AllocationHeader * header, void * allocation)> &callback) {
 		HeapMemory *currentHeap = defaultHeap.lastHeap;
 		while (currentHeap != nullptr) {
 			forAllHeapAllocations(*currentHeap, callback);

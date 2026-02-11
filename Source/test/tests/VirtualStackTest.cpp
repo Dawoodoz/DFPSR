@@ -2,6 +2,7 @@
 #include "../testTools.h"
 #include "../../DFPSR/base/virtualStack.h"
 #include "../../DFPSR/base/threading.h"
+#include "../../DFPSR/base/StorableCallback.h"
 #include <random>
 
 inline int random(int min, int max) {
@@ -104,7 +105,7 @@ START_TEST(VirtualStack)
 	{ // Multi threaded bruteforce test
 		const int jobCount = 10;
 		bool results[jobCount] = {};
-		List<std::function<void()>> jobs;
+		List<StorableCallback<void()>> jobs;
 		for (int i = 0; i < jobCount; i++) {
 			bool* result = &results[i];
 			jobs.push([result, i](){

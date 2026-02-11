@@ -25,12 +25,12 @@
 #define DFPSR_API_CONFIG
 
 #include "stringAPI.h"
-#include <functional>
+#include "../base/TemporaryCallback.h"
 
 namespace dsr {
 	// A type of function sending (block, key, value) to the caller.
 	//   One can have hard-coded options, lookup-tables, dictionaries, et cetera for looking up the given key names.
-	using ConfigIniCallback = std::function<void(const ReadableString& block, const ReadableString& key, const ReadableString& value)>;
+	using ConfigIniCallback = TemporaryCallback<void(const ReadableString& block, const ReadableString& key, const ReadableString& value)>;
 	/*
 		Parsing the given content of a *.ini configuration file.
 		Sending callbacks to receiverLambda for each key being assigned a value.
@@ -52,7 +52,7 @@ namespace dsr {
 				}
 			});
 	*/
-	void config_parse_ini(const ReadableString& content, ConfigIniCallback receiverLambda);
+	void config_parse_ini(const ReadableString& content, const ConfigIniCallback &receiver);
 
 	// Adding an ini generator might be convenient for complying with the *.ini file standard
 	// but it would also take away some artistic freedom with how lines are indented

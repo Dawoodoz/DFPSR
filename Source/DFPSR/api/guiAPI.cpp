@@ -146,7 +146,7 @@ Component dsr::component_getChild(const Component& parent, int32_t childIndex) {
 	}
 }
 
-static void findAllComponentsByName(const Component& component, const ReadableString& name, std::function<void(Component, int32_t)> callback) {
+static void findAllComponentsByName(const Component& component, const ReadableString& name, const TemporaryCallback<void(Component, int32_t)> &callback) {
 	if (component_exists(component)) {
 		// Check if the current component matches
 		if (string_match(component->getName(), name)) {
@@ -159,7 +159,7 @@ static void findAllComponentsByName(const Component& component, const ReadableSt
 		}
 	}
 }
-void dsr::window_findAllComponentsByName(const Window& window, const ReadableString& name, std::function<void(Component, int32_t)> callback) {
+void dsr::window_findAllComponentsByName(const Window& window, const ReadableString& name, const TemporaryCallback<void(Component, int32_t)> &callback) {
 	MUST_EXIST(window, window_findAllComponentsByName);
 	findAllComponentsByName(window->getRootComponent(), name, callback);
 }

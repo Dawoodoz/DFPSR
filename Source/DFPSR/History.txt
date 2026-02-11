@@ -84,4 +84,15 @@ Changes from version 0.3.0
 	* More int types were replaced with int32_t to be consistent in making the size explicit.
 		While many compilers see int and int32_t as the same type and will not complain, the names are not guaranteed to always refer to the same type.
 		Replace 'int' with 'int32_t' in your entire project if you have any problems with int types not being accepted.
-		
+	* std::function was finally replaced with the framework's own wrappers over function pointers and lambdas.
+		If you just want things to work, replace 'std::function' with 'StorableCallback' to allocate heap memory for lambda closures.
+			StorableCallback allow saving the closure outside of the original lambda's scope, and should therefore avoid capturing by reference.
+			If you don't need to capture anything, you can initialize it using a function pointer instead.
+		If you want a guarantee that there will be no heap allocation, replace 'std::function<...>' with 'const TemporaryCallback<...> &', where ... is your function interface.
+			TemporaryCallback must be passed by reference, because it can not live outside of the original lambda's scope.
+			If the compiler complains about TemporaryCallback itself being captured by value, you just pass it by reference instead like in function calls.
+		Unlike std::function, the callback types are not nullable, so instead of checking for null before calling, you simply initialize with a default action that is either doing nothing to throwing an error.
+			By not having a default constructor, there will be no extra runtime overhead to check if the function exists and you will never have to worry about null function exceptions.
+			If you see that the compiler can't find a constructor for StorableCallback and it points to a variable declaration, you need to initialize it with a function.
+		string_assignMessageHandler now uses function pointers to avoid cyclic dependencies between stringAPI.h and StorableCallback.h.
+			A message handler needs to be stored but will usually only work with global and thread-local variables.

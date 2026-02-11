@@ -166,7 +166,7 @@ static bool validIdentifier(const dsr::ReadableString &identifier) {
 	return true;
 }
 
-using NameFilter = std::function<bool(const ReadableString &filename)>;
+using NameFilter = StorableCallback<bool(const ReadableString &filename)>;
 static NameFilter generateFilterFromPattern(const dsr::ReadableString &pattern) {
 	int64_t firstStar = string_findFirst(pattern, U'*');
 	int64_t lastStar = string_findLast(pattern, U'*');
@@ -198,7 +198,7 @@ static NameFilter generateFilterFromPattern(const dsr::ReadableString &pattern) 
 	}
 }
 
-static void findFiles(const dsr::ReadableString &inPath, NameFilter filter, std::function<void(const ReadableString &path)> action) {
+static void findFiles(const dsr::ReadableString &inPath, NameFilter filter, StorableCallback<void(const ReadableString &path)> action) {
 	if (!file_getFolderContent(inPath, [&filter, &action](const ReadableString& entryPath, const ReadableString& entryName, EntryType entryType) {
 		if (entryType == EntryType::File) {
 			if (filter(entryName)) {

@@ -53,7 +53,7 @@
 #define DFPSR_HEAP
 
 #include "SafePointer.h"
-#include <functional>
+#include "TemporaryCallback.h"
 
 namespace dsr {
 	#ifdef SAFE_POINTER_CHECKS
@@ -147,7 +147,7 @@ namespace dsr {
 
 	// Call back for each used heap allocation.
 	//   Recycled allocations are not included.
-	void heap_forAllHeapAllocations(std::function<void(AllocationHeader * header, void * allocation)> callback);
+	void heap_forAllHeapAllocations(const TemporaryCallback<void(AllocationHeader * header, void * allocation)> &callback);
 
 	// Prints the allocation to the terminal.
 	void heap_debugPrintAllocation(void const * const allocation, uintptr_t maxLength = 128u);

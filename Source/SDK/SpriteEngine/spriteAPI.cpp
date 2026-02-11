@@ -8,6 +8,7 @@
 #include "importer.h"
 #include "../../DFPSR/implementation/render/ITriangle2D.h"
 #include "../../DFPSR/base/endian.h"
+#include "../../DFPSR/base/noSimd.h"
 #include "../../DFPSR/implementation/math/scalar.h"
 #include "../../DFPSR/api/fileAPI.h"
 
@@ -816,10 +817,10 @@ public:
 };
 
 SpriteWorld spriteWorld_create(OrthoSystem ortho, int32_t shadowResolution) {
-	return std::make_shared<SpriteWorldImpl>(ortho, shadowResolution);
+	return handle_create<SpriteWorldImpl>(ortho, shadowResolution);
 }
 
-#define MUST_EXIST(OBJECT, METHOD) if (OBJECT.get() == nullptr) { throwError(U"The " #OBJECT U" handle was null in " #METHOD U"\n"); }
+#define MUST_EXIST(OBJECT, METHOD) if (OBJECT.isNull()) { throwError(U"The " #OBJECT U" handle was null in " #METHOD U"\n"); }
 
 // Get the eight corners of an axis-aligned bounding box
 static void getCorners(const FVector3D& minBound, const FVector3D& maxBound, FVector3D* resultCorners) {
@@ -933,7 +934,6 @@ void spriteWorld_addBackgroundModel(SpriteWorld& world, const ModelInstance& ins
 	world->updatePassiveRegion(IRect(globalPixelMinBound.x, globalPixelMinBound.y, globalPixelMaxBound.x - globalPixelMinBound.x, globalPixelMaxBound.y - globalPixelMinBound.y));
 }
 
-//using SpriteSelection = std::function<bool(SpriteInstance&, const IVector3D, const IVector3D, const IVector3D)>;
 void spriteWorld_removeBackgroundSprites(SpriteWorld& world, const IVector3D& searchMinBound, const IVector3D& searchMaxBound, const SpriteSelection& filter) {
 	world->passiveSprites.map(searchMinBound, searchMaxBound, [world, filter](SpriteInstance& sprite, const IVector3D origin, const IVector3D minBound, const IVector3D maxBound) mutable {
 		if (filter(sprite, origin, minBound, maxBound)) {
@@ -953,7 +953,6 @@ void spriteWorld_removeBackgroundSprites(SpriteWorld& world, const IVector3D& se
 	});
 }
 
-//using ModelSelection = std::function<bool(ModelInstance&, const IVector3D, const IVector3D, const IVector3D)>;
 void spriteWorld_removeBackgroundModels(SpriteWorld& world, const IVector3D& searchMinBound, const IVector3D& searchMaxBound, const ModelSelection& filter) {
 	world->passiveModels.map(searchMinBound, searchMaxBound, [world, filter](ModelInstance& model, const IVector3D origin, const IVector3D minBound, const IVector3D maxBound) mutable {
 		if (filter(model, origin, minBound, maxBound)) {
@@ -1147,10 +1146,10 @@ static IRect getBackCulledTriangleBound(const FVector3D& a, const FVector3D& b, 
 		return IRect();
 	} else {
 		// Front facing
-		int32_t leftBound = (int32_t)std::min(std::min(a.x, b.x), c.x);
-		int32_t topBound = (int32_t)std::min(std::min(a.y, b.y), c.y);
-		int32_t rightBound = (int32_t)(std::max(std::max(a.x, b.x), c.x)) + 1;
-		int32_t bottomBound = (int32_t)(std::max(std::max(a.y, b.y), c.y)) + 1;
+		int32_t leftBound = (int32_t)min(a.x, b.x, c.x);
+		int32_t topBound = (int32_t)min(a.y, b.y, c.y);
+		int32_t rightBound = (int32_t)(max(a.x, b.x, c.x)) + 1;
+		int32_t bottomBound = (int32_t)(max(a.y, b.y, c.y)) + 1;
 		return IRect(leftBound, topBound, rightBound - leftBound, bottomBound - topBound);
 	}
 }
@@ -1173,7 +1172,7 @@ static FVector3D getAverageNormal(const Model& model, int32_t part, int32_t poly
 }
 
 DenseModel DenseModel_create(const Model& original) {
-	return std::make_shared<DenseModelImpl>(original);
+	return handle_create<DenseModelImpl>(original);
 }
 
 static int32_t getTriangleCount(const Model& original) {
@@ -1351,7 +1350,7 @@ void sprite_generateFromModel(ImageRgbaU8& targetAtlas, String& targetConfigText
 		printText(U"  Representing height from ", minBound.y, U" to ", maxBound.y, U" encoded using 8-bits\n");
 
 		// Calculate initial image size
-		float worstCaseDiameter = (std::max(maxBound.x, -minBound.x) + std::max(maxBound.y, -minBound.y) + std::max(maxBound.z, -minBound.z)) * 2;
+		float worstCaseDiameter = (max(maxBound.x, -minBound.x) + max(maxBound.y, -minBound.y) + max(maxBound.z, -minBound.z)) * 2;
 		int32_t maxRes = roundUp(int32_t(worstCaseDiameter) * ortho.pixelsPerTile, 2) + 4; // Round up to even pixels and add 4 padding pixels
 
 		// Allocate square images from the pessimistic size estimation

@@ -25,7 +25,7 @@
 #define DFPSR_API_STRING
 
 #include <cstdint>
-#include <functional>
+#include "../base/TemporaryCallback.h"
 #include "bufferAPI.h"
 #include "../base/SafePointer.h"
 #include "../base/DsrTraits.h"
@@ -417,9 +417,9 @@ List<String> string_split(const ReadableString& source, DsrChar separator, bool 
 // Use string_splitCount on the same source and separator if you need to know the element count in advance.
 // Side-effects:
 //   Calls action for each sub-string divided by separator in source given as the separatedText argument.
-void string_split_callback(std::function<void(ReadableString separatedText)> action, const ReadableString& source, DsrChar separator, bool removeWhiteSpace = false);
+void string_split_callback(const TemporaryCallback<void(ReadableString separatedText)> &action, const ReadableString& source, DsrChar separator, bool removeWhiteSpace = false);
 // An alternative overload for having a very long lambda at the end.
-inline void string_split_callback(const ReadableString& source, DsrChar separator, bool removeWhiteSpace, std::function<void(ReadableString separatedText)> action) {
+inline void string_split_callback(const ReadableString& source, DsrChar separator, bool removeWhiteSpace, const TemporaryCallback<void(ReadableString separatedText)> &action) {
 	string_split_callback(action, source, separator, removeWhiteSpace);
 }
 // Split source using separator, only to return the number of splits.
@@ -617,7 +617,8 @@ void string_sendMessage_default(const ReadableString &message, MessageType type)
 // Terminating the program as soon as possible is ideal, but one might want to save a backup or show what went wrong in a graphical interface before terminating.
 // Do not throw and catch errors as if they were warnings, because throwing and catching creates a partial transaction, potentially violating type invariants.
 //   Better to use warnings and let the sender of the warning figure out how to abort the action safely.
-void string_assignMessageHandler(std::function<void(const ReadableString &message, MessageType type)> action);
+using DsrMessageHandler = void(*)(const ReadableString &message, MessageType type);
+void string_assignMessageHandler(DsrMessageHandler action);
 
 // Undo string_assignMessageHandler, so that any messages will be handled the default way again.
 void string_unassignMessageHandler();

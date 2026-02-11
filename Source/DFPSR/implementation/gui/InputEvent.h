@@ -25,7 +25,7 @@
 #define DFPSR_GUI_INPUT_EVENT
 
 #include "../../math/IVector.h"
-#include <functional>
+#include "../../base/StorableCallback.h"
 
 namespace dsr {
 
@@ -121,11 +121,11 @@ public:
 	decltype(LAMBDA)& NAME() { return callback_##NAME; }
 
 // The callback types.
-using EmptyCallback = std::function<void()>;
-using IndexCallback = std::function<void(int32_t index)>;
-using SizeCallback = std::function<void(int32_t width, int32_t height)>;
-using KeyboardCallback = std::function<void(const KeyboardEvent& event)>;
-using MouseCallback = std::function<void(const MouseEvent& event)>;
+using EmptyCallback = StorableCallback<void()>;
+using IndexCallback = StorableCallback<void(int32_t index)>;
+using SizeCallback = StorableCallback<void(int32_t width, int32_t height)>;
+using KeyboardCallback = StorableCallback<void(const KeyboardEvent& event)>;
+using MouseCallback = StorableCallback<void(const MouseEvent& event)>;
 
 // The default functions to call until a callback has been selected.
 static EmptyCallback emptyCallback = []() {};

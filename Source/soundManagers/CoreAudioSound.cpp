@@ -29,7 +29,10 @@ static void allocateBuffers(int neededElements) {
 
 int32_t engineChannels;
 int32_t engineSampleRate;
-static std::function<bool(SafePointer<float> data, int32_t length)> engineCallback;
+
+// Callbacks have no default constructor, to avoid having to check for null in each call, so we just give it an empty function as a placeholder.
+static bool emptyEngineCallback(SafePointer<float> data, int32_t length) { return false; }
+static StorableCallback<bool(SafePointer<float> data, int32_t length)> engineCallback(&emptyEngineCallback);
 
 OSStatus coreAudioCallback(void*, AudioUnitRenderActionFlags*, const AudioTimeStamp*, uint32_t, uint32_t samplesPerChannel, AudioBufferList *outputBuffers) {
 	if (playing) {
@@ -104,7 +107,7 @@ static void initializeSound() {
 	playing = true;
 }
 
-bool sound_streamToSpeakers(int32_t channels, int32_t sampleRate, std::function<bool(SafePointer<float> data, int32_t length)> soundOutput) {
+bool sound_streamToSpeakers(int32_t channels, int32_t sampleRate, const StorableCallback<bool(SafePointer<float> data, int32_t length)> &soundOutput) {
 	engineChannels = channels;
 	engineSampleRate = sampleRate;
 	engineCallback = soundOutput;

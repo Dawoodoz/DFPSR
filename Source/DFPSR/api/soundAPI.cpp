@@ -8,8 +8,7 @@
 namespace dsr {
 
 // See the Source/soundManagers folder for implementations of sound_streamToSpeakers for different operating systems.
-
-bool sound_streamToSpeakers_fixed(int32_t channels, int32_t sampleRate, int32_t periodSamplesPerChannel, std::function<bool(SafePointer<float> fixedTarget)> soundOutput) {
+bool sound_streamToSpeakers_fixed(int32_t channels, int32_t sampleRate, int32_t periodSamplesPerChannel, const StorableCallback<bool(SafePointer<float> fixedTarget)> &soundOutput) {
 	int32_t bufferSamplesPerChannel = 0;
 	int32_t blockBytes = channels * sizeof(float);
 	Buffer fixedBuffer;
@@ -251,7 +250,7 @@ static String readChar4(SafePointer<const uint8_t> nameStart) {
 	return name;
 }
 
-static void getRiffChunks(const Chunk &parentChunk, std::function<void(const ReadableString &name, const Chunk &chunk)> returnChunk) {
+static void getRiffChunks(const Chunk &parentChunk, const TemporaryCallback<void(const ReadableString &name, const Chunk &chunk)> &returnChunk) {
 	SafePointer<const uint8_t> chunkStart = parentChunk.chunkStart;
 	SafePointer<const uint8_t> chunkEnd = chunkStart + parentChunk.chunkSize;
 	while (chunkStart.getUnchecked() + 8 <= chunkEnd.getUnchecked()) {
@@ -267,7 +266,7 @@ static void getRiffChunks(const Chunk &parentChunk, std::function<void(const Rea
 	}
 }
 
-static void getRiffChunks(const Buffer &fileBuffer, std::function<void(const ReadableString &name, const Chunk &chunk)> returnChunk) {
+static void getRiffChunks(const Buffer &fileBuffer, const TemporaryCallback<void(const ReadableString &name, const Chunk &chunk)> &returnChunk) {
 	Chunk rootChunk = Chunk(U"RIFF", fileBuffer);
 	getRiffChunks(rootChunk, [&returnChunk](const ReadableString &name, const Chunk &chunk) {
 		if (string_match(name, U"RIFF")) {
@@ -440,7 +439,7 @@ bool sound_save_RiffWave(const ReadableString& filename, const SoundBuffer &soun
 	}
 }
 
-SoundBuffer sound_generate_function(uint32_t samplesPerChannel, uint32_t channelCount, uint32_t sampleRate, std::function<float(double time, uint32_t channelIndex)> generator) {
+SoundBuffer sound_generate_function(uint32_t samplesPerChannel, uint32_t channelCount, uint32_t sampleRate, const TemporaryCallback<float(double time, uint32_t channelIndex)> &generator) {
 	SoundBuffer result = sound_create(samplesPerChannel, channelCount, sampleRate);
 	SafePointer<float> target = sound_getSafePointer(result);
 	double time = 0.0;
