@@ -7,11 +7,11 @@ using namespace dsr;
 POIndex::POIndex() {}
 POIndex::POIndex(int16_t precedenceIndex, int16_t operationIndex) : precedenceIndex(precedenceIndex), operationIndex(operationIndex) {}
 
-Operation::Operation(int16_t symbolIndex, std::function<String(ReadableString, ReadableString)> action)
+Operation::Operation(int16_t symbolIndex, StorableCallback<String(ReadableString, ReadableString)> action)
 : symbolIndex(symbolIndex), action(action) {
 }
 
-static int16_t addOperation(ExpressionSyntax &targetSyntax, int16_t symbolIndex, std::function<String(ReadableString, ReadableString)> action) {
+static int16_t addOperation(ExpressionSyntax &targetSyntax, int16_t symbolIndex, StorableCallback<String(ReadableString, ReadableString)> action) {
 	int16_t precedenceIndex = targetSyntax.precedences.length() - 1;
 	int16_t operationIndex = targetSyntax.precedences.last().operations.length();
 	// TODO: Only allow assigning a symbol once per prefix, infix and postfix.
@@ -286,7 +286,7 @@ static bool validRightmostToken(int16_t symbolIndex, const ExpressionSyntax &syn
 
 // info is a list of additional information starting with info[0] at tokens[startTokenIndex]
 // infoStart is the startTokenIndex of the root evaluation call
-static String expression_evaluate_helper(const List<TokenInfo> &info, int64_t infoStart, int64_t currentDepth, const List<String> &tokens, int64_t startTokenIndex, int64_t endTokenIndex, const ExpressionSyntax &syntax, std::function<String(ReadableString)> identifierEvaluation) {
+static String expression_evaluate_helper(const List<TokenInfo> &info, int64_t infoStart, int64_t currentDepth, const List<String> &tokens, int64_t startTokenIndex, int64_t endTokenIndex, const ExpressionSyntax &syntax, StorableCallback<String(ReadableString)> identifierEvaluation) {
 	//printText(U"Evaluate: ", debugTokens(info, infoStart, tokens, startTokenIndex, endTokenIndex), U"\n");
 	if (startTokenIndex == endTokenIndex) {
 		ReadableString first = expression_getToken(tokens, startTokenIndex, U"");
@@ -382,7 +382,7 @@ static String expression_evaluate_helper(const List<TokenInfo> &info, int64_t in
 	return U"<ERROR:Invalid expression>";
 }
 
-String expression_evaluate(const List<String> &tokens, int64_t startTokenIndex, int64_t endTokenIndex, const ExpressionSyntax &syntax, std::function<String(ReadableString)> identifierEvaluation) {
+String expression_evaluate(const List<String> &tokens, int64_t startTokenIndex, int64_t endTokenIndex, const ExpressionSyntax &syntax, StorableCallback<String(ReadableString)> identifierEvaluation) {
 	// Scan the whole expression once in the beginning and write useful information into a separate list.
 	//   This allow handling tokens as plain lists of strings while still being able to number what they are.
 	int32_t depth = 0;
@@ -404,11 +404,11 @@ String expression_evaluate(const List<String> &tokens, int64_t startTokenIndex, 
 	return expression_evaluate_helper(info, startTokenIndex, 0, tokens, startTokenIndex, endTokenIndex, syntax, identifierEvaluation);
 }
 
-String expression_evaluate(const List<String> &tokens, int64_t startTokenIndex, int64_t endTokenIndex, std::function<String(ReadableString)> identifierEvaluation) {
+String expression_evaluate(const List<String> &tokens, int64_t startTokenIndex, int64_t endTokenIndex, StorableCallback<String(ReadableString)> identifierEvaluation) {
 	return expression_evaluate(tokens, startTokenIndex, endTokenIndex, defaultSyntax, identifierEvaluation);
 }
 
-String expression_evaluate(const List<String> &tokens, std::function<String(ReadableString)> identifierEvaluation) {
+String expression_evaluate(const List<String> &tokens, StorableCallback<String(ReadableString)> identifierEvaluation) {
 	return expression_evaluate(tokens, 0, tokens.length() - 1, defaultSyntax, identifierEvaluation);
 }
 
@@ -533,7 +533,7 @@ static void expectResult(int64_t &errorCount, const List<String> &result, const 
 }
 
 void expression_runRegressionTests() {
-	std::function<String(ReadableString)> context = [](ReadableString identifier) -> String {
+	StorableCallback<String(ReadableString)> context = [](ReadableString identifier) -> String {
 		if (string_caseInsensitiveMatch(identifier, U"x")) {
 			return U"5";
 		} else if (string_caseInsensitiveMatch(identifier, U"doorCount")) {

@@ -36,7 +36,7 @@ public:
 };
 
 struct DenseModelImpl;
-using DenseModel = std::shared_ptr<struct DenseModelImpl>;
+using DenseModel = Handle<struct DenseModelImpl>;
 DenseModel DenseModel_create(const Model& original);
 
 // A 3D model that can be rotated freely.
@@ -52,7 +52,7 @@ public:
 };
 
 class SpriteWorldImpl;
-using SpriteWorld = std::shared_ptr<SpriteWorldImpl>;
+using SpriteWorld = Handle<SpriteWorldImpl>;
 
 // Sprite types
 int32_t spriteWorld_loadSpriteTypeFromFile(const String& folderPath, const String& spriteName);
@@ -71,7 +71,7 @@ void spriteWorld_addTemporarySprite(SpriteWorld& world, const SpriteInstance& sp
 void spriteWorld_addTemporaryModel(SpriteWorld& world, const ModelInstance& instance);
 
 // SpriteInstance& sprite, const IVector3D origin, const IVector3D minBound, const IVector3D maxBound -> bool selected
-using SpriteSelection = std::function<bool(SpriteInstance&, const IVector3D, const IVector3D, const IVector3D)>;
+using SpriteSelection = StorableCallback<bool(SpriteInstance&, const IVector3D, const IVector3D, const IVector3D)>;
 // Remove sprites using an axis aligned serach box in mini-tile coordinates and a lambda filter.
 //   Use userData in the lambda's first argument to get ownership information.
 //   Return true for each sprite to remove from the background.
@@ -80,7 +80,7 @@ void spriteWorld_removeBackgroundSprites(SpriteWorld& world, const IVector3D& se
 void spriteWorld_removeBackgroundSprites(SpriteWorld& world, const IVector3D& searchMinBound, const IVector3D& searchMaxBound);
 
 // ModelInstance& model, const IVector3D origin, const IVector3D minBound, const IVector3D maxBound -> bool selected.
-using ModelSelection = std::function<bool(ModelInstance&, const IVector3D, const IVector3D, const IVector3D)>;
+using ModelSelection = StorableCallback<bool(ModelInstance&, const IVector3D, const IVector3D, const IVector3D)>;
 // Remove models using an axis aligned serach box in mini-tile coordinates and a lambda filter.
 //   Use userData in the lambda's first argument to get ownership information.
 //   Return true for each model to remove from the background.

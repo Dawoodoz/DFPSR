@@ -25,7 +25,7 @@
 
 using namespace dsr;
 
-void dsr::config_parse_ini(const ReadableString& content, ConfigIniCallback receiverLambda) {
+void dsr::config_parse_ini(const ReadableString& content, const ConfigIniCallback &receiver) {
 	List<String> lines = string_split(content, U'\n');
 	String block = U"";
 	for (int32_t l = 0; l < lines.length(); l++) {
@@ -41,7 +41,7 @@ void dsr::config_parse_ini(const ReadableString& content, ConfigIniCallback rece
 		if (assignmentIndex > -1) {
 			String key = string_removeOuterWhiteSpace(string_before(command, assignmentIndex));
 			String value = string_removeOuterWhiteSpace(string_after(command, assignmentIndex));
-			receiverLambda(block, key, value);
+			receiver(block, key, value);
 		} else {
 			int32_t blockStartIndex = string_findFirst(command, U'[');
 			int32_t blockEndIndex = string_findFirst(command, U']');

@@ -30,7 +30,7 @@ static void terminateSound() {
 	}
 }
 
-bool sound_streamToSpeakers(int32_t channels, int32_t sampleRate, std::function<bool(SafePointer<float> data, int32_t length)> soundOutput) {
+bool sound_streamToSpeakers(int32_t channels, int32_t sampleRate, const StorableCallback<bool(SafePointer<float> data, int32_t length)> &soundOutput) {
 	int errorCode;
 	if ((errorCode = snd_pcm_open(&pcm, "default", SND_PCM_STREAM_PLAYBACK, 0)) < 0) {
 		terminateSound();

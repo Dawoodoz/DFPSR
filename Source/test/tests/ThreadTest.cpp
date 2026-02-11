@@ -2,13 +2,14 @@
 #include "../testTools.h"
 #include "../../DFPSR/base/threading.h"
 #include "../../DFPSR/api/timeAPI.h"
+#include "../../DFPSR/base/StorableCallback.h"
 
 // The dummy tasks are too small to get a benefit from multi-threading. (0.18 ms overhead on 0.04 ms of total work)
 START_TEST(Thread)
 	{ // Basic version iterating over lambdas in a dynamic list
 		const int jobCount = 50;
 		int results[jobCount] = {}; // TODO: Make a safer example.
-		List<std::function<void()>> jobs;
+		List<StorableCallback<void()>> jobs;
 		for (int i = 0; i < jobCount; i++) {
 			int* result = &results[i];
 			jobs.push([result, i](){

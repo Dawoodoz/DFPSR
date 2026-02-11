@@ -27,6 +27,7 @@
 #include "stringAPI.h"
 #include "bufferAPI.h"
 #include "../base/Handle.h"
+#include "../base/TemporaryCallback.h"
 #include "../settings.h"
 
 // The file API exists to save and load buffers of data for any type of file.
@@ -98,7 +99,7 @@ namespace dsr {
 	// The first entry must be something selectable to be included. Otherwise it is ignored.
 	//   C: would be returned as an entry, because other drives can be selected.
 	//   The implicit Windows drive \ and Posix system root / will not be returned, because they are implicit and can't be replaced in the path.
-	void file_getPathEntries(const ReadableString& path, std::function<void(ReadableString, int64_t, int64_t)> action);
+	void file_getPathEntries(const ReadableString& path, const TemporaryCallback<void(ReadableString, int64_t, int64_t)> &action);
 
 	// Path-syntax: Depends on pathSyntax argument.
 	// Turns / and \ into the path convention specified by pathSyntax, which is the local system's by default.
@@ -258,7 +259,7 @@ namespace dsr {
 	//               entryName equals file_getPathlessName(entryPath).
 	//               entryType equals file_getEntryType(entryPath).
 	// Post-condition: Returns true iff the folder could be found.
-	bool file_getFolderContent(const ReadableString& folderPath, std::function<void(const ReadableString& entryPath, const ReadableString& entryName, EntryType entryType)> action);
+	bool file_getFolderContent(const ReadableString& folderPath, const TemporaryCallback<void(const ReadableString& entryPath, const ReadableString& entryName, EntryType entryType)> &action);
 
 	// Path-syntax: According to the local computer.
 	// Access permissions: Default settings according to the local operating system, either inherited from the parent folder or no specific restrictions.

@@ -22,7 +22,6 @@
 //    distribution.
 
 #include "TextBox.h"
-#include <functional>
 
 using namespace dsr;
 
@@ -75,7 +74,7 @@ static void tabJump(int64_t &x, int64_t tabWidth) {
 static int64_t monospacesPerTab = 4;
 
 // Pre-condition: text does not contain any linebreak.
-static void iterateCharactersInLine(const ReadableString& text, const RasterFont &font, std::function<void(int64_t index, DsrChar code, int64_t left, int64_t right)> characterAction) {
+static void iterateCharactersInLine(const ReadableString& text, const RasterFont &font, const TemporaryCallback<void(int64_t index, DsrChar code, int64_t left, int64_t right)> &characterAction) {
 	int64_t right = 0;
 	int64_t monospaceWidth = font_getMonospaceWidth(font);
 	int64_t tabWidth = monospaceWidth * monospacesPerTab;

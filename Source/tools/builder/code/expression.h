@@ -3,6 +3,7 @@
 #define DSR_BUILDER_EXPRESSION_MODULE
 
 #include "../../../DFPSR/api/stringAPI.h"
+#include "../../../DFPSR/base/StorableCallback.h"
 
 // The expression module is a slow but generic system for evaluating expressions where all data is stored as strings for simplicity.
 //   No decimal numbers allowed, because it requires both human readable syntax and full determinism without precision loss.
@@ -20,8 +21,8 @@ enum Associativity {
 
 struct Operation {
 	int16_t symbolIndex;
-	std::function<dsr::String(dsr::ReadableString, dsr::ReadableString)> action;
-	Operation(int16_t symbolIndex, std::function<dsr::String(dsr::ReadableString, dsr::ReadableString)> action);
+	dsr::StorableCallback<dsr::String(dsr::ReadableString, dsr::ReadableString)> action;
+	Operation(int16_t symbolIndex, dsr::StorableCallback<dsr::String(dsr::ReadableString, dsr::ReadableString)> action);
 };
 
 struct Precedence {
@@ -68,9 +69,9 @@ dsr::ReadableString expression_getToken(const dsr::List<dsr::String> &tokens, in
 
 int64_t expression_interpretAsInteger(const dsr::ReadableString &value);
 
-dsr::String expression_evaluate(const dsr::List<dsr::String> &tokens, std::function<dsr::String(dsr::ReadableString)> identifierEvaluation);
-dsr::String expression_evaluate(const dsr::List<dsr::String> &tokens, int64_t startTokenIndex, int64_t endTokenIndex, std::function<dsr::String(dsr::ReadableString)> identifierEvaluation);
-dsr::String expression_evaluate(const dsr::List<dsr::String> &tokens, int64_t startTokenIndex, int64_t endTokenIndex, const ExpressionSyntax &syntax, std::function<dsr::String(dsr::ReadableString)> identifierEvaluation);
+dsr::String expression_evaluate(const dsr::List<dsr::String> &tokens, dsr::StorableCallback<dsr::String(dsr::ReadableString)> identifierEvaluation);
+dsr::String expression_evaluate(const dsr::List<dsr::String> &tokens, int64_t startTokenIndex, int64_t endTokenIndex, dsr::StorableCallback<dsr::String(dsr::ReadableString)> identifierEvaluation);
+dsr::String expression_evaluate(const dsr::List<dsr::String> &tokens, int64_t startTokenIndex, int64_t endTokenIndex, const ExpressionSyntax &syntax, dsr::StorableCallback<dsr::String(dsr::ReadableString)> identifierEvaluation);
 
 // Tokenizing into pure lists of strings is inefficient redundant work,
 //   but a lot more reusable than a list of custom types hard-coded for a specific parser.

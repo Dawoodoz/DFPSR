@@ -1197,7 +1197,7 @@ String machine_getOutputName(const MediaMachine& machine, int32_t methodIndex, i
 	return method->locals[method->inputCount + outputIndex].name;
 }
 
-MediaResult MediaMethod::callUsingKeywords(std::function<void(MediaMachine &machine, int32_t methodIndex, int32_t inputIndex, const ReadableString &argumentName)> setInputAction) {
+MediaResult MediaMethod::callUsingKeywords(const TemporaryCallback<void(MediaMachine &machine, int32_t methodIndex, int32_t inputIndex, const ReadableString &argumentName)> &setInputAction) {
 	if (this->methodIndex < 0 || this->methodIndex >= this->machine->methods.length()) {
 		throwError(U"Method index ", this->methodIndex, U" is out of bound 0..", this->machine->methods.length() - 1, U"\n");
 	}

@@ -127,7 +127,7 @@ namespace dsr {
 	// To allow detaching components while iterating over the list of children, order is reversed for child components.
 	// Raises an exception if window doesn't exist.
 	// Component names are case sensitive to reduce the risk of accidental naming conflicts among many components.
-	void window_findAllComponentsByName(const Window& window, const ReadableString& name, std::function<void(Component component, int32_t index)> callback);
+	void window_findAllComponentsByName(const Window& window, const ReadableString& name, const TemporaryCallback<void(Component component, int32_t index)> &callback);
 
 // The three main events to run in a loop at the end of the main function
 	// If the window's event queue contained any resize of the window, the canvas and the depth buffer will be replaced during this call.

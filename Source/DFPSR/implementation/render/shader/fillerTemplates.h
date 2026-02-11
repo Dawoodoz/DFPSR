@@ -32,7 +32,7 @@
 namespace dsr {
 
 // Function for filling pixels
-using PixelShadingCallback = std::function<Rgba_F32<U32x4, F32x4>(void *data, const F32x4x3 &vertexWeights)>;
+using PixelShadingCallback = Rgba_F32<U32x4, F32x4>(*)(void *data, const F32x4x3 &vertexWeights);
 
 inline bool almostZero(float value) {
 	return value > -0.001f && value < 0.001f;

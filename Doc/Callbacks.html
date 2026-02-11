@@ -1,0 +1,94 @@
+﻿<!DOCTYPE html> <HTML lang=en> <HEAD> <STYLE>
+body { background-color: #EEFFEE;  font-size: 1.0rem; font-family: Arial; max-width: 60rem;
+      color: #000000; margin: 0px;
+      padding-left:  0px; padding-right:  0px; padding-top:  0px; padding-bottom:  0px; }
+H1 {  padding-left: 10px; padding-right:  0px; padding-top: 10px; padding-bottom: 10px; font-size: 1.4rem; }
+H2 {  padding-left: 10px; padding-right:  0px; padding-top: 10px; padding-bottom:  0px; font-size: 1.2rem; }
+blockquote {
+  tab-size: 3rem;
+  color: #88FF88; background: #000000;
+  font-size: 0.95rem; font-family: monospace;
+  padding-left: 5px; padding-right: 5px;
+  padding-top: 5px; padding-bottom: 5px;
+}
+P {   padding-left: 20px; padding-right:  0px; padding-top:  0px; padding-bottom:  0px; }
+IMG { padding-left:  0px; padding-right:  0px; padding-top:  2px; padding-bottom:  0px;
+      max-width: 100%; }
+A { display: inline; border-radius: 4px;
+    font-size: 1.0rem; font-family: Arial; color: #000044; text-decoration: none;
+    padding-left: 4px; padding-right: 4px; padding-top: 4px; padding-bottom: 4px; }
+A:hover { color: #FFFF00; background: #000044; }
+A:active { color: #FFFFFF; background: #444444; }
+</STYLE> </HEAD> <BODY>
+<IMG SRC="Images/Title.png" ALT="Images/Title.png">
+<P>
+<A href="Manual.html">Back to main page</A>
+</P><P>
+</P><H1> Callbacks</H1><P>To avoid using multiple namespaces, StorableCallback is used instead of std::function.
+To allow pointing to a closure directly in stack memory, TemporaryCallback was created as a specialization.
+
+</P><P>
+</P><IMG SRC="Images/Border.png"><P>
+</P><H2> No default behavior</H2><P>
+</P><P>
+Instead of having to check for null in each call and throw exceptions when someone forgot to check for null, the callback types do not have any default constructor.
+So if you create a StorableCallback to assign to later, you need to construct it with a function pointer or lambda from the start.
+
+</P><P>
+If you don't need to delay assignment to StorableCallback, then simply give the function pointer or lambda on the initial construction to avoid redundancy.
+If calling a StorableCallback before reassigned a function is an error, then let the initial function print the error message.
+If calling a StorableCallback before reassigned a function is not an error, then let the initial function implement a default behavior, such as doing nothing.
+
+</P><P>
+</P><IMG SRC="Images/Border.png"><P>
+</P><H2> StorableCallback</H2><P>
+</P><P>
+<IMG SRC="Images/SmallDot.png">
+Source/DFPSR/base/StorableCallback.h
+
+</P><P>
+StorableCallback may allocate heap memory to store lambda closures, which makes sure that the lambda can be called even if the original closure no longer exists in the stack.
+Because StorableCallback is intended to be saved for later use, variables in its lambda closures should be captured by value to prevent memory corruption from dangling references.
+
+</P><P>
+When constructing StorableCallback from a lambda, try to reuse the same construction of StorableCallback, because heap memory will be allocated each time it is constructed.
+If creating one lambda on the stack and constructing a thousand copies of it as StorableCallback, each new StorableCallback will now know about the pre-existing copy.
+If creating one StorableCallback directly from the lambda, any copies to other instances of StorableCallback will simply use reference counting to the same allocation for the closure.
+
+</P><P>
+If creating StorableCallback from a function pointer, then there is no closure to copy nor references that can cause problems.
+If you have no variables to capture, then creating StorableCallback from a function pointer will use less memory and be safer.
+Unless you are not unloading a dynamically linked library, using function pointers is quite safe.
+
+</P><P>
+<IMG SRC="Images/Warning.png" ALT="Warning">
+Do not capture variables by reference in lambdas given as StorableCallback, because APIs using StorableCallback may decide to use the callback for a longer duration of time without warning.
+So capturing variables by reference may break compatibility with future versions even if they work now without crashing.
+
+</P><P>
+</P><IMG SRC="Images/Border.png"><P>
+</P><H2> TemporaryCallback</H2><P>
+</P><P>
+<IMG SRC="Images/SmallDot.png">
+Source/DFPSR/base/TemporaryCallback.h
+
+</P><P>
+TemporaryCallback does not copy any closure, so only use the type as constant reference input arguments to functions.
+It is okay to allocate a lambda ahead of time using the auto type and later pass it as a TemporaryCallback to a function, because then the lambda remain as a named variable that is accessible within scope when called.
+
+</P><P>
+Unlike StorableCallback, it is okay to capture variables by reference, because TemporaryCallback is not intended to live past the function call that it is passed to by reference.
+
+</P><P>
+Just like StorableCallback, constructing TemporaryCallback from a function pointer is both fast and safe, because there is no closure to allocate and no captured variables.
+
+</P><P>
+<IMG SRC="Images/Warning.png" ALT="Warning">
+Never construct TemporaryCallback outside of input arguments.
+Do not allocate it in a struct.
+Do not allocate it in a class.
+Do not allocate it as a local variable on the stack.
+Do not allocate it as an object on the heap.
+Only pass as const TemporaryCallback & to functions that plan to use it during the call's duration.
+</P>
+</BODY> </HTML>

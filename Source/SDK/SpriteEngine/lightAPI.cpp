@@ -25,9 +25,9 @@ void directedLight(const FMatrix3x3& normalToWorldSpace, OrderedImageRgbaU8& lig
 	// Normals in range 0..255 - 128 have lengths of 127 and 128, so if we double the reverse light direction we'll end up near 0..255 again for colors
 	F32xXx3 reverseLightDirection = F32xXx3(-normalize(normalToWorldSpace.transformTransposed(lightDirection)) * lightIntensity * 2.0f);
 	IRect rectangleBound = image_getBound(lightBuffer);
-	float colorR = std::max(0.0f, (float)lightColor.red / 255.0f);
-	float colorG = std::max(0.0f, (float)lightColor.green / 255.0f);
-	float colorB = std::max(0.0f, (float)lightColor.blue / 255.0f);
+	float colorR = max(0.0f, (float)lightColor.red / 255.0f);
+	float colorG = max(0.0f, (float)lightColor.green / 255.0f);
+	float colorB = max(0.0f, (float)lightColor.blue / 255.0f);
 	threadedSplit(rectangleBound, [
 	  lightBuffer, normalBuffer, reverseLightDirection, colorR, colorG, colorB](const IRect& bound) mutable {
 		SafePointer<uint8_t> lightRow = image_getSafePointer_channels(lightBuffer, bound.top());
@@ -179,9 +179,9 @@ static void addPointLightSuper(const OrthoView& camera, const IVector2D& worldCe
 		// How much closer to your face in light-space does the pixel go per depth unit
 		F32xXx3 inYourFaceAxis = F32xXx3(camera.screenDepthToLightSpace.zAxis);
 		// Light color
-		float colorR = std::max(0.0f, (float)lightColor.red * lightIntensity);
-		float colorG = std::max(0.0f, (float)lightColor.green * lightIntensity);
-		float colorB = std::max(0.0f, (float)lightColor.blue * lightIntensity);
+		float colorR = max(0.0f, (float)lightColor.red * lightIntensity);
+		float colorG = max(0.0f, (float)lightColor.green * lightIntensity);
+		float colorB = max(0.0f, (float)lightColor.blue * lightIntensity);
 		float reciprocalRadius = 1.0f / lightRadius;
 		threadedSplit(rectangleBound, [
 		  lightBuffer, normalBuffer, heightBuffer, camera, worldCenter, inYourFaceAxis, lightSpaceSourcePosition,
