@@ -71,7 +71,10 @@ Title2: Technical details
 
 ---
 
-Title2: For future maintainers
+Title2: Future maintenance
+
+*
+<- Preserving.html | Preserving software for future maintainers
 
 *
 <- Porting.html | Porting to new processors and operating systems
