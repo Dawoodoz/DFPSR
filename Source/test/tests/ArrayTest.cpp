@@ -126,11 +126,11 @@ START_TEST(Array)
 		ASSERT_EQUAL(a[1][0], U"of");
 		ASSERT_EQUAL(a[1][1], U"string");
 		ASSERT_EQUAL(a[1][2], U"arrays");
-		Array<String> b = std::move(a[0]);
+		Array<String> b = dsr::move(a[0]);
 		ASSERT_EQUAL(a[0].length(), 0);
 		ASSERT_EQUAL(a[1].length(), 3);
 		ASSERT_EQUAL(b.length(), 3);
-		Array<String> c(std::move(a[1]));
+		Array<String> c(dsr::move(a[1]));
 		ASSERT_EQUAL(a[0].length(), 0);
 		ASSERT_EQUAL(a[1].length(), 0);
 		ASSERT_EQUAL(b.length(), 3);
