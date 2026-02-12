@@ -1,0 +1,81 @@
+﻿<- Manual.html | Back to main page
+
+Title: Preserving software for future maintainers
+
+Nobody can guarantee that this framework will forever be available on the internet, but the open source licenses allow anyone to redistribute it.
+Think about what would happen if every website you knew about no longer exists.
+Companies go bankrupt and abandon old websites all the time, so something on the internet has an average lifetime of around ten years.
+The C++ compiler you used might be abandoned for a newer compiler with a super-set of C++ or the ability to automatically port a subset of C++.
+Follow this guide to make sure that your software survives for as long as possible with the minimum required maintenance.
+
+---
+
+Title2: Keep a high code quality
+
+*
+Avoid doing low level hacks in C-style code when the framwwork offers a safer alternative that avoids undefined behavior.
+
+*
+Assert your assumptions and test a lot in debug mode.
+
+*
+Test building the source code on different operating systems and processors.
+
+*
+Document the intention behind the code, not just what it does on the lower level.
+
+*
+Avoid using too many acronyms and abbreviations in the names, because the meaning might not be so obvious to someone 1000 years into the future trying to learn ancient C++.
+
+---
+
+Title2: Executable files are useful for emulators and virtual machines
+
+A pre-compiled executable can be usedful as a reference to run in an emulator, while trying to replicate the behavior in a native port.
+Make sure that the executable files are compiled on a clean computer free from malware.
+Preserve checksums to know if malware or data corruption has altered the files.
+
+---
+
+Title2: Source code is the only thing that survives the transition to new systems
+
+The most important part of preserving software, is to preserve the source code of the application and all its non-standard dependencies.
+Developers who lost the source code to their games have spent decades trying to reverse engineer their old code from the compiled executable files, which is something that you really don't want to end up doing.
+
+---
+
+Title2: Keep everything in one large folder
+
+It is easy to forget the source code for a dependency if you installed them with a packet manager and only remember how to request a pre-compiled executable from the internet.
+So this framework is designed for placing all libraries and projects in one large folder where projects refer to libraries using relative paths.
+No need to guess which combination of library versions a certain program worked with, when all dependencies have that same version with source code in a folder next to the project.
+
+---
+
+Title2: Throw in some books
+
+For time capsules intended for thousands of years on crystal discs, a contemporary English dictionary, books about computer hardware architecture, and a C++ reference manual can be good to throw in when space is available.
+Books often have legal restrictions regarding redistribution, so they are best suited for personal copies until the copyright has expired.
+
+---
+
+Title2: Store many copies
+
+No storage device will last forever, because accidents will happen, the power supply might have uneven voltage, the storage device might be a cheap knockoff from a scammer, buildings can burn down, storage devices become lost or stolen.
+Store copies on multiple computers, external storage devices, cloud services, wherever you can squeeze in a few more megabytes.
+
+---
+
+Title2: Publicly accessible source code
+
+If you have a fatal accident, and nobody knows how to publish the source code that you had left on a USB memory stick somewhere, the source code will probably get lost.
+Publishing the source code before something bad happens allow another developer to continue the work, even if you have to keep publishing it while websites for hosting source code are being abandoned.
+It is also useful if your home burns down and you are locked out of all your accounts, because then you just search the internet for your own name and find everything you need to continue on a new computer.
+
+---
+
+Title2: Keeping your passwords
+
+In case of fire, I have my most important passwords for source code hosting and e-mail saved on steel plates, which can be used to reset the other passwords after a disaster.
+
+---
