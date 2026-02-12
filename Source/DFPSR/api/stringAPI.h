@@ -31,6 +31,7 @@
 #include "../base/DsrTraits.h"
 #include "../collection/List.h"
 #include "../settings.h"
+#include "../implementation/math/scalar.h"
 
 // Define DSR_INTERNAL_ACCESS before any include to get internal access to exposed types
 #ifdef DSR_INTERNAL_ACCESS
@@ -168,8 +169,8 @@ public:
 	String(const ReadableString& source) : ReadableString(source) {}
 	String(const String& source) : ReadableString(source) {}
 	// Move constructor.
-	String(ReadableString &&source) noexcept : ReadableString(std::move(source)) {}
-	String(String &&source) noexcept : ReadableString(std::move(source)) {}
+	String(ReadableString &&source) noexcept : ReadableString(move(source)) {}
+	String(String &&source) noexcept : ReadableString(move(source)) {}
 	// Copy assignment.
 	String& operator = (const String& source) {
 		if (this != &source) {

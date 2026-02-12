@@ -48,37 +48,36 @@ inline I roundDown(I size, U alignment) {
 	return size - signedModulo(size, alignment);
 }
 
-template <typename T, DSR_ENABLE_IF(DSR_CHECK_PROPERTY(DsrTrait_Scalar_Floating, T))>
-inline T absDiff(T a, T b) {
-	float result = a - b;
-	if (result < 0.0f) {
-		result = -result;
-	}
-	return result;
+// Post-condition: Returns abs(a - b)
+// C is the promoted integer type used for the subtraction and comparison.
+// T is the input and return type.
+template <typename C, typename T>
+inline T absDiff_promoted(const T &a, const T &b) {
+	return T(abs(C(a) - C(b)));
+}
+inline uint8_t  absDiff(const uint8_t  &a, const uint8_t  &b) { return absDiff_promoted<int32_t>(a, b); }
+inline uint16_t absDiff(const uint16_t &a, const uint16_t &b) { return absDiff_promoted<int32_t>(a, b); }
+inline uint32_t absDiff(const uint32_t &a, const uint32_t &b) { return absDiff_promoted<int64_t>(a, b); }
+inline uint16_t absDiff(const int16_t  &a, const int16_t  &b) { return absDiff_promoted<int32_t>(a, b); }
+inline uint32_t absDiff(const int32_t  &a, const int32_t  &b) { return absDiff_promoted<int32_t>(a, b); }
+inline uint32_t absDiff(const int64_t  &a, const int64_t  &b) { return absDiff_promoted<int64_t>(a, b); }
+inline uint32_t absDiff(const float    &a, const float    &b) { return absDiff_promoted<float>  (a, b); }
+inline uint32_t absDiff(const double   &a, const double   &b) { return absDiff_promoted<double> (a, b); }
+
+// Substitute for std::move.
+template<typename T>
+T&& move(T& source) {
+	// Cast from l-value reference (&) to r-value reference (&&), as a way of saying that the source is used as a temporary expression that can be moved from.
+	// Then the result will match with move instead of copy when the result is used for assignment or construction.
+	return static_cast<T&&>(source);
 }
 
-inline uint8_t absDiff(uint8_t a, uint8_t b) {
-	int32_t result = (int32_t)a - (int32_t)b;
-	if (result < 0) {
-		result = -result;
-	}
-	return (uint8_t)result;
-}
-
-inline uint16_t absDiff(uint16_t a, uint16_t b) {
-	int32_t result = (int32_t)a - (int32_t)b;
-	if (result < 0) {
-		result = -result;
-	}
-	return (uint16_t)result;
-}
-
-// Only use this for trivial types, use std::swap for objects with non-trivial construction.
+// Substitute for std::swap.
 template <typename T>
 inline void swap(T &a, T &b) {
-	T temp = a;
-	a = b;
-	b = temp;
+	T temp = move(a);
+	a = move(b);
+	b = move(temp);
 }
 
 // More compact than min(a, b) when reading from the target

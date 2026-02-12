@@ -62,7 +62,7 @@ public:
 	}
 	// Perspective view frustum in camera space
 	ViewFrustum(float nearClip, float farClip, float widthSlope, float heightSlope)
-	: planeCount(farClip == std::numeric_limits<float>::infinity() ? 5 : 6) { // Skip the far clip plane if its distance is infinite.
+	: planeCount(farClip == DSR_FLOAT_INF ? 5 : 6) { // Skip the far clip plane if its distance is infinite.
 		// Sides
 		planes[view_left  ] = FPlane3D(FVector3D(-1.0f,  0.0f, -widthSlope ), 0.0f);
 		planes[view_right ] = FPlane3D(FVector3D( 1.0f,  0.0f, -widthSlope ), 0.0f);
@@ -150,7 +150,7 @@ public:
 	// Orthogonal cameras doesn't have any near or far clip planes
 	static Camera createOrthogonal(const Transform3D &location, float imageWidth, float imageHeight, float halfWidth) {
 		float halfHeight = halfWidth * imageHeight / imageWidth;
-		return Camera(false, location, imageWidth, imageHeight, halfWidth, halfHeight, -std::numeric_limits<float>::max(), std::numeric_limits<float>::max(),
+		return Camera(false, location, imageWidth, imageHeight, halfWidth, halfHeight, -std::numeric_limits<float>::max(), DSR_FLOAT_INF,
 		  ViewFrustum(halfWidth * cullRatio, halfHeight * cullRatio),
 		  ViewFrustum(halfWidth * clipRatio, halfHeight * clipRatio));
 	}

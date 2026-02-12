@@ -136,7 +136,7 @@ void dsrMain(List<String> args) {
 		startTime = time_getSeconds();
 		// Clear the buffer
 		if (useOrthogonalCamera) {
-			image_fill(depthBuffer, std::numeric_limits<float>::infinity()); // Infinite depth
+			image_fill(depthBuffer, DSR_FLOAT_INF); // Infinite depth
 		} else {
 			image_fill(depthBuffer, 0.0f); // Infinite reciprocal depth using zero
 		}

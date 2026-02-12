@@ -22,7 +22,7 @@
 //    distribution.
 
 #include "format.h"
-#include <limits>
+#include "noSimd.h"
 #include <cmath>
 
 namespace dsr {
@@ -125,9 +125,9 @@ float format_bitsToF32_IEEE754(uint32_t bits) {
 	uint32_t mantissa =  bits & 0b00000000011111111111111111111111;
 	if (exponent == 0b11111111) {
 		if (mantissa == 0u) {
-			return sign ? -std::numeric_limits<float>::infinity() : std::numeric_limits<float>::infinity();
+			return sign ? -DSR_FLOAT_INF : DSR_FLOAT_INF;
 		} else {
-			return std::numeric_limits<float>::quiet_NaN();
+			return DSR_FLOAT_NAN;
 		}
 	} else if (exponent == 0 && mantissa == 0) {
 		return 0.0f;
@@ -147,9 +147,9 @@ double format_bitsToF64_IEEE754(uint64_t bits) {
 	uint64_t mantissa =  bits & 0b0000000000001111111111111111111111111111111111111111111111111111;
 	if (exponent == 0b11111111111) {
 		if (mantissa == 0u) {
-			return sign ? -std::numeric_limits<double>::infinity() : std::numeric_limits<double>::infinity();
+			return sign ? -DSR_DOUBLE_INF : DSR_DOUBLE_INF;
 		} else {
-			return std::numeric_limits<double>::quiet_NaN();
+			return DSR_DOUBLE_NAN;
 		}
 	} else if (exponent == 0 && mantissa == 0) {
 		return 0.0;

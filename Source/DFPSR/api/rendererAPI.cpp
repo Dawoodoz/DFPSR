@@ -28,7 +28,6 @@
 #include "drawAPI.h"
 #include "../implementation/render/renderCore.h"
 #include "../base/virtualStack.h"
-#include <limits>
 
 #define MUST_EXIST(OBJECT, METHOD) if (OBJECT.isNull()) { throwError(U"The " #OBJECT U" handle was null in " #METHOD U"\n"); }
 
@@ -186,7 +185,7 @@ struct RendererImpl {
 				this->depthGrid = image_create_F32(gridWidth, gridHeight);
 			}
 			// Use inifnite depth in camera space
-			image_fill(this->depthGrid, std::numeric_limits<float>::infinity());
+			image_fill(this->depthGrid, DSR_FLOAT_INF);
 		}
 		this->occluded = true;
 	}
@@ -324,7 +323,7 @@ struct RendererImpl {
 			}
 		}
 		IRect pixelBound = getPixelBoundFromProjection(outputHullCorners, cornerCount);
-		float closestDistance = std::numeric_limits<float>::infinity();
+		float closestDistance = DSR_FLOAT_INF;
 		for (int32_t c = 0; c < cornerCount; c++) {
 			replaceWithSmaller(closestDistance, outputHullCorners[c].cs.z);
 		}
@@ -365,7 +364,7 @@ struct RendererImpl {
 					for (int32_t cellY = 0; cellY < this->gridHeight; cellY++) {
 						for (int32_t cellX = 0; cellX < this->gridWidth; cellX++) {
 							float depth = image_readPixel_clamp(this->depthGrid, cellX, cellY);
-							if (depth < std::numeric_limits<float>::infinity()) {
+							if (depth < DSR_FLOAT_INF) {
 								int32_t intensity = depth;
 								draw_rectangle(this->colorBuffer, IRect(cellX * cellSize + 4, cellY * cellSize + 4, cellSize - 8, cellSize - 8), ColorRgbaI32(intensity, intensity, 0, 255));
 							}
@@ -424,7 +423,7 @@ struct RendererImpl {
 				float maxInvDistance;
 				// Scan bottom row of whole cell width
 				for (int32_t gridX = 0; gridX < this->gridWidth; gridX++) {
-					maxInvDistance = std::numeric_limits<float>::infinity();
+					maxInvDistance = DSR_FLOAT_INF;
 					if (right >= this->width) { right = this->width; }
 					while (x < right) {
 						float newInvDistance = *depthPixel;

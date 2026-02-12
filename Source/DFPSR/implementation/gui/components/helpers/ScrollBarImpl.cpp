@@ -65,8 +65,8 @@ void ScrollBarImpl::limitScrolling(const IRect &parentLocation, bool keepPinValu
 
 // Fill from the right side if vertical and bottom if horizontal.
 static IRect getWallSide(int32_t parentWidth, int32_t parentHeight, int32_t thickness, bool vertical) {
-	return vertical ? IRect(std::max(1, parentWidth - thickness), 0, thickness, parentHeight)
-	                : IRect(0, std::max(1, parentHeight - thickness), parentWidth, thickness);
+	return vertical ? IRect(max(1, parentWidth - thickness), 0, thickness, parentHeight)
+	                : IRect(0, max(1, parentHeight - thickness), parentWidth, thickness);
 }
 
 // Get the upper part if vertical and left part if horizontal.
@@ -82,8 +82,8 @@ static IRect getEndRect(const IRect &original, int32_t endLength, bool vertical)
 }
 
 static IRect getMiddleRect(const IRect &original, int32_t startCropping, int32_t endCropping, bool vertical) {
-	return vertical ? IRect(original.left(), original.top() + startCropping, original.width(), std::max(1, original.height() - startCropping - endCropping))
-	                : IRect(original.left() + startCropping, original.top(), std::max(1, original.width() - startCropping - endCropping), original.height());
+	return vertical ? IRect(original.left(), original.top() + startCropping, original.width(), max(1, original.height() - startCropping - endCropping))
+	                : IRect(original.left() + startCropping, original.top(), max(1, original.width() - startCropping - endCropping), original.height());
 }
 
 static int32_t getStart(const IRect &rect, bool vertical) {

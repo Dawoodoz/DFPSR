@@ -166,7 +166,7 @@ static ImageF32 scaleHeightImage(const ImageRgbaU8& heightImage, float minHeight
 			if (image_readPixel_clamp(colorImage, x, y).alpha > 127) {
 				image_writePixel(result, x, y, (value * scale) + offset);
 			} else {
-				image_writePixel(result, x, y, -std::numeric_limits<float>::infinity());
+				image_writePixel(result, x, y, -DSR_FLOAT_INF);
 			}
 		}
 	}
