@@ -70,7 +70,7 @@ public:
 		impl_baseZeroBoundCheck(index, LENGTH, U"FixedArray index");
 		return this->impl_elements[index];
 	}
-	inline intptr_t length() const {
+	inline constexpr intptr_t length() const {
 		return LENGTH;
 	}
 };
