@@ -29,7 +29,7 @@ static int32_t createTriangle(Model& model, int32_t part, int32_t indexA, int32_
 	}
 }
 
-using TransformFunction = std::function<FVector3D(int32_t pixelX, int32_t pixelY, int32_t displacement)>;
+using TransformFunction = StorableCallback<FVector3D(int32_t pixelX, int32_t pixelY, int32_t displacement)>;
 
 // Returns the start point index for another side to weld against
 int32_t createGridSide(Model& model, int32_t part, const ImageU8& heightMap, const ImageRgbaU8& colorMap,
@@ -280,7 +280,10 @@ static void generateField(ParserState& state, Shape shape, const ImageU8& height
 	bool mergeSides = shape == Shape::Cylinder;
 	bool weldNormals = mirror && clipZero;
 	// Create a transform function based on the shape
-	TransformFunction transform;
+	TransformFunction transform([](int32_t pixelX, int32_t pixelY, int32_t displacement) {
+		// If no transform was assigned, then return zero if called.
+		return FVector3D();
+	});
 	if (shape == Shape::Plane) {
 		// PatchWidth along local X
 		// PatchHeight along local Z
@@ -289,7 +292,7 @@ static void generateField(ParserState& state, Shape shape, const ImageU8& height
 		float heightScale = state.partSettings.patchHeight / -(image_getHeight(heightMap) - 1);
 		FVector3D localScaling = FVector3D(widthScale, offsetPerUnit, heightScale);
 		FVector3D localOrigin = FVector3D(state.partSettings.patchWidth * -0.5f, 0.0f, state.partSettings.patchHeight * 0.5f);
-		transform = [system, localOrigin, localScaling](int32_t pixelX, int32_t pixelY, int32_t displacement){
+		transform = [system, localOrigin, localScaling](int32_t pixelX, int32_t pixelY, int32_t displacement) {
 			return system.transformPoint(localOrigin + (FVector3D(pixelX, displacement, pixelY) * localScaling));
 		};
 	} else if (shape == Shape::Cylinder) {
@@ -302,7 +305,7 @@ static void generateField(ParserState& state, Shape shape, const ImageU8& height
 		float heightOffset = state.partSettings.patchHeight * 0.5f;
 		int32_t lastRow = image_getHeight(heightMap) - 1;
 		bool fillHoles = !mirror && !clipZero; // Automatically fill the holes to close the shape when not mirroring nor clipping the sides
-		transform = [system, angleOffset, angleScale, heightOffset, heightScale, radius, offsetPerUnit, fillHoles, lastRow](int32_t pixelX, int32_t pixelY, int32_t displacement){
+		transform = [system, angleOffset, angleScale, heightOffset, heightScale, radius, offsetPerUnit, fillHoles, lastRow](int32_t pixelX, int32_t pixelY, int32_t displacement) {
 			float angle = ((float)pixelX * angleScale) + angleOffset;
 			float offset = ((float)displacement * offsetPerUnit) + radius;
 			float height = ((float)pixelY * heightScale) + heightOffset;

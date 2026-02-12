@@ -249,7 +249,7 @@ void generateBumpMap(ImageF32& targetBumpMap, const ImageU8& heightMap, const Im
 			  + sampleFixedBilinear(heightMap, x + 5, y + 3)
 			) / 13.0f;
 			float bump = image_readPixel_tile(bumpPattern, x, y) - 127.5f;
-			image_writePixel(targetBumpMap, x, y, std::max(0.0f, height + bump * 0.1f));
+			image_writePixel(targetBumpMap, x, y, max(0.0f, height + bump * 0.1f));
 		}
 	}
 }
@@ -268,7 +268,7 @@ void generateLightMap(ImageF32& targetLightMap, const ImageF32& bumpMap, const F
 	for (int32_t y = 0; y < image_getHeight(targetLightMap); y++) {
 		for (int32_t x = 0; x < image_getWidth(targetLightMap); x++) {
 			FVector3D surfaceNormal = getNormal(bumpMap, x, y);
-			float angularIntensity = std::max(0.0f, dotProduct(surfaceNormal, -sunDirection));
+			float angularIntensity = max(0.0f, dotProduct(surfaceNormal, -sunDirection));
 			image_writePixel(targetLightMap, x, y, angularIntensity + ambient);
 		}
 	}

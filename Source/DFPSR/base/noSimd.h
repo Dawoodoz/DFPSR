@@ -30,8 +30,28 @@
 #include <cmath>
 #include "SafePointer.h"
 #include "DsrTraits.h"
+#include <limits>
 
 namespace dsr {
+	#define DSR_FLOAT_INF std::numeric_limits<float>::infinity()
+	#define DSR_FLOAT_NAN std::numeric_limits<float>::quiet_NaN()
+	#define DSR_DOUBLE_INF std::numeric_limits<double>::infinity()
+	#define DSR_DOUBLE_NAN std::numeric_limits<double>::quiet_NaN()
+	#define DSR_U8_MIN std::numeric_limits<uint8_t>::min()
+	#define DSR_U8_MAX std::numeric_limits<uint8_t>::max()
+	#define DSR_U16_MIN std::numeric_limits<uint16_t>::min()
+	#define DSR_U16_MAX std::numeric_limits<uint16_t>::max()
+	#define DSR_U32_MIN std::numeric_limits<uint32_t>::min()
+	#define DSR_U32_MAX std::numeric_limits<uint32_t>::max()
+	#define DSR_U64_MIN std::numeric_limits<uint64_t>::min()
+	#define DSR_U64_MAX std::numeric_limits<uint64_t>::max()
+	#define DSR_I16_MIN std::numeric_limits<int16_t>::min()
+	#define DSR_I16_MAX std::numeric_limits<int16_t>::max()
+	#define DSR_I32_MIN std::numeric_limits<int32_t>::min()
+	#define DSR_I32_MAX std::numeric_limits<int32_t>::max()
+	#define DSR_I64_MIN std::numeric_limits<int64_t>::min()
+	#define DSR_I64_MAX std::numeric_limits<int64_t>::max()
+
 	// Type conversions.
 	inline int32_t truncateToI32(float value) { return (int32_t)value; }
 	inline uint32_t truncateToU32(float value) { return (uint32_t)value; }
@@ -132,6 +152,12 @@ namespace dsr {
 
 	// TODO: Implement min and max for integer vectors in simd.h.
 	//       Start by implementing vectorized comparisons and blend functions as a fallback for unsupported types.
+
+	// Post-condition: Returns the absolute value.
+	template <typename T, DSR_ENABLE_IF(DSR_CHECK_PROPERTY(DsrTrait_Any, T))>
+	inline T abs(const T &value) {
+		return max(value, -value);
+	}
 
 	// Pre-condition: minValue <= maxValue
 	// Post-condition: Returns value clamped from minValue to maxValue.

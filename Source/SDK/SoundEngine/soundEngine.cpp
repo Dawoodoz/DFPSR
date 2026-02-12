@@ -153,91 +153,92 @@ void soundEngine_stopAllSounds() {
 // By using a fixed period size independently of the hardware's period size with sound_streamToSpeakers_fixed, we can reduce waste from SIMD padding and context switches.
 static const int32_t periodSize = 1024;
 
-void soundEngine_initialize() {
-	// Start a worker thread mixing sounds in realtime
-	std::function<void()> task = []() {
-		//sound_streamToSpeakers(outputChannels, outputSampleRate, [](SafePointer<float> target, int32_t requestedSamplesPerChannel) -> bool {
-		sound_streamToSpeakers_fixed(outputChannels, outputSampleRate, periodSize, [](SafePointer<float> target) -> bool {
-			// TODO: Create a thread-safe swap chain or input queue, so that the main thread and sound thread can work at the same time.
-			// Anyone wanting to change the played sounds from another thread will have to wait until this section has finished processing
-			soundMutex.lock();
-				VirtualStackAllocation<float> playerBuffer(periodSize * maxChannels, "Sound target buffer", memory_createAlignmentAndMask(sizeof(DSR_FLOAT_VECTOR_SIZE)));
-				for (int32_t p = fixedPlayers.length() - 1; p >= 0; p--) {
-					SoundPlayer *player = &(fixedPlayers[p]);
-					SoundBuffer *sound = &(player->soundBuffer);
-					// Get samples from the player.
-					player_getNextSamples(*player, playerBuffer, periodSize, 1.0 / (double)outputSampleRate);
-					// TODO: Use a swap chain to update volumes for sound players without stalling.
-					// TODO: Fade volume transitions by assigning soft targets to slowly move towards.
-					// Apply any volume scaling.
-					//if (player->leftVolume < 0.999f || player->leftVolume > 1.001f || player->rightVolume < 0.999f || player->rightVolume > 1.001f) {
-					//	
-					//}
-					//
-					if (sound_getChannelCount(*sound) == 1) { // Mono source to stereo target
-						// TODO: Use a zip/shuffle operation for duplicating channels when available in hardware.
-						SafePointer<float> sourceBlock = playerBuffer;
-						SafePointer<float> targetBlock = target;
-						const bool multiplyLeft = player->fadeLeft;
-						const bool multiplyRight = player->fadeRight;
+void backgroundWorker() {
+	//sound_streamToSpeakers(outputChannels, outputSampleRate, [](SafePointer<float> target, int32_t requestedSamplesPerChannel) -> bool {
+	sound_streamToSpeakers_fixed(outputChannels, outputSampleRate, periodSize, [](SafePointer<float> target) -> bool {
+		// TODO: Create a thread-safe swap chain or input queue, so that the main thread and sound thread can work at the same time.
+		// Anyone wanting to change the played sounds from another thread will have to wait until this section has finished processing
+		soundMutex.lock();
+			VirtualStackAllocation<float> playerBuffer(periodSize * maxChannels, "Sound target buffer", memory_createAlignmentAndMask(sizeof(DSR_FLOAT_VECTOR_SIZE)));
+			for (int32_t p = fixedPlayers.length() - 1; p >= 0; p--) {
+				SoundPlayer *player = &(fixedPlayers[p]);
+				SoundBuffer *sound = &(player->soundBuffer);
+				// Get samples from the player.
+				player_getNextSamples(*player, playerBuffer, periodSize, 1.0 / (double)outputSampleRate);
+				// TODO: Use a swap chain to update volumes for sound players without stalling.
+				// TODO: Fade volume transitions by assigning soft targets to slowly move towards.
+				// Apply any volume scaling.
+				//if (player->leftVolume < 0.999f || player->leftVolume > 1.001f || player->rightVolume < 0.999f || player->rightVolume > 1.001f) {
+				//	
+				//}
+				//
+				if (sound_getChannelCount(*sound) == 1) { // Mono source to stereo target
+					// TODO: Use a zip/shuffle operation for duplicating channels when available in hardware.
+					SafePointer<float> sourceBlock = playerBuffer;
+					SafePointer<float> targetBlock = target;
+					const bool multiplyLeft = player->fadeLeft;
+					const bool multiplyRight = player->fadeRight;
+					for (int32_t t = 0; t < periodSize; t++) {
+						float value = *sourceBlock;
+						if (multiplyLeft) {
+							targetBlock[0] += value * player->leftVolume;
+						} else {
+							targetBlock[0] += value;
+						}
+						if (multiplyRight) {
+							targetBlock[1] += value * player->rightVolume;
+						} else {
+							targetBlock[1] += value;
+						}
+						sourceBlock += 1;
+						targetBlock += 2;
+					}
+				} else if (sound_getChannelCount(*sound) == 2) { // Stereo source to stereo target
+					// Accumulating sound samples with the same number of channels in and out.
+					SafePointer<const float> sourceBlock = playerBuffer;
+					SafePointer<float> targetBlock = target;
+					if (player->fadeLeft || player->fadeRight) {
 						for (int32_t t = 0; t < periodSize; t++) {
-							float value = *sourceBlock;
-							if (multiplyLeft) {
-								targetBlock[0] += value * player->leftVolume;
-							} else {
-								targetBlock[0] += value;
-							}
-							if (multiplyRight) {
-								targetBlock[1] += value * player->rightVolume;
-							} else {
-								targetBlock[1] += value;
-							}
-							sourceBlock += 1;
+							targetBlock[0] += sourceBlock[0] * player->leftVolume;
+							targetBlock[1] += sourceBlock[1] * player->rightVolume;
+							sourceBlock += 2;
 							targetBlock += 2;
 						}
-					} else if (sound_getChannelCount(*sound) == 2) { // Stereo source to stereo target
-						// Accumulating sound samples with the same number of channels in and out.
-						SafePointer<const float> sourceBlock = playerBuffer;
-						SafePointer<float> targetBlock = target;
-						if (player->fadeLeft || player->fadeRight) {
-							for (int32_t t = 0; t < periodSize; t++) {
-								targetBlock[0] += sourceBlock[0] * player->leftVolume;
-								targetBlock[1] += sourceBlock[1] * player->rightVolume;
-								sourceBlock += 2;
-								targetBlock += 2;
-							}
-						} else {
-							for (int32_t t = 0; t < periodSize * outputChannels; t += laneCountF) {
-								F32xF packedSamples = F32xF::readAligned(sourceBlock, "Reading stereo sound samples");
-								F32xF oldTarget = F32xF::readAligned(targetBlock, "Reading stereo sound samples");
-								F32xF result = oldTarget + packedSamples;
-								result.writeAligned(targetBlock, "Incrementing stereo samples");
-								// Move pointers to the next block of input and output data.
-								sourceBlock.increaseBytes(DSR_FLOAT_VECTOR_SIZE);
-								targetBlock.increaseBytes(DSR_FLOAT_VECTOR_SIZE);
-							}
-						}
 					} else {
-						// TODO: How should more input than output channels be handled?
+						for (int32_t t = 0; t < periodSize * outputChannels; t += laneCountF) {
+							F32xF packedSamples = F32xF::readAligned(sourceBlock, "Reading stereo sound samples");
+							F32xF oldTarget = F32xF::readAligned(targetBlock, "Reading stereo sound samples");
+							F32xF result = oldTarget + packedSamples;
+							result.writeAligned(targetBlock, "Incrementing stereo samples");
+							// Move pointers to the next block of input and output data.
+							sourceBlock.increaseBytes(DSR_FLOAT_VECTOR_SIZE);
+							targetBlock.increaseBytes(DSR_FLOAT_VECTOR_SIZE);
+						}
 					}
-					// Remove players that are done.
-					if (player->envelope.envelopeSettings.used) {
-						// Remove after fading out when an envelope is used.
-						if (player->envelope.done()) {
-							fixedPlayers.remove(p);
-						}
-					} else {
-						// Remove instantly on release if there is no envelope.
-						if (!(player->sustained)) {
-							fixedPlayers.remove(p);
-						}
+				} else {
+					// TODO: How should more input than output channels be handled?
+				}
+				// Remove players that are done.
+				if (player->envelope.envelopeSettings.used) {
+					// Remove after fading out when an envelope is used.
+					if (player->envelope.done()) {
+						fixedPlayers.remove(p);
+					}
+				} else {
+					// Remove instantly on release if there is no envelope.
+					if (!(player->sustained)) {
+						fixedPlayers.remove(p);
 					}
 				}
-			soundMutex.unlock();
-			return soundRunning;
-		});
-	};
-	soundFuture = std::async(std::launch::async, task);
+			}
+		soundMutex.unlock();
+		return soundRunning;
+	});
+};
+
+void soundEngine_initialize() {
+	// Start a worker thread mixing sounds in realtime
+	soundFuture = std::async(std::launch::async, &backgroundWorker);
 }
 
 void soundEngine_terminate() {

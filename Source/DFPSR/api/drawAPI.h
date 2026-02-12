@@ -136,7 +136,7 @@ namespace dsr {
 	);
 	// 32-bit floating-point depth buffers
 	//   Source height negative infinity is used for invisible pixels
-	//     Negative infinity is expressed using -std::numeric_limits<float>::infinity() from limits.h
+	//     Negative infinity is expressed using -DSR_FLOAT_INF from Source/DFPSR/base/noSimd.h
 	//   Same pixel size as in ImageRgbaU8 to make aligned reading easier when used together with colors
 	//   Floats allow doing light calculations directly without having to perform expensive conversions from integers
 	void draw_higher(

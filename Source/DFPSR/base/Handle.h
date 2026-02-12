@@ -309,7 +309,7 @@ namespace dsr {
 				}));
 			}
 		}
-		return std::move(result.setName("Nameless handle object"));
+		return move(result.setName("Nameless handle object"));
 	}
 
 	// Construct an array of objects with a shared handle pointing to the first element.
@@ -345,7 +345,7 @@ namespace dsr {
 				}));
 			}
 		}
-		return std::move(result.setName("Nameless handle array"));
+		return move(result.setName("Nameless handle array"));
 	}
 
 	// Dynamic casting of handles.

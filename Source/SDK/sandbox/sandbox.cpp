@@ -114,14 +114,6 @@ static bool tileAlign = false;
 static int32_t debugView = 0;
 static int32_t mouseLights = 1;
 
-static int32_t random(const int32_t minimum, const int32_t maximum) {
-	if (maximum > minimum) {
-		return (std::rand() % (maximum + 1 - minimum)) + minimum;
-	} else {
-		return minimum;
-	}
-}
-
 // Variables
 static int32_t brushHeight = 0; // In mini-tile units
 static SpriteInstance spriteBrush(0, ortho_dir0, IVector3D(), true);
@@ -341,20 +333,21 @@ void sandbox_main() {
 	loadModel(U"Mage", U"Character_Mage.ply", U"Character_Mage_Shadow.ply");
 
 	// Create passive sprites
+	RandomGenerator generator = random_createGenerator(723409871253);
 	for (int32_t z = -300; z < 300; z++) {
 		for (int32_t x = -300; x < 300; x++) {
 			// The bottom floor does not have to throw shadows
-			spriteWorld_addBackgroundSprite(world, SpriteInstance(random(0, 1), random(0, 3) * ortho_dir90, IVector3D(x * ortho_miniUnitsPerTile, 0, z * ortho_miniUnitsPerTile), false));
+			spriteWorld_addBackgroundSprite(world, SpriteInstance(random_generate_range(generator, 0, 1), random_generate_range(generator, 0, 3) * ortho_dir90, IVector3D(x * ortho_miniUnitsPerTile, 0, z * ortho_miniUnitsPerTile), false));
 		}
 	}
 	for (int32_t z = -300; z < 300; z++) {
 		for (int32_t x = -300; x < 300; x++) {
-			if (random(1, 4) == 1) {
+			if (random_generate_probability(generator, 25)) {
 				// Obstacles should cast shadows when possible
-				spriteWorld_addBackgroundSprite(world, SpriteInstance(random(2, 4), random(0, 3) * ortho_dir90, IVector3D(x * ortho_miniUnitsPerTile, 0, z * ortho_miniUnitsPerTile), true));
-			} else if (random(1, 20) == 1) {
+				spriteWorld_addBackgroundSprite(world, SpriteInstance(random_generate_range(generator, 2, 4), random_generate_range(generator, 0, 3) * ortho_dir90, IVector3D(x * ortho_miniUnitsPerTile, 0, z * ortho_miniUnitsPerTile), true));
+			} else if (random_generate_probability(generator, 5)) {
 				// Characters are just static geometry for testing
-				spriteWorld_addBackgroundSprite(world, SpriteInstance(5, random(0, 7) * ortho_dir45, IVector3D(x * ortho_miniUnitsPerTile, 0, z * ortho_miniUnitsPerTile), true));
+				spriteWorld_addBackgroundSprite(world, SpriteInstance(5, random_generate_range(generator, 0, 7) * ortho_dir45, IVector3D(x * ortho_miniUnitsPerTile, 0, z * ortho_miniUnitsPerTile), true));
 			}
 		}
 	}

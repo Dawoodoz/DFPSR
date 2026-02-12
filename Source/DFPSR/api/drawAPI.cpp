@@ -25,6 +25,7 @@
 #include "imageAPI.h"
 #include "../implementation/math/scalar.h"
 #include "../implementation/image/PackOrder.h"
+#include "../implementation/math/scalar.h"
 #include <limits>
 
 namespace dsr {
@@ -196,7 +197,7 @@ inline void drawLineSuper(const IMAGE_TYPE &target, int32_t x1, int32_t y1, int3
 			image_writePixel(target, x1, y, color);
 		}
 	} else {
-		if (std::abs(y2 - y1) >= std::abs(x2 - x1)) {
+		if (absDiff(y2, y1) >= absDiff(x2, x1)) {
 			if (y2 < y1) {
 				swap(x1, x2);
 				swap(y1, y2);
@@ -835,7 +836,7 @@ static void imageImpl_drawHigher(const ImageF32& targetHeight, const ImageF32& s
 		ImageIntersection intersectionH = ImageIntersection::create(targetHeight, sourceHeight, left, top);
 		ITERATE_PIXELS(intersectionH.subTarget, intersectionH.subSource,
 			float newHeight = *((const float*)sourcePixel);
-			if (newHeight > -std::numeric_limits<float>::infinity()) {
+			if (newHeight > -DSR_FLOAT_INF) {
 				newHeight += sourceHeightOffset;
 				if (newHeight > *((float*)targetPixel)) {
 					*((float*)targetPixel) = newHeight;
@@ -855,7 +856,7 @@ static void imageImpl_drawHigher(const ImageF32& targetHeight, const ImageF32& s
 		ImageIntersection intersectionA = ImageIntersection::create(targetA, sourceA, left, top);
 		ITERATE_PIXELS_2(intersectionH.subTarget, intersectionH.subSource, intersectionA.subTarget, intersectionA.subSource,
 			float newHeight = *((const float*)sourcePixel1);
-			if (newHeight > -std::numeric_limits<float>::infinity()) {
+			if (newHeight > -DSR_FLOAT_INF) {
 				newHeight += sourceHeightOffset;
 				if (newHeight > *((float*)targetPixel1)) {
 					*((float*)targetPixel1) = newHeight;
@@ -884,7 +885,7 @@ static void imageImpl_drawHigher(const ImageF32& targetHeight, const ImageF32& s
 		ImageIntersection intersectionB = ImageIntersection::create(targetB, sourceB, left, top);
 		ITERATE_PIXELS_3(intersectionH.subTarget, intersectionH.subSource, intersectionA.subTarget, intersectionA.subSource, intersectionB.subTarget, intersectionB.subSource,
 			float newHeight = *((const float*)sourcePixel1);
-			if (newHeight > -std::numeric_limits<float>::infinity()) {
+			if (newHeight > -DSR_FLOAT_INF) {
 				newHeight += sourceHeightOffset;
 				if (newHeight > *((float*)targetPixel1)) {
 					*((float*)targetPixel1) = newHeight;

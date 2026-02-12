@@ -184,8 +184,8 @@ void TextBox::generateGraphics() {
 		int64_t firstVisibleLine = this->verticalScrollBar.getValue();
 
 		// Find character indices for left and right sides.
-		int64_t selectionLeft = std::min(this->selectionStart, this->beamLocation);
-		int64_t selectionRight = std::max(this->selectionStart, this->beamLocation);
+		int64_t selectionLeft = min(this->selectionStart, this->beamLocation);
+		int64_t selectionRight = max(this->selectionStart, this->beamLocation);
 		bool hasSelection = selectionLeft < selectionRight;
 
 		// Draw the text with selection and get the beam's pixel location.
@@ -228,7 +228,7 @@ int64_t TextBox::findBeamLocationInLine(int64_t rowIndex, int64_t pixelX) {
 	ReadableString currentLine = string_exclusiveRange(this->text.value, startIndex, endIndex);
 	iterateCharactersInLine(currentLine, font, [&beamIndex, &closestDistance, &origin, pixelX](int64_t index, DsrChar code, int64_t left, int64_t right) {
 		int64_t center = origin.x + (left + right) / 2;
-		int64_t newDistance = std::abs(pixelX - center);
+		int64_t newDistance = absDiff(pixelX, center);
 		if (newDistance < closestDistance) {
 			beamIndex = index;
 			closestDistance = newDistance;
@@ -300,14 +300,14 @@ void TextBox::receiveMouseEvent(const MouseEvent& event) {
 }
 
 ReadableString TextBox::getSelectedText() {
-	int64_t selectionLeft = std::min(this->selectionStart, this->beamLocation);
-	int64_t selectionRight = std::max(this->selectionStart, this->beamLocation);
+	int64_t selectionLeft = min(this->selectionStart, this->beamLocation);
+	int64_t selectionRight = max(this->selectionStart, this->beamLocation);
 	return string_exclusiveRange(this->text.value, selectionLeft, selectionRight);
 }
 
 void TextBox::replaceSelection(const ReadableString &replacingText) {
-	int64_t selectionLeft = std::min(this->selectionStart, this->beamLocation);
-	int64_t selectionRight = std::max(this->selectionStart, this->beamLocation);
+	int64_t selectionLeft = min(this->selectionStart, this->beamLocation);
+	int64_t selectionRight = max(this->selectionStart, this->beamLocation);
 	this->text.value = string_combine(string_before(this->text.value, selectionLeft), replacingText, string_from(this->text.value, selectionRight));
 	// Place beam on the right side of the replacement without selecting anything
 	this->selectionStart = selectionLeft + string_length(replacingText);
@@ -319,8 +319,8 @@ void TextBox::replaceSelection(const ReadableString &replacingText) {
 }
 
 void TextBox::replaceSelection(DsrChar replacingCharacter) {
-	int64_t selectionLeft = std::min(this->selectionStart, this->beamLocation);
-	int64_t selectionRight = std::max(this->selectionStart, this->beamLocation);
+	int64_t selectionLeft = min(this->selectionStart, this->beamLocation);
+	int64_t selectionRight = max(this->selectionStart, this->beamLocation);
 	String newText = string_before(this->text.value, selectionLeft);
 	string_appendChar(newText, replacingCharacter);
 	string_append(newText, string_from(this->text.value, selectionRight));

@@ -540,28 +540,28 @@ uint8_t image_maxDifference(const ImageU8& imageA, const ImageU8& imageB) {
 	if (image_exists(imageA) && image_exists(imageB)) {
 		return maxDifference_template<ImageU8, 1, uint8_t>(imageA, imageB);
 	} else {
-		return std::numeric_limits<uint8_t>::infinity();
+		return DSR_U8_MAX;
 	}
 }
 uint16_t image_maxDifference(const ImageU16& imageA, const ImageU16& imageB) {
 	if (image_exists(imageA) && image_exists(imageB)) {
 		return maxDifference_template<ImageU16, 1, uint16_t>(imageA, imageB);
 	} else {
-		return std::numeric_limits<uint16_t>::infinity();
+		return DSR_U16_MAX;
 	}
 }
 float image_maxDifference(const ImageF32& imageA, const ImageF32& imageB) {
 	if (image_exists(imageA) && image_exists(imageB)) {
 		return maxDifference_template<ImageF32, 1, float>(imageA, imageB);
 	} else {
-		return std::numeric_limits<float>::infinity();
+		return DSR_FLOAT_INF;
 	}
 }
 uint8_t image_maxDifference(const ImageRgbaU8& imageA, const ImageRgbaU8& imageB) {
 	if (image_exists(imageA) && image_exists(imageB)) {
 		return maxDifference_template<ImageRgbaU8, 4, uint8_t>(imageA, imageB);
 	} else {
-		return std::numeric_limits<uint8_t>::infinity();
+		return DSR_U8_MAX;
 	}
 }
 
