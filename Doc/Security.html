@@ -24,23 +24,53 @@ A:active { color: #FFFFFF; background: #444444; }
 <P>
 <A href="Manual.html">Back to main page</A>
 </P><P>
-</P><H1> Security information for David Forsgren Piuva's Software Renderer</H1><P></P><IMG SRC="Images/Border.png"><P>
+</P><H1> Security information for David Forsgren Piuva's Software Renderer</H1><P>
+</P><P>
+</P><IMG SRC="Images/Border.png"><P>
+
+</P><P>
+</P><H2> False detections when building source code with a custom build system</H2><P>
+</P><P>
+The act of building a build system from source code containing AVX2 instructions with known vulnerabilities and then running the program, can cause a lot of noise from anti-virus software, because this is a common pattern when launching attacks.
+
+</P><P>
+On Posix systems, there is also the 'chmod +x' used before running the next script for your convenience.
+If you have already granted execution rights to all the scripts, you can comment out the chmod commands.
+
+</P><P>
+If you want to be sure that nobody actually infected your copy of the code, you can copy the source code that you actually need into a new folder and inspect every file manually before compiling for the first time.
+The official distribution of DFPSR does not contain any executable when you have just downloaded it, so delete any executable file that you did not compile yourself.
+
+</P><P>
+</P><IMG SRC="Images/Border.png"><P>
+
+</P><P>
 </P><H2> Purpose</H2><P>
 </P><P>
 The library is designed to stand the test of time when making software to be ported by future generations.
 Any attempts at security against hackers from a distant future with hundreds of years to study the source code and superior quantum processors to break your encryptions would be futile.
+
+</P><P>
 </P><IMG SRC="Images/Border.png"><P>
+
+</P><P>
 </P><H2> Design</H2><P>
 </P><P>
 Due to the flat design of the library (shallow call depth), applying browser grade security in every internal function would not be practical nor fast.
 Memory bound checks are removed in release builds for maximum performance.
 Your application should terminate if incorrect input caused an error to be thrown from the library, because resuming execution from a state which breaks the invariant means that correctness can no longer be guaranteed.
+
+</P><P>
 </P><IMG SRC="Images/Border.png"><P>
+
+</P><P>
 </P><H2> How to be "safe" (if such a thing can ever be acheived)</H2><P>
 </P><P>
 In order to be safe, you must either read all input from a reliable source (like a protected folder) or validate all input yourself before giving it to the library (no memory aliasing, extreme image dimensions, invalid file syntax...).
 Just preventing others from writing over binaries would not help, because the library does not have security against file corruption when loading media.
 Treat it like you would treat a fast low-level graphics API, don't give direct access to potential attackers.
+
+</P><P>
 </P><IMG SRC="Images/Border.png"><P>
 </P>
 </BODY> </HTML>
