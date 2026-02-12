@@ -1,0 +1,175 @@
+﻿<- Manual.html | Back to main page
+
+Title: Porting to a new system
+If you are porting this framework to a new operating system, processor model, or both, you should follow the steps in this guide to make sure that you are not missing an important step.
+There will often be small differences in interpretation of C++ on new operating systems, so try to just compile small pieces of code and slowly work your way forward.
+Remember that this framework is statically linked directly into the application, so it is okay to only implement the features that you actually need at the moment and then share the partial port with someone who wants to port the next feature.
+
+---
+
+Title2: Endianness
+Check which endianness your target processor is using.
+If it uses little-endian, you can skip this step.
+If you are porting to a processor architecture that uses big-endian, make sure to define the DSR_BIG_ENDIAN macro in settings.h when the architecture is detected.
+
+---
+
+Title2: Porting the file API
+
+*
+Source/DFPSR/api/fileAPI.h
+
+Before we can create a basic application taking unicode arguments, we need to port the DSR_MAIN_CALLER macro in Source/DFPSR/api/fileAPI.h.
+Without Unicode strings as input arguments to programs, file paths from the user will be corrupted if they contain Chinese or Arabic characters.
+The DSR_MAIN_CALLER macro generates the standard main function, asks the operating system for input arguments in Unicode format, converts it into UTF-32 if needed, and calls the program's custom main function, which is named dsrMain in all the examples.
+DSR_MAIN_CALLER will also call dsr::heap_startingApplication() to initialize the memory allocator when the program starts and dsr::heap_terminatingApplication() to clean up memory when the application ends.
+
+*
+Source/DFPSR/api/fileAPI.cpp
+
+Check if there is anything more that deviates Source/DFPSR/api/fileAPI.cpp.
+If porting to a Posix compliant system, you may still have to name the symbolic link to the currently running executable in file_getApplicationFolder, because Posix does not impose a specific folder structure.
+
+---
+
+Title2: Porting the memory allocator
+
+*
+Source/DFPSR/base/heap.cpp
+
+Go to Source/DFPSR/base/heap.cpp and implement getCacheLineSize for your operating system.
+The function should return the number of bytes in the largest cache line on all CPU cores by asking the operating system.
+
+---
+
+Title2: Test the BasicCLI SDK example
+
+If done right, you should be able to compile and run Source/templates/basicCLI/main.cpp by calling your C++ compiler directly with the source files.
+
+*
+Source/templates/basicCLI/main.cpp
+
+*
+Source/DFPSR/api/SafePointer.cpp
+
+*
+Source/DFPSR/base/heap.cpp
+
+*
+Source/DFPSR/api/timeAPI.cpp
+
+*
+Source/DFPSR/collection/collections.cpp
+
+*
+Source/DFPSR/api/stringAPI.cpp
+
+*
+Source/DFPSR/api/fileAPI.cpp
+
+*
+Source/DFPSR/base/virtualStack.cpp
+
+*
+Source/DFPSR/api/bufferAPI.cpp
+
+---
+
+Title2: Builder build system
+An important thing to get running is the Builder build system, located in Source/tools/builder.
+
+The Source/tools/builder/buildProject.* scripts are called by different projects to:
+
+*
+Find a C++ compiler installed on the system.
+
+*
+Build the builder build system if it has not already been compiled.
+
+*
+Call the builder build system with a project file and the name of an operating system.
+
+*
+Call the compiler directly or generate a script that does it.
+
+Port the Source/tools/builder/buildProject.* script to do the same thing as on the other operating systems.
+When called from new build_*.* scripts you will need a standard name defined for the operating system to be used consistently and passed as an argument after the path to the project file.
+
+*
+Source/DFPSR/DFPSR.DsrHead
+
+Use your new name for the operating system as a boolean flag assigned to one, and decide which backends to use for video and sound in Source/DFPSR/DFPSR.DsrHead.
+These can just point to the same empty backends for now, but it is important to remember where the choice of backend is made for different systems.
+Importing the DFPSR.DsrHead project header into project files is entirely optional, and it can be replaced with another header if using custom backends for a specific purpose.
+It is also possible for other libraries to have their own project headers imported separatelly for linking to other system dependencies.
+
+Then create a new build_*.* script named after the new operating system that calls your port of the Source/tools/builder/buildProject script.
+If it works for compiling Source/templates/basicCLI/BasicCLI.DsrProj, then the Builder build system seems to be somewhat working and you can move on to the next step.
+
+---
+
+Title2: Running automatic tests
+
+Once the Builder build system is running, we can use it to run automatic tests, which will greatly increase the speed of tracking down small bugs.
+Port the Source/test/test_*.* script to your operating system, to make it call your port of the Source/tools/builder/buildProject.* script that you ported before, given your new name for the operating system.
+
+Then try calling the script to compile and run all tests.
+
+*
+If a test fails, investigate why and fix it.
+
+*
+If all tests pass, move on to the next step.
+
+*
+If no tests are found, you need to look at how the "Projects" command works in the Builder build system's source code in the Source/tools/builder/code folder.
+In Source/test/TestCaller.DsrProj, the 'Projects from "*Test.cpp" in "tests"' statement is used to find each file matching the "*Test.cpp" name pattern within the Source/test/tests folder.
+
+---
+
+Title2: Porting graphics
+
+Copy an implementation from Source/windowManagers and rename it based on the dependency.
+Go back to Source/DFPSR/DFPSR.DsrHead and let the new operating system's flag trigger the inclusion of the new window manager and linking to its dependencies.
+Start porting each method one by one as closely as you can to the native API for creating a window.
+
+Once you are almost done, you can run a manual test in the Source/SDK/integrationTest folder, which will guide you through different actions to perform using mouse and keyboard.
+The trickiest part is how to handle keys that are missing on the keyboard.
+
+---
+
+Title2: Porting sound
+
+Porting sound is very similar to porting graphics, but much simpler with only a single function to implement.
+Copy an implementation from Source/soundManagers and rename it based on the dependency.
+Go back to Source/DFPSR/DFPSR.DsrHead and let the new operating system's flag trigger the inclusion of the new sound manager and linking to its dependencies.
+
+To test if you have the right balance between responsiveness and buffering ahead of time, you can run the music application in the Source/SDK/music folder, where you can play different tones using the numerical keys.
+If the sound is chopped up and does not sound smooth, you might have a too small buffer that runs out or have an alignment problem with the data.
+Recording the speaker's output with a microphone or software tool in the operating system can help to see if the sound has muted sections, duplication, or has samples leaking across channels.
+
+---
+
+Title2: Testing everything
+
+Create scipts for calling the Builder build system for Source/tools/wizard and any other applications remaining.
+Build the Wizard application and try launching different applications to see if it works well.
+
+---
+
+Title2: Document
+
+Document how to get started as a new user wanting to compile and run the SDK applications.
+Open in Doc/Text/Starting.txt and insert a guide for getting started.
+Port the script for building the documentation generator in Doc/Text.
+Call the new script to generate HTML from formated txt documents.
+
+---
+
+Title2: SIMD (Single instruction multiple data)
+
+If you need more performance, add your own USE_ macro in Source/DFPSR/settings.h when the new processor architecture is detected as a target and use the macro in Source/DFPSR/base/simd.h to include headers, allocate native SIMD vectors in the types, and implement vectorized operations using SIMD intrinsics.
+
+The scalar reference implementation can be relied on as a reference implementation, as long as you don't overflow signed integers or something else with undefined behavior.
+
+---

@@ -1,0 +1,250 @@
+﻿<!DOCTYPE html> <HTML lang=en> <HEAD> <STYLE>
+body { background-color: #EEFFEE;  font-size: 1.0rem; font-family: Arial; max-width: 60rem;
+      color: #000000; margin: 0px;
+      padding-left:  0px; padding-right:  0px; padding-top:  0px; padding-bottom:  0px; }
+H1 {  padding-left: 10px; padding-right:  0px; padding-top: 10px; padding-bottom: 10px; font-size: 1.4rem; }
+H2 {  padding-left: 10px; padding-right:  0px; padding-top: 10px; padding-bottom:  0px; font-size: 1.2rem; }
+blockquote {
+  tab-size: 3rem;
+  color: #88FF88; background: #000000;
+  font-size: 0.95rem; font-family: monospace;
+  padding-left: 5px; padding-right: 5px;
+  padding-top: 5px; padding-bottom: 5px;
+}
+P {   padding-left: 20px; padding-right:  0px; padding-top:  0px; padding-bottom:  0px; }
+IMG { padding-left:  0px; padding-right:  0px; padding-top:  2px; padding-bottom:  0px;
+      max-width: 100%; }
+A { display: inline; border-radius: 4px;
+    font-size: 1.0rem; font-family: Arial; color: #000044; text-decoration: none;
+    padding-left: 4px; padding-right: 4px; padding-top: 4px; padding-bottom: 4px; }
+A:hover { color: #FFFF00; background: #000044; }
+A:active { color: #FFFFFF; background: #444444; }
+</STYLE> </HEAD> <BODY>
+<IMG SRC="Images/Title.png" ALT="Images/Title.png">
+<P>
+<A href="Manual.html">Back to main page</A>
+</P><P>
+</P><H1> Porting to a new system</H1><P>If you are porting this framework to a new operating system, processor model, or both, you should follow the steps in this guide to make sure that you are not missing an important step.
+There will often be small differences in interpretation of C++ on new operating systems, so try to just compile small pieces of code and slowly work your way forward.
+Remember that this framework is statically linked directly into the application, so it is okay to only implement the features that you actually need at the moment and then share the partial port with someone who wants to port the next feature.
+
+</P><P>
+</P><IMG SRC="Images/Border.png"><P>
+
+</P><P>
+</P><H2> Endianness</H2><P>Check which endianness your target processor is using.
+If it uses little-endian, you can skip this step.
+If you are porting to a processor architecture that uses big-endian, make sure to define the DSR_BIG_ENDIAN macro in settings.h when the architecture is detected.
+
+</P><P>
+</P><IMG SRC="Images/Border.png"><P>
+
+</P><P>
+</P><H2> Porting the file API</H2><P>
+</P><P>
+<IMG SRC="Images/SmallDot.png">
+Source/DFPSR/api/fileAPI.h
+
+</P><P>
+Before we can create a basic application taking unicode arguments, we need to port the DSR_MAIN_CALLER macro in Source/DFPSR/api/fileAPI.h.
+Without Unicode strings as input arguments to programs, file paths from the user will be corrupted if they contain Chinese or Arabic characters.
+The DSR_MAIN_CALLER macro generates the standard main function, asks the operating system for input arguments in Unicode format, converts it into UTF-32 if needed, and calls the program's custom main function, which is named dsrMain in all the examples.
+DSR_MAIN_CALLER will also call dsr::heap_startingApplication() to initialize the memory allocator when the program starts and dsr::heap_terminatingApplication() to clean up memory when the application ends.
+
+</P><P>
+<IMG SRC="Images/SmallDot.png">
+Source/DFPSR/api/fileAPI.cpp
+
+</P><P>
+Check if there is anything more that deviates Source/DFPSR/api/fileAPI.cpp.
+If porting to a Posix compliant system, you may still have to name the symbolic link to the currently running executable in file_getApplicationFolder, because Posix does not impose a specific folder structure.
+
+</P><P>
+</P><IMG SRC="Images/Border.png"><P>
+
+</P><P>
+</P><H2> Porting the memory allocator</H2><P>
+</P><P>
+<IMG SRC="Images/SmallDot.png">
+Source/DFPSR/base/heap.cpp
+
+</P><P>
+Go to Source/DFPSR/base/heap.cpp and implement getCacheLineSize for your operating system.
+The function should return the number of bytes in the largest cache line on all CPU cores by asking the operating system.
+
+</P><P>
+</P><IMG SRC="Images/Border.png"><P>
+
+</P><P>
+</P><H2> Test the BasicCLI SDK example</H2><P>
+</P><P>
+If done right, you should be able to compile and run Source/templates/basicCLI/main.cpp by calling your C++ compiler directly with the source files.
+
+</P><P>
+<IMG SRC="Images/SmallDot.png">
+Source/templates/basicCLI/main.cpp
+
+</P><P>
+<IMG SRC="Images/SmallDot.png">
+Source/DFPSR/api/SafePointer.cpp
+
+</P><P>
+<IMG SRC="Images/SmallDot.png">
+Source/DFPSR/base/heap.cpp
+
+</P><P>
+<IMG SRC="Images/SmallDot.png">
+Source/DFPSR/api/timeAPI.cpp
+
+</P><P>
+<IMG SRC="Images/SmallDot.png">
+Source/DFPSR/collection/collections.cpp
+
+</P><P>
+<IMG SRC="Images/SmallDot.png">
+Source/DFPSR/api/stringAPI.cpp
+
+</P><P>
+<IMG SRC="Images/SmallDot.png">
+Source/DFPSR/api/fileAPI.cpp
+
+</P><P>
+<IMG SRC="Images/SmallDot.png">
+Source/DFPSR/base/virtualStack.cpp
+
+</P><P>
+<IMG SRC="Images/SmallDot.png">
+Source/DFPSR/api/bufferAPI.cpp
+
+</P><P>
+</P><IMG SRC="Images/Border.png"><P>
+
+</P><P>
+</P><H2> Builder build system</H2><P>An important thing to get running is the Builder build system, located in Source/tools/builder.
+
+</P><P>
+The Source/tools/builder/buildProject.* scripts are called by different projects to:
+
+</P><P>
+<IMG SRC="Images/SmallDot.png">
+Find a C++ compiler installed on the system.
+
+</P><P>
+<IMG SRC="Images/SmallDot.png">
+Build the builder build system if it has not already been compiled.
+
+</P><P>
+<IMG SRC="Images/SmallDot.png">
+Call the builder build system with a project file and the name of an operating system.
+
+</P><P>
+<IMG SRC="Images/SmallDot.png">
+Call the compiler directly or generate a script that does it.
+
+</P><P>
+Port the Source/tools/builder/buildProject.* script to do the same thing as on the other operating systems.
+When called from new build_*.* scripts you will need a standard name defined for the operating system to be used consistently and passed as an argument after the path to the project file.
+
+</P><P>
+<IMG SRC="Images/SmallDot.png">
+Source/DFPSR/DFPSR.DsrHead
+
+</P><P>
+Use your new name for the operating system as a boolean flag assigned to one, and decide which backends to use for video and sound in Source/DFPSR/DFPSR.DsrHead.
+These can just point to the same empty backends for now, but it is important to remember where the choice of backend is made for different systems.
+Importing the DFPSR.DsrHead project header into project files is entirely optional, and it can be replaced with another header if using custom backends for a specific purpose.
+It is also possible for other libraries to have their own project headers imported separatelly for linking to other system dependencies.
+
+</P><P>
+Then create a new build_*.* script named after the new operating system that calls your port of the Source/tools/builder/buildProject script.
+If it works for compiling Source/templates/basicCLI/BasicCLI.DsrProj, then the Builder build system seems to be somewhat working and you can move on to the next step.
+
+</P><P>
+</P><IMG SRC="Images/Border.png"><P>
+
+</P><P>
+</P><H2> Running automatic tests</H2><P>
+</P><P>
+Once the Builder build system is running, we can use it to run automatic tests, which will greatly increase the speed of tracking down small bugs.
+Port the Source/test/test_*.* script to your operating system, to make it call your port of the Source/tools/builder/buildProject.* script that you ported before, given your new name for the operating system.
+
+</P><P>
+Then try calling the script to compile and run all tests.
+
+</P><P>
+<IMG SRC="Images/SmallDot.png">
+If a test fails, investigate why and fix it.
+
+</P><P>
+<IMG SRC="Images/SmallDot.png">
+If all tests pass, move on to the next step.
+
+</P><P>
+<IMG SRC="Images/SmallDot.png">
+If no tests are found, you need to look at how the "Projects" command works in the Builder build system's source code in the Source/tools/builder/code folder.
+In Source/test/TestCaller.DsrProj, the 'Projects from "*Test.cpp" in "tests"' statement is used to find each file matching the "*Test.cpp" name pattern within the Source/test/tests folder.
+
+</P><P>
+</P><IMG SRC="Images/Border.png"><P>
+
+</P><P>
+</P><H2> Porting graphics</H2><P>
+</P><P>
+Copy an implementation from Source/windowManagers and rename it based on the dependency.
+Go back to Source/DFPSR/DFPSR.DsrHead and let the new operating system's flag trigger the inclusion of the new window manager and linking to its dependencies.
+Start porting each method one by one as closely as you can to the native API for creating a window.
+
+</P><P>
+Once you are almost done, you can run a manual test in the Source/SDK/integrationTest folder, which will guide you through different actions to perform using mouse and keyboard.
+The trickiest part is how to handle keys that are missing on the keyboard.
+
+</P><P>
+</P><IMG SRC="Images/Border.png"><P>
+
+</P><P>
+</P><H2> Porting sound</H2><P>
+</P><P>
+Porting sound is very similar to porting graphics, but much simpler with only a single function to implement.
+Copy an implementation from Source/soundManagers and rename it based on the dependency.
+Go back to Source/DFPSR/DFPSR.DsrHead and let the new operating system's flag trigger the inclusion of the new sound manager and linking to its dependencies.
+
+</P><P>
+To test if you have the right balance between responsiveness and buffering ahead of time, you can run the music application in the Source/SDK/music folder, where you can play different tones using the numerical keys.
+If the sound is chopped up and does not sound smooth, you might have a too small buffer that runs out or have an alignment problem with the data.
+Recording the speaker's output with a microphone or software tool in the operating system can help to see if the sound has muted sections, duplication, or has samples leaking across channels.
+
+</P><P>
+</P><IMG SRC="Images/Border.png"><P>
+
+</P><P>
+</P><H2> Testing everything</H2><P>
+</P><P>
+Create scipts for calling the Builder build system for Source/tools/wizard and any other applications remaining.
+Build the Wizard application and try launching different applications to see if it works well.
+
+</P><P>
+</P><IMG SRC="Images/Border.png"><P>
+
+</P><P>
+</P><H2> Document</H2><P>
+</P><P>
+Document how to get started as a new user wanting to compile and run the SDK applications.
+Open in Doc/Text/Starting.txt and insert a guide for getting started.
+Port the script for building the documentation generator in Doc/Text.
+Call the new script to generate HTML from formated txt documents.
+
+</P><P>
+</P><IMG SRC="Images/Border.png"><P>
+
+</P><P>
+</P><H2> SIMD (Single instruction multiple data)</H2><P>
+</P><P>
+If you need more performance, add your own USE_ macro in Source/DFPSR/settings.h when the new processor architecture is detected as a target and use the macro in Source/DFPSR/base/simd.h to include headers, allocate native SIMD vectors in the types, and implement vectorized operations using SIMD intrinsics.
+
+</P><P>
+The scalar reference implementation can be relied on as a reference implementation, as long as you don't overflow signed integers or something else with undefined behavior.
+
+</P><P>
+</P><IMG SRC="Images/Border.png"><P>
+</P>
+</BODY> </HTML>
