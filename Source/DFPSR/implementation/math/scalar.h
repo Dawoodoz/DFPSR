@@ -53,7 +53,7 @@ inline I roundDown(I size, U alignment) {
 // T is the input and return type.
 template <typename C, typename T>
 inline T absDiff_promoted(const T &a, const T &b) {
-	return T(abs(C(a) - C(b)));
+	return T(dsr::abs(C(a) - C(b)));
 }
 inline uint8_t  absDiff(const uint8_t  &a, const uint8_t  &b) { return absDiff_promoted<int32_t>(a, b); }
 inline uint16_t absDiff(const uint16_t &a, const uint16_t &b) { return absDiff_promoted<int32_t>(a, b); }
@@ -75,9 +75,9 @@ T&& move(T& source) {
 // Substitute for std::swap.
 template <typename T>
 inline void swap(T &a, T &b) {
-	T temp = move(a);
-	a = move(b);
-	b = move(temp);
+	T temp = dsr::move(a);
+	a = dsr::move(b);
+	b = dsr::move(temp);
 }
 
 // More compact than min(a, b) when reading from the target
