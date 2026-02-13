@@ -74,9 +74,15 @@ Title2: Technical details
 Title2: Future maintenance
 
 *
-<- Preserving.html | Preserving software for future maintainers
+<- Dictionary.html | Dictionary for commonly used terms
+
+*
+<- DesignPrinciples.html | Design principles
 
 *
 <- Porting.html | Porting to new processors and operating systems
+
+*
+<- Preserving.html | Preserving software for future maintainers
 
 ---

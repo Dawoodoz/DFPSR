@@ -1,0 +1,68 @@
+﻿<!DOCTYPE html> <HTML lang=en> <HEAD> <STYLE>
+body { background-color: #EEFFEE;  font-size: 1.0rem; font-family: Arial; max-width: 60rem;
+      color: #000000; margin: 0px;
+      padding-left:  0px; padding-right:  0px; padding-top:  0px; padding-bottom:  0px; }
+H1 {  padding-left: 10px; padding-right:  0px; padding-top: 10px; padding-bottom: 10px; font-size: 1.4rem; }
+H2 {  padding-left: 10px; padding-right:  0px; padding-top: 10px; padding-bottom:  0px; font-size: 1.2rem; }
+blockquote {
+  tab-size: 3rem;
+  color: #88FF88; background: #000000;
+  font-size: 0.95rem; font-family: monospace;
+  padding-left: 5px; padding-right: 5px;
+  padding-top: 5px; padding-bottom: 5px;
+}
+P {   padding-left: 20px; padding-right:  0px; padding-top:  0px; padding-bottom:  0px; }
+IMG { padding-left:  0px; padding-right:  0px; padding-top:  2px; padding-bottom:  0px;
+      max-width: 100%; }
+A { display: inline; border-radius: 4px;
+    font-size: 1.0rem; font-family: Arial; color: #000044; text-decoration: none;
+    padding-left: 4px; padding-right: 4px; padding-top: 4px; padding-bottom: 4px; }
+A:hover { color: #FFFF00; background: #000044; }
+A:active { color: #FFFFFF; background: #444444; }
+</STYLE> </HEAD> <BODY>
+<IMG SRC="Images/Title.png" ALT="Images/Title.png">
+<P>
+<A href="Manual.html">Back to main page</A>
+</P><P>
+</P><H1> Design principles</H1><P>
+</P><P>
+</P><IMG SRC="Images/Border.png"><P>
+
+</P><P>
+</P><H2> Choice of C++ instead of C</H2><P>
+</P><P>
+The original version of DFPSR was written in the C language, in an attempt to keep it simple and have a stable ABI for dynamic linking with almost any language.
+Being a graphics API instead of a graphics engine however, the pre-existing image filters would have made very boring graphics.
+So dynamic linking was not an option and then it did not matter if the ABI was stable or not when compiling all source code in the same version of the same language.
+Any mistake in handling of resources when writing all applications in C would lead to memory corruption, so development was painfully slow when trying to throw together a quick prototype.
+The library needed a language that allowed writing both realtime image filters with pointers, and the high level abstractions needed to apply bound checks on those pointers in debug mode.
+
+</P><P>
+While not perfect, C++ 2014 filled most of the requirements, by having access to both low level optimization and high level abstractions.
+With dsr::SafePointer, there were no more random memory crashes of unknown origin, because bound checked pointers caught data corruption directly where it happened in debug mode.
+With RAII, memory leaks no longer happened from having allocations with no pointers to them, only from applications deciding to keep adding things to collections without ever removing them.
+The SIMD abstraction used operator overloading instead of named functions for everything, which made complex math expressions a lot more readable.
+
+</P><P>
+</P><IMG SRC="Images/Border.png"><P>
+
+</P><P>
+</P><H2> Relying on a language standard instead of a single compiler implementation</H2><P>
+</P><P>
+What if the library had used a language with a single compiler implementation to fully specify the behavior?
+If the interpretation of your code requires reading the source code of a specific compiler to understand what it is supposed to do, that code will die with the compiler.
+Once the source code stands on its own without a compiler that still runs on modern systems, avoiding undefined behavior must be done in the code itself.
+
+</P><P>
+</P><IMG SRC="Images/Border.png"><P>
+
+</P><P>
+</P><H2> Bundling transpilers with projects</H2><P>
+</P><P>
+Relying on a transpiler that is bundled with the project is however fine, because you can generate code that avoids undefined behavior and save the output in case that the transpiler can no longer execute.
+This documentation was generated using a transpiler, so that it does not rely on the ability to parse HTML.
+
+</P><P>
+</P><IMG SRC="Images/Border.png"><P>
+</P>
+</BODY> </HTML>

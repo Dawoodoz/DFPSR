@@ -1,0 +1,69 @@
+﻿<- Manual.html | Back to main page
+
+Title: Dictionary
+
+To avoid confusion when reading the code comments and documentation, some contemporary programming words will have to be explained in this dictionary.
+
+---
+
+Title2: Acronyms
+
+While one should mostly avoid using abbreviations in source code, writing davidForsgrenPiuvasSoftwareRenderer:: instead of dsr:: in headers would take too much space and not help to explain the purpose of the code.
+
+ABI | Application Binary Interface.
+How a library is linked and called after the source code has been compiled, which is a binary representation.
+
+API | Application Programming Interface.
+How a library is called in the source code, which can be checked by the programming language's type system.
+A wrapper to call code written in a different language is an API, because the ABI has been wrapped in pre-declarations explaining the meaning of the bits in the calling language's type system.
+
+AD | Anno Domini (In the lord's years), used for years after the birth of prophet Jesus Christ in the Gregorian calendar, which is the calendar used to name versions of the C++ programming language.
+
+C | A programming language created by Dennis Ritche in the 1970s AD.
+Not to be confused with the C# language.
+
+C++ | A programming language created by Bjarne Stroustrup in the 1980s AD. Inherited most of the core design from C for easy porting while adding new features.
+
+DSR | David's (Forsgren Piuva's) software renderer, the shorter acronym for this library and the surrounding framework.
+
+DFPSR | David Forsgren Piuva's software renderer, the longer acronym for this library and the surrounding framework.
+
+HTML | Hyper Text Markup Language. A text format adapted for reading on computers instead of printing, by containing links and not dictating any page layout. Most known as the default format for websites.
+
+LOD | Level Of Detail. Often referring to a 3D model's polygon count, but can also apply to other types of assets.
+
+MIP | Multum in parvo. A term used for texture pyramids because there are multiple image resolutions stored in the same texture. Used to avoid noisy undersampling of textures that are seen from far away.
+
+RAII | Resource Allocation Is Initialization, an important design principle in C++ that prevents memory leaks by letting types handle heap memory allocation automatically in constructors and destructors.
+
+SIMD | Single Instruction Multiple Data.
+A power efficient hardware design for packing arrays of elements into the same register and processing them at the same time using multiple lanes.
+Makes the machine instructions faster, by both increasing the number of elements processed per instruction, and reducing the pipeline latency needed to run a single instruction by using smaller types.
+
+---
+
+Title2: Abbreviations
+
+Doc | Documentation
+
+Gen | Generator, a function or program used to create something automatically.
+
+---
+
+Title2: Expressions
+
+Array | A coherent and indexed block of memory with alignment for each element to allow random access.
+dsr::Array creates a heap allocation based on a size given at runtime during construction.
+dsr::FixedArray does not make any heap allocation, but can not change its size at runtime.
+
+Et cetera | Latin expression that is often used to indicate that a list of examples is not exhaustive, roughly meaning "and all the rest".
+
+List | A collection that can be populated with elements at runtime, where indices to the elements are treated as something temporary.
+dsr::List is an array based list, and simply called List to save some typing when there is no linked list among the framework's generic collections.
+
+Vector | An array of numbers, used for multi-dimensional math or SIMD vectorization.
+
+Vectorize | To use vectors in order to solve a math problem.
+Instead of treating one million pixels as independent objects with a heap allocation for each pixel, we vectorize images into memory aligned arrays and loop over them using chunks of shorter SIMD vectors. 
+
+Scalar | A single number, as opposed to a collection of multiple numbers.
