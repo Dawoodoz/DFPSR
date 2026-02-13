@@ -3,6 +3,8 @@
 #include "../../DFPSR/base/simd.h"
 #include "../../DFPSR/base/endian.h"
 
+// TODO: Write tests for the abs function in noSimd.h, using SIMD vectors.
+//       Implement the abs function directly to override the template functoin when hardware is available for the vector type.
 // TODO: Set up a test where SIMD is disabled to force using the reference implementation.
 // TODO: Keep the reference implementation alongside the SIMD types during brute-force testing with millions of random inputs.
 
