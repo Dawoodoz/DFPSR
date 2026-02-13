@@ -50,6 +50,9 @@ Title2: Techniques
 <- ChoosingStorage.html | Choosing storage
 
 *
+<- Vectorization.html | SIMD vectorization
+
+*
 <- ImageProcessing.html | Image processing
 
 ---

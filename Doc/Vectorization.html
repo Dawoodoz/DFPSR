@@ -1,0 +1,295 @@
+﻿<!DOCTYPE html> <HTML lang=en> <HEAD> <STYLE>
+body { background-color: #EEFFEE;  font-size: 1.0rem; font-family: Arial; max-width: 60rem;
+      color: #000000; margin: 0px;
+      padding-left:  0px; padding-right:  0px; padding-top:  0px; padding-bottom:  0px; }
+H1 {  padding-left: 10px; padding-right:  0px; padding-top: 10px; padding-bottom: 10px; font-size: 1.4rem; }
+H2 {  padding-left: 10px; padding-right:  0px; padding-top: 10px; padding-bottom:  0px; font-size: 1.2rem; }
+blockquote {
+  tab-size: 3rem;
+  color: #88FF88; background: #000000;
+  font-size: 0.95rem; font-family: monospace;
+  padding-left: 5px; padding-right: 5px;
+  padding-top: 5px; padding-bottom: 5px;
+}
+P {   padding-left: 20px; padding-right:  0px; padding-top:  0px; padding-bottom:  0px; }
+IMG { padding-left:  0px; padding-right:  0px; padding-top:  2px; padding-bottom:  0px;
+      max-width: 100%; }
+A { display: inline; border-radius: 4px;
+    font-size: 1.0rem; font-family: Arial; color: #000044; text-decoration: none;
+    padding-left: 4px; padding-right: 4px; padding-top: 4px; padding-bottom: 4px; }
+A:hover { color: #FFFF00; background: #000044; }
+A:active { color: #FFFFFF; background: #444444; }
+</STYLE> </HEAD> <BODY>
+<IMG SRC="Images/Title.png" ALT="Images/Title.png">
+<P>
+<A href="Manual.html">Back to main page</A>
+</P><P>
+</P><H1> Vectorization</H1><P>
+</P><P>
+One of the most important features of this framework is the ability to use vectors that are independent of processor architecture.
+Instead of having to manually use intrinsic functions directly, the library generates the intrinsic function calls using inlined functions bound to operands.
+
+</P><P>
+All lanes in the vectors are indexed by memory addresses, so lane zero is always first in memory, while reinterpret casting between SIMD vectors works as if reinterpret casting pointers to bytes in memory.
+
+</P><P>
+</P><IMG SRC="Images/Border.png"><P>
+
+</P><P>
+</P><H2> The headers</H2><P>
+</P><P>
+<IMG SRC="Images/SmallDot.png">
+Source/DFPSR/base/simd.h
+
+</P><P>
+The Source/DFPSR/base/simd.h header is where the SIMD vectors are implemented.
+
+</P><P>
+<IMG SRC="Images/SmallDot.png">
+Source/DFPSR/base/noSimd.h
+
+</P><P>
+To simplify using the same math functions with and without vectorization, the same functionality is offered to basic scalar types in Source/DFPSR/base/noSimd.h.
+When writing a template function that works for both scalar and vector types, one can import Source/DFPSR/base/noSimd.h in the header that defines the template functions without polluting the header with everything inside of simd.h.
+Then the caller can import simd.h from within a cpp file and call the template function using the portable vector types.
+
+</P><P>
+</P><IMG SRC="Images/Border.png"><P>
+
+</P><P>
+</P><H2> 128-bit vector types</H2><P>
+</P><P>
+The most deterministic and beginner friendly way of SIMD vectorizing, is to use the fixed size 128-bit vectors.
+Then you do not need to test the algorithm with multiple vector widths.
+It will just work with the same determinism as using scalar operations directly in C++.
+
+</P><P>
+U8x16 is a vector of unsigned integer with 16 lanes of 8 bits each.
+
+</P><P>
+U16x8 is a vector of unsigned integer with 8 lanes of 16 bits each.
+
+</P><P>
+U32x4 is a vector of unsigned integer with 4 lanes of 32 bits each.
+
+</P><P>
+I32x4 is a vector of signed integer with 4 lanes of 32 bits each.
+Note that signed integers in C++ have undefined behavior to give room for better optimization.
+
+</P><P>
+F32x4 is a vector of floating-point numbers with 4 lanes of 32 bits each.
+(float, float, float, float)
+Even if the computer follows a standard for storage of floating-point values, the calculations are always undefined behavior when it comes to rounding errors in calculations.
+Use integers if you need absolute determinism regarding precision.
+
+</P><P>
+</P><IMG SRC="Images/Border.png"><P>
+
+</P><P>
+</P><H2> Variable width vector types</H2><P>
+</P><P>
+When targeting hardware that has wider vectors than 128 bits, it is recommended to use the variable width SIMD vectors.
+Note that some SIMD hardware will have a special read-only register for reading the vector's width at runtime instead of compiling for different targets, so that the same compiled program can use the same instructions for different vector widths.
+
+</P><P>
+For SSE2 and ARM NEON, both X and F vectors are 128 bits wide.
+These are usually enabled by default, because the extensions are not optional in modern hardware.
+
+</P><P>
+For AVX, F vectors are 256 bit wide and X vectors are 128 bits wide.
+AVX has to be enabled using a flag specific to the compiler and will make the executable incompatible with processors that do not have the AVX extension.
+AVX only makes the F32xF type wider, so if you are not using it, you can skip compiling for AVX and only compile for SSE2 and AVX2.
+If you are not targeting old processors, you can start with AVX as the minimum requirement.
+
+</P><P>
+For AVX2, both X and F vectors are 256 bit wide.
+AVX2 has to be enabled using a flag specific to the compiler and will make the executable incompatible with processors that do not have the AVX2 extension.
+For programs compiled with AVX2, it is advisable to also release a version of the program that does not require AVX2.
+
+</P><P>
+</P><IMG SRC="Images/Border.png"><P>
+
+</P><P>
+</P><H2> X vector types</H2><P>
+</P><P>
+An X vector has the largest bit width that is available for both floating-point and integer types.
+
+</P><P>
+<IMG SRC="Images/SmallDot.png">
+U8xX is a vector of 8-bit unsigned integers filling up the X vector width.
+
+</P><P>
+<IMG SRC="Images/SmallDot.png">
+U16xX is a vector of 16-bit unsigned integers filling up the X vector width.
+
+</P><P>
+<IMG SRC="Images/SmallDot.png">
+U32xX is a vector of 32-bit unsigned integers filling up the X vector width.
+
+</P><P>
+<IMG SRC="Images/SmallDot.png">
+I32xX is a vector of 32-bit signed integers filling up the X vector width.
+
+</P><P>
+<IMG SRC="Images/SmallDot.png">
+F32xX is a vector of 32-bit floats filling up the X vector width, which can be smaller than F32xF when X and F vectors are not of the same size.
+
+</P><P>
+</P><IMG SRC="Images/Border.png"><P>
+
+</P><P>
+</P><H2> F vector types</H2><P>
+</P><P>
+An F vector has the largest bit width that is available for both floating-point only, which can then be wider than the X vector.
+When using the F vector, all operations in the loop must use floating-point values.
+If you are mixing in integers with the X vector width, you have to fall back to the X width for the entire loop.
+
+</P><P>
+<IMG SRC="Images/SmallDot.png">
+F32xF is a vector of 32-bit floats filling up the F vector width.
+
+</P><P>
+</P><IMG SRC="Images/Border.png"><P>
+
+</P><P>
+</P><H2> Reading and writing data</H2><P>
+</P><P>
+The SIMD vectors are designed to be used together with dsr::Buffer and dsr::SafePointer.
+dsr::Buffer guarantees that the start of the buffer is aligned with both the widest SIMD vector and the widest cache line among all CPU cores.
+dsr::SafePointer makes it easy to catch out-of-bound errors in debug mode, even when using gather instructions.
+
+</P><P>
+</P><IMG SRC="Images/Border.png"><P>
+
+</P><P>
+</P><H2> readAligned</H2><P>
+</P><P>
+readAligned is a static member function of the SIMD vectors, so you call it using the vector type as a namespace before the call.
+If you for example want to load an X vector of 16-bit unsigned integers, you call 'U16xX::readAligned(firstElementPointer, "Reading my vector")' to get U16xX as the result.
+The "data" pointer should point to the first element in the array of element to load, and must be memory aligned with the full size of the vector.
+The "methodName" string should be an ascii string literal, which is only used in debug mode and optimized away in release mode.
+
+</P><P>
+U8x? U8x32::readAligned(dsr::SafePointer<const uint8_t> data, const char* methodName)
+
+</P><P>
+U16x? U8x32::readAligned(dsr::SafePointer<const uint16_t> data, const char* methodName)
+
+</P><P>
+U32x? U8x32::readAligned(dsr::SafePointer<const uint32_t> data, const char* methodName)
+
+</P><P>
+I32x? U8x32::readAligned(dsr::SafePointer<const int32_t> data, const char* methodName)
+
+</P><P>
+F32x? U8x32::readAligned(dsr::SafePointer<const float> data, const char* methodName)
+
+</P><P>
+</P><IMG SRC="Images/Border.png"><P>
+
+</P><P>
+</P><H2> writeAligned</H2><P>
+</P><P>
+writeAligned is a regular member function of the SIMD vectors, so you call it by treating the vector as an object.
+If you have a SIMD vector called myVector containing a result that you want to store in memory, you call 'myVector.writeAligned(firstElementPointer, "Writing my vector");' to store it.
+The "data" pointer should point to the first element in the array of element to write, and must be memory aligned with the full size of the vector.
+The "methodName" string should be an ascii string literal, which is only used in debug mode and optimized away in release mode.
+
+</P><P>
+void U8x?::writeAligned(dsr::SafePointer<uint8_t> data, const char* methodName) const
+
+</P><P>
+void U16x?::writeAligned(dsr::SafePointer<uint16_t> data, const char* methodName) const
+
+</P><P>
+void U32x?::writeAligned(dsr::SafePointer<uint32_t> data, const char* methodName) const
+
+</P><P>
+void I32x?::writeAligned(dsr::SafePointer<int32_t> data, const char* methodName) const
+
+</P><P>
+void F32x?::writeAligned(dsr::SafePointer<float> data, const char* methodName) const
+
+</P><P>
+</P><IMG SRC="Images/Border.png"><P>
+
+</P><P>
+</P><H2> Gather functions</H2><P>
+</P><P>
+The gather_U32, gather_I32 and gather_F32 functions take a SafePointer and a vector of 32-bit unsigned integer element offsets.
+For each element offset in the offset vector, the element at the pointer plus the offset is returned at the corresponding lane in the result.
+
+</P><P>
+U32x? gather_U32(dsr::SafePointer<const uint32_t> data, const U32x? &elementOffset)
+
+</P><P>
+I32x? gather_I32(dsr::SafePointer<const int32_t> data, const U32x? &elementOffset)
+
+</P><P>
+F32x? gather_F32(dsr::SafePointer<const float> data, const U32x? &elementOffset)
+
+</P><P>
+</P><IMG SRC="Images/Border.png"><P>
+
+</P><P>
+</P><H2> Constructing SIMD vectors from multiple scalars</H2><P>
+</P><P>
+The easiest way to construct a SIMD vector is to construct it from its elements, such as 'F32x4(0.3f, 12.5f, 10.0f, 1.0f)'.
+
+</P><P>
+</P><IMG SRC="Images/Border.png"><P>
+
+</P><P>
+</P><H2> Constructing SIMD vectors from a single scalar</H2><P>
+</P><P>
+Every SIMD vector can also be constructed from a uniform scalar, because this has special SIMD instructions in some processors.
+So 'U32x4(25)' is the same as writing 'U32x4(25, 25, 25, 25)'.
+
+</P><P>
+</P><IMG SRC="Images/Border.png"><P>
+
+</P><P>
+</P><H2> Constructing SIMD vectors from gradients</H2><P>
+</P><P>
+While not hardware accellerated, the static member function createGradient can be used to construct a SIMD vector using the value of the first element and how much to add for each following element.
+So by writing 'F32xX::createGradient(0.5f, 1.0f)', you get F32x4(0.5f, 1.5f, 2.5f, 3.5f), F32x8(0.5f, 1.5f, 2.5f, 3.5f, 4.5f, 5.5f, 6.5f, 7.5f)... depending on the length of the type.
+
+</P><P>
+Vectorizing sampling locations will sometimes require initializing a SIMD vector to a gradient and then iterate it in strides.
+
+</P><P>
+</P><IMG SRC="Images/Border.png"><P>
+
+</P><P>
+</P><H2> Math operations</H2><P>
+</P><P>
+On top of the functions defined in noSimd.h, most of the standard math functions that applies to scalars are also defined for SIMD vectors, such as addition (a + b), subtraction (a - b, -a) and multiplication (a * b).
+The math operations are performed as point operations.
+(a, b, c, d...) op (x, y, z, w...) = (a op x, b op y, c op z, d op w...)
+
+</P><P>
+32-bit integer multiplication is not supported directly in hardware on some processors, but it will fall back on multiple scalar multiplications when that happens to give correct results.
+
+</P><P>
+Integer division is not supported for SIMD vectors, because noboty uses integer division in optimized code and hardware supports it.
+For multiplying and dividing by powers of two, you can instead pre-calculate the base-two logarithm of the value to multiply or divide.
+Shift left on an unsigned integer to multiply.
+Shift right on an unsigned integer to divide.
+
+</P><P>
+Bit shifting is not supported for signed integers, because that would be undefined behavior.
+Some hardware architectures offer signed bit shifting in a way that divides and multiplies signed integers correctly, but these might not even exist for scalar operations.
+
+</P><P>
+For optimal performance, use bitShiftLeftImmediate instead of << and bitShiftRightImmediate instead of >> when you know the offset amount in compile time.
+Instead of 'myVector << 5', write 'bitShiftLeftImmediate<5>(myVector)'.
+Instead of 'myVector >> 12', write 'bitShiftRightImmediate<12>(myVector)'.
+Otherwise the hardware abstraction may have to fall back on repeated scalar operations even though bit shifting intrinsic functions are available for immediate offsets.
+
+</P><P>
+SIMD vectors with lanes of unsigned integers also support bitwise and (a & b), bitwise inclusive or (a | b), bitwise exclusive or (a ^ b), bitwise negation (~a).
+
+</P><P>
+</P><IMG SRC="Images/Border.png"><P>
+</P>
+</BODY> </HTML>
