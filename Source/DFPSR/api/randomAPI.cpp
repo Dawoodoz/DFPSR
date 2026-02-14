@@ -1,6 +1,6 @@
 /*
 Copyright (C) 2025 Miguel Castillo
-Reviewed and adapted by David Forsgren Piuva
+Reviewed and adapted 2025 to 2026 by David Forsgren Piuva
 
 This is free and unencumbered software released into the public domain.
 

@@ -1,6 +1,6 @@
 /*
 Copyright (C) 2025 Miguel Castillo
-Reviewed and adapted by David Forsgren Piuva
+Reviewed and adapted 2025 to 2026 by David Forsgren Piuva
 
 This is free and unencumbered software released into the public domain.
 
@@ -49,7 +49,10 @@ struct RandomGenerator {
 // Returns a new random generator initialized by seed.
 RandomGenerator random_createGenerator(uint64_t seed);
 
-// Pre-condition: minimum <= maximum
+// The raw output from the generator without any limits.
+uint64_t random_generate_U64(RandomGenerator &generator);
+
+// Pre-condition: minimum <= maximum.
 int32_t random_generate_range(RandomGenerator &generator, int32_t minimum, int32_t maximum);
 float random_generate_range(RandomGenerator &generator, float minimum, float maximum);
 
