@@ -14,8 +14,8 @@ echo PROJECT_BUILD_SCRIPT = %PROJECT_BUILD_SCRIPT%
 set PROJECT_FILE=%TEST_FOLDER%TestCaller.DsrProj
 echo PROJECT_FILE = %PROJECT_FILE%
 
-rem Build TestCaller and all its tests. 
-call "%PROJECT_BUILD_SCRIPT%" "%PROJECT_FILE%" Windows %@%
+rem Build TestCaller and all its tests.
+call "%PROJECT_BUILD_SCRIPT%" "%PROJECT_FILE%" Windows Optimization=0 %@%
 if errorlevel 0 (
 	echo Done building TestCaller.
 ) else (
