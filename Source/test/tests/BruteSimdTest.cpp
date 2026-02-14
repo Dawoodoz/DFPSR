@@ -6,6 +6,24 @@
 
 static const intptr_t ITERATIONS = 1000000;
 
+template<typename T>
+T generate(RandomGenerator &generator) {
+	return (T)random_generate_U64(generator);
+}
+template<>
+float generate<float>(RandomGenerator &generator) {
+	// Too big floats will fail from not having enough precision, so this random generator is limited within -1000.0f to 1000.0f.
+	int32_t fractions = random_generate_range(generator, -1000000, 1000000);
+	return float(fractions) * 0.001f;
+}
+
+template<typename T>
+bool somewhatEqual(const T &a, const T &b) {
+	double da = double(a);
+	double db = double(b);
+	return (da < db + 0.0001) && (da > db - 0.0001);
+}
+
 template<typename S_IN, typename S_OUT, typename V_IN, typename V_OUT>
 void unaryEquivalent (
   const TemporaryCallback<S_OUT(const S_IN &a)> &scalarOp,
@@ -23,7 +41,7 @@ void unaryEquivalent (
 		// Generate random input.
 		ALIGN_BYTES(sizeof(V_IN)) S_IN inputA[laneCount];
 		for (intptr_t lane = 0; lane < laneCount; lane++) {
-			inputA[lane] = (S_IN)random_generate_U64(generator);
+			inputA[lane] = generate<S_IN>(generator);
 		}
 		// Execute scalar operation for all lanes.
 		ALIGN_BYTES(sizeof(V_OUT)) S_OUT scalarResult[laneCount];
@@ -33,16 +51,17 @@ void unaryEquivalent (
 		// Execute SIMD operation with all lanes at the same time.
 		V_IN simdInputA = V_IN::readAlignedUnsafe(inputA);
 		V_OUT simdOutput = simdOp(simdInputA);
-		ALIGN_BYTES(sizeof(V_OUT)) S_OUT simdResult[laneCount];
-		simdOutput.writeAlignedUnsafe(simdResult);
+		ALIGN_BYTES(sizeof(V_OUT)) S_OUT vectorResult[laneCount];
+		simdOutput.writeAlignedUnsafe(vectorResult);
 		// Compare results.
 		for (intptr_t lane = 0; lane < laneCount; lane++) {
-			// TODO: Handle tolerance margins for floating-point elements.
-			if (scalarResult[lane] != simdResult[lane]) {
-				printText(U"\nWrong result at lane ", lane, U" in 0..", laneCount - 1, U" at iteration ", iteration, U" of ", testName, U"!\n");
+			if (!somewhatEqual(scalarResult[lane], vectorResult[lane])) {
+				printText(U"\n_______________________________ FAIL _______________________________\n");
+				printText(U"Wrong result at lane ", lane, U" of 0..", laneCount - 1, U" at iteration ", iteration, U" of ", testName, U"!\n");
 				printText(U"Input: ", inputA[lane], U"\n");
 				printText(U"Scalar result: ", scalarResult[lane], U"\n");
-				printText(U"SIMD result: ", simdResult[lane], U"\n");
+				printText(U"Vector result: ", vectorResult[lane], U"\n");
+				printText(U"\n____________________________________________________________________\n");
 				failed = true;
 				return;
 			}
@@ -69,8 +88,8 @@ void binaryEquivalent (
 		ALIGN_BYTES(sizeof(V_OUT)) S_IN inputA[laneCount];
 		ALIGN_BYTES(sizeof(V_OUT)) S_IN inputB[laneCount];
 		for (intptr_t lane = 0; lane < laneCount; lane++) {
-			inputA[lane] = (S_IN)random_generate_U64(generator);
-			inputB[lane] = (S_IN)random_generate_U64(generator);
+			inputA[lane] = generate<S_IN>(generator);
+			inputB[lane] = generate<S_IN>(generator);
 		}
 		// Execute scalar operation for all lanes.
 		ALIGN_BYTES(sizeof(V_OUT)) S_OUT scalarResult[laneCount];
@@ -81,16 +100,17 @@ void binaryEquivalent (
 		V_IN simdInputA = V_IN::readAlignedUnsafe(inputA);
 		V_IN simdInputB = V_IN::readAlignedUnsafe(inputB);
 		V_OUT simdOutput = simdOp(simdInputA, simdInputB);
-		ALIGN_BYTES(sizeof(V_OUT)) S_OUT simdResult[laneCount];
-		simdOutput.writeAlignedUnsafe(simdResult);
+		ALIGN_BYTES(sizeof(V_OUT)) S_OUT vectorResult[laneCount];
+		simdOutput.writeAlignedUnsafe(vectorResult);
 		// Compare results.
 		for (intptr_t lane = 0; lane < laneCount; lane++) {
-			// TODO: Handle tolerance margins for floating-point elements.
-			if (scalarResult[lane] != simdResult[lane]) {
-				printText(U"\nWrong result at lane ", lane, U" in 0..", laneCount - 1, U" at iteration ", iteration, U" of ", testName, U"!\n");
+			if (!somewhatEqual(scalarResult[lane], vectorResult[lane])) {
+				printText(U"\n_______________________________ FAIL _______________________________\n");
+				printText(U"\nWrong result at lane ", lane, U" of 0..", laneCount - 1, U" at iteration ", iteration, U" of ", testName, U"!\n");
 				printText(U"Input: ", inputA[lane], U", ", inputB[lane], U"\n");
 				printText(U"Scalar result: ", scalarResult[lane], U"\n");
-				printText(U"SIMD result: ", simdResult[lane], U"\n");
+				printText(U"Vector result: ", vectorResult[lane], U"\n");
+				printText(U"\n____________________________________________________________________\n");
 				failed = true;
 				return;
 			}
@@ -129,6 +149,8 @@ START_TEST(BruteSimd)
 	BINARY_POINT_EQUIVALENCE(uint32_t, U32x8 , a + b);
 	BINARY_POINT_EQUIVALENCE(int32_t , I32x4 , a + b);
 	BINARY_POINT_EQUIVALENCE(int32_t , I32x4 , a + b);
+	BINARY_POINT_EQUIVALENCE(float   , F32x4 , a + b);
+	BINARY_POINT_EQUIVALENCE(float   , F32x4 , a + b);
 
 	// Subtraction
 	BINARY_POINT_EQUIVALENCE(uint8_t , U8x16 , a - b);
@@ -139,10 +161,14 @@ START_TEST(BruteSimd)
 	BINARY_POINT_EQUIVALENCE(uint32_t, U32x8 , a - b);
 	BINARY_POINT_EQUIVALENCE(int32_t , I32x4 , a - b);
 	BINARY_POINT_EQUIVALENCE(int32_t , I32x4 , a - b);
+	BINARY_POINT_EQUIVALENCE(float   , F32x4 , a - b);
+	BINARY_POINT_EQUIVALENCE(float   , F32x4 , a - b);
 
 	// Negation
 	UNARY_POINT_EQUIVALENCE(int32_t , I32x4 , -a);
 	UNARY_POINT_EQUIVALENCE(int32_t , I32x4 , -a);
+	UNARY_POINT_EQUIVALENCE(float   , F32x4 , -a);
+	UNARY_POINT_EQUIVALENCE(float   , F32x4 , -a);
 
 	// Multiplication
 	//BINARY_POINT_EQUIVALENCE(uint8_t , U8x16 , a * b); // Missing
@@ -153,6 +179,8 @@ START_TEST(BruteSimd)
 	BINARY_POINT_EQUIVALENCE(uint32_t, U32x8 , a * b);
 	BINARY_POINT_EQUIVALENCE(int32_t , I32x4 , a * b);
 	BINARY_POINT_EQUIVALENCE(int32_t , I32x4 , a * b);
+	BINARY_POINT_EQUIVALENCE(float   , F32x4 , a * b);
+	BINARY_POINT_EQUIVALENCE(float   , F32x4 , a * b);
 
 	// Bitwise and
 	//BINARY_POINT_EQUIVALENCE(uint8_t , U8x16 , a & b); // Missing
