@@ -3,8 +3,6 @@
 #include "../../DFPSR/base/simd.h"
 #include "../../DFPSR/base/endian.h"
 
-// TODO: Write tests for the abs function in noSimd.h, using SIMD vectors.
-//       Implement the abs function directly to override the template functoin when hardware is available for the vector type.
 // TODO: Set up a test where SIMD is disabled to force using the reference implementation.
 // TODO: Keep the reference implementation alongside the SIMD types during brute-force testing with millions of random inputs.
 
@@ -1075,6 +1073,24 @@ START_TEST(Simd)
 	// Maximum
 	ASSERT_EQUAL_SIMD(max(F32x4(1.1f, 2.2f, 3.3f, 4.4f), F32x4(5.0f, 3.0f, 1.0f, -1.0f)), F32x4(5.0f, 3.0f, 3.3f, 4.4f));
 	ASSERT_EQUAL_SIMD(max(F32x8(1.1f, 2.2f, 3.3f, 4.4f, 5.5f, 6.6f, 7.7f, 8.8f), F32x8(5.0f, 3.0f, 1.0f, -1.0f, 4.0f, 5.0f, -2.5f, 10.0f)), F32x8(5.0f, 3.0f, 3.3f, 4.4f, 5.5f, 6.6f, 7.7f, 10.0f));
+
+	// Absolute
+	ASSERT_EQUAL_SIMD(
+	  abs(F32x4(1.1f,-2.2f, 3.3f,-4.4f)),
+	      F32x4(1.1f, 2.2f, 3.3f, 4.4f)
+	);
+	ASSERT_EQUAL_SIMD(
+	  abs(F32x8(1.1f,-2.2f,-3.3f, 4.4f, 5.5f,-6.6f,-7.7f,-8.8f)),
+	      F32x8(1.1f, 2.2f, 3.3f, 4.4f, 5.5f, 6.6f, 7.7f, 8.8f)
+	);
+	ASSERT_EQUAL_SIMD(
+	  abs(I32x4(1,-2, 3,-4)),
+	      I32x4(1, 2, 3, 4)
+	);
+	ASSERT_EQUAL_SIMD(
+	  abs(I32x8(1,-2,-3, 4, 5,-6,-7,-8)),
+	      I32x8(1, 2, 3, 4, 5, 6, 7, 8)
+	);
 
 	// Clamp
 	ASSERT_EQUAL_SIMD(clamp(F32x4(-1.5f), F32x4(-35.1f, 1.0f, 2.0f, 45.7f), F32x4(1.5f)), F32x4(-1.5f, 1.0f, 1.5f, 1.5f));
