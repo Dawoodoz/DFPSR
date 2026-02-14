@@ -2108,7 +2108,7 @@
 			left.writeAlignedUnsafe(&(a[0])); \
 			right.writeAlignedUnsafe(&(b[0])); \
 			for (int i = 0; i < LANE_COUNT; i++) { \
-				if (fabs(a[i] - b[i]) >= 0.0001f) return false; \
+				if ((a[i] > b[i] + 0.0001f) || (a[i] < b[i] - 0.0001f)) return false; \
 			} \
 			return true; \
 		} \
@@ -2118,7 +2118,7 @@
 			left.writeAlignedUnsafe(&(a[0])); \
 			right.writeAlignedUnsafe(&(b[0])); \
 			for (int i = 0; i < LANE_COUNT; i++) { \
-				if (fabs(a[i] - b[i]) < 0.0001f) return false; \
+				if (!((a[i] > b[i] + 0.0001f) || (a[i] < b[i] - 0.0001f))) return false; \
 			} \
 			return true; \
 		}
@@ -2231,6 +2231,33 @@
 			return F32x4(v0, v1, v2, v3);
 		#endif
 	}
+	inline F32x4 abs(const F32x4& value) {
+		#if defined(USE_SSE2)
+			// Mask out the negation bit to make the value positive.
+			ALIGN16 const uint32_t noSignMask[4] = {
+			  0b01111111111111111111111111111111,
+			  0b01111111111111111111111111111111,
+			  0b01111111111111111111111111111111,
+			  0b01111111111111111111111111111111
+			};
+			ALIGN16 const __m128 mask = F32x4::readAlignedUnsafe((const float*)noSignMask).v;
+			ALIGN16 __m128 result = _mm_and_ps(value.v, mask);
+			return F32x4(result);
+		#elif defined(USE_NEON)
+			return F32x4(vabsq_f32(value.v));
+		#else
+			float v0 = value.scalars[0];
+			float v1 = value.scalars[1];
+			float v2 = value.scalars[2];
+			float v3 = value.scalars[3];
+			return F32x4(
+			  v0 < 0.0f ? -v0 : v0,
+			  v1 < 0.0f ? -v1 : v1,
+			  v2 < 0.0f ? -v2 : v2,
+			  v3 < 0.0f ? -v3 : v3
+			);
+		#endif
+	}
 	inline I32x4 operator+(const I32x4& left, const I32x4& right) {
 		#if defined(USE_BASIC_SIMD)
 			return I32x4(ADD_I32_SIMD(left.v, right.v));
@@ -2255,6 +2282,35 @@
 			#endif
 		#else
 			IMPL_SCALAR_REFERENCE_INFIX_4_LANES(left, right, I32x4, int32_t, *)
+		#endif
+	}
+	// Behaviour is undefined if taking the absolute value of the most negative value that has no corresponding positive value.
+	inline I32x4 abs(const I32x4& value) {
+		#if defined(USE_SSSE3)
+			return I32x4(_mm_abs_epi32(value.v));
+		#elif defined(USE_SSE2)
+			// Falling back on a scalar implementation when _mm_abs_epi32 is not available.
+			ALIGN16 int32_t values[4];
+			value.writeAlignedUnsafe(values);
+			return I32x4(
+			  values[0] < 0 ? -values[0] : values[0],
+			  values[1] < 0 ? -values[1] : values[1],
+			  values[2] < 0 ? -values[2] : values[2],
+			  values[3] < 0 ? -values[3] : values[3]
+			);
+		#elif defined(USE_NEON)
+			return I32x4(vabsq_s32(value.v));
+		#else
+			int32_t v0 = value.scalars[0];
+			int32_t v1 = value.scalars[1];
+			int32_t v2 = value.scalars[2];
+			int32_t v3 = value.scalars[3];
+			return I32x4(
+			  v0 < 0.0f ? -v0 : v0,
+			  v1 < 0.0f ? -v1 : v1,
+			  v2 < 0.0f ? -v2 : v2,
+			  v3 < 0.0f ? -v3 : v3
+			);
 		#endif
 	}
 	// TODO: Specify the behavior of truncated unsigned integer overflow and add it to the tests.
@@ -3055,6 +3111,43 @@
 			return F32x8(v0, v1, v2, v3, v4, v5, v6, v7);
 		#endif
 	}
+	inline F32x8 abs(const F32x8& value) {
+		#if defined(USE_AVX)
+			// Mask out the negation bit to make the value positive.
+			ALIGN32 const uint32_t noSignMask[8] = {
+			  0b01111111111111111111111111111111,
+			  0b01111111111111111111111111111111,
+			  0b01111111111111111111111111111111,
+			  0b01111111111111111111111111111111,
+			  0b01111111111111111111111111111111,
+			  0b01111111111111111111111111111111,
+			  0b01111111111111111111111111111111,
+			  0b01111111111111111111111111111111
+			};
+			ALIGN32 const __m256 mask = F32x8::readAlignedUnsafe((const float*)noSignMask).v;
+			ALIGN32 __m256 result = _mm256_and_ps(value.v, mask);
+			return F32x8(result);
+		#else
+			float v0 = value.scalars[0];
+			float v1 = value.scalars[1];
+			float v2 = value.scalars[2];
+			float v3 = value.scalars[3];
+			float v4 = value.scalars[4];
+			float v5 = value.scalars[5];
+			float v6 = value.scalars[6];
+			float v7 = value.scalars[7];
+			return F32x8(
+			  v0 < 0.0f ? -v0 : v0,
+			  v1 < 0.0f ? -v1 : v1,
+			  v2 < 0.0f ? -v2 : v2,
+			  v3 < 0.0f ? -v3 : v3,
+			  v4 < 0.0f ? -v4 : v4,
+			  v5 < 0.0f ? -v5 : v5,
+			  v6 < 0.0f ? -v6 : v6,
+			  v7 < 0.0f ? -v7 : v7
+			);
+		#endif
+	}
 	inline I32x8 operator+(const I32x8& left, const I32x8& right) {
 		#if defined(USE_256BIT_X_SIMD)
 			return I32x8(ADD_I32_SIMD256(left.v, right.v));
@@ -3074,6 +3167,31 @@
 			return I32x8(MUL_I32_SIMD256(left.v, right.v));
 		#else
 			IMPL_SCALAR_REFERENCE_INFIX_8_LANES(left, right, I32x8, int32_t, *)
+		#endif
+	}
+	// Behaviour is undefined if taking the absolute value of the most negative value that has no corresponding positive value.
+	inline I32x8 abs(const I32x8& value) {
+		#if defined(USE_AVX2)
+			return I32x8(_mm256_abs_epi32(value.v));
+		#else
+			int32_t v0 = value.scalars[0];
+			int32_t v1 = value.scalars[1];
+			int32_t v2 = value.scalars[2];
+			int32_t v3 = value.scalars[3];
+			int32_t v4 = value.scalars[4];
+			int32_t v5 = value.scalars[5];
+			int32_t v6 = value.scalars[6];
+			int32_t v7 = value.scalars[7];
+			return I32x8(
+			  v0 < 0 ? -v0 : v0,
+			  v1 < 0 ? -v1 : v1,
+			  v2 < 0 ? -v2 : v2,
+			  v3 < 0 ? -v3 : v3,
+			  v4 < 0 ? -v4 : v4,
+			  v5 < 0 ? -v5 : v5,
+			  v6 < 0 ? -v6 : v6,
+			  v7 < 0 ? -v7 : v7
+			);
 		#endif
 	}
 	inline U32x8 operator+(const U32x8& left, const U32x8& right) {
