@@ -48,12 +48,6 @@ inline I roundDown(I size, U alignment) {
 	return size - signedModulo(size, alignment);
 }
 
-// Post-condition: Returns abs(a - b)
-template <typename T, DSR_ENABLE_IF(DSR_CHECK_PROPERTY(DsrTrait_Scalar, T))>
-inline T absDiff(const T &a, const T &b) {
-	return (a > b) ? (a - b) : (b - a);
-}
-
 // Substitute for std::move.
 template<typename T>
 T&& move(T& source) {
