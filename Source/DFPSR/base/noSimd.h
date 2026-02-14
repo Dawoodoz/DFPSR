@@ -159,6 +159,12 @@ namespace dsr {
 		return max(value, -value);
 	}
 
+	// Post-condition: Returns abs(a - b)
+	template <typename T, DSR_ENABLE_IF(DSR_CHECK_PROPERTY(DsrTrait_Scalar, T))>
+	inline T absDiff(const T &a, const T &b) {
+		return (a > b) ? (a - b) : (b - a);
+	}
+
 	// Pre-condition: minValue <= maxValue
 	// Post-condition: Returns value clamped from minValue to maxValue.
 	template <typename T, DSR_ENABLE_IF(DSR_CHECK_PROPERTY(DsrTrait_Any, T))>
