@@ -37,6 +37,7 @@ void unaryEquivalent (
 		simdOutput.writeAlignedUnsafe(simdResult);
 		// Compare results.
 		for (intptr_t lane = 0; lane < laneCount; lane++) {
+			// TODO: Handle tolerance margins for floating-point elements.
 			if (scalarResult[lane] != simdResult[lane]) {
 				printText(U"\nWrong result at lane ", lane, U" in 0..", laneCount - 1, U" at iteration ", iteration, U" of ", testName, U"!\n");
 				printText(U"Input: ", inputA[lane], U"\n");
@@ -84,6 +85,7 @@ void binaryEquivalent (
 		simdOutput.writeAlignedUnsafe(simdResult);
 		// Compare results.
 		for (intptr_t lane = 0; lane < laneCount; lane++) {
+			// TODO: Handle tolerance margins for floating-point elements.
 			if (scalarResult[lane] != simdResult[lane]) {
 				printText(U"\nWrong result at lane ", lane, U" in 0..", laneCount - 1, U" at iteration ", iteration, U" of ", testName, U"!\n");
 				printText(U"Input: ", inputA[lane], U", ", inputB[lane], U"\n");
@@ -118,59 +120,68 @@ START_TEST(BruteSimd)
 		printText(U"	* NEON\n");
 	#endif
 
-	BINARY_POINT_EQUIVALENCE(uint8_t, U8x16, a + b);
-	BINARY_POINT_EQUIVALENCE(uint8_t, U8x32, a + b);
-	BINARY_POINT_EQUIVALENCE(uint8_t, U8x16, a - b);
-	BINARY_POINT_EQUIVALENCE(uint8_t, U8x32, a - b);
-	// Missing implementations
-	//BINARY_POINT_EQUIVALENCE(uint8_t, U8x16, a * b);
-	//BINARY_POINT_EQUIVALENCE(uint8_t, U8x32, a * b);
-	// TODO: These should be easy to implement a fallback for if reinterpret casting to two 64-bit unsigned integers.
-	//BINARY_POINT_EQUIVALENCE(uint8_t, U8x16, a & b);
-	//BINARY_POINT_EQUIVALENCE(uint8_t, U8x32, a & b);
-	//BINARY_POINT_EQUIVALENCE(uint8_t, U8x16, a | b);
-	//BINARY_POINT_EQUIVALENCE(uint8_t, U8x32, a | b);
-	//BINARY_POINT_EQUIVALENCE(uint8_t, U8x16, a ^ b);
-	//BINARY_POINT_EQUIVALENCE(uint8_t, U8x32, a ^ b);
-
+	// Addition.
+	BINARY_POINT_EQUIVALENCE(uint8_t , U8x16 , a + b);
+	BINARY_POINT_EQUIVALENCE(uint8_t , U8x32 , a + b);
 	BINARY_POINT_EQUIVALENCE(uint16_t, U16x8 , a + b);
 	BINARY_POINT_EQUIVALENCE(uint16_t, U16x16, a + b);
+	BINARY_POINT_EQUIVALENCE(uint32_t, U32x4 , a + b);
+	BINARY_POINT_EQUIVALENCE(uint32_t, U32x8 , a + b);
+	BINARY_POINT_EQUIVALENCE(int32_t , I32x4 , a + b);
+	BINARY_POINT_EQUIVALENCE(int32_t , I32x4 , a + b);
+
+	// Subtraction
+	BINARY_POINT_EQUIVALENCE(uint8_t , U8x16 , a - b);
+	BINARY_POINT_EQUIVALENCE(uint8_t , U8x32 , a - b);
 	BINARY_POINT_EQUIVALENCE(uint16_t, U16x8 , a - b);
 	BINARY_POINT_EQUIVALENCE(uint16_t, U16x16, a - b);
-	// Missing implementations
-	//BINARY_POINT_EQUIVALENCE(uint16_t, U16x8 , a * b);
-	//BINARY_POINT_EQUIVALENCE(uint16_t, U16x16, a * b);
-	BINARY_POINT_EQUIVALENCE(uint16_t, U16x8, a & b);
+	BINARY_POINT_EQUIVALENCE(uint32_t, U32x4 , a - b);
+	BINARY_POINT_EQUIVALENCE(uint32_t, U32x8 , a - b);
+	BINARY_POINT_EQUIVALENCE(int32_t , I32x4 , a - b);
+	BINARY_POINT_EQUIVALENCE(int32_t , I32x4 , a - b);
+
+	// Negation
+	UNARY_POINT_EQUIVALENCE(int32_t , I32x4 , -a);
+	UNARY_POINT_EQUIVALENCE(int32_t , I32x4 , -a);
+
+	// Multiplication
+	//BINARY_POINT_EQUIVALENCE(uint8_t , U8x16 , a * b); // Missing
+	//BINARY_POINT_EQUIVALENCE(uint8_t , U8x32 , a * b); // Missing
+	//BINARY_POINT_EQUIVALENCE(uint16_t, U16x8 , a * b); // Missing
+	//BINARY_POINT_EQUIVALENCE(uint16_t, U16x16, a * b); // Missing
+	BINARY_POINT_EQUIVALENCE(uint32_t, U32x4 , a * b);
+	BINARY_POINT_EQUIVALENCE(uint32_t, U32x8 , a * b);
+	BINARY_POINT_EQUIVALENCE(int32_t , I32x4 , a * b);
+	BINARY_POINT_EQUIVALENCE(int32_t , I32x4 , a * b);
+
+	// Bitwise and
+	//BINARY_POINT_EQUIVALENCE(uint8_t , U8x16 , a & b); // Missing
+	//BINARY_POINT_EQUIVALENCE(uint8_t , U8x32 , a & b); // Missing
+	BINARY_POINT_EQUIVALENCE(uint16_t, U16x8 , a & b);
 	BINARY_POINT_EQUIVALENCE(uint16_t, U16x16, a & b);
-	BINARY_POINT_EQUIVALENCE(uint16_t, U16x8, a | b);
+	BINARY_POINT_EQUIVALENCE(uint32_t, U32x4 , a & b);
+	BINARY_POINT_EQUIVALENCE(uint32_t, U32x8 , a & b);
+
+	// Bitwise or
+	//BINARY_POINT_EQUIVALENCE(uint8_t , U8x16, a | b); // Missing
+	//BINARY_POINT_EQUIVALENCE(uint8_t , U8x32, a | b); // Missing
+	BINARY_POINT_EQUIVALENCE(uint16_t, U16x8 , a | b);
 	BINARY_POINT_EQUIVALENCE(uint16_t, U16x16, a | b);
-	BINARY_POINT_EQUIVALENCE(uint16_t, U16x8, a ^ b);
+	BINARY_POINT_EQUIVALENCE(uint32_t, U32x4 , a | b);
+	BINARY_POINT_EQUIVALENCE(uint32_t, U32x8 , a | b);
+
+	// Bitwise xor
+	//BINARY_POINT_EQUIVALENCE(uint8_t , U8x16, a ^ b); // Missing
+	//BINARY_POINT_EQUIVALENCE(uint8_t , U8x32, a ^ b); // Missing
+	BINARY_POINT_EQUIVALENCE(uint16_t, U16x8 , a ^ b);
 	BINARY_POINT_EQUIVALENCE(uint16_t, U16x16, a ^ b);
-	UNARY_POINT_EQUIVALENCE(uint16_t, U16x8, ~a);
+	BINARY_POINT_EQUIVALENCE(uint32_t, U32x4 , a ^ b);
+	BINARY_POINT_EQUIVALENCE(uint32_t, U32x8 , a ^ b);
+
+	// Bitwise negation
+	UNARY_POINT_EQUIVALENCE(uint16_t, U16x8 , ~a);
 	UNARY_POINT_EQUIVALENCE(uint16_t, U16x16, ~a);
-
-	BINARY_POINT_EQUIVALENCE(uint32_t, U32x4, a + b);
-	BINARY_POINT_EQUIVALENCE(uint32_t, U32x8, a + b);
-	BINARY_POINT_EQUIVALENCE(uint32_t, U32x4, a - b);
-	BINARY_POINT_EQUIVALENCE(uint32_t, U32x8, a - b);
-	BINARY_POINT_EQUIVALENCE(uint32_t, U32x4, a * b);
-	BINARY_POINT_EQUIVALENCE(uint32_t, U32x8, a * b);
-	BINARY_POINT_EQUIVALENCE(uint32_t, U32x4, a & b);
-	BINARY_POINT_EQUIVALENCE(uint32_t, U32x8, a & b);
-	BINARY_POINT_EQUIVALENCE(uint32_t, U32x4, a | b);
-	BINARY_POINT_EQUIVALENCE(uint32_t, U32x8, a | b);
-	BINARY_POINT_EQUIVALENCE(uint32_t, U32x4, a ^ b);
-	BINARY_POINT_EQUIVALENCE(uint32_t, U32x8, a ^ b);
-	UNARY_POINT_EQUIVALENCE(uint32_t, U32x4, ~a);
-	UNARY_POINT_EQUIVALENCE(uint32_t, U32x8, ~a);
-
-	UNARY_POINT_EQUIVALENCE(int32_t, I32x4, -a);
-	UNARY_POINT_EQUIVALENCE(int32_t, I32x4, -a);
-	BINARY_POINT_EQUIVALENCE(int32_t, I32x4, a + b);
-	BINARY_POINT_EQUIVALENCE(int32_t, I32x4, a + b);
-	BINARY_POINT_EQUIVALENCE(int32_t, I32x4, a - b);
-	BINARY_POINT_EQUIVALENCE(int32_t, I32x4, a - b);
-	BINARY_POINT_EQUIVALENCE(int32_t, I32x4, a * b);
-	BINARY_POINT_EQUIVALENCE(int32_t, I32x4, a * b);
+	UNARY_POINT_EQUIVALENCE(uint32_t, U32x4 , ~a);
+	UNARY_POINT_EQUIVALENCE(uint32_t, U32x8 , ~a);
 
 END_TEST
