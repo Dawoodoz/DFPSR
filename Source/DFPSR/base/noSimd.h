@@ -154,7 +154,7 @@ namespace dsr {
 	//       Start by implementing vectorized comparisons and blend functions as a fallback for unsupported types.
 
 	// Post-condition: Returns the absolute value.
-	template <typename T, DSR_ENABLE_IF(DSR_CHECK_PROPERTY(DsrTrait_Any, T))>
+	template <typename T, DSR_ENABLE_IF(DSR_CHECK_PROPERTY(DsrTrait_Scalar, T))>
 	inline T abs(const T &value) {
 		return max(value, -value);
 	}
