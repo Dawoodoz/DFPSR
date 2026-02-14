@@ -2108,7 +2108,8 @@
 			left.writeAlignedUnsafe(&(a[0])); \
 			right.writeAlignedUnsafe(&(b[0])); \
 			for (int i = 0; i < LANE_COUNT; i++) { \
-				if (fabs(a[i] - b[i]) >= 0.0001f) return false; \
+				/*if ((a[i] > b[i] + 0.0001f) || (a[i] < b[i] - 0.0001f)) return false; // Why does this cause segfault on MS-Windows?*/ \
+				if (abs(a[i] - b[i]) >= 0.0001f) return false; \
 			} \
 			return true; \
 		} \
@@ -2118,7 +2119,8 @@
 			left.writeAlignedUnsafe(&(a[0])); \
 			right.writeAlignedUnsafe(&(b[0])); \
 			for (int i = 0; i < LANE_COUNT; i++) { \
-				if (fabs(a[i] - b[i]) < 0.0001f) return false; \
+				/*if (!((a[i] > b[i] + 0.0001f) || (a[i] < b[i] - 0.0001f))) return false; */ \
+				if (abs(a[i] - b[i]) < 0.0001f) return false; \
 			} \
 			return true; \
 		}
