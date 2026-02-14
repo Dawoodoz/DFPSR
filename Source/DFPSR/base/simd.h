@@ -2324,7 +2324,7 @@
 			return value ^ U16x8(~uint16_t(0));
 		#else
 			// TODO: Generate automatically using a macro.
-			return U16x8(~value.scalars[0], ~value.scalars[1], ~value.scalars[2], ~value.scalars[3]);
+			return U16x8(~value.scalars[0], ~value.scalars[1], ~value.scalars[2], ~value.scalars[3], ~value.scalars[4], ~value.scalars[5], ~value.scalars[6], ~value.scalars[7]);
 		#endif
 	}
 	inline U16x8 operator<<(const U16x8& left, const U16x8 &bitOffsets) {
