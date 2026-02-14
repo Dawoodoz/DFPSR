@@ -3260,7 +3260,7 @@
 		#if defined(USE_AVX2)
 			return U16x16(_mm256_and_si256(left.v, right.v));
 		#else
-			IMPL_SCALAR_REFERENCE_INFIX_8_LANES(left, right, U16x16, uint16_t, &)
+			IMPL_SCALAR_REFERENCE_INFIX_16_LANES(left, right, U16x16, uint16_t, &)
 		#endif
 	}
 	// Bitwise or
@@ -3268,7 +3268,7 @@
 		#if defined(USE_AVX2)
 			return U16x16(_mm256_or_si256(left.v, right.v));
 		#else
-			IMPL_SCALAR_REFERENCE_INFIX_8_LANES(left, right, U16x16, uint16_t, |)
+			IMPL_SCALAR_REFERENCE_INFIX_16_LANES(left, right, U16x16, uint16_t, |)
 		#endif
 	}
 	// Bitwise xor
@@ -3276,7 +3276,7 @@
 		#if defined(USE_AVX2)
 			return U16x16(_mm256_xor_si256(left.v, right.v));
 		#else
-			IMPL_SCALAR_REFERENCE_INFIX_8_LANES(left, right, U16x16, uint16_t, ^)
+			IMPL_SCALAR_REFERENCE_INFIX_16_LANES(left, right, U16x16, uint16_t, ^)
 		#endif
 	}
 	// Bitwise negation
