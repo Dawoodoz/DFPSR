@@ -49,20 +49,10 @@ inline I roundDown(I size, U alignment) {
 }
 
 // Post-condition: Returns abs(a - b)
-// C is the promoted integer type used for the subtraction and comparison.
-// T is the input and return type.
-template <typename C, typename T>
-inline T absDiff_promoted(const T &a, const T &b) {
-	return T(dsr::abs(C(a) - C(b)));
+template <typename T, DSR_ENABLE_IF(DSR_CHECK_PROPERTY(DsrTrait_Scalar, T))>
+inline T absDiff(const T &a, const T &b) {
+	return (a > b) ? (a - b) : (b - a);
 }
-inline uint8_t  absDiff(const uint8_t  &a, const uint8_t  &b) { return absDiff_promoted<int32_t>(a, b); }
-inline uint16_t absDiff(const uint16_t &a, const uint16_t &b) { return absDiff_promoted<int32_t>(a, b); }
-inline uint32_t absDiff(const uint32_t &a, const uint32_t &b) { return absDiff_promoted<int64_t>(a, b); }
-inline uint16_t absDiff(const int16_t  &a, const int16_t  &b) { return absDiff_promoted<int32_t>(a, b); }
-inline uint32_t absDiff(const int32_t  &a, const int32_t  &b) { return absDiff_promoted<int32_t>(a, b); }
-inline uint32_t absDiff(const int64_t  &a, const int64_t  &b) { return absDiff_promoted<int64_t>(a, b); }
-inline uint32_t absDiff(const float    &a, const float    &b) { return absDiff_promoted<float>  (a, b); }
-inline uint32_t absDiff(const double   &a, const double   &b) { return absDiff_promoted<double> (a, b); }
 
 // Substitute for std::move.
 template<typename T>
