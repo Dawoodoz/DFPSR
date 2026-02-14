@@ -1035,21 +1035,21 @@ static void testGather() {
 }
 
 START_TEST(Simd)
-	printText("\nSIMD test is compiled using:\n");
+	printText(U"\nThe SIMD test is compiled using:\n");
 	#ifdef USE_SSE2
-		printText("	* SSE2\n");
+		printText(U"	* SSE2\n");
 	#endif
 	#ifdef USE_SSSE3
-		printText("	* SSSE3\n");
+		printText(U"	* SSSE3\n");
 	#endif
 	#ifdef USE_AVX
-		printText("	* AVX\n");
+		printText(U"	* AVX\n");
 	#endif
 	#ifdef USE_AVX2
-		printText("	* AVX2\n");
+		printText(U"	* AVX2\n");
 	#endif
 	#ifdef USE_NEON
-		printText("	* NEON\n");
+		printText(U"	* NEON\n");
 	#endif
 
 	testComparisons();
