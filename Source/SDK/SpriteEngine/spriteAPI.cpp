@@ -1357,9 +1357,9 @@ void sprite_generateFromModel(ImageRgbaU8& targetAtlas, String& targetConfigText
 		int32_t width = maxRes;
 		int32_t height = maxRes;
 		ImageF32 depthBuffer = image_create_F32(width, height);
-		ImageRgbaU8 colorImage[cameraAngles];
-		ImageRgbaU8 heightImage[cameraAngles];
-		ImageRgbaU8 normalImage[cameraAngles];
+		Array<ImageRgbaU8> colorImage = Array<ImageRgbaU8>(cameraAngles, ImageRgbaU8());
+		Array<ImageRgbaU8> heightImage = Array<ImageRgbaU8>(cameraAngles, ImageRgbaU8());
+		Array<ImageRgbaU8> normalImage = Array<ImageRgbaU8>(cameraAngles, ImageRgbaU8());
 		for (int32_t a = 0; a < cameraAngles; a++) {
 			colorImage[a] = image_create_RgbaU8(width, height);
 			heightImage[a] = image_create_RgbaU8(width, height);
