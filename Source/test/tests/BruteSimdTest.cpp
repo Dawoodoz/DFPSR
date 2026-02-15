@@ -231,8 +231,8 @@ START_TEST(BruteSimd)
 	// Multiplication
 	//BINARY_POINT_EQUIVALENCE_EXPR(uint8_t , U8x16 , a * b); // Missing
 	//BINARY_POINT_EQUIVALENCE_EXPR(uint8_t , U8x32 , a * b); // Missing
-	//BINARY_POINT_EQUIVALENCE_EXPR(uint16_t, U16x8 , a * b); // Missing
-	//BINARY_POINT_EQUIVALENCE_EXPR(uint16_t, U16x16, a * b); // Missing
+	BINARY_POINT_EQUIVALENCE_EXPR(uint16_t, U16x8 , a * b);
+	BINARY_POINT_EQUIVALENCE_EXPR(uint16_t, U16x16, a * b);
 	BINARY_POINT_EQUIVALENCE_EXPR(uint32_t, U32x4 , a * b);
 	BINARY_POINT_EQUIVALENCE_EXPR(uint32_t, U32x8 , a * b);
 	BINARY_POINT_EQUIVALENCE_EXPR(int32_t , I32x4 , a * b);
