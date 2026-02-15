@@ -66,7 +66,7 @@ namespace dsr {
 	inline float gather_F32(dsr::SafePointer<const float> data, const uint32_t &elementOffset) { return data[elementOffset]; }
 
 	// Comparisons between all lanes, which is one lane for scalar types.
-	inline bool allLanesEqual         (const  uint8_t& left,  const uint8_t& right) { return left == right; }
+	inline bool allLanesEqual         (const  uint8_t& left, const  uint8_t& right) { return left == right; }
 	inline bool allLanesEqual         (const uint16_t& left, const uint16_t& right) { return left == right; }
 	inline bool allLanesEqual         (const uint32_t& left, const uint32_t& right) { return left == right; }
 	inline bool allLanesEqual         (const  int32_t& left, const  int32_t& right) { return left == right; }
@@ -186,9 +186,9 @@ namespace dsr {
 
 	inline float reciprocal(float value) { return 1.0f / value; }
 
-	inline float reciprocalSquareRoot(float value) { return 1.0f / sqrt(value); }
+	inline float reciprocalSquareRoot(float value) { return 1.0f / std::sqrt(value); }
 
-	inline float squareRoot(float value) { return sqrt(value); }
+	inline float squareRoot(float value) { return std::sqrt(value); }
 
 	// TODO: Add more functions from simd.h.
 }
