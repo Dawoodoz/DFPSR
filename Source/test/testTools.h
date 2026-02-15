@@ -85,14 +85,14 @@ static bool failed = false;
 DSR_MAIN_CALLER(dsrMain) \
 void dsrMain(List<String> args) \
 	{ \
-		testName = #NAME; \
+		testName = U###NAME; \
 		stateName = U"While Assigning message handler"; \
 		std::signal(SIGSEGV, [](int signal) { failed = true; throwError(U"Segmentation fault from ", testName, U"! ", stateName); }); \
 		string_assignMessageHandler(&messageHandler); \
 		stateName = U"While handling arguments\n"; \
 		handleArguments(args); \
 		stateName = U"Test start\n"; \
-		printText(U"Running test \"", #NAME, "\":\n "); \
+		printText(U"Running test \"", U###NAME, U"\":\n "); \
 		intptr_t startAllocationCount = heap_getAllocationCount(); \
 		heap_forAllHeapAllocations([](AllocationHeader * header, void * allocation) { \
 			heap_setAllocationCustomFlags(header, 1u); \
@@ -114,7 +114,7 @@ void dsrMain(List<String> args) \
 	ExpectedErrorPrefix = PREFIX; \
 	stateName = string_combine(U"During expected crash starting with ", PREFIX, U"\n");
 #define END_CRASH \
-	ExpectedErrorPrefix = "";
+	ExpectedErrorPrefix = U"";
 
 // Prefix is the expected start of the error message.
 //   Just enough to know that we triggered the right error message.
@@ -126,7 +126,7 @@ void dsrMain(List<String> args) \
 
 #define ASSERT(CONDITION) \
 { \
-	stateName = string_combine(U"While evaluating condition ", #CONDITION, U"\n"); \
+	stateName = string_combine(U"While evaluating condition ", U###CONDITION, U"\n"); \
 	if (CONDITION) { \
 		printText(U"*"); \
 	} else { \
@@ -134,7 +134,7 @@ void dsrMain(List<String> args) \
 			U"\n\n", \
 			U"_______________________________ FAIL _______________________________\n", \
 			U"\n", \
-			U"Failed assertion!\nCondition: ", #CONDITION, U"\n", \
+			U"Failed assertion!\nCondition: ", U###CONDITION, U"\n", \
 			U"____________________________________________________________________\n" \
 		); \
 		failed = true; \
@@ -143,7 +143,7 @@ void dsrMain(List<String> args) \
 
 #define ASSERT_COMP(A, B, OP, OP_NAME) \
 { \
-	stateName = string_combine(U"While evaluating condition ", #A, " ", OP_NAME, U" ", #B, U"\n"); \
+	stateName = string_combine(U"While evaluating condition ", U###A, U" ", OP_NAME, U" ", U###B, U"\n"); \
 	auto lhs = A; \
 	auto rhs = B; \
 	if (OP(lhs, rhs)) { \
@@ -153,20 +153,20 @@ void dsrMain(List<String> args) \
 			U"\n\n", \
 			U"_______________________________ FAIL _______________________________\n", \
 			U"\n", \
-			U"Condition: ", #A, " ", OP_NAME, U" ", #B, U"\n", \
-			lhs, " ", OP_NAME, " ", rhs, U" is false.\n", \
+			U"Condition: ", U###A, U" ", OP_NAME, U" ", U###B, U"\n", \
+			lhs, U" ", OP_NAME, U" ", rhs, U" is false.\n", \
 			U"____________________________________________________________________\n" \
 		); \
 		failed = true; \
 	} \
 }
-#define ASSERT_EQUAL(A, B) ASSERT_COMP(A, B, OP_EQUALS, "==")
-#define ASSERT_NOT_EQUAL(A, B) ASSERT_COMP(A, B, OP_NOT_EQUALS, "!=")
-#define ASSERT_LESSER(A, B) ASSERT_COMP(A, B, OP_LESSER, "<")
-#define ASSERT_LESSER_OR_EQUAL(A, B) ASSERT_COMP(A, B, OP_LESSER_OR_EQUAL, "<=")
-#define ASSERT_GREATER(A, B) ASSERT_COMP(A, B, OP_GREATER, ">")
-#define ASSERT_GREATER_OR_EQUAL(A, B) ASSERT_COMP(A, B, OP_GREATER_OR_EQUAL, ">=")
-#define ASSERT_NEAR(A, B) ASSERT_COMP(A, B, OP_NEAR, "==")
+#define ASSERT_EQUAL(A, B) ASSERT_COMP(A, B, OP_EQUALS, U"==")
+#define ASSERT_NOT_EQUAL(A, B) ASSERT_COMP(A, B, OP_NOT_EQUALS, U"!=")
+#define ASSERT_LESSER(A, B) ASSERT_COMP(A, B, OP_LESSER, U"<")
+#define ASSERT_LESSER_OR_EQUAL(A, B) ASSERT_COMP(A, B, OP_LESSER_OR_EQUAL, U"<=")
+#define ASSERT_GREATER(A, B) ASSERT_COMP(A, B, OP_GREATER, U">")
+#define ASSERT_GREATER_OR_EQUAL(A, B) ASSERT_COMP(A, B, OP_GREATER_OR_EQUAL, U">=")
+#define ASSERT_NEAR(A, B) ASSERT_COMP(A, B, OP_NEAR, U"==")
 
 #define ASSERT_HEAP_DEPTH(DEPTH) { \
 	intptr_t currentAllocationCount = heap_getAllocationCount(); \

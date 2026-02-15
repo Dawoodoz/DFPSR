@@ -6,8 +6,8 @@
 // TODO: Set up a test where SIMD is disabled to force using the reference implementation.
 // TODO: Keep the reference implementation alongside the SIMD types during brute-force testing with millions of random inputs.
 
-#define ASSERT_EQUAL_SIMD(A, B) ASSERT_COMP(A, B, allLanesEqual, "==")
-#define ASSERT_NOTEQUAL_SIMD(A, B) ASSERT_COMP(A, B, !allLanesEqual, "!=")
+#define ASSERT_EQUAL_SIMD(A, B) ASSERT_COMP(A, B, allLanesEqual, U"==")
+#define ASSERT_NOTEQUAL_SIMD(A, B) ASSERT_COMP(A, B, !allLanesEqual, U"!=")
 
 static void testComparisons() {
 	// Test non-vectorized comparison functions. (Used for test conditions and debug assertions)
