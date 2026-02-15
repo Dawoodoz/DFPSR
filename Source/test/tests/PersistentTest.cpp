@@ -82,14 +82,14 @@ public:
 PERSISTENT_DEFINITION(MyCollection)
 
 String exampleOne =
-R"QUOTE(Begin : MyClass
+UR"QUOTE(Begin : MyClass
 	a = 1
 	b = "two"
 End
 )QUOTE";
 
 String exampleTwo =
-R"QUOTE(Begin : MySubClass
+UR"QUOTE(Begin : MySubClass
 	a = 1
 	b = "two"
 	c = 3
@@ -98,7 +98,7 @@ End
 )QUOTE";
 
 String exampleThree =
-R"QUOTE(Begin : MyCollection
+UR"QUOTE(Begin : MyCollection
 	a = 1
 	b = "first"
 	Begin : MyClass

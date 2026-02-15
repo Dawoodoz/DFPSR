@@ -4,8 +4,8 @@
 #include "../../DFPSR/implementation/image/PackOrder.h"
 #include "../../DFPSR/api/textureAPI.h"
 
-#define ASSERT_EQUAL_SIMD(A, B) ASSERT_COMP(A, B, allLanesEqual, "==")
-#define ASSERT_NOTEQUAL_SIMD(A, B) ASSERT_COMP(A, B, !allLanesEqual, "!=")
+#define ASSERT_EQUAL_SIMD(A, B) ASSERT_COMP(A, B, allLanesEqual, U"==")
+#define ASSERT_NOTEQUAL_SIMD(A, B) ASSERT_COMP(A, B, !allLanesEqual, U"!=")
 
 START_TEST(Texture)
 	{

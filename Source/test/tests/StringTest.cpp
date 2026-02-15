@@ -60,7 +60,7 @@ START_TEST(String)
 		ASSERT_EQUAL(cd, U"cd");
 		auto abcd = ab + cd;
 		ASSERT_EQUAL(abcd, U"abcd");
-		ASSERT_EQUAL(dsr::string_combine(U"a", U"b", U"c", "d"), U"abcd");
+		ASSERT_EQUAL(dsr::string_combine(U"a", U"b", U"c", U"d"), U"abcd");
 	}
 	{ // Sub-strings
 		dsr::ReadableString abcd = U"abcd";

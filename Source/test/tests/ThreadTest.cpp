@@ -20,7 +20,7 @@ START_TEST(Thread)
 		}
 		double totalStartTime = time_getSeconds();
 		threadedWorkFromList(jobs);
-		printText("Completed all jobs in ", (time_getSeconds() - totalStartTime) * 1000.0, " ms\n");
+		printText(U"Completed all jobs in ", (time_getSeconds() - totalStartTime) * 1000.0, U" ms\n");
 		for (int i = 0; i < jobCount; i++) {
 			ASSERT_EQUAL(results[i], i * 26 + 43);
 		}
@@ -39,7 +39,7 @@ START_TEST(Thread)
 				itemPtr[i] += i * 10;
 			}
 		});
-		printText("Completed all jobs in ", (time_getSeconds() - totalStartTime) * 1000.0, " ms\n");
+		printText(U"Completed all jobs in ", (time_getSeconds() - totalStartTime) * 1000.0, U" ms\n");
 		for (int i = 0; i < rowStart; i++) {
 			ASSERT_EQUAL(items[i], 0);
 		}
