@@ -148,9 +148,9 @@ START_TEST(BruteSimd)
 	BINARY_POINT_EQUIVALENCE(uint32_t, U32x4 , a + b);
 	BINARY_POINT_EQUIVALENCE(uint32_t, U32x8 , a + b);
 	BINARY_POINT_EQUIVALENCE(int32_t , I32x4 , a + b);
-	BINARY_POINT_EQUIVALENCE(int32_t , I32x4 , a + b);
+	BINARY_POINT_EQUIVALENCE(int32_t , I32x8 , a + b);
 	BINARY_POINT_EQUIVALENCE(float   , F32x4 , a + b);
-	BINARY_POINT_EQUIVALENCE(float   , F32x4 , a + b);
+	BINARY_POINT_EQUIVALENCE(float   , F32x8 , a + b);
 
 	// Subtraction
 	BINARY_POINT_EQUIVALENCE(uint8_t , U8x16 , a - b);
@@ -160,15 +160,15 @@ START_TEST(BruteSimd)
 	BINARY_POINT_EQUIVALENCE(uint32_t, U32x4 , a - b);
 	BINARY_POINT_EQUIVALENCE(uint32_t, U32x8 , a - b);
 	BINARY_POINT_EQUIVALENCE(int32_t , I32x4 , a - b);
-	BINARY_POINT_EQUIVALENCE(int32_t , I32x4 , a - b);
+	BINARY_POINT_EQUIVALENCE(int32_t , I32x8 , a - b);
 	BINARY_POINT_EQUIVALENCE(float   , F32x4 , a - b);
-	BINARY_POINT_EQUIVALENCE(float   , F32x4 , a - b);
+	BINARY_POINT_EQUIVALENCE(float   , F32x8 , a - b);
 
 	// Negation
 	UNARY_POINT_EQUIVALENCE(int32_t , I32x4 , -a);
-	UNARY_POINT_EQUIVALENCE(int32_t , I32x4 , -a);
+	UNARY_POINT_EQUIVALENCE(int32_t , I32x8 , -a);
 	UNARY_POINT_EQUIVALENCE(float   , F32x4 , -a);
-	UNARY_POINT_EQUIVALENCE(float   , F32x4 , -a);
+	UNARY_POINT_EQUIVALENCE(float   , F32x8 , -a);
 
 	// Multiplication
 	//BINARY_POINT_EQUIVALENCE(uint8_t , U8x16 , a * b); // Missing
@@ -178,9 +178,9 @@ START_TEST(BruteSimd)
 	BINARY_POINT_EQUIVALENCE(uint32_t, U32x4 , a * b);
 	BINARY_POINT_EQUIVALENCE(uint32_t, U32x8 , a * b);
 	BINARY_POINT_EQUIVALENCE(int32_t , I32x4 , a * b);
-	BINARY_POINT_EQUIVALENCE(int32_t , I32x4 , a * b);
+	BINARY_POINT_EQUIVALENCE(int32_t , I32x8 , a * b);
 	BINARY_POINT_EQUIVALENCE(float   , F32x4 , a * b);
-	BINARY_POINT_EQUIVALENCE(float   , F32x4 , a * b);
+	BINARY_POINT_EQUIVALENCE(float   , F32x8 , a * b);
 
 	// Bitwise and
 	//BINARY_POINT_EQUIVALENCE(uint8_t , U8x16 , a & b); // Missing
