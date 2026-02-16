@@ -33,7 +33,7 @@ then
 	exit 1
 fi
 
-for file in ./tests/*.cpp; do
+for file in ./tests/*Test.cpp; do
 	[ -e $file ] || continue
 	# Get name without path
 	name=${file##*/};
