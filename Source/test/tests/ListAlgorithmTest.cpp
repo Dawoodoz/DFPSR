@@ -141,14 +141,22 @@ START_TEST(ListAlgorithm)
 		list_append_sorted_descending(descendingList, List<int32_t>(1, -63, 236, 634, 54));
 		ASSERT_EQUAL(descendingList, List<int32_t>(634, 236, 236, 64, 54, 12, 6, 2, 1, -4, -63));
 	}
+	{ // Insert elements into unsorted list.
+		List<int32_t> unsortedList(5, 2, 4, 7, 3, 6);
+		list_insert_last(unsortedList, 4);
+		ASSERT_EQUAL(unsortedList, List<int32_t>(5, 2, 4, 7, 3, 6, 4));
+		list_insert_last(unsortedList, 1);
+		ASSERT_EQUAL(unsortedList, List<int32_t>(5, 2, 4, 7, 3, 6, 4, 1));
+	}
+	{ // Apend elements into unsorted list.
+		List<int32_t> unsortedList(5, 2, 4, 7, 3, 6);
+		list_append_last(unsortedList, List<int32_t>(13, 35, 23, 67, 44));
+		ASSERT_EQUAL(unsortedList, List<int32_t>(5, 2, 4, 7, 3, 6, 13, 35, 23, 67, 44));
+	}
 	// TODO: Write more tests.
 	// * list_insertUnique_last
 	// * list_insertUnique_sorted_ascending
 	// * list_insertUnique_sorted_descending
-	// * list_append_last
-	// * list_append_sorted
-	// * list_append_sorted_ascending
-	// * list_append_sorted_descending
 	// * list_appendUnique_last
 	// * list_appendUnique_sorted
 	// * list_appendUnique_sorted_ascending
