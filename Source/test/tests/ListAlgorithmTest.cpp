@@ -81,17 +81,56 @@ START_TEST(ListAlgorithm)
 		ASSERT_EQUAL(list_isSorted_descending(List<int32_t>(2)), true);
 		ASSERT_EQUAL(list_isSorted_descending(List<int32_t>()), true);
 	}
+	{ // Insert elements into ascending list.
+		List<int32_t> ascendingList(-4, 2, 6, 12, 64, 236);
+		list_insert_sorted_ascending(ascendingList, 1);
+		ASSERT_EQUAL(ascendingList, List<int32_t>(-4, 1, 2, 6, 12, 64, 236));
+		list_insert_sorted_ascending(ascendingList, -63);
+		ASSERT_EQUAL(ascendingList, List<int32_t>(-63, -4, 1, 2, 6, 12, 64, 236));
+		list_insert_sorted_ascending(ascendingList, 236);
+		ASSERT_EQUAL(ascendingList, List<int32_t>(-63, -4, 1, 2, 6, 12, 64, 236, 236));
+		list_insert_sorted_ascending(ascendingList, 634);
+		ASSERT_EQUAL(ascendingList, List<int32_t>(-63, -4, 1, 2, 6, 12, 64, 236, 236, 634));
+		list_insert_sorted_ascending(ascendingList, 54);
+		ASSERT_EQUAL(ascendingList, List<int32_t>(-63, -4, 1, 2, 6, 12, 54, 64, 236, 236, 634));
+	}
+	{ // Insert elements into ascending list.
+		List<int32_t> ascendingList(-4, 2, 6, 12, 64, 236);
+		list_append_sorted_ascending(ascendingList, List<int32_t>(1, -63, 236, 634, 54));
+		ASSERT_EQUAL(ascendingList, List<int32_t>(-63, -4, 1, 2, 6, 12, 54, 64, 236, 236, 634));
+	}
+	{ // Insert elements into descending list.
+		List<int32_t> descendingList(236, 64, 12, 6, 2, -4);
+		list_insert_sorted_descending(descendingList, 1);
+		ASSERT_EQUAL(descendingList, List<int32_t>(236, 64, 12, 6, 2, 1, -4));
+		list_insert_sorted_descending(descendingList, -63);
+		ASSERT_EQUAL(descendingList, List<int32_t>(236, 64, 12, 6, 2, 1, -4, -63));
+		list_insert_sorted_descending(descendingList, 236);
+		ASSERT_EQUAL(descendingList, List<int32_t>(236, 236, 64, 12, 6, 2, 1, -4, -63));
+		list_insert_sorted_descending(descendingList, 634);
+		ASSERT_EQUAL(descendingList, List<int32_t>(634, 236, 236, 64, 12, 6, 2, 1, -4, -63));
+		list_insert_sorted_descending(descendingList, 54);
+		ASSERT_EQUAL(descendingList, List<int32_t>(634, 236, 236, 64, 54, 12, 6, 2, 1, -4, -63));
+	}
+	{ // Insert elements into descending list.
+		List<int32_t> descendingList(236, 64, 12, 6, 2, -4);
+		list_append_sorted_descending(descendingList, List<int32_t>(1, -63, 236, 634, 54));
+		ASSERT_EQUAL(descendingList, List<int32_t>(634, 236, 236, 64, 54, 12, 6, 2, 1, -4, -63));
+	}
 	// TODO: Write more tests.
 	// * list_elementExists
 	// * list_elementIsMissing
-	// * list_insert_last
-	// * list_insert_sorted_ascending
 	// * list_insertUnique_last
 	// * list_insertUnique_sorted_ascending
+	// * list_insertUnique_sorted_descending
 	// * list_append_last
+	// * list_append_sorted
 	// * list_append_sorted_ascending
+	// * list_append_sorted_descending
 	// * list_appendUnique_last
+	// * list_appendUnique_sorted
 	// * list_appendUnique_sorted_ascending
+	// * list_appendUnique_sorted_descending
 
 	{ // List sorting with duplicate elements.
 		List<int32_t> myList(5, 2, 18, 6, -1, 4, 6, -64, 2, 45);
