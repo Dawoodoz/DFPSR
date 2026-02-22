@@ -86,7 +86,7 @@ List<OUTPUT_TYPE> list_map(const List<INPUT_TYPE> &input, const TemporaryCallbac
 // condition should return true iff the given element should call action,
 // action should return true to continue the loop or false when done.
 template <typename T, bool BACKWARD = false>
-static List<intptr_t> list_forAll(
+static List<intptr_t> list_forEach(
   const dsr::List<T> &list,
   const TemporaryCallback<bool(intptr_t index, const T &element)> &condition,
   const TemporaryCallback<bool(intptr_t index, const T &element)> &action
@@ -170,7 +170,7 @@ template <typename T>
 static inline List<intptr_t> list_findAll(const dsr::List<T> &list, const TemporaryCallback<bool(intptr_t index, const T &element)> &condition) {
 	List<intptr_t> result;
 	// Ascending loop
-	list_forAll<T, false>(list, condition, [&result](intptr_t index, const T &element) -> bool {
+	list_forEach<T, false>(list, condition, [&result](intptr_t index, const T &element) -> bool {
 		result.push(index); // Push the element's index to the list.
 		return true; // Keep iterating over the list.
 	});
@@ -192,7 +192,7 @@ template <typename T>
 static inline intptr_t list_findFirst(const dsr::List<T> &list, const TemporaryCallback<bool(intptr_t index, const T &element)> &condition) {
 	intptr_t result = -1;
 	// Ascending loop
-	list_forAll<T, false>(list, condition, [&result](intptr_t index, const T &element) -> bool {
+	list_forEach<T, false>(list, condition, [&result](intptr_t index, const T &element) -> bool {
 		result = index; // Take the index as the result.
 		return false; // We are done iterating over the list.
 	});
@@ -214,7 +214,7 @@ template <typename T>
 static inline intptr_t list_findLast(const dsr::List<T> &list, const TemporaryCallback<bool(intptr_t index, const T &element)> &condition) {
 	intptr_t result = -1;
 	// Descending loop
-	list_forAll<T, true>(list, condition, [&result](intptr_t index, const T &element) -> bool {
+	list_forEach<T, true>(list, condition, [&result](intptr_t index, const T &element) -> bool {
 		result = index; // Take the index as the result.
 		return false; // We are done iterating over the list.
 	});
