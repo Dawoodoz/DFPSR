@@ -386,13 +386,13 @@ static inline void list_append_sorted_descending(dsr::List<T> &targetList, const
 	}
 }
 
-// TODO: Replace _last and _sorted with a template argument that can be passed from list_appendUnique.
+// TODO: Replace _last and _sorted with a template argument that can be passed from list_append_unique.
 // TODO: Take a function for equality.
 // Pre-conditions:
 //   All elements in targetList must be unique, or else they will remain duplicated.
 // Pushes element to targetList and return true iff list_elementIsMissing.
 template <typename T>
-static inline bool list_insertUnique_last(dsr::List<T> &targetList, const T &element) {
+static inline bool list_insert_unique_last(dsr::List<T> &targetList, const T &element) {
 	if (list_elementIsMissing(targetList, element)) {
 		targetList.push(element);
 		return true;
@@ -410,7 +410,7 @@ static inline bool list_insertUnique_last(dsr::List<T> &targetList, const T &ele
 // Pre-condition; targetList is sorted according to the < operator when beginning the call.
 // Side-effect: targetList will remain sorted if it was sorted from the start.
 template <typename T>
-static inline bool list_insertUnique_sorted_ascending(dsr::List<T> &targetList, const T &element) {
+static inline bool list_insert_unique_sorted_ascending(dsr::List<T> &targetList, const T &element) {
 	if (list_elementIsMissing(targetList, element)) {
 		targetList.push(element);
 		intptr_t at = targetList.length() - 1;
@@ -434,11 +434,11 @@ static inline bool list_insertUnique_sorted_ascending(dsr::List<T> &targetList, 
 // Pushes all elements in sourceList that does not already exist in targetList.
 // Returns true iff any element was pushed to targetList.
 template <typename T>
-static inline bool list_appendUnique_last(dsr::List<T> &targetList, const dsr::List<T> &sourceList) {
+static inline bool list_append_unique_last(dsr::List<T> &targetList, const dsr::List<T> &sourceList) {
 	bool result = false;
 	for (intptr_t e = 0; e < sourceList.length(); e++) {
 		// Must store the result in a new variable to avoid lazy evaluation with side-effects.
-		bool newResult = list_insertUnique_last(targetList, sourceList[e]);
+		bool newResult = list_insert_unique_last(targetList, sourceList[e]);
 		result = result || newResult;
 	}
 	return result;
@@ -454,11 +454,11 @@ static inline bool list_appendUnique_last(dsr::List<T> &targetList, const dsr::L
 // Pushes all elements in sourceList that does not already exist in targetList.
 // Returns true iff any element was pushed to targetList.
 template <typename T>
-static inline bool list_appendUnique_sorted_ascending(dsr::List<T> &targetList, const dsr::List<T> &sourceList) {
+static inline bool list_append_unique_sorted_ascending(dsr::List<T> &targetList, const dsr::List<T> &sourceList) {
 	bool result = false;
 	for (intptr_t e = 0; e < sourceList.length(); e++) {
 		// Must store the result in a new variable to avoid lazy evaluation with side-effects.
-		bool newResult = list_insertUnique_sorted_ascending(targetList, sourceList[e]);
+		bool newResult = list_insert_unique_sorted_ascending(targetList, sourceList[e]);
 		result = result || newResult;
 	}
 	return result;

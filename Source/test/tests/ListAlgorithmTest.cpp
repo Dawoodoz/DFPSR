@@ -154,13 +154,13 @@ START_TEST(ListAlgorithm)
 		ASSERT_EQUAL(unsortedList, List<int32_t>(5, 2, 4, 7, 3, 6, 13, 35, 23, 67, 44));
 	}
 	// TODO: Write more tests.
-	// * list_insertUnique_last
-	// * list_insertUnique_sorted_ascending
-	// * list_insertUnique_sorted_descending
-	// * list_appendUnique_last
-	// * list_appendUnique_sorted
-	// * list_appendUnique_sorted_ascending
-	// * list_appendUnique_sorted_descending
+	// * list_insert_unique_last
+	// * list_insert_unique_sorted_ascending
+	// * list_insert_unique_sorted_descending
+	// * list_append_unique_last
+	// * list_append_unique_sorted
+	// * list_append_unique_sorted_ascending
+	// * list_append_unique_sorted_descending
 
 	{ // List sorting with duplicate elements.
 		List<int32_t> myList(5, 2, 18, 6, -1, 4, 6, -64, 2, 45);
@@ -180,22 +180,22 @@ START_TEST(ListAlgorithm)
 		ASSERT_EQUAL(list_elementExists(unsortedSet, 7), true);
 		ASSERT_EQUAL(list_elementExists(unsortedSet, 8), false);
 		// New value.
-		ASSERT_EQUAL(list_insertUnique_last(unsortedSet, 3), true)
+		ASSERT_EQUAL(list_insert_unique_last(unsortedSet, 3), true)
 		ASSERT_EQUAL(unsortedSet, List<int32_t>(7, 5, 2, 4, 3));
 		// Already exists.
-		ASSERT_EQUAL(list_insertUnique_last(unsortedSet, 5), false)
+		ASSERT_EQUAL(list_insert_unique_last(unsortedSet, 5), false)
 		ASSERT_EQUAL(unsortedSet, List<int32_t>(7, 5, 2, 4, 3));
 		// New value.
-		ASSERT_EQUAL(list_insertUnique_last(unsortedSet, 6), true)
+		ASSERT_EQUAL(list_insert_unique_last(unsortedSet, 6), true)
 		ASSERT_EQUAL(unsortedSet, List<int32_t>(7, 5, 2, 4, 3, 6));
 	}
 	{
 		List<int32_t> unsortedUnion(7, 5, 2, 4);
 		// Nothing is inserted, because all inserted elements already exist.
-		ASSERT_EQUAL(list_appendUnique_last(unsortedUnion, List<int32_t>(5, 2)), false);
+		ASSERT_EQUAL(list_append_unique_last(unsortedUnion, List<int32_t>(5, 2)), false);
 		ASSERT_EQUAL(unsortedUnion, List<int32_t>(7, 5, 2, 4));
 		// Unique values (3 and 6) are inserted at the end.
-		ASSERT_EQUAL(list_appendUnique_last(unsortedUnion, List<int32_t>(3, 5, 6)), true);
+		ASSERT_EQUAL(list_append_unique_last(unsortedUnion, List<int32_t>(3, 5, 6)), true);
 		ASSERT_EQUAL(unsortedUnion, List<int32_t>(7, 5, 2, 4, 3, 6));
 	}
 	{
@@ -209,22 +209,22 @@ START_TEST(ListAlgorithm)
 		ASSERT_EQUAL(list_elementExists(sortedSet, 7), true);
 		ASSERT_EQUAL(list_elementExists(sortedSet, 8), false);
 		// New value.
-		ASSERT_EQUAL(list_insertUnique_sorted_ascending(sortedSet, 3), true)
+		ASSERT_EQUAL(list_insert_unique_sorted_ascending(sortedSet, 3), true)
 		ASSERT_EQUAL(sortedSet, List<int32_t>(2, 3, 4, 5, 7));
 		// Already exists.
-		ASSERT_EQUAL(list_insertUnique_sorted_ascending(sortedSet, 5), false)
+		ASSERT_EQUAL(list_insert_unique_sorted_ascending(sortedSet, 5), false)
 		ASSERT_EQUAL(sortedSet, List<int32_t>(2, 3, 4, 5, 7));
 		// New value.
-		ASSERT_EQUAL(list_insertUnique_sorted_ascending(sortedSet, 6), true)
+		ASSERT_EQUAL(list_insert_unique_sorted_ascending(sortedSet, 6), true)
 		ASSERT_EQUAL(sortedSet, List<int32_t>(2, 3, 4, 5, 6, 7));
 	}
 	{ // Sorted unions, which are useful for comparing if two sets contain the same values.
 		List<int32_t> sortedUnion(2, 4, 5, 7);
 		// Nothing is inserted, because all inserted elements already exist.
-		ASSERT_EQUAL(list_appendUnique_sorted_ascending(sortedUnion, List<int32_t>(5, 2)), false);
+		ASSERT_EQUAL(list_append_unique_sorted_ascending(sortedUnion, List<int32_t>(5, 2)), false);
 		ASSERT_EQUAL(sortedUnion, List<int32_t>(2, 4, 5, 7));
 		// Unique values (3 and 6) are inserted in ascending order.
-		ASSERT_EQUAL(list_appendUnique_sorted_ascending(sortedUnion, List<int32_t>(3, 5, 6)), true);
+		ASSERT_EQUAL(list_append_unique_sorted_ascending(sortedUnion, List<int32_t>(3, 5, 6)), true);
 		ASSERT_EQUAL(sortedUnion, List<int32_t>(2, 3, 4, 5, 6, 7));
 	}
 	// TODO: Test with custom comparison functions.
