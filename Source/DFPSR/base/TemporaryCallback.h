@@ -102,6 +102,34 @@ public:
 			return (*this->functionPointer)(std::forward<ARGS>(args)...);
 		}
 	}
+	// Optimized version of operator (), for when calling the function many times in a row.
+	// Call hasClosure once for all the calls, then choose to call callWithClosure if it returned true, or callWithoutClosure if it returned false.
+	// Pre-condition: The callback may not contain a closure.
+	inline RESULT callWithClosure(ARGS... args) const {
+		/* TODO: Can't call throwError from this header, because the string API depends on TemporaryCallback for string splitting.
+		#ifndef NDEBUG
+			if (!(this->hasClosure())) {
+				throwError(U"Called callWithClosure on a TemporaryCallback that does not have a closure!\n");
+			}
+		#endif
+		*/
+		// Call the invoke function that remembers the nameless lambda type and provides the data.
+		return this->invoke(this->closure, std::forward<ARGS>(args)...);
+	}
+	// Optimized version of operator (), for when calling the function many times in a row.
+	// Call hasClosure once for all the calls, then choose to call callWithClosure if it returned true, or callWithoutClosure if it returned false.
+	// Pre-condition: The callback may not contain a closure.
+	inline RESULT callWithoutClosure(ARGS... args) const {
+		/* TODO: Can't call throwError from this header, because the string API depends on TemporaryCallback for string splitting.
+		#ifndef NDEBUG
+			if (this->hasClosure()) {
+				throwError(U"Called callWithoutClosure on a TemporaryCallback that has a closure!\n");
+			}
+		#endif
+		*/
+		// Call the function pointer directly.
+		return (*this->functionPointer)(std::forward<ARGS>(args)...);
+	}
 };
 
 }

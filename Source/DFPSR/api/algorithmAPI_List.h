@@ -60,27 +60,53 @@ static String& string_toStreamIndented(String& target, const List<T>& collection
 	return target;
 }
 
+// Post-condition: Returns the result of function f from each element of input.
 template <typename OUTPUT_TYPE, typename INPUT_TYPE>
 List<OUTPUT_TYPE> list_map(const List<INPUT_TYPE> &input, const TemporaryCallback<OUTPUT_TYPE(const INPUT_TYPE &element)> &f) {
 	List<OUTPUT_TYPE> result;
 	result.reserve(input.length());
-	for (intptr_t e = 0; e < input.length(); e++) {
-		result.push(f(input[e]));
+	if (f.hasClosure()) {
+		// Optimized loop for calling lambda.
+		for (intptr_t e = 0; e < input.length(); e++) {
+			result.push(f.callWithClosure(input[e]));
+		}
+	} else {
+		// Optimized loop for calling function pointer.
+		for (intptr_t e = 0; e < input.length(); e++) {
+			result.push(f.callWithoutClosure(input[e]));
+		}
 	}
 	return result;
 }
 
-// TODO: Implement list_find_all, returning a list with indices to matching elements, using both == and a custom condition.
-
-// Returns an index to the first element in list matching find, or -1 if none could be found.
+// Returns a list of indices to all elements in list where condition returns true, or an empty list if the condition returned false for all elements.
 template <typename T>
-static intptr_t list_findFirst(const dsr::List<T> &list, const T &find) {
-	for (intptr_t e = 0; e < list.length(); e++) {
-		if (list[e] == find) {
-			return e;
+static List<intptr_t> list_findAll(const dsr::List<T> &list, const TemporaryCallback<bool(const T &element)> &condition) {
+	List<intptr_t> result;
+	if (condition.hasClosure()) {
+		// Optimized loop for testing lambda condition.
+		for (intptr_t e = 0; e < list.length(); e++) {
+			if (condition.callWithClosure(list[e])) {
+				result.push(e);
+			}
+		}
+	} else {
+		// Optimized loop for testing function pointer condition.
+		for (intptr_t e = 0; e < list.length(); e++) {
+			if (condition.callWithoutClosure(list[e])) {
+				result.push(e);
+			}
 		}
 	}
-	return -1;
+	return result;
+}
+
+// Returns a list of indices to all elements in list matching, or an empty list if there is no match.
+template <typename T>
+static List<intptr_t> list_findAll(const dsr::List<T> &list, const T &find) {
+	return list_findAll<T>(list, [find](const T &element) -> bool {
+		return element == find;
+	});
 }
 
 // Returns an index to the first element in list where condition returns true, or -1 if the condition returned false for all elements.
@@ -94,18 +120,15 @@ static intptr_t list_findFirst(const dsr::List<T> &list, const TemporaryCallback
 	return -1;
 }
 
-// Returns an index to the last element in list matching find, or -1 if none could be found.
+// Returns an index to the first element in list matching find, or -1 if none could be found.
 template <typename T>
-static intptr_t list_findLast(const dsr::List<T> &list, const T &find) {
-	for (intptr_t e = list.length() - 1; e >= 0; e--) {
-		if (list[e] == find) {
-			return e;
-		}
-	}
-	return -1;
+static intptr_t list_findFirst(const dsr::List<T> &list, const T &find) {
+	return list_findFirst<T>(list, [find](const T &element) -> bool {
+		return element == find;
+	});
 }
 
-// Returns an index to the last element in list where condition returns true, or -1 if the condition returned false for all elements.
+// Returns an index to the last element in list matching find, or -1 if none could be found.
 template <typename T>
 static intptr_t list_findLast(const dsr::List<T> &list, const TemporaryCallback<bool(const T &element)> &condition) {
 	for (intptr_t e = list.length() - 1; e >= 0; e--) {
@@ -114,6 +137,14 @@ static intptr_t list_findLast(const dsr::List<T> &list, const TemporaryCallback<
 		}
 	}
 	return -1;
+}
+
+// Returns an index to the last element in list where condition returns true, or -1 if the condition returned false for all elements.
+template <typename T>
+static intptr_t list_findLast(const dsr::List<T> &list, const T &find) {
+	return list_findLast<T>(list, [find](const T &element) -> bool {
+		return element == find;
+	});
 }
 
 // Returns true iff find matches any element in list.
