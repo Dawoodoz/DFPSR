@@ -246,6 +246,33 @@ inline static void list_insert_last(dsr::List<T> &targetList, const T &element) 
 	targetList.push(element);
 }
 
+// Post-condition: Returns true iff the list is sorted according to compare, meaning that each neigoboring pair of elements in sourceList satisfies the comparison in the compare function.
+template <typename T>
+static bool list_isSorted(const List<T>& sourceList, const TemporaryCallback<bool(const T &leftSide, const T &rightSide)> &compare) {
+	for (intptr_t e = 0; e < sourceList.length() - 1; e++) {
+		if (!compare(sourceList[e], sourceList[e + 1])) {
+			// Not sorted according to compare.
+			return false;
+		}
+	}
+	// Sorted according to compare.
+	return true;
+}
+
+// If you have a default way of sorting T, you can just define comparison operators for the type to avoid referring to a custom comparison function every time.
+// Post-condition: Returns true iff the list is sorted in ascending order according to T's <= operator, meaning that sourceList[n] <= sourceList[n + 1] for all neighboring elements.
+template <typename T>
+static bool list_isSorted_ascending(const List<T>& sourceList) {
+	return list_isSorted<T>(sourceList, [](const T &leftSide, const T &rightSide) -> bool { return leftSide <= rightSide; });
+}
+
+// If you have a default way of sorting T, you can just define comparison operators for the type to avoid referring to a custom comparison function every time.
+// Post-condition: Returns true iff the list is sorted in descending order according to T's >= operator, meaning that sourceList[n] >= sourceList[n + 1] for all neighboring elements.
+template <typename T>
+static bool list_isSorted_descending(const List<T>& sourceList) {
+	return list_isSorted<T>(sourceList, [](const T &leftSide, const T &rightSide) -> bool { return leftSide >= rightSide; });
+}
+
 // TODO: Take the sorting order as a function argument.
 // TODO: Document
 template <typename T>
@@ -416,32 +443,6 @@ static void list_heapSort_ascending(List<T>& targetList) {
 template <typename T>
 static void list_heapSort_descending(List<T>& targetList) {
 	dsr::list_heapSort<T>(targetList, [](const T &leftSide, const T &rightSide) -> bool { return leftSide >= rightSide; });
-}
-
-// TODO: Implement list_isSorted with a custom comparison.
-
-template <typename T>
-static bool list_isSorted_ascending(const List<T>& sourceList) {
-	for (intptr_t e = 0; e < sourceList.length() - 1; e++) {
-		if (sourceList[e] > sourceList[e + 1]) {
-			// Not sorted in ascending order.
-			return false;
-		}
-	}
-	// Sorted in ascending order.
-	return true;
-}
-
-template <typename T>
-static bool list_isSorted_descending(const List<T>& sourceList) {
-	for (intptr_t e = 0; e < sourceList.length() - 1; e++) {
-		if (sourceList[e] < sourceList[e + 1]) {
-			// Not sorted in decending order.
-			return false;
-		}
-	}
-	// Sorted in decending order.
-	return true;
 }
 
 }
