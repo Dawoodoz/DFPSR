@@ -504,43 +504,21 @@ static inline intptr_t list_insert_unique_sorted_descending(
 	return list_insert_unique_sorted<T>(targetList, element, [](const T &leftSide, const T &rightSide) -> bool { return leftSide >= rightSide; }, compareEqual);
 }
 
-// TODO: Should a list of new indices by returned instead of bool?
-// TODO: Create a varargs version starting with nothing and adding unique elements from all lists before returning by value, so that duplicates in the first list are also reduced.
-// TODO: Take a function for equality.
+// TODO: Create a varargs union function, starting with nothing and adding unique elements from all lists before returning by value, so that duplicates in the first list are also reduced.
+
 // Pre-conditions:
 //   * All elements in targetList must be unique, or else they will remain duplicated.
 //   * targetList and sourceList may not refer to the same list.
 // Pushes all elements in sourceList that does not already exist in targetList.
-// Returns true iff any element was pushed to targetList.
 template <typename T>
-static inline bool list_append_unique_last(dsr::List<T> &targetList, const dsr::List<T> &sourceList) {
-	bool result = false;
+static inline void list_append_unique_last(
+  dsr::List<T> &targetList,
+  const dsr::List<T> &sourceList,
+  const TemporaryCallback<bool(const T &leftSide, const T &rightSide)> &compareEqual = [](const T &leftSide, const T &rightSide) -> bool { return leftSide == rightSide; }
+) {
 	for (intptr_t e = 0; e < sourceList.length(); e++) {
-		// Must store the result in a new variable to avoid lazy evaluation with side-effects.
-		bool newResult = list_insert_unique_last<T>(targetList, sourceList[e]) != -1;
-		result = result || newResult;
+		list_insert_unique_last<T>(targetList, sourceList[e], compareEqual);
 	}
-	return result;
-}
-
-// TODO: Create a varargs version starting with nothing and adding unique elements from all lists before returning by value, so that duplicates in the first list are also reduced.
-// TODO: Take functions for both equality and sorting.
-// TODO: Assert that the original list is sorted in debug mode.
-// Pre-conditions:
-//   All elements in targetList must be unique, or else they will remain duplicated.
-//   targetList must be sorted in ascending order.
-//   targetList and sourceList may not refer to the same list.
-// Pushes all elements in sourceList that does not already exist in targetList.
-// Returns true iff any element was pushed to targetList.
-template <typename T>
-static inline bool list_append_unique_sorted_ascending(dsr::List<T> &targetList, const dsr::List<T> &sourceList) {
-	bool result = false;
-	for (intptr_t e = 0; e < sourceList.length(); e++) {
-		// Must store the result in a new variable to avoid lazy evaluation with side-effects.
-		bool newResult = list_insert_unique_sorted_ascending<T>(targetList, sourceList[e]) != -1;
-		result = result || newResult;
-	}
-	return result;
 }
 
 // Pre-conditions:
@@ -550,14 +528,31 @@ static inline bool list_append_unique_sorted_ascending(dsr::List<T> &targetList,
 // Pushes all elements in sourceList that does not already exist in targetList.
 // Returns true iff any element was pushed to targetList.
 template <typename T>
-static inline bool list_append_unique_sorted_descending(dsr::List<T> &targetList, const dsr::List<T> &sourceList) {
-	bool result = false;
+static inline void list_append_unique_sorted_ascending(
+  dsr::List<T> &targetList,
+  const dsr::List<T> &sourceList,
+  const TemporaryCallback<bool(const T &leftSide, const T &rightSide)> &compareEqual = [](const T &leftSide, const T &rightSide) -> bool { return leftSide == rightSide; }
+) {
 	for (intptr_t e = 0; e < sourceList.length(); e++) {
-		// Must store the result in a new variable to avoid lazy evaluation with side-effects.
-		bool newResult = list_insert_unique_sorted_descending<T>(targetList, sourceList[e]) != -1;
-		result = result || newResult;
+		list_insert_unique_sorted_ascending<T>(targetList, sourceList[e], compareEqual);
 	}
-	return result;
+}
+
+// Pre-conditions:
+//   All elements in targetList must be unique, or else they will remain duplicated.
+//   targetList must be sorted in ascending order.
+//   targetList and sourceList may not refer to the same list.
+// Pushes all elements in sourceList that does not already exist in targetList.
+// Returns true iff any element was pushed to targetList.
+template <typename T>
+static inline void list_append_unique_sorted_descending(
+  dsr::List<T> &targetList,
+  const dsr::List<T> &sourceList,
+  const TemporaryCallback<bool(const T &leftSide, const T &rightSide)> &compareEqual = [](const T &leftSide, const T &rightSide) -> bool { return leftSide == rightSide; }
+) {
+	for (intptr_t e = 0; e < sourceList.length(); e++) {
+		list_insert_unique_sorted_descending<T>(targetList, sourceList[e], compareEqual);
+	}
 }
 
 // Helper function for heapSort.
