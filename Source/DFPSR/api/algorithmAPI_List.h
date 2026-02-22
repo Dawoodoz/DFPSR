@@ -261,6 +261,9 @@ static void list_insert_sorted_ascending(dsr::List<T> &targetList, const T &elem
 // TODO: Document
 template <typename T>
 static void list_append_last(dsr::List<T> &targetList, const dsr::List<T> &sourceList) {
+	// Reserve enough space for all the new elements.
+	targetList.reserve(targetList.length() + sourceList.length());
+	// Place the elements at the end.
 	for (intptr_t e = 0; e < sourceList.length(); e++) {
 		list_insert_last(targetList, sourceList[e]);
 	}
@@ -269,6 +272,9 @@ static void list_append_last(dsr::List<T> &targetList, const dsr::List<T> &sourc
 // TODO: Document
 template <typename T>
 static void list_append_sorted_ascending(dsr::List<T> &targetList, const dsr::List<T> &sourceList) {
+	// Reserve enough space for all the new elements.
+	targetList.reserve(targetList.length() + sourceList.length());
+	// Insert the elements.
 	for (intptr_t e = 0; e < sourceList.length(); e++) {
 		list_insert_sorted_ascending(targetList, sourceList[e]);
 	}
