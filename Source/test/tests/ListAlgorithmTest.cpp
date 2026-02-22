@@ -62,6 +62,25 @@ START_TEST(ListAlgorithm)
 		// Find last alive.
 		ASSERT_EQUAL(list_findLast<Person>(people, [](const Person &person) -> bool { return !(person.alive); }), 5);
 	}
+	{ // Checking if a list is sorted.
+		ASSERT_EQUAL(list_isSorted_ascending(List<int32_t>()), true);
+		ASSERT_EQUAL(list_isSorted_ascending(List<int32_t>(1)), true);
+		ASSERT_EQUAL(list_isSorted_ascending(List<int32_t>(1, 2)), true);
+		ASSERT_EQUAL(list_isSorted_ascending(List<int32_t>(1, 2, 3)), true);
+		ASSERT_EQUAL(list_isSorted_ascending(List<int32_t>(1, 2, 3, 4)), true);
+		ASSERT_EQUAL(list_isSorted_ascending(List<int32_t>(1, 3, 2, 4)), false);
+		ASSERT_EQUAL(list_isSorted_ascending(List<int32_t>(4, 3, 2, 1)), false);
+		ASSERT_EQUAL(list_isSorted_ascending(List<int32_t>(1, 1, 2, 2, 3, 3, 4, 4)), true);
+		ASSERT_EQUAL(list_isSorted_descending(List<int32_t>(4, 4, 3, 3, 2, 2, 1, 1)), true);
+		ASSERT_EQUAL(list_isSorted_descending(List<int32_t>(1, 2, 3, 4)), false);
+		ASSERT_EQUAL(list_isSorted_descending(List<int32_t>(1, 3, 2, 4)), false);
+		ASSERT_EQUAL(list_isSorted_descending(List<int32_t>(4, 3, 2, 1)), true);
+		ASSERT_EQUAL(list_isSorted_descending(List<int32_t>(4, 3, 2)), true);
+		ASSERT_EQUAL(list_isSorted_descending(List<int32_t>(3, 2, 1)), true);
+		ASSERT_EQUAL(list_isSorted_descending(List<int32_t>(3, 2)), true);
+		ASSERT_EQUAL(list_isSorted_descending(List<int32_t>(2)), true);
+		ASSERT_EQUAL(list_isSorted_descending(List<int32_t>()), true);
+	}
 	// TODO: Write more tests.
 	// * list_elementExists
 	// * list_elementIsMissing
