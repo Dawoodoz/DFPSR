@@ -72,19 +72,19 @@ START_TEST(ListAlgorithm)
 			Person(2012, true)   // 6
 		);
 		// Find all alive.
-		List<intptr_t> alivePersonIndices = list_findAll<Person>(people, [](const Person &person) -> bool { return person.alive; });
+		List<intptr_t> alivePersonIndices = list_findAll<Person>(people, [](intptr_t index, const Person &person) -> bool { return person.alive; });
 		ASSERT_EQUAL(alivePersonIndices, List<intptr_t>(3, 4, 6));
 		// Find all dead.
-		List<intptr_t> deadPersonIndices = list_findAll<Person>(people, [](const Person &person) -> bool { return !(person.alive); });
+		List<intptr_t> deadPersonIndices = list_findAll<Person>(people, [](intptr_t index, const Person &person) -> bool { return !(person.alive); });
 		ASSERT_EQUAL(deadPersonIndices, List<intptr_t>(0, 1, 2, 5));
 		// Find first alive.
-		ASSERT_EQUAL(list_findFirst<Person>(people, [](const Person &person) -> bool { return person.alive; }), 3);
+		ASSERT_EQUAL(list_findFirst<Person>(people, [](intptr_t index, const Person &person) -> bool { return person.alive; }), 3);
 		// Find first dead.
-		ASSERT_EQUAL(list_findFirst<Person>(people, [](const Person &person) -> bool { return !(person.alive); }), 0);
+		ASSERT_EQUAL(list_findFirst<Person>(people, [](intptr_t index, const Person &person) -> bool { return !(person.alive); }), 0);
 		// Find last alive.
-		ASSERT_EQUAL(list_findLast<Person>(people, [](const Person &person) -> bool { return person.alive; }), 6);
+		ASSERT_EQUAL(list_findLast<Person>(people, [](intptr_t index, const Person &person) -> bool { return person.alive; }), 6);
 		// Find last alive.
-		ASSERT_EQUAL(list_findLast<Person>(people, [](const Person &person) -> bool { return !(person.alive); }), 5);
+		ASSERT_EQUAL(list_findLast<Person>(people, [](intptr_t index, const Person &person) -> bool { return !(person.alive); }), 5);
 	}
 	{ // Checking if a list is sorted.
 		ASSERT_EQUAL(list_isSorted_ascending(List<int32_t>()), true);
@@ -107,15 +107,20 @@ START_TEST(ListAlgorithm)
 	}
 	{ // Insert elements into ascending list.
 		List<int32_t> ascendingList(-4, 2, 6, 12, 64, 236);
-		list_insert_sorted_ascending(ascendingList, 1);
+		ASSERT_EQUAL(list_insert_sorted_ascending(ascendingList, 1), 1); // Inserted at index 1.
+		//                                            _
 		ASSERT_EQUAL(ascendingList, List<int32_t>(-4, 1, 2, 6, 12, 64, 236));
-		list_insert_sorted_ascending(ascendingList, -63);
+		ASSERT_EQUAL(list_insert_sorted_ascending(ascendingList, -63), 0); // Inserted at index 0.
+		//                                        ___
 		ASSERT_EQUAL(ascendingList, List<int32_t>(-63, -4, 1, 2, 6, 12, 64, 236));
-		list_insert_sorted_ascending(ascendingList, 236);
+		ASSERT_EQUAL(list_insert_sorted_ascending(ascendingList, 236), 8); // Inserted at index 8.
+		//                                                                       ___
 		ASSERT_EQUAL(ascendingList, List<int32_t>(-63, -4, 1, 2, 6, 12, 64, 236, 236));
-		list_insert_sorted_ascending(ascendingList, 634);
+		ASSERT_EQUAL(list_insert_sorted_ascending(ascendingList, 634), 9); // Inserted at index 9.
+		//                                                                            ___
 		ASSERT_EQUAL(ascendingList, List<int32_t>(-63, -4, 1, 2, 6, 12, 64, 236, 236, 634));
-		list_insert_sorted_ascending(ascendingList, 54);
+		ASSERT_EQUAL(list_insert_sorted_ascending(ascendingList, 54), 6); // Inserted at index 6.
+		//                                                              __
 		ASSERT_EQUAL(ascendingList, List<int32_t>(-63, -4, 1, 2, 6, 12, 54, 64, 236, 236, 634));
 	}
 	{ // Insert elements into ascending list.
@@ -125,15 +130,20 @@ START_TEST(ListAlgorithm)
 	}
 	{ // Insert elements into descending list.
 		List<int32_t> descendingList(236, 64, 12, 6, 2, -4);
-		list_insert_sorted_descending(descendingList, 1);
+		ASSERT_EQUAL(list_insert_sorted_descending(descendingList, 1), 5);
+		//                                                            _
 		ASSERT_EQUAL(descendingList, List<int32_t>(236, 64, 12, 6, 2, 1, -4));
-		list_insert_sorted_descending(descendingList, -63);
+		ASSERT_EQUAL(list_insert_sorted_descending(descendingList, -63), 7);
+		//                                                                   ___
 		ASSERT_EQUAL(descendingList, List<int32_t>(236, 64, 12, 6, 2, 1, -4, -63));
-		list_insert_sorted_descending(descendingList, 236);
+		ASSERT_EQUAL(list_insert_sorted_descending(descendingList, 236), 1);
+		//                                              ___
 		ASSERT_EQUAL(descendingList, List<int32_t>(236, 236, 64, 12, 6, 2, 1, -4, -63));
-		list_insert_sorted_descending(descendingList, 634);
+		ASSERT_EQUAL(list_insert_sorted_descending(descendingList, 634), 0);
+		//                                         ___
 		ASSERT_EQUAL(descendingList, List<int32_t>(634, 236, 236, 64, 12, 6, 2, 1, -4, -63));
-		list_insert_sorted_descending(descendingList, 54);
+		ASSERT_EQUAL(list_insert_sorted_descending(descendingList, 54), 4);
+		//                                                            __
 		ASSERT_EQUAL(descendingList, List<int32_t>(634, 236, 236, 64, 54, 12, 6, 2, 1, -4, -63));
 	}
 	{ // Insert elements into descending list.
@@ -180,13 +190,13 @@ START_TEST(ListAlgorithm)
 		ASSERT_EQUAL(list_elementExists(unsortedSet, 7), true);
 		ASSERT_EQUAL(list_elementExists(unsortedSet, 8), false);
 		// New value.
-		ASSERT_EQUAL(list_insert_unique_last(unsortedSet, 3), true)
+		ASSERT_EQUAL(list_insert_unique_last(unsortedSet, 3), 4)
 		ASSERT_EQUAL(unsortedSet, List<int32_t>(7, 5, 2, 4, 3));
 		// Already exists.
-		ASSERT_EQUAL(list_insert_unique_last(unsortedSet, 5), false)
+		ASSERT_EQUAL(list_insert_unique_last(unsortedSet, 5), -1)
 		ASSERT_EQUAL(unsortedSet, List<int32_t>(7, 5, 2, 4, 3));
 		// New value.
-		ASSERT_EQUAL(list_insert_unique_last(unsortedSet, 6), true)
+		ASSERT_EQUAL(list_insert_unique_last(unsortedSet, 6), 5)
 		ASSERT_EQUAL(unsortedSet, List<int32_t>(7, 5, 2, 4, 3, 6));
 	}
 	{
@@ -209,13 +219,13 @@ START_TEST(ListAlgorithm)
 		ASSERT_EQUAL(list_elementExists(sortedSet, 7), true);
 		ASSERT_EQUAL(list_elementExists(sortedSet, 8), false);
 		// New value.
-		ASSERT_EQUAL(list_insert_unique_sorted_ascending(sortedSet, 3), true)
+		ASSERT_EQUAL(list_insert_unique_sorted_ascending(sortedSet, 3), 1)
 		ASSERT_EQUAL(sortedSet, List<int32_t>(2, 3, 4, 5, 7));
 		// Already exists.
-		ASSERT_EQUAL(list_insert_unique_sorted_ascending(sortedSet, 5), false)
+		ASSERT_EQUAL(list_insert_unique_sorted_ascending(sortedSet, 5), -1)
 		ASSERT_EQUAL(sortedSet, List<int32_t>(2, 3, 4, 5, 7));
 		// New value.
-		ASSERT_EQUAL(list_insert_unique_sorted_ascending(sortedSet, 6), true)
+		ASSERT_EQUAL(list_insert_unique_sorted_ascending(sortedSet, 6), 4)
 		ASSERT_EQUAL(sortedSet, List<int32_t>(2, 3, 4, 5, 6, 7));
 	}
 	{ // Sorted unions, which are useful for comparing if two sets contain the same values.
