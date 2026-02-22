@@ -249,10 +249,24 @@ inline static void list_insert_last(dsr::List<T> &targetList, const T &element) 
 // Post-condition: Returns true iff the list is sorted according to compare, meaning that each neigoboring pair of elements in sourceList satisfies the comparison in the compare function.
 template <typename T>
 static bool list_isSorted(const List<T>& sourceList, const TemporaryCallback<bool(const T &leftSide, const T &rightSide)> &compare) {
-	for (intptr_t e = 0; e < sourceList.length() - 1; e++) {
-		if (!compare(sourceList[e], sourceList[e + 1])) {
-			// Not sorted according to compare.
-			return false;
+	if (compare.hasClosure()) {
+		// Optimized loop for comparing with lambda,
+		//   for when you have to follow indices through captured collection to see the real meaning behind an index,
+		//   or just use a lambda with an empty closure for the convenience.
+		for (intptr_t e = 0; e < sourceList.length() - 1; e++) {
+			if (!compare.callWithClosure(sourceList[e], sourceList[e + 1])) {
+				// Not sorted according to compare.
+				return false;
+			}
+		}
+	} else {
+		// Optimized loop for comparing with function pointer,
+		//   for when a comparison can be done directly on the elements.
+		for (intptr_t e = 0; e < sourceList.length() - 1; e++) {
+			if (!compare.callWithoutClosure(sourceList[e], sourceList[e + 1])) {
+				// Not sorted according to compare.
+				return false;
+			}
 		}
 	}
 	// Sorted according to compare.
