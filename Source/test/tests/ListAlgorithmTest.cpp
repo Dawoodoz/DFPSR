@@ -62,17 +62,17 @@ START_TEST(ListAlgorithm)
 		// Find last alive.
 		ASSERT_EQUAL(list_findLast<Person>(people, [](const Person &person) -> bool { return !(person.alive); }), 5);
 	}
-	// TODO: Give better names and write more tests.
+	// TODO: Write more tests.
 	// * list_elementExists
 	// * list_elementIsMissing
 	// * list_insert_last
 	// * list_insert_sorted_ascending
-	// * list_append_last
-	// * list_append_sorted_ascending
 	// * list_insertUnique_last
 	// * list_insertUnique_sorted_ascending
-	// * list_insertUnion_last
-	// * list_insertUnion_sorted_ascending
+	// * list_append_last
+	// * list_append_sorted_ascending
+	// * list_appendUnique_last
+	// * list_appendUnique_sorted_ascending
 
 	{ // List sorting with duplicate elements.
 		List<int32_t> myList(5, 2, 18, 6, -1, 4, 6, -64, 2, 45);
@@ -104,10 +104,10 @@ START_TEST(ListAlgorithm)
 	{
 		List<int32_t> unsortedUnion(7, 5, 2, 4);
 		// Nothing is inserted, because all inserted elements already exist.
-		ASSERT_EQUAL(list_insertUnion_last(unsortedUnion, List<int32_t>(5, 2)), false);
+		ASSERT_EQUAL(list_appendUnique_last(unsortedUnion, List<int32_t>(5, 2)), false);
 		ASSERT_EQUAL(unsortedUnion, List<int32_t>(7, 5, 2, 4));
 		// Unique values (3 and 6) are inserted at the end.
-		ASSERT_EQUAL(list_insertUnion_last(unsortedUnion, List<int32_t>(3, 5, 6)), true);
+		ASSERT_EQUAL(list_appendUnique_last(unsortedUnion, List<int32_t>(3, 5, 6)), true);
 		ASSERT_EQUAL(unsortedUnion, List<int32_t>(7, 5, 2, 4, 3, 6));
 	}
 	{
@@ -133,10 +133,10 @@ START_TEST(ListAlgorithm)
 	{ // Sorted unions, which are useful for comparing if two sets contain the same values.
 		List<int32_t> sortedUnion(2, 4, 5, 7);
 		// Nothing is inserted, because all inserted elements already exist.
-		ASSERT_EQUAL(list_insertUnion_sorted_ascending(sortedUnion, List<int32_t>(5, 2)), false);
+		ASSERT_EQUAL(list_appendUnique_sorted_ascending(sortedUnion, List<int32_t>(5, 2)), false);
 		ASSERT_EQUAL(sortedUnion, List<int32_t>(2, 4, 5, 7));
 		// Unique values (3 and 6) are inserted in ascending order.
-		ASSERT_EQUAL(list_insertUnion_sorted_ascending(sortedUnion, List<int32_t>(3, 5, 6)), true);
+		ASSERT_EQUAL(list_appendUnique_sorted_ascending(sortedUnion, List<int32_t>(3, 5, 6)), true);
 		ASSERT_EQUAL(sortedUnion, List<int32_t>(2, 3, 4, 5, 6, 7));
 	}
 	// TODO: Test with custom comparison functions.

@@ -274,7 +274,7 @@ static void list_append_sorted_ascending(dsr::List<T> &targetList, const dsr::Li
 	}
 }
 
-// TODO: Replace _last and _sorted with a template argument that can be passed from list_insertUnion.
+// TODO: Replace _last and _sorted with a template argument that can be passed from list_appendUnique.
 // TODO: Take a function for equality.
 // Pre-conditions:
 //   All elements in targetList must be unique, or else they will remain duplicated.
@@ -322,7 +322,7 @@ static bool list_insertUnique_sorted_ascending(dsr::List<T> &targetList, const T
 // Pushes all elements in sourceList that does not already exist in targetList.
 // Returns true iff any element was pushed to targetList.
 template <typename T>
-static bool list_insertUnion_last(dsr::List<T> &targetList, const dsr::List<T> &sourceList) {
+static bool list_appendUnique_last(dsr::List<T> &targetList, const dsr::List<T> &sourceList) {
 	bool result = false;
 	for (intptr_t e = 0; e < sourceList.length(); e++) {
 		// Must store the result in a new variable to avoid lazy evaluation with side-effects.
@@ -342,7 +342,7 @@ static bool list_insertUnion_last(dsr::List<T> &targetList, const dsr::List<T> &
 // Pushes all elements in sourceList that does not already exist in targetList.
 // Returns true iff any element was pushed to targetList.
 template <typename T>
-static bool list_insertUnion_sorted_ascending(dsr::List<T> &targetList, const dsr::List<T> &sourceList) {
+static bool list_appendUnique_sorted_ascending(dsr::List<T> &targetList, const dsr::List<T> &sourceList) {
 	bool result = false;
 	for (intptr_t e = 0; e < sourceList.length(); e++) {
 		// Must store the result in a new variable to avoid lazy evaluation with side-effects.
