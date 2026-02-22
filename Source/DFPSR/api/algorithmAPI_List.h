@@ -504,8 +504,6 @@ static inline intptr_t list_insert_unique_sorted_descending(
 	return list_insert_unique_sorted<T>(targetList, element, [](const T &leftSide, const T &rightSide) -> bool { return leftSide >= rightSide; }, compareEqual);
 }
 
-// TODO: Create a varargs union function, starting with nothing and adding unique elements from all lists before returning by value, so that duplicates in the first list are also reduced.
-
 // Pre-conditions:
 //   * All elements in targetList must be unique, or else they will remain duplicated.
 //   * targetList and sourceList may not refer to the same list.
