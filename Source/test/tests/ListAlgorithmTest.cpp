@@ -37,6 +37,30 @@ START_TEST(ListAlgorithm)
 		});
 		ASSERT_EQUAL(output, List<String>(U"9", U"6", U"8", U"4"));
 	}
+	{ // Find elements in lists.
+		List<int32_t> values(4, 1, 3, 7, 34, 72, 2, 45, 6, 4, 7, 7, 2);
+		// Check if 7 exists.
+		ASSERT_EQUAL(list_elementExists(values, 7), true);
+		ASSERT_EQUAL(list_elementIsMissing(values, 7), false);
+		// Find the first 7 at index 3 in values.
+		ASSERT_EQUAL(list_findFirst(values, 7), 3);
+		// Find the last 7 at index 11 in values.
+		ASSERT_EQUAL(list_findLast(values, 7), 11);
+		// Find the last 7 at indices 3, 10 and 11 in values.
+		ASSERT_EQUAL(list_findAll(values, 7), List<intptr_t>(3, 10, 11));
+		// Value 7 does not exist in an empty list.
+		ASSERT_EQUAL(list_elementExists(List<int32_t>(), 7), false);
+		ASSERT_EQUAL(list_elementIsMissing(List<int32_t>(), 7), true);
+		ASSERT_EQUAL(list_findFirst(List<int32_t>(), 7), -1);
+		ASSERT_EQUAL(list_findLast(List<int32_t>(), 7), -1);
+		ASSERT_EQUAL(list_findAll(List<int32_t>(), 7), List<intptr_t>());
+		// Value 8 does not exist in the list.
+		ASSERT_EQUAL(list_elementExists(values, 8), false);
+		ASSERT_EQUAL(list_elementIsMissing(values, 8), true);
+		ASSERT_EQUAL(list_findFirst(values, 8), -1);
+		ASSERT_EQUAL(list_findLast(values, 8), -1);
+		ASSERT_EQUAL(list_findAll(values, 8), List<intptr_t>());
+	}
 	{ // Find using custom criteria.
 		List<Person> people(
 			Person(1584, false), // 0
@@ -118,8 +142,6 @@ START_TEST(ListAlgorithm)
 		ASSERT_EQUAL(descendingList, List<int32_t>(634, 236, 236, 64, 54, 12, 6, 2, 1, -4, -63));
 	}
 	// TODO: Write more tests.
-	// * list_elementExists
-	// * list_elementIsMissing
 	// * list_insertUnique_last
 	// * list_insertUnique_sorted_ascending
 	// * list_insertUnique_sorted_descending
