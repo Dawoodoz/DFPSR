@@ -48,6 +48,10 @@ Doc | Documentation
 
 Gen | Generator, a function or program used to create something automatically.
 
+Iff | Short form for "if and only if", which is used to constrain boolean outputs.
+The "if and only if" expression is used instead of having to write explicitly that a function returns false when the criteria for returning true is not met.
+If only defining when a function should return true and not when it should return false, a function always returning true will satisfy the post-condition by returning true when the condition is met.
+
 ---
 
 Title2: Expressions
