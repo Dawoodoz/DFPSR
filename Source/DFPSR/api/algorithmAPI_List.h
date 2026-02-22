@@ -79,25 +79,91 @@ List<OUTPUT_TYPE> list_map(const List<INPUT_TYPE> &input, const TemporaryCallbac
 	return result;
 }
 
+// action should return true to continue the loop or false when done.
+template <typename T, bool BACKWARD = false>
+static List<intptr_t> list_forAll(const dsr::List<T> &list, const TemporaryCallback<bool(const T &element)> &condition, const TemporaryCallback<bool(intptr_t index, const T &element)> &action) {
+	List<intptr_t> result;
+	if (BACKWARD) {
+		if (action.hasClosure()) {
+			if (condition.hasClosure()) {
+				// Optimized loop for testing lambda condition.
+				for (intptr_t e = list.length() - 1; e >= 0; e--) {
+					if (condition.callWithClosure(list[e])) {
+						if (!action.callWithClosure(e, list[e])) break;
+					}
+				}
+			} else {
+				// Optimized loop for testing function pointer condition.
+				for (intptr_t e = list.length() - 1; e >= 0; e--) {
+					if (condition.callWithoutClosure(list[e])) {
+						if (!action.callWithClosure(e, list[e])) break;
+					}
+				}
+			}
+		} else {
+			if (condition.hasClosure()) {
+				// Optimized loop for testing lambda condition.
+				for (intptr_t e = list.length() - 1; e >= 0; e--) {
+					if (condition.callWithClosure(list[e])) {
+						if (!action.callWithoutClosure(e, list[e])) break;
+					}
+				}
+			} else {
+				// Optimized loop for testing function pointer condition.
+				for (intptr_t e = list.length() - 1; e >= 0; e--) {
+					if (condition.callWithoutClosure(list[e])) {
+						if (!action.callWithoutClosure(e, list[e])) break;
+					}
+				}
+			}
+		}
+	} else {
+		if (action.hasClosure()) {
+			if (condition.hasClosure()) {
+				// Optimized loop for testing lambda condition.
+				for (intptr_t e = 0; e < list.length(); e++) {
+					if (condition.callWithClosure(list[e])) {
+						if (!action.callWithClosure(e, list[e])) break;
+					}
+				}
+			} else {
+				// Optimized loop for testing function pointer condition.
+				for (intptr_t e = 0; e < list.length(); e++) {
+					if (condition.callWithoutClosure(list[e])) {
+						if (!action.callWithClosure(e, list[e])) break;
+					}
+				}
+			}
+		} else {
+			if (condition.hasClosure()) {
+				// Optimized loop for testing lambda condition.
+				for (intptr_t e = 0; e < list.length(); e++) {
+					if (condition.callWithClosure(list[e])) {
+						if (!action.callWithoutClosure(e, list[e])) break;
+					}
+				}
+			} else {
+				// Optimized loop for testing function pointer condition.
+				for (intptr_t e = 0; e < list.length(); e++) {
+					if (condition.callWithoutClosure(list[e])) {
+						if (!action.callWithoutClosure(e, list[e])) break;
+					}
+				}
+			}
+		}
+	}
+	return result;
+}
+
 // Returns a list of indices to all elements in list where condition returns true, or an empty list if the condition returned false for all elements.
 template <typename T>
 static List<intptr_t> list_findAll(const dsr::List<T> &list, const TemporaryCallback<bool(const T &element)> &condition) {
 	List<intptr_t> result;
-	if (condition.hasClosure()) {
-		// Optimized loop for testing lambda condition.
-		for (intptr_t e = 0; e < list.length(); e++) {
-			if (condition.callWithClosure(list[e])) {
-				result.push(e);
-			}
-		}
-	} else {
-		// Optimized loop for testing function pointer condition.
-		for (intptr_t e = 0; e < list.length(); e++) {
-			if (condition.callWithoutClosure(list[e])) {
-				result.push(e);
-			}
-		}
-	}
+	// Ascending loop
+	list_forAll<T, false>(list, condition, [&result](intptr_t index, const T &element) -> bool {
+		result.push(index); // Push the element's index to the list.
+		return true; // Keep iterating over the list.
+	});
 	return result;
 }
 
@@ -112,12 +178,13 @@ static List<intptr_t> list_findAll(const dsr::List<T> &list, const T &find) {
 // Returns an index to the first element in list where condition returns true, or -1 if the condition returned false for all elements.
 template <typename T>
 static intptr_t list_findFirst(const dsr::List<T> &list, const TemporaryCallback<bool(const T &element)> &condition) {
-	for (intptr_t e = 0; e < list.length(); e++) {
-		if (condition(list[e])) {
-			return e;
-		}
-	}
-	return -1;
+	intptr_t result = -1;
+	// Ascending loop
+	list_forAll<T, false>(list, condition, [&result](intptr_t index, const T &element) -> bool {
+		result = index; // Take the index as the result.
+		return false; // We are done iterating over the list.
+	});
+	return result;
 }
 
 // Returns an index to the first element in list matching find, or -1 if none could be found.
@@ -131,12 +198,13 @@ static intptr_t list_findFirst(const dsr::List<T> &list, const T &find) {
 // Returns an index to the last element in list matching find, or -1 if none could be found.
 template <typename T>
 static intptr_t list_findLast(const dsr::List<T> &list, const TemporaryCallback<bool(const T &element)> &condition) {
-	for (intptr_t e = list.length() - 1; e >= 0; e--) {
-		if (condition(list[e])) {
-			return e;
-		}
-	}
-	return -1;
+	intptr_t result = -1;
+	// Descending loop
+	list_forAll<T, true>(list, condition, [&result](intptr_t index, const T &element) -> bool {
+		result = index; // Take the index as the result.
+		return false; // We are done iterating over the list.
+	});
+	return result;
 }
 
 // Returns an index to the last element in list where condition returns true, or -1 if the condition returned false for all elements.
