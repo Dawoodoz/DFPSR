@@ -79,23 +79,32 @@ List<OUTPUT_TYPE> list_map(const List<INPUT_TYPE> &input, const TemporaryCallbac
 	return result;
 }
 
+// Side-effects:
+//   * Execute action on each element in list that satisfies condition.
+// Let BACKWARD be false to loop forwards from 0 to length - 1.
+// Let BACKWARD be true to loop backwards from length - 1 to 0.
+// condition should return true iff the given element should call action,
 // action should return true to continue the loop or false when done.
 template <typename T, bool BACKWARD = false>
-static List<intptr_t> list_forAll(const dsr::List<T> &list, const TemporaryCallback<bool(const T &element)> &condition, const TemporaryCallback<bool(intptr_t index, const T &element)> &action) {
+static List<intptr_t> list_forAll(
+  const dsr::List<T> &list,
+  const TemporaryCallback<bool(intptr_t index, const T &element)> &condition,
+  const TemporaryCallback<bool(intptr_t index, const T &element)> &action
+) {
 	List<intptr_t> result;
 	if (BACKWARD) {
 		if (action.hasClosure()) {
 			if (condition.hasClosure()) {
 				// Optimized loop for testing lambda condition.
 				for (intptr_t e = list.length() - 1; e >= 0; e--) {
-					if (condition.callWithClosure(list[e])) {
+					if (condition.callWithClosure(e, list[e])) {
 						if (!action.callWithClosure(e, list[e])) break;
 					}
 				}
 			} else {
 				// Optimized loop for testing function pointer condition.
 				for (intptr_t e = list.length() - 1; e >= 0; e--) {
-					if (condition.callWithoutClosure(list[e])) {
+					if (condition.callWithoutClosure(e, list[e])) {
 						if (!action.callWithClosure(e, list[e])) break;
 					}
 				}
@@ -104,14 +113,14 @@ static List<intptr_t> list_forAll(const dsr::List<T> &list, const TemporaryCallb
 			if (condition.hasClosure()) {
 				// Optimized loop for testing lambda condition.
 				for (intptr_t e = list.length() - 1; e >= 0; e--) {
-					if (condition.callWithClosure(list[e])) {
+					if (condition.callWithClosure(e, list[e])) {
 						if (!action.callWithoutClosure(e, list[e])) break;
 					}
 				}
 			} else {
 				// Optimized loop for testing function pointer condition.
 				for (intptr_t e = list.length() - 1; e >= 0; e--) {
-					if (condition.callWithoutClosure(list[e])) {
+					if (condition.callWithoutClosure(e, list[e])) {
 						if (!action.callWithoutClosure(e, list[e])) break;
 					}
 				}
@@ -122,14 +131,14 @@ static List<intptr_t> list_forAll(const dsr::List<T> &list, const TemporaryCallb
 			if (condition.hasClosure()) {
 				// Optimized loop for testing lambda condition.
 				for (intptr_t e = 0; e < list.length(); e++) {
-					if (condition.callWithClosure(list[e])) {
+					if (condition.callWithClosure(e, list[e])) {
 						if (!action.callWithClosure(e, list[e])) break;
 					}
 				}
 			} else {
 				// Optimized loop for testing function pointer condition.
 				for (intptr_t e = 0; e < list.length(); e++) {
-					if (condition.callWithoutClosure(list[e])) {
+					if (condition.callWithoutClosure(e, list[e])) {
 						if (!action.callWithClosure(e, list[e])) break;
 					}
 				}
@@ -138,14 +147,14 @@ static List<intptr_t> list_forAll(const dsr::List<T> &list, const TemporaryCallb
 			if (condition.hasClosure()) {
 				// Optimized loop for testing lambda condition.
 				for (intptr_t e = 0; e < list.length(); e++) {
-					if (condition.callWithClosure(list[e])) {
+					if (condition.callWithClosure(e, list[e])) {
 						if (!action.callWithoutClosure(e, list[e])) break;
 					}
 				}
 			} else {
 				// Optimized loop for testing function pointer condition.
 				for (intptr_t e = 0; e < list.length(); e++) {
-					if (condition.callWithoutClosure(list[e])) {
+					if (condition.callWithoutClosure(e, list[e])) {
 						if (!action.callWithoutClosure(e, list[e])) break;
 					}
 				}
@@ -155,9 +164,10 @@ static List<intptr_t> list_forAll(const dsr::List<T> &list, const TemporaryCallb
 	return result;
 }
 
-// Returns a list of indices to all elements in list where condition returns true, or an empty list if the condition returned false for all elements.
+// Post-conditions:
+//   * Returns a list of indices to all elements in list where condition returns true, or an empty list if the condition returned false for all elements.
 template <typename T>
-static inline List<intptr_t> list_findAll(const dsr::List<T> &list, const TemporaryCallback<bool(const T &element)> &condition) {
+static inline List<intptr_t> list_findAll(const dsr::List<T> &list, const TemporaryCallback<bool(intptr_t index, const T &element)> &condition) {
 	List<intptr_t> result;
 	// Ascending loop
 	list_forAll<T, false>(list, condition, [&result](intptr_t index, const T &element) -> bool {
@@ -167,17 +177,19 @@ static inline List<intptr_t> list_findAll(const dsr::List<T> &list, const Tempor
 	return result;
 }
 
-// Returns a list of indices to all elements in list matching, or an empty list if there is no match.
+// Post-conditions:
+//   * Returns a list of indices to all elements in list matching, or an empty list if there is no match.
 template <typename T>
 static inline List<intptr_t> list_findAll(const dsr::List<T> &list, const T &find) {
-	return list_findAll<T>(list, [find](const T &element) -> bool {
+	return list_findAll<T>(list, [&find](intptr_t index, const T &element) -> bool {
 		return element == find;
 	});
 }
 
-// Returns an index to the first element in list where condition returns true, or -1 if the condition returned false for all elements.
+// Post-conditions:
+//   * Returns an index to the first element in list satisfying condition, or -1 if none could be found.
 template <typename T>
-static inline intptr_t list_findFirst(const dsr::List<T> &list, const TemporaryCallback<bool(const T &element)> &condition) {
+static inline intptr_t list_findFirst(const dsr::List<T> &list, const TemporaryCallback<bool(intptr_t index, const T &element)> &condition) {
 	intptr_t result = -1;
 	// Ascending loop
 	list_forAll<T, false>(list, condition, [&result](intptr_t index, const T &element) -> bool {
@@ -187,17 +199,19 @@ static inline intptr_t list_findFirst(const dsr::List<T> &list, const TemporaryC
 	return result;
 }
 
-// Returns an index to the first element in list matching find, or -1 if none could be found.
+// Post-conditions:
+//   * Returns an index to the first element in list matching find according to T's == operator, or -1 if none could be found.
 template <typename T>
 static inline intptr_t list_findFirst(const dsr::List<T> &list, const T &find) {
-	return list_findFirst<T>(list, [find](const T &element) -> bool {
+	return list_findFirst<T>(list, [&find](intptr_t index, const T &element) -> bool {
 		return element == find;
 	});
 }
 
-// Returns an index to the last element in list matching find, or -1 if none could be found.
+// Post-conditions:
+//   * Returns an index to the last element in list satisfying condition, or -1 if none could be found.
 template <typename T>
-static inline intptr_t list_findLast(const dsr::List<T> &list, const TemporaryCallback<bool(const T &element)> &condition) {
+static inline intptr_t list_findLast(const dsr::List<T> &list, const TemporaryCallback<bool(intptr_t index, const T &element)> &condition) {
 	intptr_t result = -1;
 	// Descending loop
 	list_forAll<T, true>(list, condition, [&result](intptr_t index, const T &element) -> bool {
@@ -207,48 +221,49 @@ static inline intptr_t list_findLast(const dsr::List<T> &list, const TemporaryCa
 	return result;
 }
 
-// Post-condition: Returns an index to the last element in list where condition returns true, or -1 if the condition returned false for all elements.
+// Post-conditions:
+//   * Returns an index to the last element in list matching find according to T's == operator, or -1 if none could be found.
 template <typename T>
 static inline intptr_t list_findLast(const dsr::List<T> &list, const T &find) {
-	return list_findLast<T>(list, [find](const T &element) -> bool {
+	return list_findLast<T>(list, [&find](intptr_t index, const T &element) -> bool {
 		return element == find;
 	});
 }
 
-// Post-condition: Returns true iff find matches any element in list.
+// Post-condition: Returns true iff condition is satisfied for any element in list.
+template <typename T>
+static inline bool list_elementExists(const dsr::List<T> &list, const TemporaryCallback<bool(intptr_t index, const T &element)> &condition) {
+	return list_findFirst(list, condition) != -1;
+}
+
+// Post-condition: Returns true iff find matches any element in list according to T's == operator.
 template <typename T>
 static inline bool list_elementExists(const dsr::List<T> &list, const T &find) {
 	return list_findFirst(list, find) != -1;
 }
 
-// Post-condition: Returns true iff condition is satisfied for any element in list.
+// Post-condition: Returns true iff condition is not satisfied for any element in list.
 template <typename T>
-static inline bool list_elementExists(const dsr::List<T> &list, const TemporaryCallback<bool(const T &element)> &condition) {
-	return list_findFirst(list, condition) != -1;
+static inline bool list_elementIsMissing(const dsr::List<T> &list, const TemporaryCallback<bool(intptr_t index, const T &element)> &condition) {
+	return list_findFirst(list, condition) == -1;
 }
 
-// Post-condition: Returns true iff find does not exist in list.
+// Post-condition: Returns true iff find does not exist in list according to T's == operator.
 template <typename T>
 static inline bool list_elementIsMissing(const dsr::List<T> &list, const T &find) {
 	return list_findFirst(list, find) == -1;
 }
 
-// Post-condition: Returns true iff condition is not satisfied for any element in list.
+// Post-condition: Returns true iff the list is sorted according to sortCompare, meaning that each neigoboring pair of elements in sourceList satisfies the comparison in the sortCompare function.
 template <typename T>
-static inline bool list_elementIsMissing(const dsr::List<T> &list, const TemporaryCallback<bool(const T &element)> &condition) {
-	return list_findFirst(list, condition) == -1;
-}
-
-// Post-condition: Returns true iff the list is sorted according to compare, meaning that each neigoboring pair of elements in sourceList satisfies the comparison in the compare function.
-template <typename T>
-static bool list_isSorted(const List<T>& sourceList, const TemporaryCallback<bool(const T &leftSide, const T &rightSide)> &compare) {
-	if (compare.hasClosure()) {
+static bool list_isSorted(const List<T>& sourceList, const TemporaryCallback<bool(const T &leftSide, const T &rightSide)> &sortCompare) {
+	if (sortCompare.hasClosure()) {
 		// Optimized loop for comparing with lambda,
 		//   for when you have to follow indices through captured collection to see the real meaning behind an index,
 		//   or just use a lambda with an empty closure for the convenience.
 		for (intptr_t e = 0; e < sourceList.length() - 1; e++) {
-			if (!compare.callWithClosure(sourceList[e], sourceList[e + 1])) {
-				// Not sorted according to compare.
+			if (!sortCompare.callWithClosure(sourceList[e], sourceList[e + 1])) {
+				// Not sorted according to sortCompare.
 				return false;
 			}
 		}
@@ -256,13 +271,13 @@ static bool list_isSorted(const List<T>& sourceList, const TemporaryCallback<boo
 		// Optimized loop for comparing with function pointer,
 		//   for when a comparison can be done directly on the elements.
 		for (intptr_t e = 0; e < sourceList.length() - 1; e++) {
-			if (!compare.callWithoutClosure(sourceList[e], sourceList[e + 1])) {
-				// Not sorted according to compare.
+			if (!sortCompare.callWithoutClosure(sourceList[e], sourceList[e + 1])) {
+				// Not sorted according to sortCompare.
 				return false;
 			}
 		}
 	}
-	// Sorted according to compare.
+	// Sorted according to sortCompare.
 	return true;
 }
 
@@ -280,38 +295,44 @@ static inline bool list_isSorted_descending(const List<T>& sourceList) {
 	return list_isSorted<T>(sourceList, [](const T &leftSide, const T &rightSide) -> bool { return leftSide >= rightSide; });
 }
 
-// Insert an element into an unsorted list.
+// Insert an element into an unsorted list and return the element's new index.
+// For consistency with the insert_unique functions that do not always push something to refer to, there is no version returning by reference.
 // Side-effect:
 //   * targetList expands to include a copy of the new element at the end.
 template <typename T>
-static inline void list_insert_last(dsr::List<T> &targetList, const T &element) {
-	targetList.push(element);
+static inline intptr_t list_insert_last(dsr::List<T> &targetList, const T &element) {
+	return targetList.pushGetIndex(element);
 }
 
-// Insert an element into a sorted list.
+// Insert an element into a sorted list and return its new index.
+// For consistency with the insert_unique functions that do not always push something to refer to, there is no version returning by reference.
 // The insertion is stable, so no pre-existing equal elements will change order between each other.
 //   If targetList already contains any elements that are considered equal to element, the new element will be placed behind all of them.
 // Pre-condition:
-//   * targetList must be sorted according to compare, so that list_isSorted(targetList, compare) would return true.
+//   * targetList must be sorted according to sortCompare, so that list_isSorted(targetList, sortCompare) would return true.
 // Side-effect:
 //   * targetList expands to include a copy of the new element at a sorted location.
-//   * targetList remains sorted according to compare, so that list_isSorted(targetList, compare) will still return true.
+//   * targetList remains sorted according to sortCompare, so that list_isSorted(targetList, sortCompare) will still return true.
+// Post-condition:
+//   * Returns the inserted element's new index in targetList.
 template <typename T>
-static void list_insert_sorted(dsr::List<T> &targetList, const T &element, const TemporaryCallback<bool(const T &leftSide, const T &rightSide)> &compare) {
+static intptr_t list_insert_sorted(dsr::List<T> &targetList, const T &element, const TemporaryCallback<bool(const T &leftSide, const T &rightSide)> &sortCompare) {
 	#ifndef NDEBUG
-		if (!list_isSorted(targetList, compare)) {
+		if (!list_isSorted(targetList, sortCompare)) {
 			throwError(U"Tried to call list_insert_sorted with a target list that was not already sorted!\n");
 		}
 	#endif
 	targetList.push(element);
 	intptr_t at = targetList.length() - 1;
-	while (at > 0 && !compare(targetList[at - 1], targetList[at])) {
-		targetList.swap(at, at - 1);
+	while (at > 0 && !sortCompare(targetList[at - 1], targetList[at])) {
+		targetList.swap(at - 1, at);
 		at--;
 	}
+	return at;
 }
 
-// Insert an element into a sorted list.
+// Insert an element into a sorted list and return its new index.
+// For consistency with the insert_unique functions that do not always push something to refer to, there is no version returning by reference.
 // The insertion is stable, so no pre-existing equal elements will change order between each other.
 //   If targetList already contains any elements that are considered equal to element, the new element will be placed behind all of them.
 // Pre-condition:
@@ -319,12 +340,15 @@ static void list_insert_sorted(dsr::List<T> &targetList, const T &element, const
 // Side-effect:
 //   * targetList expands to include a copy of the new element at a sorted location.
 //   * targetList remains sorted according to T's <= operator, so that list_isSorted_ascending(targetList) will still return true.
+// Post-condition:
+//   * Returns the inserted element's new index in targetList.
 template <typename T>
-static inline void list_insert_sorted_ascending(dsr::List<T> &targetList, const T &element) {
-	list_insert_sorted<T>(targetList, element, [](const T &leftSide, const T &rightSide) -> bool { return leftSide <= rightSide; });
+static inline intptr_t list_insert_sorted_ascending(dsr::List<T> &targetList, const T &element) {
+	return list_insert_sorted<T>(targetList, element, [](const T &leftSide, const T &rightSide) -> bool { return leftSide <= rightSide; });
 }
 
-// Insert an element into a sorted list.
+// Insert an element into a sorted list and return its new index.
+// For consistency with the insert_unique functions that do not always push something to refer to, there is no version returning by reference.
 // The insertion is stable, so no pre-existing equal elements will change order between each other.
 //   If targetList already contains any elements that are considered equal to element, the new element will be placed behind all of them.
 // Pre-condition:
@@ -332,9 +356,11 @@ static inline void list_insert_sorted_ascending(dsr::List<T> &targetList, const 
 // Side-effect:
 //   * targetList expands to include a copy of the new element at a sorted location.
 //   * targetList remains sorted according to T's >= operator, so that list_isSorted_descending(targetList) will still return true.
+// Post-condition:
+//   * Returns the inserted element's new index in targetList.
 template <typename T>
-static inline void list_insert_sorted_descending(dsr::List<T> &targetList, const T &element) {
-	list_insert_sorted<T>(targetList, element, [](const T &leftSide, const T &rightSide) -> bool { return leftSide >= rightSide; });
+static inline intptr_t list_insert_sorted_descending(dsr::List<T> &targetList, const T &element) {
+	return list_insert_sorted<T>(targetList, element, [](const T &leftSide, const T &rightSide) -> bool { return leftSide >= rightSide; });
 }
 
 // Insert copies of the elements from sourceList into the end of targetList.
@@ -352,18 +378,20 @@ static inline void list_append_last(dsr::List<T> &targetList, const dsr::List<T>
 
 // Convenient wrapper for calling list_insert_sorted for all elements in sourceList.
 //   Each element is inserted individually to find its sorted location within targetList.
+// Call list_insert_sorted directly if you need to know the new indices from its result.
 template <typename T>
-static inline void list_append_sorted(dsr::List<T> &targetList, const dsr::List<T> &sourceList, const TemporaryCallback<bool(const T &leftSide, const T &rightSide)> &compare) {
+static inline void list_append_sorted(dsr::List<T> &targetList, const dsr::List<T> &sourceList, const TemporaryCallback<bool(const T &leftSide, const T &rightSide)> &sortCompare) {
 	// Reserve enough space for all the new elements.
 	targetList.reserve(targetList.length() + sourceList.length());
 	// Insert the elements.
 	for (intptr_t e = 0; e < sourceList.length(); e++) {
-		list_insert_sorted<T>(targetList, sourceList[e], compare);
+		list_insert_sorted<T>(targetList, sourceList[e], sortCompare);
 	}
 }
 
 // Convenient wrapper for calling list_insert_sorted_ascending for all elements in sourceList.
 //   Each element is inserted individually to find its sorted location within targetList.
+// Call list_insert_sorted_ascending directly if you need to know the new indices from its result.
 template <typename T>
 static inline void list_append_sorted_ascending(dsr::List<T> &targetList, const dsr::List<T> &sourceList) {
 	// Reserve enough space for all the new elements.
@@ -376,6 +404,7 @@ static inline void list_append_sorted_ascending(dsr::List<T> &targetList, const 
 
 // Convenient wrapper for calling list_insert_sorted_descending for all elements in sourceList.
 //   Each element is inserted individually to find its sorted location within targetList.
+// Call list_insert_sorted_descending directly if you need to know the new indices from its result.
 template <typename T>
 static inline void list_append_sorted_descending(dsr::List<T> &targetList, const dsr::List<T> &sourceList) {
 	// Reserve enough space for all the new elements.
@@ -386,51 +415,101 @@ static inline void list_append_sorted_descending(dsr::List<T> &targetList, const
 	}
 }
 
-// TODO: Replace _last and _sorted with a template argument that can be passed from list_append_unique.
-// TODO: Take a function for equality.
+// Only inserting element when element does not have an equal in targetList.
 // Pre-conditions:
-//   All elements in targetList must be unique, or else they will remain duplicated.
-// Pushes element to targetList and return true iff list_elementIsMissing.
+//   * All elements in targetList must be unique according to compareEqual, or else they will remain duplicated.
+// Side-effects:
+//   * Pushes element to targetList iff the element was missing according to compareEqual and therefore inserted into targetList.
+// Post-conditions:
+//   * Returns true iff the element was unique and therefore inserted into targetList.
 template <typename T>
-static inline bool list_insert_unique_last(dsr::List<T> &targetList, const T &element) {
-	if (list_elementIsMissing(targetList, element)) {
-		targetList.push(element);
-		return true;
+static inline intptr_t list_insert_unique_last(
+  dsr::List<T> &targetList,
+  const T &element,
+  const TemporaryCallback<bool(const T &leftSide, const T &rightSide)> &compareEqual = [](const T &leftSide, const T &rightSide) -> bool { return leftSide == rightSide; }
+) {
+	if (list_elementIsMissing<T>(targetList, [&element, &compareEqual](intptr_t otherElementIndex, const T &otherElement) -> bool {
+		return compareEqual(element, otherElement);
+	})) {
+		return list_insert_last<T>(targetList, element);
 	} else {
-		return false;
+		return -1;
 	}
 }
 
-// TODO: Take functions for both equality and sorting.
-// TODO: Assert that the original list is sorted in debug mode.
 // Pre-conditions:
-//   All elements in targetList must be unique, or else they will remain duplicated.
-//   targetList must be sorted in ascending order.
-// Pushes element to a sorted location in targetList and return true iff list_elementIsMissing.
-// Pre-condition; targetList is sorted according to the < operator when beginning the call.
-// Side-effect: targetList will remain sorted if it was sorted from the start.
+//   * All elements in targetList must be unique according to compareEqual, or else they will remain duplicated.
+//     compareEqual defaults to T's == operator if not provided.
+//   * All elements in targetList must be sorted according to sortCompare, so that sortCompare(targetList[n], targetList[n + 1]) is satisfied for all neighboring pairs.
+// Side-effects:
+//   * Pushes element to a sorted location in targetList.
+// Pre-conditions;
+//   * targetList is sorted according to the < operator when beginning the call.
+// Post-conditions:
+//   * Returns element's new index in targetList, or -1 if it was not inserted.
+//   * targetList will remain sorted if it was sorted from the start.
 template <typename T>
-static inline bool list_insert_unique_sorted_ascending(dsr::List<T> &targetList, const T &element) {
-	if (list_elementIsMissing(targetList, element)) {
-		targetList.push(element);
-		intptr_t at = targetList.length() - 1;
-		while (at > 0 && targetList[at] < targetList[at - 1]) {
-			targetList.swap(at, at - 1);
-			at--;
-		}
-		return true;
+static inline intptr_t list_insert_unique_sorted(
+  dsr::List<T> &targetList,
+  const T &element,
+  const TemporaryCallback<bool(const T &leftSide, const T &rightSide)> &sortCompare,
+  const TemporaryCallback<bool(const T &leftSide, const T &rightSide)> &compareEqual = [](const T &leftSide, const T &rightSide) -> bool { return leftSide == rightSide; }
+) {
+	if (list_elementIsMissing<T>(targetList, [&element, &compareEqual](intptr_t otherElementIndex, const T &otherElement) -> bool {
+		return compareEqual(element, otherElement);
+	})) {
+		return list_insert_sorted<T>(targetList, element, sortCompare);
 	} else {
-		return false;
+		return -1;
 	}
 }
 
-// TODO: Having insert union without append is a bit strange, so implement a basic append function as well.
+// Pre-conditions:
+//   * All elements in targetList must be unique according to compareEqual, or else they will remain duplicated.
+//     compareEqual defaults to T's == operator if not provided.
+//   * All elements in targetList must be sorted according to T's <= operator, so that targetList[n] <= targetList[n + 1] is satisfied for all neighboring pairs.
+// Side-effects:
+//   * Pushes element to a sorted location in targetList.
+// Pre-conditions;
+//   * targetList is sorted according to the < operator when beginning the call.
+// Post-conditions:
+//   * Returns element's new index in targetList, or -1 if it was not inserted.
+//   * targetList will remain sorted if it was sorted from the start.
+template <typename T>
+static inline intptr_t list_insert_unique_sorted_ascending(
+  dsr::List<T> &targetList,
+  const T &element,
+  const TemporaryCallback<bool(const T &leftSide, const T &rightSide)> &compareEqual = [](const T &leftSide, const T &rightSide) -> bool { return leftSide == rightSide; }
+) {
+	return list_insert_unique_sorted<T>(targetList, element, [](const T &leftSide, const T &rightSide) -> bool { return leftSide <= rightSide; }, compareEqual);
+}
 
+// Pre-conditions:
+//   * All elements in targetList must be unique according to compareEqual, or else they will remain duplicated.
+//     compareEqual defaults to T's == operator if not provided.
+//   * All elements in targetList must be sorted according to T's >= operator, so that targetList[n] >= targetList[n + 1] is satisfied for all neighboring pairs.
+// Side-effects:
+//   * Pushes element to a sorted location in targetList.
+// Pre-conditions;
+//   * targetList is sorted according to the < operator when beginning the call.
+// Post-conditions:
+//   * Returns element's new index in targetList, or -1 if it was not inserted.
+//   * targetList will remain sorted if it was sorted from the start.
+template <typename T>
+static inline intptr_t list_insert_unique_sorted_descending(
+  dsr::List<T> &targetList,
+  const T &element,
+  const TemporaryCallback<bool(const T &leftSide, const T &rightSide)> &compareEqual = [](const T &leftSide, const T &rightSide) -> bool { return leftSide == rightSide; }
+) {
+	return list_insert_unique_sorted<T>(targetList, element, [](const T &leftSide, const T &rightSide) -> bool { return leftSide >= rightSide; }, compareEqual);
+}
+
+// TODO: Should a list of new indices by returned instead of bool?
 // TODO: Create a varargs version starting with nothing and adding unique elements from all lists before returning by value, so that duplicates in the first list are also reduced.
 // TODO: Take a function for equality.
 // Pre-conditions:
-//   All elements in targetList must be unique, or else they will remain duplicated.
-//   targetList and sourceList may not refer to the same list.
+//   * All elements in targetList must be unique, or else they will remain duplicated.
+//   * targetList and sourceList may not refer to the same list.
 // Pushes all elements in sourceList that does not already exist in targetList.
 // Returns true iff any element was pushed to targetList.
 template <typename T>
@@ -438,7 +517,7 @@ static inline bool list_append_unique_last(dsr::List<T> &targetList, const dsr::
 	bool result = false;
 	for (intptr_t e = 0; e < sourceList.length(); e++) {
 		// Must store the result in a new variable to avoid lazy evaluation with side-effects.
-		bool newResult = list_insert_unique_last(targetList, sourceList[e]);
+		bool newResult = list_insert_unique_last<T>(targetList, sourceList[e]) != -1;
 		result = result || newResult;
 	}
 	return result;
@@ -458,7 +537,24 @@ static inline bool list_append_unique_sorted_ascending(dsr::List<T> &targetList,
 	bool result = false;
 	for (intptr_t e = 0; e < sourceList.length(); e++) {
 		// Must store the result in a new variable to avoid lazy evaluation with side-effects.
-		bool newResult = list_insert_unique_sorted_ascending(targetList, sourceList[e]);
+		bool newResult = list_insert_unique_sorted_ascending<T>(targetList, sourceList[e]) != -1;
+		result = result || newResult;
+	}
+	return result;
+}
+
+// Pre-conditions:
+//   All elements in targetList must be unique, or else they will remain duplicated.
+//   targetList must be sorted in ascending order.
+//   targetList and sourceList may not refer to the same list.
+// Pushes all elements in sourceList that does not already exist in targetList.
+// Returns true iff any element was pushed to targetList.
+template <typename T>
+static inline bool list_append_unique_sorted_descending(dsr::List<T> &targetList, const dsr::List<T> &sourceList) {
+	bool result = false;
+	for (intptr_t e = 0; e < sourceList.length(); e++) {
+		// Must store the result in a new variable to avoid lazy evaluation with side-effects.
+		bool newResult = list_insert_unique_sorted_descending<T>(targetList, sourceList[e]) != -1;
 		result = result || newResult;
 	}
 	return result;
@@ -466,39 +562,40 @@ static inline bool list_append_unique_sorted_ascending(dsr::List<T> &targetList,
 
 // Helper function for heapSort.
 template <typename T>
-static void impl_list_heapify(dsr::List<T>& targetList, intptr_t n, intptr_t i, const TemporaryCallback<bool(const T &leftSide, const T &rightSide)> &compare) {
+static void impl_list_heapify(dsr::List<T>& targetList, intptr_t n, intptr_t i, const TemporaryCallback<bool(const T &leftSide, const T &rightSide)> &sortCompare) {
 	intptr_t largest = i;
 	intptr_t l = 2 * i + 1;
 	intptr_t r = 2 * i + 2;
-	if (l < n && !compare(targetList[l], targetList[largest])) {
+	if (l < n && !sortCompare(targetList[l], targetList[largest])) {
 		largest = l;
 	}
-	if (r < n && !compare(targetList[r], targetList[largest])) {
+	if (r < n && !sortCompare(targetList[r], targetList[largest])) {
 		largest = r;
 	}
 	if (largest != i) {
 		targetList.swap(i, largest);
-		impl_list_heapify(targetList, n, largest, compare);
+		impl_list_heapify(targetList, n, largest, sortCompare);
 	}
 }
 
 // Apply the heap-sort algorithm to targetList.
-// The compare function should return true when leftSide and rightSide are sorted correctly.
+//   The heap-sort algorithm does not preserve a stable order between elements that are equal according to sortCompare.
+// The sortCompare function should return true when leftSide and rightSide are sorted correctly.
 // Pre-condition:
-//   The compare function must return true when leftSide and rightSide are equal, because elements in the list might be identical.
+//   The sortCompare function must return true when leftSide and rightSide are equal, because elements in the list might be identical.
 // Side-effects:
 //   Overwrites the input with the result, by sorting it in-place.
 //   The elements returned by reference in targetList is a permutation of the original elements,
-//   where each neighboring pair of elements satisfy the compare condition.
+//   where each neighboring pair of elements satisfy the sortCompare condition.
 template <typename T>
-static void list_heapSort(List<T>& targetList, const TemporaryCallback<bool(const T &leftSide, const T &rightSide)> &compare) {
+static void list_heapSort(List<T>& targetList, const TemporaryCallback<bool(const T &leftSide, const T &rightSide)> &sortCompare) {
 	intptr_t n = targetList.length();
 	for (intptr_t i = n / 2 - 1; i >= 0; i--) {
-		dsr::impl_list_heapify(targetList, n, i, compare);
+		dsr::impl_list_heapify(targetList, n, i, sortCompare);
 	}
 	for (intptr_t i = n - 1; i > 0; i--) {
 		targetList.swap(0, i);
-		dsr::impl_list_heapify(targetList, i, 0, compare);
+		dsr::impl_list_heapify<T>(targetList, i, 0, sortCompare);
 	}
 }
 
