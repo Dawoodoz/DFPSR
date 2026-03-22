@@ -49,7 +49,7 @@ static ReadableString getMediaTypeName(DataType type) {
 // An upper limit on the memory makes sure that the entire application does not crash from getting bottomless recursion in a virtual machine.
 static const int32_t MEMORY_LIMIT = 1024;
 
-class MediaMemory : public PlanarMemory {
+class MediaMemory : public PlanarMemory<MEDIA_MACHINE_TYPE_COUNT> {
 public:
 	MemoryPlane<FixedPoint> FixedPointMemory;
 	MemoryPlane<AlignedImageU8> AlignedImageU8Memory;
@@ -109,26 +109,26 @@ public:
 #define MEDIA_MEMORY ((MediaMemory&)memory)
 
 // Type definitions
-static const VMTypeDef mediaMachineTypes[] = {
-	VMTypeDef(U"FixedPoint", DataType_FixedPoint, true,
-	[](VirtualMachine& machine, int32_t globalIndex, const ReadableString& defaultValueText){
+static const VMTypeDef<MEDIA_MACHINE_TYPE_COUNT> mediaMachineTypes[] = {
+	VMTypeDef<MEDIA_MACHINE_TYPE_COUNT>(U"FixedPoint", DataType_FixedPoint, true,
+	[](VirtualMachine<MEDIA_MACHINE_TYPE_COUNT>& machine, int32_t globalIndex, const ReadableString& defaultValueText){
 		FixedPoint defaultValue = string_length(defaultValueText) > 0 ? FixedPoint::fromText(defaultValueText) : FixedPoint();
 		List<VMA> args;
 		args.pushConstruct(DataType_FixedPoint, globalIndex);
 		args.pushConstruct(defaultValue);
 		machine.interpretCommand(U"Load", args);
 	},
-	[](PlanarMemory& memory, Variable& variable, int32_t globalIndex, int32_t* framePointer, bool fullContent) {
+	[](PlanarMemory<MEDIA_MACHINE_TYPE_COUNT>& memory, Variable<MEDIA_MACHINE_TYPE_COUNT>& variable, int32_t globalIndex, int32_t* framePointer, bool fullContent) {
 		FixedPoint value = MEDIA_MEMORY.FixedPointMemory.accessByGlobalIndex(globalIndex, framePointer[DataType_FixedPoint]);
 		printText(variable.name, U"(", value, U")");
 	}),
-	VMTypeDef(U"ImageU8", DataType_ImageU8, false,
-	[](VirtualMachine& machine, int32_t globalIndex, const ReadableString& defaultValueText){
+	VMTypeDef<MEDIA_MACHINE_TYPE_COUNT>(U"ImageU8", DataType_ImageU8, false,
+	[](VirtualMachine<MEDIA_MACHINE_TYPE_COUNT>& machine, int32_t globalIndex, const ReadableString& defaultValueText){
 		List<VMA> args;
 		args.pushConstruct(DataType_ImageU8, globalIndex);
 		machine.interpretCommand(U"Reset", args);
 	},
-	[](PlanarMemory& memory, Variable& variable, int32_t globalIndex, int32_t* framePointer, bool fullContent) {
+	[](PlanarMemory<MEDIA_MACHINE_TYPE_COUNT>& memory, Variable<MEDIA_MACHINE_TYPE_COUNT>& variable, int32_t globalIndex, int32_t* framePointer, bool fullContent) {
 		AlignedImageU8 value = MEDIA_MEMORY.AlignedImageU8Memory.accessByGlobalIndex(globalIndex, framePointer[DataType_ImageU8]);
 		printText(variable.name, U" ImageU8");
 		if (image_exists(value)) {
@@ -141,13 +141,13 @@ static const VMTypeDef mediaMachineTypes[] = {
 			printText(U"(nothing)");
 		}
 	}),
-	VMTypeDef(U"ImageRgbaU8", DataType_ImageRgbaU8, false,
-	[](VirtualMachine& machine, int32_t globalIndex, const ReadableString& defaultValueText){
+	VMTypeDef<MEDIA_MACHINE_TYPE_COUNT>(U"ImageRgbaU8", DataType_ImageRgbaU8, false,
+	[](VirtualMachine<MEDIA_MACHINE_TYPE_COUNT>& machine, int32_t globalIndex, const ReadableString& defaultValueText){
 		List<VMA> args;
 		args.pushConstruct(DataType_ImageRgbaU8, globalIndex);
 		machine.interpretCommand(U"Reset", args);
 	},
-	[](PlanarMemory& memory, Variable& variable, int32_t globalIndex, int32_t* framePointer, bool fullContent) {
+	[](PlanarMemory<MEDIA_MACHINE_TYPE_COUNT>& memory, Variable<MEDIA_MACHINE_TYPE_COUNT>& variable, int32_t globalIndex, int32_t* framePointer, bool fullContent) {
 		OrderedImageRgbaU8 value = MEDIA_MEMORY.OrderedImageRgbaU8Memory.accessByGlobalIndex(globalIndex, framePointer[DataType_ImageRgbaU8]);
 		printText(variable.name, U" ImageRgbaU8");
 		if (image_exists(value)) {
@@ -172,39 +172,39 @@ inline FixedPoint getFixedPointValue(MediaMemory& memory, const VMA& arg) {
 #define IMAGE_U8_REF(ARG_INDEX) (MEDIA_MEMORY.AlignedImageU8Memory.getRef(args[ARG_INDEX], memory.current.framePointer[DataType_ImageU8]))
 #define IMAGE_RGBAU8_REF(ARG_INDEX) (MEDIA_MEMORY.OrderedImageRgbaU8Memory.getRef(args[ARG_INDEX], memory.current.framePointer[DataType_ImageRgbaU8]))
 #define NEXT_INSTRUCTION memory.current.programCounter++;
-static const InsSig mediaMachineInstructions[] = {
-	InsSig::create(U"LOAD", 1,
-		[](VirtualMachine& machine, PlanarMemory& memory, const List<VMA>& args) {
+static const InsSig<MEDIA_MACHINE_TYPE_COUNT> mediaMachineInstructions[] = {
+	InsSig<MEDIA_MACHINE_TYPE_COUNT>::create(U"LOAD", 1,
+		[](VirtualMachine<MEDIA_MACHINE_TYPE_COUNT>& machine, PlanarMemory<MEDIA_MACHINE_TYPE_COUNT>& memory, const List<VMA>& args) {
 			SCALAR_REF(0) = SCALAR_VALUE(1);
 			NEXT_INSTRUCTION
 		},
 		ArgSig(U"Target", false, DataType_FixedPoint),
 		ArgSig(U"Source", true, DataType_FixedPoint)
 	),
-	InsSig::create(U"RESET", 1,
-		[](VirtualMachine& machine, PlanarMemory& memory, const List<VMA>& args) {
+	InsSig<MEDIA_MACHINE_TYPE_COUNT>::create(U"RESET", 1,
+		[](VirtualMachine<MEDIA_MACHINE_TYPE_COUNT>& machine, PlanarMemory<MEDIA_MACHINE_TYPE_COUNT>& memory, const List<VMA>& args) {
 			IMAGE_U8_REF(0) = AlignedImageU8();
 			NEXT_INSTRUCTION
 		},
 		ArgSig(U"Target", false, DataType_ImageU8)
 	),
-	InsSig::create(U"RESET", 1,
-		[](VirtualMachine& machine, PlanarMemory& memory, const List<VMA>& args) {
+	InsSig<MEDIA_MACHINE_TYPE_COUNT>::create(U"RESET", 1,
+		[](VirtualMachine<MEDIA_MACHINE_TYPE_COUNT>& machine, PlanarMemory<MEDIA_MACHINE_TYPE_COUNT>& memory, const List<VMA>& args) {
 			IMAGE_RGBAU8_REF(0) = OrderedImageRgbaU8();
 			NEXT_INSTRUCTION
 		},
 		ArgSig(U"Target", false, DataType_ImageRgbaU8)
 	),
-	InsSig::create(U"ROUND", 1,
-		[](VirtualMachine& machine, PlanarMemory& memory, const List<VMA>& args) {
+	InsSig<MEDIA_MACHINE_TYPE_COUNT>::create(U"ROUND", 1,
+		[](VirtualMachine<MEDIA_MACHINE_TYPE_COUNT>& machine, PlanarMemory<MEDIA_MACHINE_TYPE_COUNT>& memory, const List<VMA>& args) {
 			SCALAR_REF(0) = FixedPoint::fromWhole(fixedPoint_round(SCALAR_VALUE(1)));
 			NEXT_INSTRUCTION
 		},
 		ArgSig(U"Target", false, DataType_FixedPoint), // Aliasing is accepted
 		ArgSig(U"Source", true, DataType_FixedPoint)
 	),
-	InsSig::create(U"MIN", 1,
-		[](VirtualMachine& machine, PlanarMemory& memory, const List<VMA>& args) {
+	InsSig<MEDIA_MACHINE_TYPE_COUNT>::create(U"MIN", 1,
+		[](VirtualMachine<MEDIA_MACHINE_TYPE_COUNT>& machine, PlanarMemory<MEDIA_MACHINE_TYPE_COUNT>& memory, const List<VMA>& args) {
 			SCALAR_REF(0) = fixedPoint_min(SCALAR_VALUE(1), SCALAR_VALUE(2));
 			NEXT_INSTRUCTION
 		},
@@ -212,8 +212,8 @@ static const InsSig mediaMachineInstructions[] = {
 		ArgSig(U"LeftSource", true, DataType_FixedPoint),
 		ArgSig(U"RightSource", true, DataType_FixedPoint)
 	),
-	InsSig::create(U"MAX", 1,
-		[](VirtualMachine& machine, PlanarMemory& memory, const List<VMA>& args) {
+	InsSig<MEDIA_MACHINE_TYPE_COUNT>::create(U"MAX", 1,
+		[](VirtualMachine<MEDIA_MACHINE_TYPE_COUNT>& machine, PlanarMemory<MEDIA_MACHINE_TYPE_COUNT>& memory, const List<VMA>& args) {
 			SCALAR_REF(0) = fixedPoint_max(SCALAR_VALUE(1), SCALAR_VALUE(2));
 			NEXT_INSTRUCTION
 		},
@@ -221,8 +221,8 @@ static const InsSig mediaMachineInstructions[] = {
 		ArgSig(U"LeftSource", true, DataType_FixedPoint),
 		ArgSig(U"RightSource", true, DataType_FixedPoint)
 	),
-	InsSig::create(U"ADD", 1,
-		[](VirtualMachine& machine, PlanarMemory& memory, const List<VMA>& args) {
+	InsSig<MEDIA_MACHINE_TYPE_COUNT>::create(U"ADD", 1,
+		[](VirtualMachine<MEDIA_MACHINE_TYPE_COUNT>& machine, PlanarMemory<MEDIA_MACHINE_TYPE_COUNT>& memory, const List<VMA>& args) {
 			SCALAR_REF(0) = SCALAR_VALUE(1) + SCALAR_VALUE(2);
 			NEXT_INSTRUCTION
 		},
@@ -230,8 +230,8 @@ static const InsSig mediaMachineInstructions[] = {
 		ArgSig(U"LeftSource", true, DataType_FixedPoint),
 		ArgSig(U"RightSource", true, DataType_FixedPoint)
 	),
-	InsSig::create(U"ADD", 1,
-		[](VirtualMachine& machine, PlanarMemory& memory, const List<VMA>& args) {
+	InsSig<MEDIA_MACHINE_TYPE_COUNT>::create(U"ADD", 1,
+		[](VirtualMachine<MEDIA_MACHINE_TYPE_COUNT>& machine, PlanarMemory<MEDIA_MACHINE_TYPE_COUNT>& memory, const List<VMA>& args) {
 			media_filter_add(IMAGE_U8_REF(0), IMAGE_U8_REF(1), IMAGE_U8_REF(2));
 			NEXT_INSTRUCTION
 		},
@@ -239,8 +239,8 @@ static const InsSig mediaMachineInstructions[] = {
 		ArgSig(U"LeftSource", true, DataType_ImageU8),
 		ArgSig(U"RightSource", true, DataType_ImageU8)
 	),
-	InsSig::create(U"ADD", 1,
-		[](VirtualMachine& machine, PlanarMemory& memory, const List<VMA>& args) {
+	InsSig<MEDIA_MACHINE_TYPE_COUNT>::create(U"ADD", 1,
+		[](VirtualMachine<MEDIA_MACHINE_TYPE_COUNT>& machine, PlanarMemory<MEDIA_MACHINE_TYPE_COUNT>& memory, const List<VMA>& args) {
 			media_filter_add(IMAGE_U8_REF(0), IMAGE_U8_REF(1), SCALAR_VALUE(2));
 			NEXT_INSTRUCTION
 		},
@@ -248,8 +248,8 @@ static const InsSig mediaMachineInstructions[] = {
 		ArgSig(U"LeftSource", true, DataType_ImageU8),
 		ArgSig(U"RightSource", true, DataType_FixedPoint)
 	),
-	InsSig::create(U"ADD", 1,
-		[](VirtualMachine& machine, PlanarMemory& memory, const List<VMA>& args) {
+	InsSig<MEDIA_MACHINE_TYPE_COUNT>::create(U"ADD", 1,
+		[](VirtualMachine<MEDIA_MACHINE_TYPE_COUNT>& machine, PlanarMemory<MEDIA_MACHINE_TYPE_COUNT>& memory, const List<VMA>& args) {
 			media_filter_add(IMAGE_U8_REF(0), IMAGE_U8_REF(2), SCALAR_VALUE(1));
 			NEXT_INSTRUCTION
 		},
@@ -257,8 +257,8 @@ static const InsSig mediaMachineInstructions[] = {
 		ArgSig(U"LeftSource", true, DataType_FixedPoint),
 		ArgSig(U"RightSource", true, DataType_ImageU8)
 	),
-	InsSig::create(U"SUB", 1,
-		[](VirtualMachine& machine, PlanarMemory& memory, const List<VMA>& args) {
+	InsSig<MEDIA_MACHINE_TYPE_COUNT>::create(U"SUB", 1,
+		[](VirtualMachine<MEDIA_MACHINE_TYPE_COUNT>& machine, PlanarMemory<MEDIA_MACHINE_TYPE_COUNT>& memory, const List<VMA>& args) {
 			SCALAR_REF(0) = SCALAR_VALUE(1) - SCALAR_VALUE(2);
 			NEXT_INSTRUCTION
 		},
@@ -266,8 +266,8 @@ static const InsSig mediaMachineInstructions[] = {
 		ArgSig(U"PositiveSource", true, DataType_FixedPoint),
 		ArgSig(U"NegativeSource", true, DataType_FixedPoint)
 	),
-	InsSig::create(U"SUB", 1,
-		[](VirtualMachine& machine, PlanarMemory& memory, const List<VMA>& args) {
+	InsSig<MEDIA_MACHINE_TYPE_COUNT>::create(U"SUB", 1,
+		[](VirtualMachine<MEDIA_MACHINE_TYPE_COUNT>& machine, PlanarMemory<MEDIA_MACHINE_TYPE_COUNT>& memory, const List<VMA>& args) {
 			media_filter_sub(IMAGE_U8_REF(0), IMAGE_U8_REF(1), IMAGE_U8_REF(2));
 			NEXT_INSTRUCTION
 		},
@@ -275,8 +275,8 @@ static const InsSig mediaMachineInstructions[] = {
 		ArgSig(U"PositiveSource", true, DataType_ImageU8),
 		ArgSig(U"NegativeSource", true, DataType_ImageU8)
 	),
-	InsSig::create(U"SUB", 1,
-		[](VirtualMachine& machine, PlanarMemory& memory, const List<VMA>& args) {
+	InsSig<MEDIA_MACHINE_TYPE_COUNT>::create(U"SUB", 1,
+		[](VirtualMachine<MEDIA_MACHINE_TYPE_COUNT>& machine, PlanarMemory<MEDIA_MACHINE_TYPE_COUNT>& memory, const List<VMA>& args) {
 			media_filter_sub(IMAGE_U8_REF(0), IMAGE_U8_REF(1), SCALAR_VALUE(2));
 			NEXT_INSTRUCTION
 		},
@@ -284,8 +284,8 @@ static const InsSig mediaMachineInstructions[] = {
 		ArgSig(U"PositiveSource", true, DataType_ImageU8),
 		ArgSig(U"NegativeSource", true, DataType_FixedPoint)
 	),
-	InsSig::create(U"SUB", 1,
-		[](VirtualMachine& machine, PlanarMemory& memory, const List<VMA>& args) {
+	InsSig<MEDIA_MACHINE_TYPE_COUNT>::create(U"SUB", 1,
+		[](VirtualMachine<MEDIA_MACHINE_TYPE_COUNT>& machine, PlanarMemory<MEDIA_MACHINE_TYPE_COUNT>& memory, const List<VMA>& args) {
 			media_filter_sub(IMAGE_U8_REF(0), SCALAR_VALUE(2), IMAGE_U8_REF(1));
 			NEXT_INSTRUCTION
 		},
@@ -293,8 +293,8 @@ static const InsSig mediaMachineInstructions[] = {
 		ArgSig(U"PositiveSource", true, DataType_FixedPoint),
 		ArgSig(U"NegativeSource", true, DataType_ImageU8)
 	),
-	InsSig::create(U"MUL", 1,
-		[](VirtualMachine& machine, PlanarMemory& memory, const List<VMA>& args) {
+	InsSig<MEDIA_MACHINE_TYPE_COUNT>::create(U"MUL", 1,
+		[](VirtualMachine<MEDIA_MACHINE_TYPE_COUNT>& machine, PlanarMemory<MEDIA_MACHINE_TYPE_COUNT>& memory, const List<VMA>& args) {
 			SCALAR_REF(0) = SCALAR_VALUE(1) * SCALAR_VALUE(2);
 			NEXT_INSTRUCTION
 		},
@@ -302,8 +302,8 @@ static const InsSig mediaMachineInstructions[] = {
 		ArgSig(U"LeftSource", true, DataType_FixedPoint),
 		ArgSig(U"RightSource", true, DataType_FixedPoint)
 	),
-	InsSig::create(U"MUL", 1,
-		[](VirtualMachine& machine, PlanarMemory& memory, const List<VMA>& args) {
+	InsSig<MEDIA_MACHINE_TYPE_COUNT>::create(U"MUL", 1,
+		[](VirtualMachine<MEDIA_MACHINE_TYPE_COUNT>& machine, PlanarMemory<MEDIA_MACHINE_TYPE_COUNT>& memory, const List<VMA>& args) {
 			media_filter_mul(IMAGE_U8_REF(0), IMAGE_U8_REF(1), SCALAR_VALUE(2));
 			NEXT_INSTRUCTION
 		},
@@ -311,8 +311,8 @@ static const InsSig mediaMachineInstructions[] = {
 		ArgSig(U"LeftSource", true, DataType_ImageU8),
 		ArgSig(U"RightSource", true, DataType_FixedPoint)
 	),
-	InsSig::create(U"MUL", 1,
-		[](VirtualMachine& machine, PlanarMemory& memory, const List<VMA>& args) {
+	InsSig<MEDIA_MACHINE_TYPE_COUNT>::create(U"MUL", 1,
+		[](VirtualMachine<MEDIA_MACHINE_TYPE_COUNT>& machine, PlanarMemory<MEDIA_MACHINE_TYPE_COUNT>& memory, const List<VMA>& args) {
 			media_filter_mul(IMAGE_U8_REF(0), IMAGE_U8_REF(1), IMAGE_U8_REF(2), SCALAR_VALUE(3));
 			NEXT_INSTRUCTION
 		},
@@ -321,8 +321,8 @@ static const InsSig mediaMachineInstructions[] = {
 		ArgSig(U"SecondSource", true, DataType_ImageU8),
 		ArgSig(U"Scalar", true, DataType_FixedPoint) // Use 1/255 for normalized multiplication
 	),
-	InsSig::create(U"CREATE", 1,
-		[](VirtualMachine& machine, PlanarMemory& memory, const List<VMA>& args) {
+	InsSig<MEDIA_MACHINE_TYPE_COUNT>::create(U"CREATE", 1,
+		[](VirtualMachine<MEDIA_MACHINE_TYPE_COUNT>& machine, PlanarMemory<MEDIA_MACHINE_TYPE_COUNT>& memory, const List<VMA>& args) {
 			int32_t width = INT_VALUE(1);
 			int32_t height = INT_VALUE(2);
 			if (width < 1 || height < 1) {
@@ -335,8 +335,8 @@ static const InsSig mediaMachineInstructions[] = {
 		ArgSig(U"Width", true, DataType_FixedPoint),
 		ArgSig(U"Height", true, DataType_FixedPoint)
 	),
-	InsSig::create(U"CREATE", 1,
-		[](VirtualMachine& machine, PlanarMemory& memory, const List<VMA>& args) {
+	InsSig<MEDIA_MACHINE_TYPE_COUNT>::create(U"CREATE", 1,
+		[](VirtualMachine<MEDIA_MACHINE_TYPE_COUNT>& machine, PlanarMemory<MEDIA_MACHINE_TYPE_COUNT>& memory, const List<VMA>& args) {
 			int32_t width = INT_VALUE(1);
 			int32_t height = INT_VALUE(2);
 			if (width < 1 || height < 1) {
@@ -349,64 +349,64 @@ static const InsSig mediaMachineInstructions[] = {
 		ArgSig(U"Width", true, DataType_FixedPoint),
 		ArgSig(U"Height", true, DataType_FixedPoint)
 	),
-	InsSig::create(U"EXISTS", 1,
-		[](VirtualMachine& machine, PlanarMemory& memory, const List<VMA>& args) {
+	InsSig<MEDIA_MACHINE_TYPE_COUNT>::create(U"EXISTS", 1,
+		[](VirtualMachine<MEDIA_MACHINE_TYPE_COUNT>& machine, PlanarMemory<MEDIA_MACHINE_TYPE_COUNT>& memory, const List<VMA>& args) {
 			SCALAR_REF(0) = FixedPoint::fromWhole(image_exists(IMAGE_U8_REF(1)) ? 1 : 0);
 			NEXT_INSTRUCTION
 		},
 		ArgSig(U"Truth", false, DataType_FixedPoint), // 1 for existing, 0 for null
 		ArgSig(U"Source", true, DataType_ImageU8)
 	),
-	InsSig::create(U"EXISTS", 1,
-		[](VirtualMachine& machine, PlanarMemory& memory, const List<VMA>& args) {
+	InsSig<MEDIA_MACHINE_TYPE_COUNT>::create(U"EXISTS", 1,
+		[](VirtualMachine<MEDIA_MACHINE_TYPE_COUNT>& machine, PlanarMemory<MEDIA_MACHINE_TYPE_COUNT>& memory, const List<VMA>& args) {
 			SCALAR_REF(0) = FixedPoint::fromWhole(image_exists(IMAGE_RGBAU8_REF(1)) ? 1 : 0);
 			NEXT_INSTRUCTION
 		},
 		ArgSig(U"Truth", false, DataType_FixedPoint), // 1 for existing, 0 for null
 		ArgSig(U"Source", true, DataType_ImageRgbaU8)
 	),
-	InsSig::create(U"GET_WIDTH", 1,
-		[](VirtualMachine& machine, PlanarMemory& memory, const List<VMA>& args) {
+	InsSig<MEDIA_MACHINE_TYPE_COUNT>::create(U"GET_WIDTH", 1,
+		[](VirtualMachine<MEDIA_MACHINE_TYPE_COUNT>& machine, PlanarMemory<MEDIA_MACHINE_TYPE_COUNT>& memory, const List<VMA>& args) {
 			SCALAR_REF(0) = FixedPoint::fromWhole(image_getWidth(IMAGE_U8_REF(1)));
 			NEXT_INSTRUCTION
 		},
 		ArgSig(U"Width", false, DataType_FixedPoint),
 		ArgSig(U"Source", true, DataType_ImageU8)
 	),
-	InsSig::create(U"GET_WIDTH", 1,
-		[](VirtualMachine& machine, PlanarMemory& memory, const List<VMA>& args) {
+	InsSig<MEDIA_MACHINE_TYPE_COUNT>::create(U"GET_WIDTH", 1,
+		[](VirtualMachine<MEDIA_MACHINE_TYPE_COUNT>& machine, PlanarMemory<MEDIA_MACHINE_TYPE_COUNT>& memory, const List<VMA>& args) {
 			SCALAR_REF(0) = FixedPoint::fromWhole(image_getWidth(IMAGE_RGBAU8_REF(1)));
 			NEXT_INSTRUCTION
 		},
 		ArgSig(U"Width", false, DataType_FixedPoint),
 		ArgSig(U"Source", true, DataType_ImageRgbaU8)
 	),
-	InsSig::create(U"GET_HEIGHT", 1,
-		[](VirtualMachine& machine, PlanarMemory& memory, const List<VMA>& args) {
+	InsSig<MEDIA_MACHINE_TYPE_COUNT>::create(U"GET_HEIGHT", 1,
+		[](VirtualMachine<MEDIA_MACHINE_TYPE_COUNT>& machine, PlanarMemory<MEDIA_MACHINE_TYPE_COUNT>& memory, const List<VMA>& args) {
 			SCALAR_REF(0) = FixedPoint::fromWhole(image_getHeight(IMAGE_U8_REF(1)));
 			NEXT_INSTRUCTION
 		},
 		ArgSig(U"Height", false, DataType_FixedPoint),
 		ArgSig(U"Source", true, DataType_ImageU8)
 	),
-	InsSig::create(U"GET_HEIGHT", 1,
-		[](VirtualMachine& machine, PlanarMemory& memory, const List<VMA>& args) {
+	InsSig<MEDIA_MACHINE_TYPE_COUNT>::create(U"GET_HEIGHT", 1,
+		[](VirtualMachine<MEDIA_MACHINE_TYPE_COUNT>& machine, PlanarMemory<MEDIA_MACHINE_TYPE_COUNT>& memory, const List<VMA>& args) {
 			SCALAR_REF(0) = FixedPoint::fromWhole(image_getHeight(IMAGE_RGBAU8_REF(1)));
 			NEXT_INSTRUCTION
 		},
 		ArgSig(U"Height", false, DataType_FixedPoint),
 		ArgSig(U"Source", true, DataType_ImageRgbaU8)
 	),
-	InsSig::create(U"FILL", 1,
-		[](VirtualMachine& machine, PlanarMemory& memory, const List<VMA>& args) {
+	InsSig<MEDIA_MACHINE_TYPE_COUNT>::create(U"FILL", 1,
+		[](VirtualMachine<MEDIA_MACHINE_TYPE_COUNT>& machine, PlanarMemory<MEDIA_MACHINE_TYPE_COUNT>& memory, const List<VMA>& args) {
 			image_fill(IMAGE_U8_REF(0), INT_VALUE(1));
 			NEXT_INSTRUCTION
 		},
 		ArgSig(U"Target", false, DataType_ImageU8),
 		ArgSig(U"Luma", true, DataType_FixedPoint)
 	),
-	InsSig::create(U"FILL", 1,
-		[](VirtualMachine& machine, PlanarMemory& memory, const List<VMA>& args) {
+	InsSig<MEDIA_MACHINE_TYPE_COUNT>::create(U"FILL", 1,
+		[](VirtualMachine<MEDIA_MACHINE_TYPE_COUNT>& machine, PlanarMemory<MEDIA_MACHINE_TYPE_COUNT>& memory, const List<VMA>& args) {
 			image_fill(
 			  IMAGE_RGBAU8_REF(0),
 			  ColorRgbaI32(INT_VALUE(1), INT_VALUE(2), INT_VALUE(3), INT_VALUE(4))
@@ -419,8 +419,8 @@ static const InsSig mediaMachineInstructions[] = {
 		ArgSig(U"Blue", true, DataType_FixedPoint),
 		ArgSig(U"Alpha", true, DataType_FixedPoint)
 	),
-	InsSig::create(U"RECTANGLE", 1,
-		[](VirtualMachine& machine, PlanarMemory& memory, const List<VMA>& args) {
+	InsSig<MEDIA_MACHINE_TYPE_COUNT>::create(U"RECTANGLE", 1,
+		[](VirtualMachine<MEDIA_MACHINE_TYPE_COUNT>& machine, PlanarMemory<MEDIA_MACHINE_TYPE_COUNT>& memory, const List<VMA>& args) {
 			draw_rectangle(
 			  IMAGE_U8_REF(0),
 			  IRect(INT_VALUE(1), INT_VALUE(2), INT_VALUE(3), INT_VALUE(4)),
@@ -435,8 +435,8 @@ static const InsSig mediaMachineInstructions[] = {
 		ArgSig(U"Height", true, DataType_FixedPoint),
 		ArgSig(U"Luma", true, DataType_FixedPoint)
 	),
-	InsSig::create(U"RECTANGLE", 1,
-		[](VirtualMachine& machine, PlanarMemory& memory, const List<VMA>& args) {
+	InsSig<MEDIA_MACHINE_TYPE_COUNT>::create(U"RECTANGLE", 1,
+		[](VirtualMachine<MEDIA_MACHINE_TYPE_COUNT>& machine, PlanarMemory<MEDIA_MACHINE_TYPE_COUNT>& memory, const List<VMA>& args) {
 			draw_rectangle(
 			  IMAGE_RGBAU8_REF(0),
 			  IRect(INT_VALUE(1), INT_VALUE(2), INT_VALUE(3), INT_VALUE(4)),
@@ -454,8 +454,8 @@ static const InsSig mediaMachineInstructions[] = {
 		ArgSig(U"Blue", true, DataType_FixedPoint),
 		ArgSig(U"Alpha", true, DataType_FixedPoint)
 	),
-	InsSig::create(U"COPY", 1,
-		[](VirtualMachine& machine, PlanarMemory& memory, const List<VMA>& args) {
+	InsSig<MEDIA_MACHINE_TYPE_COUNT>::create(U"COPY", 1,
+		[](VirtualMachine<MEDIA_MACHINE_TYPE_COUNT>& machine, PlanarMemory<MEDIA_MACHINE_TYPE_COUNT>& memory, const List<VMA>& args) {
 			draw_copy(IMAGE_U8_REF(0), IMAGE_U8_REF(3), INT_VALUE(1), INT_VALUE(2));
 			NEXT_INSTRUCTION
 		},
@@ -464,8 +464,8 @@ static const InsSig mediaMachineInstructions[] = {
 		ArgSig(U"TargetTop", true, DataType_FixedPoint),
 		ArgSig(U"Source", true, DataType_ImageU8)
 	),
-	InsSig::create(U"COPY", 1,
-		[](VirtualMachine& machine, PlanarMemory& memory, const List<VMA>& args) {
+	InsSig<MEDIA_MACHINE_TYPE_COUNT>::create(U"COPY", 1,
+		[](VirtualMachine<MEDIA_MACHINE_TYPE_COUNT>& machine, PlanarMemory<MEDIA_MACHINE_TYPE_COUNT>& memory, const List<VMA>& args) {
 			draw_copy(IMAGE_RGBAU8_REF(0), IMAGE_RGBAU8_REF(3), INT_VALUE(1), INT_VALUE(2));
 			NEXT_INSTRUCTION
 		},
@@ -474,8 +474,8 @@ static const InsSig mediaMachineInstructions[] = {
 		ArgSig(U"TargetTop", true, DataType_FixedPoint),
 		ArgSig(U"Source", true, DataType_ImageRgbaU8)
 	),
-	InsSig::create(U"COPY", 1,
-		[](VirtualMachine& machine, PlanarMemory& memory, const List<VMA>& args) {
+	InsSig<MEDIA_MACHINE_TYPE_COUNT>::create(U"COPY", 1,
+		[](VirtualMachine<MEDIA_MACHINE_TYPE_COUNT>& machine, PlanarMemory<MEDIA_MACHINE_TYPE_COUNT>& memory, const List<VMA>& args) {
 			draw_copy(
 			  IMAGE_U8_REF(0),
 			  image_getSubImage(IMAGE_U8_REF(3), IRect(INT_VALUE(4), INT_VALUE(5), INT_VALUE(6), INT_VALUE(7))),
@@ -496,8 +496,8 @@ static const InsSig mediaMachineInstructions[] = {
 		ArgSig(U"SourceWidth", true, DataType_FixedPoint),
 		ArgSig(U"SourceHeight", true, DataType_FixedPoint)
 	),
-	InsSig::create(U"COPY", 1,
-		[](VirtualMachine& machine, PlanarMemory& memory, const List<VMA>& args) {
+	InsSig<MEDIA_MACHINE_TYPE_COUNT>::create(U"COPY", 1,
+		[](VirtualMachine<MEDIA_MACHINE_TYPE_COUNT>& machine, PlanarMemory<MEDIA_MACHINE_TYPE_COUNT>& memory, const List<VMA>& args) {
 			draw_copy(
 			  IMAGE_RGBAU8_REF(0),
 			  image_getSubImage(IMAGE_RGBAU8_REF(3), IRect(INT_VALUE(4), INT_VALUE(5), INT_VALUE(6), INT_VALUE(7))),
@@ -515,8 +515,8 @@ static const InsSig mediaMachineInstructions[] = {
 		ArgSig(U"SourceWidth", true, DataType_FixedPoint),
 		ArgSig(U"SourceHeight", true, DataType_FixedPoint)
 	),
-	InsSig::create(U"RESIZE_BILINEAR", 1,
-		[](VirtualMachine& machine, PlanarMemory& memory, const List<VMA>& args) {
+	InsSig<MEDIA_MACHINE_TYPE_COUNT>::create(U"RESIZE_BILINEAR", 1,
+		[](VirtualMachine<MEDIA_MACHINE_TYPE_COUNT>& machine, PlanarMemory<MEDIA_MACHINE_TYPE_COUNT>& memory, const List<VMA>& args) {
 			int32_t width = INT_VALUE(1); if (width < 1) width = 1;
 			int32_t height = INT_VALUE(2); if (height < 1) height = 1;
 			IMAGE_U8_REF(0) = filter_resize(IMAGE_U8_REF(3), Sampler::Linear, width, height);
@@ -527,8 +527,8 @@ static const InsSig mediaMachineInstructions[] = {
 		ArgSig(U"NewHeight", true, DataType_FixedPoint),
 		ArgSig(U"Source", true, DataType_ImageU8)
 	),
-	InsSig::create(U"RESIZE_BILINEAR", 1,
-		[](VirtualMachine& machine, PlanarMemory& memory, const List<VMA>& args) {
+	InsSig<MEDIA_MACHINE_TYPE_COUNT>::create(U"RESIZE_BILINEAR", 1,
+		[](VirtualMachine<MEDIA_MACHINE_TYPE_COUNT>& machine, PlanarMemory<MEDIA_MACHINE_TYPE_COUNT>& memory, const List<VMA>& args) {
 			int32_t width = INT_VALUE(1); if (width < 1) width = 1;
 			int32_t height = INT_VALUE(2); if (height < 1) height = 1;
 			IMAGE_RGBAU8_REF(0) = filter_resize(IMAGE_RGBAU8_REF(3), Sampler::Linear, width, height);
@@ -539,8 +539,8 @@ static const InsSig mediaMachineInstructions[] = {
 		ArgSig(U"NewHeight", true, DataType_FixedPoint),
 		ArgSig(U"Source", true, DataType_ImageRgbaU8)
 	),
-	InsSig::create(U"RESIZE_BILINEAR", 1,
-		[](VirtualMachine& machine, PlanarMemory& memory, const List<VMA>& args) {
+	InsSig<MEDIA_MACHINE_TYPE_COUNT>::create(U"RESIZE_BILINEAR", 1,
+		[](VirtualMachine<MEDIA_MACHINE_TYPE_COUNT>& machine, PlanarMemory<MEDIA_MACHINE_TYPE_COUNT>& memory, const List<VMA>& args) {
 			int32_t width = INT_VALUE(1); if (width < 1) width = 1;
 			int32_t height = INT_VALUE(2); if (height < 1) height = 1;
 			IMAGE_U8_REF(0) = filter_resize(image_getSubImage(IMAGE_U8_REF(3), IRect(INT_VALUE(4), INT_VALUE(5), INT_VALUE(6), INT_VALUE(7))), Sampler::Linear, width, height);
@@ -556,8 +556,8 @@ static const InsSig mediaMachineInstructions[] = {
 		ArgSig(U"SourceWidth", true, DataType_FixedPoint),
 		ArgSig(U"SourceHeight", true, DataType_FixedPoint)
 	),
-	InsSig::create(U"RESIZE_BILINEAR", 1,
-		[](VirtualMachine& machine, PlanarMemory& memory, const List<VMA>& args) {
+	InsSig<MEDIA_MACHINE_TYPE_COUNT>::create(U"RESIZE_BILINEAR", 1,
+		[](VirtualMachine<MEDIA_MACHINE_TYPE_COUNT>& machine, PlanarMemory<MEDIA_MACHINE_TYPE_COUNT>& memory, const List<VMA>& args) {
 			int32_t width = INT_VALUE(1); if (width < 1) width = 1;
 			int32_t height = INT_VALUE(2); if (height < 1) height = 1;
 			IMAGE_RGBAU8_REF(0) = filter_resize(image_getSubImage(IMAGE_RGBAU8_REF(3), IRect(INT_VALUE(4), INT_VALUE(5), INT_VALUE(6), INT_VALUE(7))), Sampler::Linear, width, height);
@@ -573,18 +573,18 @@ static const InsSig mediaMachineInstructions[] = {
 		ArgSig(U"SourceWidth", true, DataType_FixedPoint),
 		ArgSig(U"SourceHeight", true, DataType_FixedPoint)
 	),
-	InsSig::create(U"GET_RED", 1,
+	InsSig<MEDIA_MACHINE_TYPE_COUNT>::create(U"GET_RED", 1,
 		// Getting red channel of an image.
-		[](VirtualMachine& machine, PlanarMemory& memory, const List<VMA>& args) {
+		[](VirtualMachine<MEDIA_MACHINE_TYPE_COUNT>& machine, PlanarMemory<MEDIA_MACHINE_TYPE_COUNT>& memory, const List<VMA>& args) {
 			IMAGE_U8_REF(0) = image_get_red(IMAGE_RGBAU8_REF(1));
 			NEXT_INSTRUCTION
 		},
 		ArgSig(U"Target", false, DataType_ImageU8),
 		ArgSig(U"Source", true, DataType_ImageRgbaU8)
 	),
-	InsSig::create(U"GET_RED", 1,
+	InsSig<MEDIA_MACHINE_TYPE_COUNT>::create(U"GET_RED", 1,
 		// Getting red channel of a source region in the image.
-		[](VirtualMachine& machine, PlanarMemory& memory, const List<VMA>& args) {
+		[](VirtualMachine<MEDIA_MACHINE_TYPE_COUNT>& machine, PlanarMemory<MEDIA_MACHINE_TYPE_COUNT>& memory, const List<VMA>& args) {
 			IMAGE_U8_REF(0) = image_get_red(image_getSubImage(IMAGE_RGBAU8_REF(1), IRect(INT_VALUE(2), INT_VALUE(3), INT_VALUE(4), INT_VALUE(5))));
 			NEXT_INSTRUCTION
 		},
@@ -595,18 +595,18 @@ static const InsSig mediaMachineInstructions[] = {
 		ArgSig(U"SourceWidth", true, DataType_FixedPoint),
 		ArgSig(U"SourceHeight", true, DataType_FixedPoint)
 	),
-	InsSig::create(U"GET_GREEN", 1,
+	InsSig<MEDIA_MACHINE_TYPE_COUNT>::create(U"GET_GREEN", 1,
 		// Getting green channel of an image.
-		[](VirtualMachine& machine, PlanarMemory& memory, const List<VMA>& args) {
+		[](VirtualMachine<MEDIA_MACHINE_TYPE_COUNT>& machine, PlanarMemory<MEDIA_MACHINE_TYPE_COUNT>& memory, const List<VMA>& args) {
 			IMAGE_U8_REF(0) = image_get_green(IMAGE_RGBAU8_REF(1));
 			NEXT_INSTRUCTION
 		},
 		ArgSig(U"Target", false, DataType_ImageU8),
 		ArgSig(U"Source", true, DataType_ImageRgbaU8)
 	),
-	InsSig::create(U"GET_GREEN", 1,
+	InsSig<MEDIA_MACHINE_TYPE_COUNT>::create(U"GET_GREEN", 1,
 		// Getting green channel of a source region in the image.
-		[](VirtualMachine& machine, PlanarMemory& memory, const List<VMA>& args) {
+		[](VirtualMachine<MEDIA_MACHINE_TYPE_COUNT>& machine, PlanarMemory<MEDIA_MACHINE_TYPE_COUNT>& memory, const List<VMA>& args) {
 			IMAGE_U8_REF(0) = image_get_green(image_getSubImage(IMAGE_RGBAU8_REF(1), IRect(INT_VALUE(2), INT_VALUE(3), INT_VALUE(4), INT_VALUE(5))));
 			NEXT_INSTRUCTION
 		},
@@ -617,18 +617,18 @@ static const InsSig mediaMachineInstructions[] = {
 		ArgSig(U"SourceWidth", true, DataType_FixedPoint),
 		ArgSig(U"SourceHeight", true, DataType_FixedPoint)
 	),
-	InsSig::create(U"GET_BLUE", 1,
+	InsSig<MEDIA_MACHINE_TYPE_COUNT>::create(U"GET_BLUE", 1,
 		// Getting blue channel of an image.
-		[](VirtualMachine& machine, PlanarMemory& memory, const List<VMA>& args) {
+		[](VirtualMachine<MEDIA_MACHINE_TYPE_COUNT>& machine, PlanarMemory<MEDIA_MACHINE_TYPE_COUNT>& memory, const List<VMA>& args) {
 			IMAGE_U8_REF(0) = image_get_blue(IMAGE_RGBAU8_REF(1));
 			NEXT_INSTRUCTION
 		},
 		ArgSig(U"Target", false, DataType_ImageU8),
 		ArgSig(U"Source", true, DataType_ImageRgbaU8)
 	),
-	InsSig::create(U"GET_BLUE", 1,
+	InsSig<MEDIA_MACHINE_TYPE_COUNT>::create(U"GET_BLUE", 1,
 		// Getting blue channel of a source region in the image.
-		[](VirtualMachine& machine, PlanarMemory& memory, const List<VMA>& args) {
+		[](VirtualMachine<MEDIA_MACHINE_TYPE_COUNT>& machine, PlanarMemory<MEDIA_MACHINE_TYPE_COUNT>& memory, const List<VMA>& args) {
 			IMAGE_U8_REF(0) = image_get_blue(image_getSubImage(IMAGE_RGBAU8_REF(1), IRect(INT_VALUE(2), INT_VALUE(3), INT_VALUE(4), INT_VALUE(5))));
 			NEXT_INSTRUCTION
 		},
@@ -639,18 +639,18 @@ static const InsSig mediaMachineInstructions[] = {
 		ArgSig(U"SourceWidth", true, DataType_FixedPoint),
 		ArgSig(U"SourceHeight", true, DataType_FixedPoint)
 	),
-	InsSig::create(U"GET_ALPHA", 1,
+	InsSig<MEDIA_MACHINE_TYPE_COUNT>::create(U"GET_ALPHA", 1,
 		// Getting alpha channel of an image.
-		[](VirtualMachine& machine, PlanarMemory& memory, const List<VMA>& args) {
+		[](VirtualMachine<MEDIA_MACHINE_TYPE_COUNT>& machine, PlanarMemory<MEDIA_MACHINE_TYPE_COUNT>& memory, const List<VMA>& args) {
 			IMAGE_U8_REF(0) = image_get_alpha(IMAGE_RGBAU8_REF(1));
 			NEXT_INSTRUCTION
 		},
 		ArgSig(U"Target", false, DataType_ImageU8),
 		ArgSig(U"Source", true, DataType_ImageRgbaU8)
 	),
-	InsSig::create(U"GET_ALPHA", 1,
+	InsSig<MEDIA_MACHINE_TYPE_COUNT>::create(U"GET_ALPHA", 1,
 		// Getting alpha channel of a source region in the image.
-		[](VirtualMachine& machine, PlanarMemory& memory, const List<VMA>& args) {
+		[](VirtualMachine<MEDIA_MACHINE_TYPE_COUNT>& machine, PlanarMemory<MEDIA_MACHINE_TYPE_COUNT>& memory, const List<VMA>& args) {
 			IMAGE_U8_REF(0) = image_get_alpha(image_getSubImage(IMAGE_RGBAU8_REF(1), IRect(INT_VALUE(2), INT_VALUE(3), INT_VALUE(4), INT_VALUE(5))));
 			NEXT_INSTRUCTION
 		},
@@ -661,8 +661,8 @@ static const InsSig mediaMachineInstructions[] = {
 		ArgSig(U"SourceWidth", true, DataType_FixedPoint),
 		ArgSig(U"SourceHeight", true, DataType_FixedPoint)
 	),
-	InsSig::create(U"PACK_RGBA", 1,
-		[](VirtualMachine& machine, PlanarMemory& memory, const List<VMA>& args) {
+	InsSig<MEDIA_MACHINE_TYPE_COUNT>::create(U"PACK_RGBA", 1,
+		[](VirtualMachine<MEDIA_MACHINE_TYPE_COUNT>& machine, PlanarMemory<MEDIA_MACHINE_TYPE_COUNT>& memory, const List<VMA>& args) {
 			IMAGE_RGBAU8_REF(0) = image_pack(IMAGE_U8_REF(1), INT_VALUE(2), INT_VALUE(3), INT_VALUE(4));
 			NEXT_INSTRUCTION
 		},
@@ -672,8 +672,8 @@ static const InsSig mediaMachineInstructions[] = {
 		ArgSig(U"Blue", true, DataType_FixedPoint),
 		ArgSig(U"Alpha", true, DataType_FixedPoint)
 	),
-	InsSig::create(U"PACK_RGBA", 1,
-		[](VirtualMachine& machine, PlanarMemory& memory, const List<VMA>& args) {
+	InsSig<MEDIA_MACHINE_TYPE_COUNT>::create(U"PACK_RGBA", 1,
+		[](VirtualMachine<MEDIA_MACHINE_TYPE_COUNT>& machine, PlanarMemory<MEDIA_MACHINE_TYPE_COUNT>& memory, const List<VMA>& args) {
 			IMAGE_RGBAU8_REF(0) = image_pack(INT_VALUE(1), IMAGE_U8_REF(2), INT_VALUE(3), INT_VALUE(4));
 			NEXT_INSTRUCTION
 		},
@@ -683,8 +683,8 @@ static const InsSig mediaMachineInstructions[] = {
 		ArgSig(U"Blue", true, DataType_FixedPoint),
 		ArgSig(U"Alpha", true, DataType_FixedPoint)
 	),
-	InsSig::create(U"PACK_RGBA", 1,
-		[](VirtualMachine& machine, PlanarMemory& memory, const List<VMA>& args) {
+	InsSig<MEDIA_MACHINE_TYPE_COUNT>::create(U"PACK_RGBA", 1,
+		[](VirtualMachine<MEDIA_MACHINE_TYPE_COUNT>& machine, PlanarMemory<MEDIA_MACHINE_TYPE_COUNT>& memory, const List<VMA>& args) {
 			IMAGE_RGBAU8_REF(0) = image_pack(INT_VALUE(1), INT_VALUE(2), IMAGE_U8_REF(3), INT_VALUE(4));
 			NEXT_INSTRUCTION
 		},
@@ -694,8 +694,8 @@ static const InsSig mediaMachineInstructions[] = {
 		ArgSig(U"Blue", true, DataType_ImageU8),
 		ArgSig(U"Alpha", true, DataType_FixedPoint)
 	),
-	InsSig::create(U"PACK_RGBA", 1,
-		[](VirtualMachine& machine, PlanarMemory& memory, const List<VMA>& args) {
+	InsSig<MEDIA_MACHINE_TYPE_COUNT>::create(U"PACK_RGBA", 1,
+		[](VirtualMachine<MEDIA_MACHINE_TYPE_COUNT>& machine, PlanarMemory<MEDIA_MACHINE_TYPE_COUNT>& memory, const List<VMA>& args) {
 			IMAGE_RGBAU8_REF(0) = image_pack(INT_VALUE(1), INT_VALUE(2), INT_VALUE(3), IMAGE_U8_REF(4));
 			NEXT_INSTRUCTION
 		},
@@ -705,8 +705,8 @@ static const InsSig mediaMachineInstructions[] = {
 		ArgSig(U"Blue", true, DataType_FixedPoint),
 		ArgSig(U"Alpha", true, DataType_ImageU8)
 	),
-	InsSig::create(U"PACK_RGBA", 1,
-		[](VirtualMachine& machine, PlanarMemory& memory, const List<VMA>& args) {
+	InsSig<MEDIA_MACHINE_TYPE_COUNT>::create(U"PACK_RGBA", 1,
+		[](VirtualMachine<MEDIA_MACHINE_TYPE_COUNT>& machine, PlanarMemory<MEDIA_MACHINE_TYPE_COUNT>& memory, const List<VMA>& args) {
 			IMAGE_RGBAU8_REF(0) = image_pack(IMAGE_U8_REF(1), IMAGE_U8_REF(2), INT_VALUE(3), INT_VALUE(4));
 			NEXT_INSTRUCTION
 		},
@@ -716,8 +716,8 @@ static const InsSig mediaMachineInstructions[] = {
 		ArgSig(U"Blue", true, DataType_FixedPoint),
 		ArgSig(U"Alpha", true, DataType_FixedPoint)
 	),
-	InsSig::create(U"PACK_RGBA", 1,
-		[](VirtualMachine& machine, PlanarMemory& memory, const List<VMA>& args) {
+	InsSig<MEDIA_MACHINE_TYPE_COUNT>::create(U"PACK_RGBA", 1,
+		[](VirtualMachine<MEDIA_MACHINE_TYPE_COUNT>& machine, PlanarMemory<MEDIA_MACHINE_TYPE_COUNT>& memory, const List<VMA>& args) {
 			IMAGE_RGBAU8_REF(0) = image_pack(IMAGE_U8_REF(1), INT_VALUE(2), IMAGE_U8_REF(3), INT_VALUE(4));
 			NEXT_INSTRUCTION
 		},
@@ -727,8 +727,8 @@ static const InsSig mediaMachineInstructions[] = {
 		ArgSig(U"Blue", true, DataType_ImageU8),
 		ArgSig(U"Alpha", true, DataType_FixedPoint)
 	),
-	InsSig::create(U"PACK_RGBA", 1,
-		[](VirtualMachine& machine, PlanarMemory& memory, const List<VMA>& args) {
+	InsSig<MEDIA_MACHINE_TYPE_COUNT>::create(U"PACK_RGBA", 1,
+		[](VirtualMachine<MEDIA_MACHINE_TYPE_COUNT>& machine, PlanarMemory<MEDIA_MACHINE_TYPE_COUNT>& memory, const List<VMA>& args) {
 			IMAGE_RGBAU8_REF(0) = image_pack(IMAGE_U8_REF(1), INT_VALUE(2), INT_VALUE(3), IMAGE_U8_REF(4));
 			NEXT_INSTRUCTION
 		},
@@ -738,8 +738,8 @@ static const InsSig mediaMachineInstructions[] = {
 		ArgSig(U"Blue", true, DataType_FixedPoint),
 		ArgSig(U"Alpha", true, DataType_ImageU8)
 	),
-	InsSig::create(U"PACK_RGBA", 1,
-		[](VirtualMachine& machine, PlanarMemory& memory, const List<VMA>& args) {
+	InsSig<MEDIA_MACHINE_TYPE_COUNT>::create(U"PACK_RGBA", 1,
+		[](VirtualMachine<MEDIA_MACHINE_TYPE_COUNT>& machine, PlanarMemory<MEDIA_MACHINE_TYPE_COUNT>& memory, const List<VMA>& args) {
 			IMAGE_RGBAU8_REF(0) = image_pack(INT_VALUE(1), IMAGE_U8_REF(2), IMAGE_U8_REF(3), INT_VALUE(4));
 			NEXT_INSTRUCTION
 		},
@@ -749,8 +749,8 @@ static const InsSig mediaMachineInstructions[] = {
 		ArgSig(U"Blue", true, DataType_ImageU8),
 		ArgSig(U"Alpha", true, DataType_FixedPoint)
 	),
-	InsSig::create(U"PACK_RGBA", 1,
-		[](VirtualMachine& machine, PlanarMemory& memory, const List<VMA>& args) {
+	InsSig<MEDIA_MACHINE_TYPE_COUNT>::create(U"PACK_RGBA", 1,
+		[](VirtualMachine<MEDIA_MACHINE_TYPE_COUNT>& machine, PlanarMemory<MEDIA_MACHINE_TYPE_COUNT>& memory, const List<VMA>& args) {
 			IMAGE_RGBAU8_REF(0) = image_pack(INT_VALUE(1), IMAGE_U8_REF(2), INT_VALUE(3), IMAGE_U8_REF(4));
 			NEXT_INSTRUCTION
 		},
@@ -760,8 +760,8 @@ static const InsSig mediaMachineInstructions[] = {
 		ArgSig(U"Blue", true, DataType_FixedPoint),
 		ArgSig(U"Alpha", true, DataType_ImageU8)
 	),
-	InsSig::create(U"PACK_RGBA", 1,
-		[](VirtualMachine& machine, PlanarMemory& memory, const List<VMA>& args) {
+	InsSig<MEDIA_MACHINE_TYPE_COUNT>::create(U"PACK_RGBA", 1,
+		[](VirtualMachine<MEDIA_MACHINE_TYPE_COUNT>& machine, PlanarMemory<MEDIA_MACHINE_TYPE_COUNT>& memory, const List<VMA>& args) {
 			IMAGE_RGBAU8_REF(0) = image_pack(INT_VALUE(1), INT_VALUE(2), IMAGE_U8_REF(3), IMAGE_U8_REF(4));
 			NEXT_INSTRUCTION
 		},
@@ -771,8 +771,8 @@ static const InsSig mediaMachineInstructions[] = {
 		ArgSig(U"Blue", true, DataType_ImageU8),
 		ArgSig(U"Alpha", true, DataType_ImageU8)
 	),
-	InsSig::create(U"PACK_RGBA", 1,
-		[](VirtualMachine& machine, PlanarMemory& memory, const List<VMA>& args) {
+	InsSig<MEDIA_MACHINE_TYPE_COUNT>::create(U"PACK_RGBA", 1,
+		[](VirtualMachine<MEDIA_MACHINE_TYPE_COUNT>& machine, PlanarMemory<MEDIA_MACHINE_TYPE_COUNT>& memory, const List<VMA>& args) {
 			IMAGE_RGBAU8_REF(0) = image_pack(INT_VALUE(1), IMAGE_U8_REF(2), IMAGE_U8_REF(3), IMAGE_U8_REF(4));
 			NEXT_INSTRUCTION
 		},
@@ -782,8 +782,8 @@ static const InsSig mediaMachineInstructions[] = {
 		ArgSig(U"Blue", true, DataType_ImageU8),
 		ArgSig(U"Alpha", true, DataType_ImageU8)
 	),
-	InsSig::create(U"PACK_RGBA", 1,
-		[](VirtualMachine& machine, PlanarMemory& memory, const List<VMA>& args) {
+	InsSig<MEDIA_MACHINE_TYPE_COUNT>::create(U"PACK_RGBA", 1,
+		[](VirtualMachine<MEDIA_MACHINE_TYPE_COUNT>& machine, PlanarMemory<MEDIA_MACHINE_TYPE_COUNT>& memory, const List<VMA>& args) {
 			IMAGE_RGBAU8_REF(0) = image_pack(IMAGE_U8_REF(1), INT_VALUE(2), IMAGE_U8_REF(3), IMAGE_U8_REF(4));
 			NEXT_INSTRUCTION
 		},
@@ -793,8 +793,8 @@ static const InsSig mediaMachineInstructions[] = {
 		ArgSig(U"Blue", true, DataType_ImageU8),
 		ArgSig(U"Alpha", true, DataType_ImageU8)
 	),
-	InsSig::create(U"PACK_RGBA", 1,
-		[](VirtualMachine& machine, PlanarMemory& memory, const List<VMA>& args) {
+	InsSig<MEDIA_MACHINE_TYPE_COUNT>::create(U"PACK_RGBA", 1,
+		[](VirtualMachine<MEDIA_MACHINE_TYPE_COUNT>& machine, PlanarMemory<MEDIA_MACHINE_TYPE_COUNT>& memory, const List<VMA>& args) {
 			IMAGE_RGBAU8_REF(0) = image_pack(IMAGE_U8_REF(1), IMAGE_U8_REF(2), INT_VALUE(3), IMAGE_U8_REF(4));
 			NEXT_INSTRUCTION
 		},
@@ -804,8 +804,8 @@ static const InsSig mediaMachineInstructions[] = {
 		ArgSig(U"Blue", true, DataType_FixedPoint),
 		ArgSig(U"Alpha", true, DataType_ImageU8)
 	),
-	InsSig::create(U"PACK_RGBA", 1,
-		[](VirtualMachine& machine, PlanarMemory& memory, const List<VMA>& args) {
+	InsSig<MEDIA_MACHINE_TYPE_COUNT>::create(U"PACK_RGBA", 1,
+		[](VirtualMachine<MEDIA_MACHINE_TYPE_COUNT>& machine, PlanarMemory<MEDIA_MACHINE_TYPE_COUNT>& memory, const List<VMA>& args) {
 			IMAGE_RGBAU8_REF(0) = image_pack(IMAGE_U8_REF(1), IMAGE_U8_REF(2), IMAGE_U8_REF(3), INT_VALUE(4));
 			NEXT_INSTRUCTION
 		},
@@ -815,8 +815,8 @@ static const InsSig mediaMachineInstructions[] = {
 		ArgSig(U"Blue", true, DataType_ImageU8),
 		ArgSig(U"Alpha", true, DataType_FixedPoint)
 	),
-	InsSig::create(U"PACK_RGBA", 1,
-		[](VirtualMachine& machine, PlanarMemory& memory, const List<VMA>& args) {
+	InsSig<MEDIA_MACHINE_TYPE_COUNT>::create(U"PACK_RGBA", 1,
+		[](VirtualMachine<MEDIA_MACHINE_TYPE_COUNT>& machine, PlanarMemory<MEDIA_MACHINE_TYPE_COUNT>& memory, const List<VMA>& args) {
 			IMAGE_RGBAU8_REF(0) = image_pack(IMAGE_U8_REF(1), IMAGE_U8_REF(2), IMAGE_U8_REF(3), IMAGE_U8_REF(4));
 			NEXT_INSTRUCTION
 		},
@@ -826,8 +826,8 @@ static const InsSig mediaMachineInstructions[] = {
 		ArgSig(U"Blue", true, DataType_ImageU8),
 		ArgSig(U"Alpha", true, DataType_ImageU8)
 	),
-	InsSig::create(U"LINE", 1,
-		[](VirtualMachine& machine, PlanarMemory& memory, const List<VMA>& args) {
+	InsSig<MEDIA_MACHINE_TYPE_COUNT>::create(U"LINE", 1,
+		[](VirtualMachine<MEDIA_MACHINE_TYPE_COUNT>& machine, PlanarMemory<MEDIA_MACHINE_TYPE_COUNT>& memory, const List<VMA>& args) {
 			draw_line(IMAGE_U8_REF(0), INT_VALUE(1), INT_VALUE(2), INT_VALUE(3), INT_VALUE(4), INT_VALUE(5));
 			NEXT_INSTRUCTION
 		},
@@ -838,8 +838,8 @@ static const InsSig mediaMachineInstructions[] = {
 		ArgSig(U"Y2", true, DataType_FixedPoint),
 		ArgSig(U"Luma", true, DataType_FixedPoint)
 	),
-	InsSig::create(U"LINE", 1,
-		[](VirtualMachine& machine, PlanarMemory& memory, const List<VMA>& args) {
+	InsSig<MEDIA_MACHINE_TYPE_COUNT>::create(U"LINE", 1,
+		[](VirtualMachine<MEDIA_MACHINE_TYPE_COUNT>& machine, PlanarMemory<MEDIA_MACHINE_TYPE_COUNT>& memory, const List<VMA>& args) {
 			draw_line(
 			  IMAGE_RGBAU8_REF(0),
 			  INT_VALUE(1), INT_VALUE(2), INT_VALUE(3), INT_VALUE(4),
@@ -857,8 +857,8 @@ static const InsSig mediaMachineInstructions[] = {
 		ArgSig(U"Blue", true, DataType_FixedPoint),
 		ArgSig(U"Alpha", true, DataType_FixedPoint)
 	),
-	InsSig::create(U"FADE_LINEAR", 1,
-		[](VirtualMachine& machine, PlanarMemory& memory, const List<VMA>& args) {
+	InsSig<MEDIA_MACHINE_TYPE_COUNT>::create(U"FADE_LINEAR", 1,
+		[](VirtualMachine<MEDIA_MACHINE_TYPE_COUNT>& machine, PlanarMemory<MEDIA_MACHINE_TYPE_COUNT>& memory, const List<VMA>& args) {
 			media_fade_linear(IMAGE_U8_REF(0), SCALAR_VALUE(1), SCALAR_VALUE(2), SCALAR_VALUE(3), SCALAR_VALUE(4), SCALAR_VALUE(5), SCALAR_VALUE(6));
 			NEXT_INSTRUCTION
 		},
@@ -870,8 +870,8 @@ static const InsSig mediaMachineInstructions[] = {
 		ArgSig(U"Y2", true, DataType_FixedPoint),
 		ArgSig(U"Luma2", true, DataType_FixedPoint) // At x2, y2
 	),
-	InsSig::create(U"FADE_REGION_LINEAR", 1,
-		[](VirtualMachine& machine, PlanarMemory& memory, const List<VMA>& args) {
+	InsSig<MEDIA_MACHINE_TYPE_COUNT>::create(U"FADE_REGION_LINEAR", 1,
+		[](VirtualMachine<MEDIA_MACHINE_TYPE_COUNT>& machine, PlanarMemory<MEDIA_MACHINE_TYPE_COUNT>& memory, const List<VMA>& args) {
 			media_fade_region_linear(IMAGE_U8_REF(0), IRect(INT_VALUE(1), INT_VALUE(2), INT_VALUE(3), INT_VALUE(4)), SCALAR_VALUE(5), SCALAR_VALUE(6), SCALAR_VALUE(7), SCALAR_VALUE(8), SCALAR_VALUE(9), SCALAR_VALUE(10));
 			NEXT_INSTRUCTION
 		},
@@ -888,8 +888,8 @@ static const InsSig mediaMachineInstructions[] = {
 		ArgSig(U"Luma2", true, DataType_FixedPoint)  // At Left + X2, Top + Y2
 	),
 	//void media_fade_radial(ImageU8& targetImage, FixedPoint centerX, FixedPoint centerY, FixedPoint innerRadius, FixedPoint innerLuma, FixedPoint outerRadius, FixedPoint outerLuma);
-	InsSig::create(U"FADE_RADIAL", 1,
-		[](VirtualMachine& machine, PlanarMemory& memory, const List<VMA>& args) {
+	InsSig<MEDIA_MACHINE_TYPE_COUNT>::create(U"FADE_RADIAL", 1,
+		[](VirtualMachine<MEDIA_MACHINE_TYPE_COUNT>& machine, PlanarMemory<MEDIA_MACHINE_TYPE_COUNT>& memory, const List<VMA>& args) {
 			media_fade_radial(IMAGE_U8_REF(0), SCALAR_VALUE(1), SCALAR_VALUE(2), SCALAR_VALUE(3), SCALAR_VALUE(4), SCALAR_VALUE(5), SCALAR_VALUE(6));
 			NEXT_INSTRUCTION
 		},
@@ -902,8 +902,8 @@ static const InsSig mediaMachineInstructions[] = {
 		ArgSig(U"OuterLuma", true, DataType_FixedPoint)
 	),
 	// void media_fade_region_radial(ImageU8& targetImage, const IRect& viewport, FixedPoint centerX, FixedPoint centerY, FixedPoint innerRadius, FixedPoint innerLuma, FixedPoint outerRadius, FixedPoint outerLuma);
-	InsSig::create(U"FADE_REGION_RADIAL", 1,
-		[](VirtualMachine& machine, PlanarMemory& memory, const List<VMA>& args) {
+	InsSig<MEDIA_MACHINE_TYPE_COUNT>::create(U"FADE_REGION_RADIAL", 1,
+		[](VirtualMachine<MEDIA_MACHINE_TYPE_COUNT>& machine, PlanarMemory<MEDIA_MACHINE_TYPE_COUNT>& memory, const List<VMA>& args) {
 			media_fade_region_radial(IMAGE_U8_REF(0), IRect(INT_VALUE(1), INT_VALUE(2), INT_VALUE(3), INT_VALUE(4)), SCALAR_VALUE(5), SCALAR_VALUE(6), SCALAR_VALUE(7), SCALAR_VALUE(8), SCALAR_VALUE(9), SCALAR_VALUE(10));
 			NEXT_INSTRUCTION
 		},
@@ -919,8 +919,8 @@ static const InsSig mediaMachineInstructions[] = {
 		ArgSig(U"OuterRadius", true, DataType_FixedPoint),
 		ArgSig(U"OuterLuma", true, DataType_FixedPoint)
 	),
-	InsSig::create(U"WRITE_PIXEL", 1,
-		[](VirtualMachine& machine, PlanarMemory& memory, const List<VMA>& args) {
+	InsSig<MEDIA_MACHINE_TYPE_COUNT>::create(U"WRITE_PIXEL", 1,
+		[](VirtualMachine<MEDIA_MACHINE_TYPE_COUNT>& machine, PlanarMemory<MEDIA_MACHINE_TYPE_COUNT>& memory, const List<VMA>& args) {
 			image_writePixel(IMAGE_U8_REF(0), INT_VALUE(1), INT_VALUE(2), INT_VALUE(3));
 			NEXT_INSTRUCTION
 		},
@@ -929,8 +929,8 @@ static const InsSig mediaMachineInstructions[] = {
 		ArgSig(U"Y", true, DataType_FixedPoint),
 		ArgSig(U"Luma", true, DataType_FixedPoint)
 	),
-	InsSig::create(U"WRITE_PIXEL", 1,
-		[](VirtualMachine& machine, PlanarMemory& memory, const List<VMA>& args) {
+	InsSig<MEDIA_MACHINE_TYPE_COUNT>::create(U"WRITE_PIXEL", 1,
+		[](VirtualMachine<MEDIA_MACHINE_TYPE_COUNT>& machine, PlanarMemory<MEDIA_MACHINE_TYPE_COUNT>& memory, const List<VMA>& args) {
 			image_writePixel(
 			  IMAGE_RGBAU8_REF(0),
 			  INT_VALUE(1), INT_VALUE(2),
@@ -946,8 +946,8 @@ static const InsSig mediaMachineInstructions[] = {
 		ArgSig(U"Blue", true, DataType_FixedPoint),
 		ArgSig(U"Alpha", true, DataType_FixedPoint)
 	),
-	InsSig::create(U"READ_PIXEL_BORDER", 1,
-		[](VirtualMachine& machine, PlanarMemory& memory, const List<VMA>& args) {
+	InsSig<MEDIA_MACHINE_TYPE_COUNT>::create(U"READ_PIXEL_BORDER", 1,
+		[](VirtualMachine<MEDIA_MACHINE_TYPE_COUNT>& machine, PlanarMemory<MEDIA_MACHINE_TYPE_COUNT>& memory, const List<VMA>& args) {
 			SCALAR_REF(0) = FixedPoint::fromWhole(image_readPixel_border(IMAGE_U8_REF(1), INT_VALUE(2), INT_VALUE(3), INT_VALUE(4)));
 			NEXT_INSTRUCTION
 		},
@@ -957,8 +957,8 @@ static const InsSig mediaMachineInstructions[] = {
 		ArgSig(U"Y", true, DataType_FixedPoint),
 		ArgSig(U"LumaBorder", true, DataType_FixedPoint)
 	),
-	InsSig::create(U"READ_PIXEL_BORDER", 4,
-		[](VirtualMachine& machine, PlanarMemory& memory, const List<VMA>& args) {
+	InsSig<MEDIA_MACHINE_TYPE_COUNT>::create(U"READ_PIXEL_BORDER", 4,
+		[](VirtualMachine<MEDIA_MACHINE_TYPE_COUNT>& machine, PlanarMemory<MEDIA_MACHINE_TYPE_COUNT>& memory, const List<VMA>& args) {
 			ColorRgbaI32 result = image_readPixel_border(
 			  IMAGE_RGBAU8_REF(4),
 			  INT_VALUE(5), INT_VALUE(6),
@@ -982,8 +982,8 @@ static const InsSig mediaMachineInstructions[] = {
 		ArgSig(U"BlueBorder", true, DataType_FixedPoint),
 		ArgSig(U"AlphaBorder", true, DataType_FixedPoint)
 	),
-	InsSig::create(U"READ_PIXEL_CLAMP", 1,
-		[](VirtualMachine& machine, PlanarMemory& memory, const List<VMA>& args) {
+	InsSig<MEDIA_MACHINE_TYPE_COUNT>::create(U"READ_PIXEL_CLAMP", 1,
+		[](VirtualMachine<MEDIA_MACHINE_TYPE_COUNT>& machine, PlanarMemory<MEDIA_MACHINE_TYPE_COUNT>& memory, const List<VMA>& args) {
 			SCALAR_REF(0) = FixedPoint::fromWhole(image_readPixel_clamp(IMAGE_U8_REF(1), INT_VALUE(2), INT_VALUE(3)));
 			NEXT_INSTRUCTION
 		},
@@ -992,8 +992,8 @@ static const InsSig mediaMachineInstructions[] = {
 		ArgSig(U"X", true, DataType_FixedPoint),
 		ArgSig(U"Y", true, DataType_FixedPoint)
 	),
-	InsSig::create(U"READ_PIXEL_CLAMP", 4,
-		[](VirtualMachine& machine, PlanarMemory& memory, const List<VMA>& args) {
+	InsSig<MEDIA_MACHINE_TYPE_COUNT>::create(U"READ_PIXEL_CLAMP", 4,
+		[](VirtualMachine<MEDIA_MACHINE_TYPE_COUNT>& machine, PlanarMemory<MEDIA_MACHINE_TYPE_COUNT>& memory, const List<VMA>& args) {
 			ColorRgbaI32 result = image_readPixel_clamp(
 			  IMAGE_RGBAU8_REF(4),
 			  INT_VALUE(5), INT_VALUE(6)
@@ -1012,8 +1012,8 @@ static const InsSig mediaMachineInstructions[] = {
 		ArgSig(U"X", true, DataType_FixedPoint),
 		ArgSig(U"Y", true, DataType_FixedPoint)
 	),
-	InsSig::create(U"READ_PIXEL_TILE", 1,
-		[](VirtualMachine& machine, PlanarMemory& memory, const List<VMA>& args) {
+	InsSig<MEDIA_MACHINE_TYPE_COUNT>::create(U"READ_PIXEL_TILE", 1,
+		[](VirtualMachine<MEDIA_MACHINE_TYPE_COUNT>& machine, PlanarMemory<MEDIA_MACHINE_TYPE_COUNT>& memory, const List<VMA>& args) {
 			SCALAR_REF(0) = FixedPoint::fromWhole(image_readPixel_tile(IMAGE_U8_REF(1), INT_VALUE(2), INT_VALUE(3)));
 			NEXT_INSTRUCTION
 		},
@@ -1022,8 +1022,8 @@ static const InsSig mediaMachineInstructions[] = {
 		ArgSig(U"X", true, DataType_FixedPoint),
 		ArgSig(U"Y", true, DataType_FixedPoint)
 	),
-	InsSig::create(U"READ_PIXEL_TILE", 4,
-		[](VirtualMachine& machine, PlanarMemory& memory, const List<VMA>& args) {
+	InsSig<MEDIA_MACHINE_TYPE_COUNT>::create(U"READ_PIXEL_TILE", 4,
+		[](VirtualMachine<MEDIA_MACHINE_TYPE_COUNT>& machine, PlanarMemory<MEDIA_MACHINE_TYPE_COUNT>& memory, const List<VMA>& args) {
 			ColorRgbaI32 result = image_readPixel_tile(
 			  IMAGE_RGBAU8_REF(4),
 			  INT_VALUE(5), INT_VALUE(6)
@@ -1060,10 +1060,10 @@ static void checkMethodIndex(const MediaMachine& machine, int32_t methodIndex) {
 }
 
 MediaMachine machine_create(const ReadableString& code) {
-	Handle<PlanarMemory> memory = handle_create<MediaMemory>().setName("MediaMemory");
-	static const int32_t mediaMachineInstructionCount = sizeof(mediaMachineInstructions) / sizeof(InsSig);
-	static const int32_t mediaMachineTypeCount = sizeof(mediaMachineTypes) / sizeof(VMTypeDef);
-	return MediaMachine(handle_create<VirtualMachine>(code, memory, mediaMachineInstructions, mediaMachineInstructionCount, mediaMachineTypes, mediaMachineTypeCount).setName("MediaMachine"));
+	Handle<PlanarMemory<MEDIA_MACHINE_TYPE_COUNT>> memory = handle_create<MediaMemory>().setName("MediaMemory");
+	static const int32_t mediaMachineInstructionCount = sizeof(mediaMachineInstructions) / sizeof(InsSig<MEDIA_MACHINE_TYPE_COUNT>);
+	static const int32_t mediaMachineTypeCount = sizeof(mediaMachineTypes) / sizeof(VMTypeDef<MEDIA_MACHINE_TYPE_COUNT>);
+	return MediaMachine(handle_create<VirtualMachine<MEDIA_MACHINE_TYPE_COUNT>>(code, memory, mediaMachineInstructions, mediaMachineInstructionCount, mediaMachineTypes, mediaMachineTypeCount).setName("MediaMachine"));
 }
 
 void machine_executeMethod(MediaMachine& machine, int32_t methodIndex) {
@@ -1072,11 +1072,11 @@ void machine_executeMethod(MediaMachine& machine, int32_t methodIndex) {
 }
 
 template <typename T>
-static void setInputByIndex(MemoryPlane<T>& stack, int32_t framePointer, Method& method, DataType givenType, int32_t inputIndex, const T& value) {
+static void setInputByIndex(MemoryPlane<T>& stack, int32_t framePointer, Method<MEDIA_MACHINE_TYPE_COUNT>& method, DataType givenType, int32_t inputIndex, const T& value) {
 	if (inputIndex < 0 || inputIndex >= method.inputCount) {
 		throwError(U"Invalid input index ", inputIndex, U" of 0..", (method.inputCount - 1), U".");
 	}
-	Variable* variable = &method.locals[inputIndex];
+	Variable<MEDIA_MACHINE_TYPE_COUNT>* variable = &method.locals[inputIndex];
 	DataType expected = variable->typeDescription->dataType;
 	if (givenType != expected) {
 		throwError(U"Cannot assign ", getMediaTypeName(givenType), U" to ", variable->name, U" of ", getMediaTypeName(expected), U".");
@@ -1084,11 +1084,11 @@ static void setInputByIndex(MemoryPlane<T>& stack, int32_t framePointer, Method&
 	stack.accessByStackIndex(framePointer + variable->typeLocalIndex) = value;
 }
 template <typename T>
-static T& accessOutputByIndex(MemoryPlane<T>& stack, int32_t framePointer, Method& method, DataType wantedType, int32_t outputIndex) {
+static T& accessOutputByIndex(MemoryPlane<T>& stack, int32_t framePointer, Method<MEDIA_MACHINE_TYPE_COUNT>& method, DataType wantedType, int32_t outputIndex) {
 	if (outputIndex < 0 || outputIndex >= method.outputCount) {
 		throwError(U"Invalid output index ", outputIndex, U" of 0..", (method.outputCount - 1), U".");
 	}
-	Variable* variable = &method.locals[method.inputCount + outputIndex];
+	Variable<MEDIA_MACHINE_TYPE_COUNT>* variable = &method.locals[method.inputCount + outputIndex];
 	DataType foundType = variable->typeDescription->dataType;
 	if (wantedType != foundType) {
 		throwError(U"Cannot get ", variable->name, U" of ", getMediaTypeName(wantedType), U" as ", getMediaTypeName(wantedType), U".");
@@ -1184,7 +1184,7 @@ int32_t machine_getOutputCount(const MediaMachine& machine, int32_t methodIndex)
 
 String machine_getInputName(const MediaMachine& machine, int32_t methodIndex, int32_t inputIndex) {
 	checkMethodIndex(machine, methodIndex);
-	Method *method = &(machine->methods[methodIndex]);
+	Method<MEDIA_MACHINE_TYPE_COUNT> *method = &(machine->methods[methodIndex]);
 	if (inputIndex < 0 || inputIndex >= method->inputCount) {
 		throwError(U"Input index ", inputIndex, U" is out of bound 0..", method->inputCount - 1, U" for method ", machine_getMethodName(machine, methodIndex), U"!\n");
 	}
@@ -1193,7 +1193,7 @@ String machine_getInputName(const MediaMachine& machine, int32_t methodIndex, in
 
 String machine_getOutputName(const MediaMachine& machine, int32_t methodIndex, int32_t outputIndex) {
 	checkMethodIndex(machine, methodIndex);
-	Method *method = &(machine->methods[methodIndex]);
+	Method<MEDIA_MACHINE_TYPE_COUNT> *method = &(machine->methods[methodIndex]);
 	if (outputIndex < 0 || outputIndex >= method->outputCount) {
 		throwError(U"Input index ", outputIndex, U" is out of bound 0..", method->outputCount - 1, U" for method ", machine_getMethodName(machine, methodIndex), U"!\n");
 	}
@@ -1204,7 +1204,7 @@ MediaResult MediaMethod::callUsingKeywords(const TemporaryCallback<void(MediaMac
 	if (this->methodIndex < 0 || this->methodIndex >= this->machine->methods.length()) {
 		throwError(U"Method index ", this->methodIndex, U" is out of bound 0..", this->machine->methods.length() - 1, U"\n");
 	}
-	Method *method = &(this->machine->methods[this->methodIndex]);
+	Method<MEDIA_MACHINE_TYPE_COUNT> *method = &(this->machine->methods[this->methodIndex]);
 	int32_t inputCount = method->inputCount;
 	// TODO: Make sure that input arguments are assigned default arguments before assigning inputs as keywords.
 	for (int32_t i = 0; i < inputCount; i++) {
