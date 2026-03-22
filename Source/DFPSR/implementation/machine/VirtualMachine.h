@@ -42,6 +42,7 @@
 
 #include <cstdint>
 #include "../../math/FixedPoint.h"
+#include "../../collection/FixedArray.h"
 #include "../../collection/Array.h"
 #include "../../collection/List.h"
 #include "../../api/timeAPI.h"
@@ -152,8 +153,8 @@ template <int32_t TYPE_COUNT>
 struct CallState {
 	int32_t methodIndex = 0;
 	int32_t programCounter = 0;
-	int32_t stackPointer[TYPE_COUNT] = {};
-	int32_t framePointer[TYPE_COUNT] = {};
+	FixedArray<int32_t, TYPE_COUNT> stackPointer;
+	FixedArray<int32_t, TYPE_COUNT> framePointer;
 };
 
 // A planar memory system with one stack and frame pointer for each type of memory.
@@ -269,9 +270,9 @@ struct Method {
 	List<Variable<TYPE_COUNT>> locals; // locals[0..inputCount-1] are the inputs, while locals[inputCount..inputCount+outputCount-1] are the outputs
 
 	// Type-specific spaces
-	int32_t count[TYPE_COUNT] = {};
+	FixedArray<int32_t, TYPE_COUNT> count;
 	// Look-up table from a combination of type and type-local indices to unified-local indices
-	List<int32_t> unifiedLocalIndices[TYPE_COUNT];
+	FixedArray<List<int32_t>, TYPE_COUNT> unifiedLocalIndices;
 
 	Method(const String& name, int32_t startAddress, int32_t machineTypeCount) : name(name), startAddress(startAddress) {
 		// Increase TYPE_COUNT if it's not enough
@@ -508,8 +509,8 @@ struct VirtualMachine {
 				printText(U"Calling \"", calledMethod->name, U"\".\n");
 			#endif
 			// Calculate new frame pointers
-			int32_t newFramePointer[TYPE_COUNT] = {};
-			int32_t newStackPointer[TYPE_COUNT] = {};
+			FixedArray<int32_t, TYPE_COUNT> newFramePointer;
+			FixedArray<int32_t, TYPE_COUNT> newStackPointer;
 			for (int32_t t = 0; t < TYPE_COUNT; t++) {
 				newFramePointer[t] = memory.current.stackPointer[t];
 				newStackPointer[t] = memory.current.stackPointer[t] + machine.methods[calledMethodIndex].count[t];
@@ -798,7 +799,7 @@ struct VirtualMachine {
 			int32_t methodIndex = this->memory->current.methodIndex;
 			printText(U"\nMemory:\n");
 			// Global memory is at the bottom of the stack.
-			int32_t globalFramePointer[TYPE_COUNT] = {};
+			FixedArray<int32_t, TYPE_COUNT> globalFramePointer;
 			debugPrintMethod(0, globalFramePointer, this->methods[0].count, U"    ");
 			// Stack memory for each calling method.
 			for (int32_t i = 0; i < memory->callStack.length(); i++) {
