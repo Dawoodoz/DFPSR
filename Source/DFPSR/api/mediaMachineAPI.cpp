@@ -46,12 +46,15 @@ static ReadableString getMediaTypeName(DataType type) {
 	}
 }
 
+// An upper limit on the memory makes sure that the entire application does not crash from getting bottomless recursion in a virtual machine.
+static const int32_t MEMORY_LIMIT = 1024;
+
 class MediaMemory : public PlanarMemory {
 public:
 	MemoryPlane<FixedPoint> FixedPointMemory;
 	MemoryPlane<AlignedImageU8> AlignedImageU8Memory;
 	MemoryPlane<OrderedImageRgbaU8> OrderedImageRgbaU8Memory;
-	MediaMemory() : FixedPointMemory(1024), AlignedImageU8Memory(1024), OrderedImageRgbaU8Memory(512) {}
+	MediaMemory() : FixedPointMemory(MEMORY_LIMIT), AlignedImageU8Memory(MEMORY_LIMIT), OrderedImageRgbaU8Memory(MEMORY_LIMIT) {}
 	void store(int32_t targetStackIndex, const VMA& sourceArg, int32_t sourceFramePointer, DataType type) override {
 		switch(type) {
 			case DataType_FixedPoint:
