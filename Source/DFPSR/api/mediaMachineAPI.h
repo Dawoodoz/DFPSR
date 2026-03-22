@@ -31,13 +31,17 @@
 
 namespace dsr {
 
+// The total number of types used in MediaMachine.
+static const int32_t MEDIA_MACHINE_TYPE_COUNT = 3;
+
 // A handle to a media machine.
 //   Media machines can be used to generate, filter and analyze images.
 //   Everything running in a media machine is guaranteed to be 100% deterministic to the last bit.
 //     This reduces the amount of code where maintenance has to be performed during porting.
 //     It also means that any use of float or double is forbidden.
-struct VirtualMachine;
-using MediaMachine = Handle<VirtualMachine>;
+
+template <int32_t TYPE_COUNT> struct VirtualMachine;
+using MediaMachine = Handle<VirtualMachine<MEDIA_MACHINE_TYPE_COUNT>>;
 
 // TODO: Complete VirtualMachine with conditional jumps and document the language dialect used by MediaMachine.
 // Side-effect: Creates a media machine from Media Machine Code (*.mmc file).
