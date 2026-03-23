@@ -51,10 +51,10 @@ static const int32_t MEMORY_LIMIT = 1024;
 
 class MediaMemory : public PlanarMemory<MEDIA_MACHINE_TYPE_COUNT> {
 public:
-	MemoryPlane<FixedPoint> FixedPointMemory;
-	MemoryPlane<AlignedImageU8> AlignedImageU8Memory;
-	MemoryPlane<OrderedImageRgbaU8> OrderedImageRgbaU8Memory;
-	MediaMemory() : FixedPointMemory(MEMORY_LIMIT), AlignedImageU8Memory(MEMORY_LIMIT), OrderedImageRgbaU8Memory(MEMORY_LIMIT) {}
+	MemoryPlane<FixedPoint> fixedPointMemory;
+	MemoryPlane<AlignedImageU8> alignedImageU8Memory;
+	MemoryPlane<OrderedImageRgbaU8> orderedImageRgbaU8Memory;
+	MediaMemory() : fixedPointMemory(MEMORY_LIMIT), alignedImageU8Memory(MEMORY_LIMIT), orderedImageRgbaU8Memory(MEMORY_LIMIT) {}
 	void store(int32_t targetStackIndex, const VMA& sourceArg, int32_t sourceFramePointer, DataType type) override {
 		switch(type) {
 			case DataType_FixedPoint:
@@ -62,10 +62,10 @@ public:
 					#ifdef VIRTUAL_MACHINE_DEBUG_PRINT
 						printText(U"Storing: FixedPoint[", targetStackIndex, U"] <- immediate ", sourceArg.value, U".\n");
 					#endif
-					this->FixedPointMemory.accessByStackIndex(targetStackIndex) = sourceArg.value;
+					this->fixedPointMemory.accessByStackIndex(targetStackIndex) = sourceArg.value;
 				} else {
 					int32_t globalIndex = sourceArg.value.getMantissa();
-					FixedPoint value = this->FixedPointMemory.accessByGlobalIndex(globalIndex, sourceFramePointer);
+					FixedPoint value = this->fixedPointMemory.accessByGlobalIndex(globalIndex, sourceFramePointer);
 					#ifdef VIRTUAL_MACHINE_DEBUG_PRINT
 						if (globalIndex < 0) {
 							printText(U"Storing: FixedPoint[", targetStackIndex, U"] <- FixedPoint[", -(globalIndex + 1), U"] = ", value, U".\n");
@@ -73,14 +73,14 @@ public:
 							printText(U"Storing: FixedPoint[", targetStackIndex, U"] <- FixedPoint[fp(", sourceFramePointer, U") + ", globalIndex, U"] = ", value, U".\n");
 						}
 					#endif
-					this->FixedPointMemory.accessByStackIndex(targetStackIndex) = value;
+					this->fixedPointMemory.accessByStackIndex(targetStackIndex) = value;
 				}
 			break;
 			case DataType_ImageU8:
-				this->AlignedImageU8Memory.accessByStackIndex(targetStackIndex) = this->AlignedImageU8Memory.accessByGlobalIndex(sourceArg.value.getMantissa(), sourceFramePointer);
+				this->alignedImageU8Memory.accessByStackIndex(targetStackIndex) = this->alignedImageU8Memory.accessByGlobalIndex(sourceArg.value.getMantissa(), sourceFramePointer);
 			break;
 			case DataType_ImageRgbaU8:
-				this->OrderedImageRgbaU8Memory.accessByStackIndex(targetStackIndex) = this->OrderedImageRgbaU8Memory.accessByGlobalIndex(sourceArg.value.getMantissa(), sourceFramePointer);
+				this->orderedImageRgbaU8Memory.accessByStackIndex(targetStackIndex) = this->orderedImageRgbaU8Memory.accessByGlobalIndex(sourceArg.value.getMantissa(), sourceFramePointer);
 			break;
 			default:
 				throwError(U"Storing element of unhandled type!\n");
@@ -91,13 +91,13 @@ public:
 		int32_t globalIndex = targetArg.value.getMantissa();
 		switch(type) {
 			case DataType_FixedPoint:
-				this->FixedPointMemory.accessByGlobalIndex(globalIndex, targetFramePointer) = this->FixedPointMemory.accessByStackIndex(sourceStackIndex);
+				this->fixedPointMemory.accessByGlobalIndex(globalIndex, targetFramePointer) = this->fixedPointMemory.accessByStackIndex(sourceStackIndex);
 			break;
 			case DataType_ImageU8:
-				this->AlignedImageU8Memory.accessByGlobalIndex(globalIndex, targetFramePointer) = this->AlignedImageU8Memory.accessByStackIndex(sourceStackIndex);
+				this->alignedImageU8Memory.accessByGlobalIndex(globalIndex, targetFramePointer) = this->alignedImageU8Memory.accessByStackIndex(sourceStackIndex);
 			break;
 			case DataType_ImageRgbaU8:
-				this->OrderedImageRgbaU8Memory.accessByGlobalIndex(globalIndex, targetFramePointer) = this->OrderedImageRgbaU8Memory.accessByStackIndex(sourceStackIndex);
+				this->orderedImageRgbaU8Memory.accessByGlobalIndex(globalIndex, targetFramePointer) = this->orderedImageRgbaU8Memory.accessByStackIndex(sourceStackIndex);
 			break;
 			default:
 				throwError(U"Loading element of unhandled type!\n");
@@ -119,7 +119,7 @@ static const VMTypeDef<MEDIA_MACHINE_TYPE_COUNT> mediaMachineTypes[] = {
 		machine.interpretCommand(U"Load", args);
 	},
 	[](PlanarMemory<MEDIA_MACHINE_TYPE_COUNT>& memory, Variable<MEDIA_MACHINE_TYPE_COUNT>& variable, int32_t globalIndex, int32_t* framePointer, bool fullContent) {
-		FixedPoint value = MEDIA_MEMORY.FixedPointMemory.accessByGlobalIndex(globalIndex, framePointer[DataType_FixedPoint]);
+		FixedPoint value = MEDIA_MEMORY.fixedPointMemory.accessByGlobalIndex(globalIndex, framePointer[DataType_FixedPoint]);
 		printText(variable.name, U"(", value, U")");
 	}),
 	VMTypeDef<MEDIA_MACHINE_TYPE_COUNT>(U"ImageU8", DataType_ImageU8, false,
@@ -129,7 +129,7 @@ static const VMTypeDef<MEDIA_MACHINE_TYPE_COUNT> mediaMachineTypes[] = {
 		machine.interpretCommand(U"Reset", args);
 	},
 	[](PlanarMemory<MEDIA_MACHINE_TYPE_COUNT>& memory, Variable<MEDIA_MACHINE_TYPE_COUNT>& variable, int32_t globalIndex, int32_t* framePointer, bool fullContent) {
-		AlignedImageU8 value = MEDIA_MEMORY.AlignedImageU8Memory.accessByGlobalIndex(globalIndex, framePointer[DataType_ImageU8]);
+		AlignedImageU8 value = MEDIA_MEMORY.alignedImageU8Memory.accessByGlobalIndex(globalIndex, framePointer[DataType_ImageU8]);
 		printText(variable.name, U" ImageU8");
 		if (image_exists(value)) {
 			if (fullContent) {
@@ -148,7 +148,7 @@ static const VMTypeDef<MEDIA_MACHINE_TYPE_COUNT> mediaMachineTypes[] = {
 		machine.interpretCommand(U"Reset", args);
 	},
 	[](PlanarMemory<MEDIA_MACHINE_TYPE_COUNT>& memory, Variable<MEDIA_MACHINE_TYPE_COUNT>& variable, int32_t globalIndex, int32_t* framePointer, bool fullContent) {
-		OrderedImageRgbaU8 value = MEDIA_MEMORY.OrderedImageRgbaU8Memory.accessByGlobalIndex(globalIndex, framePointer[DataType_ImageRgbaU8]);
+		OrderedImageRgbaU8 value = MEDIA_MEMORY.orderedImageRgbaU8Memory.accessByGlobalIndex(globalIndex, framePointer[DataType_ImageRgbaU8]);
 		printText(variable.name, U" ImageRgbaU8");
 		if (image_exists(value)) {
 			// TODO: image_toAscii for multi-channel images
@@ -163,14 +163,14 @@ inline FixedPoint getFixedPointValue(MediaMemory& memory, const VMA& arg) {
 	if (arg.argType == ArgumentType::Immediate) {
 		return arg.value;
 	} else {
-		return memory.FixedPointMemory.getRef(arg, memory.current.framePointer[DataType_FixedPoint]);
+		return memory.fixedPointMemory.getRef(arg, memory.current.framePointer[DataType_FixedPoint]);
 	}
 }
 #define SCALAR_VALUE(ARG_INDEX) getFixedPointValue(MEDIA_MEMORY, args[ARG_INDEX])
 #define INT_VALUE(ARG_INDEX) fixedPoint_round(SCALAR_VALUE(ARG_INDEX))
-#define SCALAR_REF(ARG_INDEX) (MEDIA_MEMORY.FixedPointMemory.getRef(args[ARG_INDEX], memory.current.framePointer[DataType_FixedPoint]))
-#define IMAGE_U8_REF(ARG_INDEX) (MEDIA_MEMORY.AlignedImageU8Memory.getRef(args[ARG_INDEX], memory.current.framePointer[DataType_ImageU8]))
-#define IMAGE_RGBAU8_REF(ARG_INDEX) (MEDIA_MEMORY.OrderedImageRgbaU8Memory.getRef(args[ARG_INDEX], memory.current.framePointer[DataType_ImageRgbaU8]))
+#define SCALAR_REF(ARG_INDEX) (MEDIA_MEMORY.fixedPointMemory.getRef(args[ARG_INDEX], memory.current.framePointer[DataType_FixedPoint]))
+#define IMAGE_U8_REF(ARG_INDEX) (MEDIA_MEMORY.alignedImageU8Memory.getRef(args[ARG_INDEX], memory.current.framePointer[DataType_ImageU8]))
+#define IMAGE_RGBAU8_REF(ARG_INDEX) (MEDIA_MEMORY.orderedImageRgbaU8Memory.getRef(args[ARG_INDEX], memory.current.framePointer[DataType_ImageRgbaU8]))
 #define NEXT_INSTRUCTION memory.current.programCounter++;
 static const InsSig<MEDIA_MACHINE_TYPE_COUNT> mediaMachineInstructions[] = {
 	InsSig<MEDIA_MACHINE_TYPE_COUNT>::create(U"LOAD", 1,
@@ -1103,42 +1103,42 @@ void machine_setInputByIndex(MediaMachine& machine, int32_t methodIndex, int32_t
 		printText(U"Input ", inputIndex, U" of ", machine->methods[methodIndex].inputCount, U" (", machine->methods[methodIndex].locals[inputIndex].name, U") to ", machine->methods[methodIndex].name, U" = ", input, U"\n");
 	#endif
 	checkMethodIndex(machine, methodIndex);
-	setInputByIndex(((MediaMemory*)machine->memory.getUnsafe())->FixedPointMemory, machine->memory->current.framePointer[DataType_FixedPoint], machine->methods[methodIndex], DataType_FixedPoint, inputIndex, FixedPoint::fromWhole(input));
+	setInputByIndex(((MediaMemory*)machine->memory.getUnsafe())->fixedPointMemory, machine->memory->current.framePointer[DataType_FixedPoint], machine->methods[methodIndex], DataType_FixedPoint, inputIndex, FixedPoint::fromWhole(input));
 }
 void machine_setInputByIndex(MediaMachine& machine, int32_t methodIndex, int32_t inputIndex, const FixedPoint& input) {
 	#ifdef VIRTUAL_MACHINE_DEBUG_PRINT
 		printText(U"Input ", inputIndex, U" of ", machine->methods[methodIndex].inputCount, U" (", machine->methods[methodIndex].locals[inputIndex].name, U") to ", machine->methods[methodIndex].name, U" = ", input, U"\n");
 	#endif
 	checkMethodIndex(machine, methodIndex);
-	setInputByIndex(((MediaMemory*)machine->memory.getUnsafe())->FixedPointMemory, machine->memory->current.framePointer[DataType_FixedPoint], machine->methods[methodIndex], DataType_FixedPoint, inputIndex, input);
+	setInputByIndex(((MediaMemory*)machine->memory.getUnsafe())->fixedPointMemory, machine->memory->current.framePointer[DataType_FixedPoint], machine->methods[methodIndex], DataType_FixedPoint, inputIndex, input);
 }
 void machine_setInputByIndex(MediaMachine& machine, int32_t methodIndex, int32_t inputIndex, const AlignedImageU8& input) {
 	#ifdef VIRTUAL_MACHINE_DEBUG_PRINT
 		printText(U"Input ", inputIndex, U" of ", machine->methods[methodIndex].inputCount, U" (", machine->methods[methodIndex].locals[inputIndex].name, U") to ", machine->methods[methodIndex].name, U" = monochrome image of ", image_getWidth(input), U"x", image_getHeight(input), U" pixels\n");
 	#endif
 	checkMethodIndex(machine, methodIndex);
-	setInputByIndex(((MediaMemory*)machine->memory.getUnsafe())->AlignedImageU8Memory, machine->memory->current.framePointer[DataType_ImageU8], machine->methods[methodIndex], DataType_ImageU8, inputIndex, input);
+	setInputByIndex(((MediaMemory*)machine->memory.getUnsafe())->alignedImageU8Memory, machine->memory->current.framePointer[DataType_ImageU8], machine->methods[methodIndex], DataType_ImageU8, inputIndex, input);
 }
 void machine_setInputByIndex(MediaMachine& machine, int32_t methodIndex, int32_t inputIndex, const OrderedImageRgbaU8& input) {
 	#ifdef VIRTUAL_MACHINE_DEBUG_PRINT
 		printText(U"Input ", inputIndex, U" of ", machine->methods[methodIndex].inputCount, U" (", machine->methods[methodIndex].locals[inputIndex].name, U") to ", machine->methods[methodIndex].name, U" = rgba image of ", image_getWidth(input), U"x", image_getHeight(input), U" pixels\n");
 	#endif
 	checkMethodIndex(machine, methodIndex);
-	setInputByIndex(((MediaMemory*)machine->memory.getUnsafe())->OrderedImageRgbaU8Memory, machine->memory->current.framePointer[DataType_ImageRgbaU8], machine->methods[methodIndex], DataType_ImageRgbaU8, inputIndex, input);
+	setInputByIndex(((MediaMemory*)machine->memory.getUnsafe())->orderedImageRgbaU8Memory, machine->memory->current.framePointer[DataType_ImageRgbaU8], machine->methods[methodIndex], DataType_ImageRgbaU8, inputIndex, input);
 }
 
 // Get output by index
 FixedPoint machine_getFixedPointOutputByIndex(const MediaMachine& machine, int32_t methodIndex, int32_t outputIndex) {
 	checkMethodIndex(machine, methodIndex);
-	return accessOutputByIndex<FixedPoint>(((MediaMemory*)machine->memory.getUnsafe())->FixedPointMemory, machine->memory->current.framePointer[DataType_FixedPoint], machine->methods[methodIndex], DataType_FixedPoint, outputIndex);
+	return accessOutputByIndex<FixedPoint>(((MediaMemory*)machine->memory.getUnsafe())->fixedPointMemory, machine->memory->current.framePointer[DataType_FixedPoint], machine->methods[methodIndex], DataType_FixedPoint, outputIndex);
 }
 AlignedImageU8 machine_getImageU8OutputByIndex(const MediaMachine& machine, int32_t methodIndex, int32_t outputIndex) {
 	checkMethodIndex(machine, methodIndex);
-	return accessOutputByIndex<AlignedImageU8>(((MediaMemory*)machine->memory.getUnsafe())->AlignedImageU8Memory, machine->memory->current.framePointer[DataType_ImageU8], machine->methods[methodIndex], DataType_ImageU8, outputIndex);
+	return accessOutputByIndex<AlignedImageU8>(((MediaMemory*)machine->memory.getUnsafe())->alignedImageU8Memory, machine->memory->current.framePointer[DataType_ImageU8], machine->methods[methodIndex], DataType_ImageU8, outputIndex);
 }
 OrderedImageRgbaU8 machine_getImageRgbaU8OutputByIndex(const MediaMachine& machine, int32_t methodIndex, int32_t outputIndex) {
 	checkMethodIndex(machine, methodIndex);
-	return accessOutputByIndex<OrderedImageRgbaU8>(((MediaMemory*)machine->memory.getUnsafe())->OrderedImageRgbaU8Memory, machine->memory->current.framePointer[DataType_ImageRgbaU8], machine->methods[methodIndex], DataType_ImageRgbaU8, outputIndex);
+	return accessOutputByIndex<OrderedImageRgbaU8>(((MediaMemory*)machine->memory.getUnsafe())->orderedImageRgbaU8Memory, machine->memory->current.framePointer[DataType_ImageRgbaU8], machine->methods[methodIndex], DataType_ImageRgbaU8, outputIndex);
 }
 
 bool machine_exists(const MediaMachine& machine) {
