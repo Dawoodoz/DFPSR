@@ -76,7 +76,6 @@ static ReadableString getName(AccessType access) {
 
 // Types used in machine instuctions
 enum class ArgumentType {
-	Unused,
 	Immediate,
 	Reference
 };
@@ -107,7 +106,7 @@ struct Variable {
 
 // Virtual Machine Argument
 struct VMA {
-	const ArgumentType argType = ArgumentType::Unused;
+	const ArgumentType argType;
 	const DataType dataType;
 	const FixedPoint value;
 	explicit VMA(FixedPoint value)
