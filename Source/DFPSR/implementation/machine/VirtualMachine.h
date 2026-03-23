@@ -160,8 +160,8 @@ struct CallState {
 //   This is possible because the virtual machine only operates on types known in compile-time.
 //   The planar stack system:
 //     * Removes the need to manually initialize and align classes in generic memory.
-	//     * Encapsulates any effects of endianness or signed integer representations in the physical hardware.
-//       Because there cannot be accidental reintepretation when the type is known in compile-time.
+//     * Encapsulates any effects of endianness or signed integer representations in the physical hardware.
+//       Because there can not be accidental reintepretation when the type is known in compile-time.
 template <int32_t TYPE_COUNT>
 class PlanarMemory {
 public:
@@ -466,8 +466,8 @@ struct VirtualMachine {
 		// Split assembler arguments into separate input and output arguments for machine instructions
 		List<VMA> inputArguments;
 		List<VMA> outputArguments;
-		inputArguments.push(VMA(FixedPoint::fromMantissa(calledMethodIndex)));
-		outputArguments.push(VMA(FixedPoint::fromMantissa(calledMethodIndex)));
+		inputArguments.pushConstruct(FixedPoint::fromMantissa(calledMethodIndex));
+		outputArguments.pushConstruct(FixedPoint::fromMantissa(calledMethodIndex));
 		int32_t outputCount = 0;
 		for (int32_t a = 1; a < arguments.length(); a++) {
 			ReadableString content = string_removeOuterWhiteSpace(arguments[a]);
