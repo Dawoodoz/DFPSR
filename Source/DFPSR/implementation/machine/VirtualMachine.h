@@ -324,6 +324,47 @@ struct VirtualMachine {
 		}
 		return nullptr;
 	}
+	// Instead of tokenizing, the assembler simply splits everything after colon along commas to get the arguments.
+	//   To avoid splitting with commas inside of text used to create immediate values, only the commas outside of "" () [] {} are used to split.
+	List<String> nestedCommaSplit(const ReadableString& source) {
+		List<String> result;
+		intptr_t sectionStart = 0;
+		bool quoted = false;
+		intptr_t depth = 0;
+		for (intptr_t i = 0; i < string_length(source); i++) {
+			DsrChar c = source[i];
+			if (quoted) {
+				if (c == U'"') {
+					quoted = false;
+				} else if (c == U'\\') {
+					// Skip one character after escape.
+					i++;
+				}
+			} else {
+				if (c == U'"') {
+					quoted = true;
+				} else if (c == U',' and depth == 0) {
+					ReadableString element = string_exclusiveRange(source, sectionStart, i);
+					result.push(string_removeOuterWhiteSpace(element));
+					sectionStart = i + 1;
+				} else if (c == U'(' || c == U'[' || c == U'{') {
+					depth++;
+				} else if (c == U')' || c == U']' || c == U'}') {
+					depth--;
+				}
+			}
+		}
+		if (string_length(source) > sectionStart) {
+			result.push(string_removeOuterWhiteSpace(string_exclusiveRange(source, sectionStart, string_length(source))));
+		}
+		if (quoted) {
+			throwError(U"Quotes may not contain unmangled line-breaks in virtual machine assembler code!\n");
+		}
+		if (depth != 0) {
+			throwError(U"Immediate constants must balance expressions containing () [] {}, because otherwise parsing of virtual machine assembler code can not know which commas are used to separate arguments!\n");
+		}
+		return result;
+	}
 	// Constructor
 	VirtualMachine(const ReadableString& code, const Handle<PlanarMemory<TYPE_COUNT>>& memory,
 	  const InsSig<TYPE_COUNT>* machineInstructions, int32_t machineInstructionCount,
@@ -348,7 +389,7 @@ struct VirtualMachine {
 			if (colonIndex > -1) {
 				ReadableString command = string_removeOuterWhiteSpace(string_before(currentLine, colonIndex));
 				ReadableString argumentLine = string_after(currentLine, colonIndex);
-				List<String> arguments = string_split(argumentLine, U',', true);
+				List<String> arguments = nestedCommaSplit(argumentLine);
 				this->interpretMachineWord(command, arguments);
 			} else if (string_length(currentLine) > 0) {
 				throwError(U"Unexpected line \"", currentLine, U"\".\n");
