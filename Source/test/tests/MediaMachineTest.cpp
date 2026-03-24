@@ -4,7 +4,7 @@
 
 START_TEST(CompilerFront)
 	{
-		MediaMachine testMachine = machine_create(
+		MediaMachine testMachine = mediaMachine_create(
 			U"BEGIN: addFixedPoint\n"
 			U"	INPUT: FixedPoint, left\n"
 			U"	INPUT: FixedPoint, right\n"
@@ -17,27 +17,27 @@ START_TEST(CompilerFront)
 			U"	CALL: addFixedPoint, result, x, 8\n"
 			U"END:\n"
 		);
-		ASSERT(machine_exists(testMachine));
+		ASSERT(mediaMachine_exists(testMachine));
 		{
-			int32_t addMethod = machine_findMethod(testMachine, U"addFixedPoint");
+			int32_t addMethod = mediaMachine_findMethod(testMachine, U"addFixedPoint");
 			ASSERT_NOT_EQUAL(addMethod, -1);
-			machine_setInputByIndex(testMachine, addMethod, 0, FixedPoint::fromWhole(1200));
-			machine_setInputByIndex(testMachine, addMethod, 1, FixedPoint::fromWhole(34));
-			machine_executeMethod(testMachine, addMethod);
-			ASSERT_EQUAL(machine_getFixedPointOutputByIndex(testMachine, addMethod, 0), FixedPoint::fromWhole(1234));
+			mediaMachine_setInputByIndex(testMachine, addMethod, 0, FixedPoint::fromWhole(1200));
+			mediaMachine_setInputByIndex(testMachine, addMethod, 1, FixedPoint::fromWhole(34));
+			mediaMachine_executeMethod(testMachine, addMethod);
+			ASSERT_EQUAL(mediaMachine_getFixedPointOutputByIndex(testMachine, addMethod, 0), FixedPoint::fromWhole(1234));
 		}
 		{
-			MediaMethod addMethod = machine_getMethod(testMachine, U"addFixedPoint", -1);
+			MediaMethod addMethod = mediaMachine_getMethod(testMachine, U"addFixedPoint", -1);
 			FixedPoint result;
 			addMethod(FixedPoint::fromWhole(1200), FixedPoint::fromWhole(34))(result);
 			ASSERT_EQUAL(result, FixedPoint::fromWhole(1234));
 		}
 		{
-			int32_t addEightMethod = machine_findMethod(testMachine, U"addEight");
+			int32_t addEightMethod = mediaMachine_findMethod(testMachine, U"addEight");
 			ASSERT_NOT_EQUAL(addEightMethod, -1);
-			machine_setInputByIndex(testMachine, addEightMethod, 0, FixedPoint::fromWhole(120));
-			machine_executeMethod(testMachine, addEightMethod);
-			ASSERT_EQUAL(machine_getFixedPointOutputByIndex(testMachine, addEightMethod, 0), FixedPoint::fromWhole(128));
+			mediaMachine_setInputByIndex(testMachine, addEightMethod, 0, FixedPoint::fromWhole(120));
+			mediaMachine_executeMethod(testMachine, addEightMethod);
+			ASSERT_EQUAL(mediaMachine_getFixedPointOutputByIndex(testMachine, addEightMethod, 0), FixedPoint::fromWhole(128));
 		}
 	}
 END_TEST
