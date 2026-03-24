@@ -1039,14 +1039,14 @@ static VMA resolveImmediateConstant(PlanarMemory<MEDIA_MACHINE_TYPE_COUNT> &memo
 	}
 }
 
-MediaMachine machine_create(const ReadableString& code) {
+MediaMachine mediaMachine_create(const ReadableString& code) {
 	Handle<PlanarMemory<MEDIA_MACHINE_TYPE_COUNT>> memory = handle_create<MediaMemory>().setName("MediaMemory");
 	static const int32_t mediaMachineInstructionCount = sizeof(mediaMachineInstructions) / sizeof(InsSig<MEDIA_MACHINE_TYPE_COUNT>);
 	static const int32_t mediaMachineTypeCount = sizeof(mediaMachineTypes) / sizeof(VMTypeDef<MEDIA_MACHINE_TYPE_COUNT>);
 	return MediaMachine(handle_create<VirtualMachine<MEDIA_MACHINE_TYPE_COUNT>>(code, memory, mediaMachineInstructions, mediaMachineInstructionCount, mediaMachineTypes, mediaMachineTypeCount, resolveImmediateConstant).setName("MediaMachine"));
 }
 
-void machine_executeMethod(MediaMachine& machine, int32_t methodIndex) {
+void mediaMachine_executeMethod(MediaMachine& machine, int32_t methodIndex) {
 	checkMethodIndex(machine, methodIndex);
 	machine->executeMethod(methodIndex);
 }
@@ -1078,28 +1078,28 @@ static T& accessOutputByIndex(MemoryPlane<T>& stack, int32_t framePointer, Metho
 
 // Set input by argument index
 //   Indexed arguments are confirmed to be inputs during compilation of the script
-void machine_setInputByIndex(MediaMachine& machine, int32_t methodIndex, int32_t inputIndex, int32_t input) {
+void mediaMachine_setInputByIndex(MediaMachine& machine, int32_t methodIndex, int32_t inputIndex, int32_t input) {
 	#ifdef VIRTUAL_MACHINE_DEBUG_PRINT
 		printText(U"Input ", inputIndex, U" of ", machine->methods[methodIndex].inputCount, U" (", machine->methods[methodIndex].locals[inputIndex].name, U") to ", machine->methods[methodIndex].name, U" = ", input, U"\n");
 	#endif
 	checkMethodIndex(machine, methodIndex);
 	setInputByIndex(((MediaMemory*)machine->memory.getUnsafe())->fixedPointMemory, machine->memory->current.framePointer[DataType_FixedPoint], machine->methods[methodIndex], DataType_FixedPoint, inputIndex, FixedPoint::fromWhole(input));
 }
-void machine_setInputByIndex(MediaMachine& machine, int32_t methodIndex, int32_t inputIndex, const FixedPoint& input) {
+void mediaMachine_setInputByIndex(MediaMachine& machine, int32_t methodIndex, int32_t inputIndex, const FixedPoint& input) {
 	#ifdef VIRTUAL_MACHINE_DEBUG_PRINT
 		printText(U"Input ", inputIndex, U" of ", machine->methods[methodIndex].inputCount, U" (", machine->methods[methodIndex].locals[inputIndex].name, U") to ", machine->methods[methodIndex].name, U" = ", input, U"\n");
 	#endif
 	checkMethodIndex(machine, methodIndex);
 	setInputByIndex(((MediaMemory*)machine->memory.getUnsafe())->fixedPointMemory, machine->memory->current.framePointer[DataType_FixedPoint], machine->methods[methodIndex], DataType_FixedPoint, inputIndex, input);
 }
-void machine_setInputByIndex(MediaMachine& machine, int32_t methodIndex, int32_t inputIndex, const AlignedImageU8& input) {
+void mediaMachine_setInputByIndex(MediaMachine& machine, int32_t methodIndex, int32_t inputIndex, const AlignedImageU8& input) {
 	#ifdef VIRTUAL_MACHINE_DEBUG_PRINT
 		printText(U"Input ", inputIndex, U" of ", machine->methods[methodIndex].inputCount, U" (", machine->methods[methodIndex].locals[inputIndex].name, U") to ", machine->methods[methodIndex].name, U" = monochrome image of ", image_getWidth(input), U"x", image_getHeight(input), U" pixels\n");
 	#endif
 	checkMethodIndex(machine, methodIndex);
 	setInputByIndex(((MediaMemory*)machine->memory.getUnsafe())->alignedImageU8Memory, machine->memory->current.framePointer[DataType_ImageU8], machine->methods[methodIndex], DataType_ImageU8, inputIndex, input);
 }
-void machine_setInputByIndex(MediaMachine& machine, int32_t methodIndex, int32_t inputIndex, const OrderedImageRgbaU8& input) {
+void mediaMachine_setInputByIndex(MediaMachine& machine, int32_t methodIndex, int32_t inputIndex, const OrderedImageRgbaU8& input) {
 	#ifdef VIRTUAL_MACHINE_DEBUG_PRINT
 		printText(U"Input ", inputIndex, U" of ", machine->methods[methodIndex].inputCount, U" (", machine->methods[methodIndex].locals[inputIndex].name, U") to ", machine->methods[methodIndex].name, U" = rgba image of ", image_getWidth(input), U"x", image_getHeight(input), U" pixels\n");
 	#endif
@@ -1108,25 +1108,25 @@ void machine_setInputByIndex(MediaMachine& machine, int32_t methodIndex, int32_t
 }
 
 // Get output by index
-FixedPoint machine_getFixedPointOutputByIndex(const MediaMachine& machine, int32_t methodIndex, int32_t outputIndex) {
+FixedPoint mediaMachine_getFixedPointOutputByIndex(const MediaMachine& machine, int32_t methodIndex, int32_t outputIndex) {
 	checkMethodIndex(machine, methodIndex);
 	return accessOutputByIndex<FixedPoint>(((MediaMemory*)machine->memory.getUnsafe())->fixedPointMemory, machine->memory->current.framePointer[DataType_FixedPoint], machine->methods[methodIndex], DataType_FixedPoint, outputIndex);
 }
-AlignedImageU8 machine_getImageU8OutputByIndex(const MediaMachine& machine, int32_t methodIndex, int32_t outputIndex) {
+AlignedImageU8 mediaMachine_getImageU8OutputByIndex(const MediaMachine& machine, int32_t methodIndex, int32_t outputIndex) {
 	checkMethodIndex(machine, methodIndex);
 	return accessOutputByIndex<AlignedImageU8>(((MediaMemory*)machine->memory.getUnsafe())->alignedImageU8Memory, machine->memory->current.framePointer[DataType_ImageU8], machine->methods[methodIndex], DataType_ImageU8, outputIndex);
 }
-OrderedImageRgbaU8 machine_getImageRgbaU8OutputByIndex(const MediaMachine& machine, int32_t methodIndex, int32_t outputIndex) {
+OrderedImageRgbaU8 mediaMachine_getImageRgbaU8OutputByIndex(const MediaMachine& machine, int32_t methodIndex, int32_t outputIndex) {
 	checkMethodIndex(machine, methodIndex);
 	return accessOutputByIndex<OrderedImageRgbaU8>(((MediaMemory*)machine->memory.getUnsafe())->orderedImageRgbaU8Memory, machine->memory->current.framePointer[DataType_ImageRgbaU8], machine->methods[methodIndex], DataType_ImageRgbaU8, outputIndex);
 }
 
-bool machine_exists(const MediaMachine& machine) {
+bool mediaMachine_exists(const MediaMachine& machine) {
 	return machine.isNotNull();
 }
 
-int32_t machine_findMethod(const MediaMachine& machine, const ReadableString& methodName) {
-	if (!machine_exists(machine)) {
+int32_t mediaMachine_findMethod(const MediaMachine& machine, const ReadableString& methodName) {
+	if (!mediaMachine_exists(machine)) {
 		throwError(U"Can not look for ", methodName, U" in a media machine that does not exist!\n");
 		return -1;
 	} else {
@@ -1134,48 +1134,48 @@ int32_t machine_findMethod(const MediaMachine& machine, const ReadableString& me
 	}
 }
 
-MediaMethod machine_getMethod(MediaMachine& machine, const ReadableString& methodName, int32_t contextIndex, bool mustExist) {
-	int32_t methodIndex = machine_findMethod(machine, methodName);
+MediaMethod mediaMachine_getMethod(MediaMachine& machine, const ReadableString& methodName, int32_t contextIndex, bool mustExist) {
+	int32_t methodIndex = mediaMachine_findMethod(machine, methodName);
 	if (mustExist && methodIndex == -1) {
 		throwError(U"The method name ", methodName, U" could not be found in the media machine!\n");
 	}
 	return MediaMethod(machine, methodIndex, contextIndex);
 }
 
-String machine_getMethodName(const MediaMachine& machine, int32_t methodIndex) {
+String mediaMachine_getMethodName(const MediaMachine& machine, int32_t methodIndex) {
 	checkMethodIndex(machine, methodIndex);
 	return machine->methods[methodIndex].name;
 }
 
-int32_t machine_getMethodCount(const MediaMachine& machine) {
+int32_t mediaMachine_getMethodCount(const MediaMachine& machine) {
 	checkMachine(machine);
 	return machine->methods.length();
 }
 
-int32_t machine_getInputCount(const MediaMachine& machine, int32_t methodIndex) {
+int32_t mediaMachine_getInputCount(const MediaMachine& machine, int32_t methodIndex) {
 	checkMethodIndex(machine, methodIndex);
 	return machine->methods[methodIndex].inputCount;
 }
 
-int32_t machine_getOutputCount(const MediaMachine& machine, int32_t methodIndex) {
+int32_t mediaMachine_getOutputCount(const MediaMachine& machine, int32_t methodIndex) {
 	checkMethodIndex(machine, methodIndex);
 	return machine->methods[methodIndex].outputCount;
 }
 
-String machine_getInputName(const MediaMachine& machine, int32_t methodIndex, int32_t inputIndex) {
+String mediaMachine_getInputName(const MediaMachine& machine, int32_t methodIndex, int32_t inputIndex) {
 	checkMethodIndex(machine, methodIndex);
 	Method<MEDIA_MACHINE_TYPE_COUNT> *method = &(machine->methods[methodIndex]);
 	if (inputIndex < 0 || inputIndex >= method->inputCount) {
-		throwError(U"Input index ", inputIndex, U" is out of bound 0..", method->inputCount - 1, U" for method ", machine_getMethodName(machine, methodIndex), U"!\n");
+		throwError(U"Input index ", inputIndex, U" is out of bound 0..", method->inputCount - 1, U" for method ", mediaMachine_getMethodName(machine, methodIndex), U"!\n");
 	}
 	return method->locals[inputIndex].name;
 }
 
-String machine_getOutputName(const MediaMachine& machine, int32_t methodIndex, int32_t outputIndex) {
+String mediaMachine_getOutputName(const MediaMachine& machine, int32_t methodIndex, int32_t outputIndex) {
 	checkMethodIndex(machine, methodIndex);
 	Method<MEDIA_MACHINE_TYPE_COUNT> *method = &(machine->methods[methodIndex]);
 	if (outputIndex < 0 || outputIndex >= method->outputCount) {
-		throwError(U"Input index ", outputIndex, U" is out of bound 0..", method->outputCount - 1, U" for method ", machine_getMethodName(machine, methodIndex), U"!\n");
+		throwError(U"Input index ", outputIndex, U" is out of bound 0..", method->outputCount - 1, U" for method ", mediaMachine_getMethodName(machine, methodIndex), U"!\n");
 	}
 	return method->locals[method->inputCount + outputIndex].name;
 }
@@ -1190,7 +1190,7 @@ MediaResult MediaMethod::callUsingKeywords(const TemporaryCallback<void(MediaMac
 	for (int32_t i = 0; i < inputCount; i++) {
 		setInputAction(this->machine, this->methodIndex, i, method->locals[i].name);
 	}
-	machine_executeMethod(this->machine, this->methodIndex);
+	mediaMachine_executeMethod(this->machine, this->methodIndex);
 	return MediaResult(this->machine, this->methodIndex);
 }
 
