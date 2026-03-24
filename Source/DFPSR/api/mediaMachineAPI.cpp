@@ -35,6 +35,7 @@ namespace dsr {
 // Media Machine specification
 
 // Enumerating types
+static const DataType DataType_FixedPoint = 0;
 static const DataType DataType_ImageU8 = 1;
 static const DataType DataType_ImageRgbaU8 = 2;
 static ReadableString getMediaTypeName(DataType type) {
@@ -58,29 +59,13 @@ public:
 	void store(int32_t targetStackIndex, const VMA& sourceArg, int32_t sourceFramePointer, DataType type) override {
 		switch(type) {
 			case DataType_FixedPoint:
-				if (sourceArg.argType == ArgumentType::Immediate) {
-					#ifdef VIRTUAL_MACHINE_DEBUG_PRINT
-						printText(U"Storing: FixedPoint[", targetStackIndex, U"] <- immediate ", sourceArg.value, U".\n");
-					#endif
-					this->fixedPointMemory.accessByStackIndex(targetStackIndex) = sourceArg.value;
-				} else {
-					int32_t globalIndex = sourceArg.value.getMantissa();
-					FixedPoint value = this->fixedPointMemory.accessByGlobalIndex(globalIndex, sourceFramePointer);
-					#ifdef VIRTUAL_MACHINE_DEBUG_PRINT
-						if (globalIndex < 0) {
-							printText(U"Storing: FixedPoint[", targetStackIndex, U"] <- FixedPoint[", -(globalIndex + 1), U"] = ", value, U".\n");
-						} else {
-							printText(U"Storing: FixedPoint[", targetStackIndex, U"] <- FixedPoint[fp(", sourceFramePointer, U") + ", globalIndex, U"] = ", value, U".\n");
-						}
-					#endif
-					this->fixedPointMemory.accessByStackIndex(targetStackIndex) = value;
-				}
+				this->fixedPointMemory.accessByStackIndex(targetStackIndex) = this->fixedPointMemory.getRead(sourceArg, sourceFramePointer);
 			break;
 			case DataType_ImageU8:
-				this->alignedImageU8Memory.accessByStackIndex(targetStackIndex) = this->alignedImageU8Memory.accessByGlobalIndex(sourceArg.value.getMantissa(), sourceFramePointer);
+				this->alignedImageU8Memory.accessByStackIndex(targetStackIndex) = this->alignedImageU8Memory.getRead(sourceArg, sourceFramePointer);
 			break;
 			case DataType_ImageRgbaU8:
-				this->orderedImageRgbaU8Memory.accessByStackIndex(targetStackIndex) = this->orderedImageRgbaU8Memory.accessByGlobalIndex(sourceArg.value.getMantissa(), sourceFramePointer);
+				this->orderedImageRgbaU8Memory.accessByStackIndex(targetStackIndex) = this->orderedImageRgbaU8Memory.getRead(sourceArg, sourceFramePointer);
 			break;
 			default:
 				throwError(U"Storing element of unhandled type!\n");
@@ -88,7 +73,8 @@ public:
 		}
 	}
 	void load(int32_t sourceStackIndex, const VMA& targetArg, int32_t targetFramePointer, DataType type) override {
-		int32_t globalIndex = targetArg.value.getMantissa();
+		// Assuming that targetArg.argType == ArgumentType::Reference.
+		int32_t globalIndex = targetArg.index;
 		switch(type) {
 			case DataType_FixedPoint:
 				this->fixedPointMemory.accessByGlobalIndex(globalIndex, targetFramePointer) = this->fixedPointMemory.accessByStackIndex(sourceStackIndex);
@@ -111,23 +97,11 @@ public:
 // Type definitions
 static const VMTypeDef<MEDIA_MACHINE_TYPE_COUNT> mediaMachineTypes[] = {
 	VMTypeDef<MEDIA_MACHINE_TYPE_COUNT>(U"FixedPoint", DataType_FixedPoint, true,
-	[](VirtualMachine<MEDIA_MACHINE_TYPE_COUNT>& machine, int32_t globalIndex, const ReadableString& defaultValueText){
-		FixedPoint defaultValue = string_length(defaultValueText) > 0 ? FixedPoint::fromText(defaultValueText) : FixedPoint();
-		List<VMA> args;
-		args.pushConstruct(DataType_FixedPoint, globalIndex);
-		args.pushConstruct(defaultValue);
-		machine.interpretCommand(U"Load", args);
-	},
 	[](PlanarMemory<MEDIA_MACHINE_TYPE_COUNT>& memory, Variable<MEDIA_MACHINE_TYPE_COUNT>& variable, int32_t globalIndex, int32_t* framePointer, bool fullContent) {
 		FixedPoint value = MEDIA_MEMORY.fixedPointMemory.accessByGlobalIndex(globalIndex, framePointer[DataType_FixedPoint]);
 		printText(variable.name, U"(", value, U")");
 	}),
 	VMTypeDef<MEDIA_MACHINE_TYPE_COUNT>(U"ImageU8", DataType_ImageU8, false,
-	[](VirtualMachine<MEDIA_MACHINE_TYPE_COUNT>& machine, int32_t globalIndex, const ReadableString& defaultValueText){
-		List<VMA> args;
-		args.pushConstruct(DataType_ImageU8, globalIndex);
-		machine.interpretCommand(U"Reset", args);
-	},
 	[](PlanarMemory<MEDIA_MACHINE_TYPE_COUNT>& memory, Variable<MEDIA_MACHINE_TYPE_COUNT>& variable, int32_t globalIndex, int32_t* framePointer, bool fullContent) {
 		AlignedImageU8 value = MEDIA_MEMORY.alignedImageU8Memory.accessByGlobalIndex(globalIndex, framePointer[DataType_ImageU8]);
 		printText(variable.name, U" ImageU8");
@@ -142,11 +116,6 @@ static const VMTypeDef<MEDIA_MACHINE_TYPE_COUNT> mediaMachineTypes[] = {
 		}
 	}),
 	VMTypeDef<MEDIA_MACHINE_TYPE_COUNT>(U"ImageRgbaU8", DataType_ImageRgbaU8, false,
-	[](VirtualMachine<MEDIA_MACHINE_TYPE_COUNT>& machine, int32_t globalIndex, const ReadableString& defaultValueText){
-		List<VMA> args;
-		args.pushConstruct(DataType_ImageRgbaU8, globalIndex);
-		machine.interpretCommand(U"Reset", args);
-	},
 	[](PlanarMemory<MEDIA_MACHINE_TYPE_COUNT>& memory, Variable<MEDIA_MACHINE_TYPE_COUNT>& variable, int32_t globalIndex, int32_t* framePointer, bool fullContent) {
 		OrderedImageRgbaU8 value = MEDIA_MEMORY.orderedImageRgbaU8Memory.accessByGlobalIndex(globalIndex, framePointer[DataType_ImageRgbaU8]);
 		printText(variable.name, U" ImageRgbaU8");
@@ -159,14 +128,7 @@ static const VMTypeDef<MEDIA_MACHINE_TYPE_COUNT> mediaMachineTypes[] = {
 	})
 };
 
-inline FixedPoint getFixedPointValue(MediaMemory& memory, const VMA& arg) {
-	if (arg.argType == ArgumentType::Immediate) {
-		return arg.value;
-	} else {
-		return memory.fixedPointMemory.getRef(arg, memory.current.framePointer[DataType_FixedPoint]);
-	}
-}
-#define SCALAR_VALUE(ARG_INDEX) getFixedPointValue(MEDIA_MEMORY, args[ARG_INDEX])
+#define SCALAR_VALUE(ARG_INDEX) (MEDIA_MEMORY.fixedPointMemory.getRead(args[ARG_INDEX], memory.current.framePointer[DataType_FixedPoint]))
 #define INT_VALUE(ARG_INDEX) fixedPoint_round(SCALAR_VALUE(ARG_INDEX))
 #define SCALAR_REF(ARG_INDEX) (MEDIA_MEMORY.fixedPointMemory.getRef(args[ARG_INDEX], memory.current.framePointer[DataType_FixedPoint]))
 #define IMAGE_U8_REF(ARG_INDEX) (MEDIA_MEMORY.alignedImageU8Memory.getRef(args[ARG_INDEX], memory.current.framePointer[DataType_ImageU8]))
@@ -180,6 +142,13 @@ static const InsSig<MEDIA_MACHINE_TYPE_COUNT> mediaMachineInstructions[] = {
 		},
 		ArgSig(U"Target", false, DataType_FixedPoint),
 		ArgSig(U"Source", true, DataType_FixedPoint)
+	),
+	InsSig<MEDIA_MACHINE_TYPE_COUNT>::create(U"RESET", 1,
+		[](VirtualMachine<MEDIA_MACHINE_TYPE_COUNT>& machine, PlanarMemory<MEDIA_MACHINE_TYPE_COUNT>& memory, const List<VMA>& args) {
+			SCALAR_REF(0) = FixedPoint::zero();
+			NEXT_INSTRUCTION
+		},
+		ArgSig(U"Target", false, DataType_FixedPoint)
 	),
 	InsSig<MEDIA_MACHINE_TYPE_COUNT>::create(U"RESET", 1,
 		[](VirtualMachine<MEDIA_MACHINE_TYPE_COUNT>& machine, PlanarMemory<MEDIA_MACHINE_TYPE_COUNT>& memory, const List<VMA>& args) {
@@ -1059,11 +1028,22 @@ static void checkMethodIndex(const MediaMachine& machine, int32_t methodIndex) {
 	}
 }
 
+static VMA resolveImmediateConstant(PlanarMemory<MEDIA_MACHINE_TYPE_COUNT> &memory, const ReadableString &argument) {
+	MediaMemory &mediaMemory = (MediaMemory&)memory;
+	DsrChar firstCharacter = argument[0];
+	if (firstCharacter == U'-' || (U'0' <= firstCharacter || firstCharacter <= U'9')) {
+		return VMA(ArgumentType::Immediate, DataType_FixedPoint, mediaMemory.fixedPointMemory.allocateImmediate(FixedPoint::fromText(argument)));
+	} else {
+		throwError(U"The media machine does not recognize the ", argument, U" argument as an immediate value!\n");
+		return VMA(ArgumentType::Immediate, -1, -1);
+	}
+}
+
 MediaMachine machine_create(const ReadableString& code) {
 	Handle<PlanarMemory<MEDIA_MACHINE_TYPE_COUNT>> memory = handle_create<MediaMemory>().setName("MediaMemory");
 	static const int32_t mediaMachineInstructionCount = sizeof(mediaMachineInstructions) / sizeof(InsSig<MEDIA_MACHINE_TYPE_COUNT>);
 	static const int32_t mediaMachineTypeCount = sizeof(mediaMachineTypes) / sizeof(VMTypeDef<MEDIA_MACHINE_TYPE_COUNT>);
-	return MediaMachine(handle_create<VirtualMachine<MEDIA_MACHINE_TYPE_COUNT>>(code, memory, mediaMachineInstructions, mediaMachineInstructionCount, mediaMachineTypes, mediaMachineTypeCount).setName("MediaMachine"));
+	return MediaMachine(handle_create<VirtualMachine<MEDIA_MACHINE_TYPE_COUNT>>(code, memory, mediaMachineInstructions, mediaMachineInstructionCount, mediaMachineTypes, mediaMachineTypeCount, resolveImmediateConstant).setName("MediaMachine"));
 }
 
 void machine_executeMethod(MediaMachine& machine, int32_t methodIndex) {
