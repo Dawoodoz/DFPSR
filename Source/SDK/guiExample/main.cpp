@@ -54,7 +54,7 @@ void dsrMain(List<String> args) {
 
 	// Create a virtual machine with reusable image generating functions.
 	//   The same Media Machine Code (*.mmc) can be used for multiple themes.
-	MediaMachine machine = machine_create(string_load(U"media/Drawing.mmc"));
+	MediaMachine machine = mediaMachine_create(string_load(U"media/Drawing.mmc"));
 	// Use the virtual machine with a specific style referring to the functions in machine.
 	window_applyTheme(window, theme_createFromFile(machine, U"media/Theme.ini"));
 

@@ -679,27 +679,27 @@ bool VisualComponent::managesChildren() {
 MediaResult dsr::component_generateImage(VisualTheme theme, MediaMethod &method, int32_t width, int32_t height, int32_t red, int32_t green, int32_t blue, int32_t pressed, int32_t focused, int32_t hovered) {
 	return method.callUsingKeywords([&theme, &method, width, height, red, green, blue, pressed, focused, hovered](MediaMachine &machine, int32_t methodIndex, int32_t inputIndex, const ReadableString &argumentName) {
 		if (string_caseInsensitiveMatch(argumentName, U"width")) {
-			machine_setInputByIndex(machine, methodIndex, inputIndex, width);
+			mediaMachine_setInputByIndex(machine, methodIndex, inputIndex, width);
 		} else if (string_caseInsensitiveMatch(argumentName, U"height")) {
-			machine_setInputByIndex(machine, methodIndex, inputIndex, height);
+			mediaMachine_setInputByIndex(machine, methodIndex, inputIndex, height);
 		} else if (string_caseInsensitiveMatch(argumentName, U"pressed")) {
-			machine_setInputByIndex(machine, methodIndex, inputIndex, pressed);
+			mediaMachine_setInputByIndex(machine, methodIndex, inputIndex, pressed);
 		} else if (string_caseInsensitiveMatch(argumentName, U"focused")) {
-			machine_setInputByIndex(machine, methodIndex, inputIndex, focused);
+			mediaMachine_setInputByIndex(machine, methodIndex, inputIndex, focused);
 		} else if (string_caseInsensitiveMatch(argumentName, U"hovered")) {
-			machine_setInputByIndex(machine, methodIndex, inputIndex, hovered);
+			mediaMachine_setInputByIndex(machine, methodIndex, inputIndex, hovered);
 		} else if (string_caseInsensitiveMatch(argumentName, U"red")) {
-			machine_setInputByIndex(machine, methodIndex, inputIndex, red);
+			mediaMachine_setInputByIndex(machine, methodIndex, inputIndex, red);
 		} else if (string_caseInsensitiveMatch(argumentName, U"green")) {
-			machine_setInputByIndex(machine, methodIndex, inputIndex, green);
+			mediaMachine_setInputByIndex(machine, methodIndex, inputIndex, green);
 		} else if (string_caseInsensitiveMatch(argumentName, U"blue")) {
-			machine_setInputByIndex(machine, methodIndex, inputIndex, blue);
+			mediaMachine_setInputByIndex(machine, methodIndex, inputIndex, blue);
 		} else if (theme_assignMediaMachineArguments(theme, method.contextIndex, machine, methodIndex, inputIndex, argumentName)) {
 			// Assigned by theme_assignMediaMachineArguments.
 		} else {
 			// TODO: Ask the theme for the argument using a specified style class for variations between different types of buttons, checkboxes, panels, et cetera.
 			//       Send a warning if the theme did not provide an input argument to its own media function.
-			sendWarning(U"Unhandled setting \"", argumentName, U"\" requested by the media method \"", machine_getMethodName(machine, methodIndex), U"\" in the visual theme!\n");
+			sendWarning(U"Unhandled setting \"", argumentName, U"\" requested by the media method \"", mediaMachine_getMethodName(machine, methodIndex), U"\" in the visual theme!\n");
 		}
 	});
 }

@@ -96,3 +96,6 @@ Changes from version 0.3.0
 			If you see that the compiler can't find a constructor for StorableCallback and it points to a variable declaration, you need to initialize it with a function.
 		string_assignMessageHandler now uses function pointers to avoid cyclic dependencies between stringAPI.h and StorableCallback.h.
 			A message handler needs to be stored but will usually only work with global and thread-local variables.
+	* The "machine_" prefix was replaced with "mediaMachine_".
+		Because there will likely be more instances of VirtualMachine with their own APIs, so it is best to rename it before there are compilers generating the undocumented assembler language.
+		In case that you decided to learn an undocumented assembler language for the media machine before the script compiler is ready, simply replace "machine_" with "mediaMachine_" and the code should work as before.

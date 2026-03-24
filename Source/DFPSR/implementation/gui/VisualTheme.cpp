@@ -338,7 +338,7 @@ public:
 static VisualTheme defaultTheme;
 VisualTheme theme_getDefault() {
 	if (!(defaultTheme.getUnsafe())) {
-		defaultTheme = theme_createFromText(machine_create(defaultMediaMachineCode), defaultStyleSettings, file_getCurrentPath());
+		defaultTheme = theme_createFromText(mediaMachine_create(defaultMediaMachineCode), defaultStyleSettings, file_getCurrentPath());
 	}
 	return defaultTheme;
 }
@@ -432,7 +432,7 @@ MediaMethod theme_getScalableImage(const VisualTheme &theme, const ReadableStrin
 	if ((classIndex != -1 && theme->settings[classIndex].getString(methodName, U"method"))
 	                     || (theme->settings[0].getString(methodName, U"method"))) {
 		// If the class existed and it contained the setting or the setting could be found in the default class then return it.
-		return machine_getMethod(theme->machine, methodName, theme->getClassIndex(className));
+		return mediaMachine_getMethod(theme->machine, methodName, theme->getClassIndex(className));
 	} else {
 		throwError(U"theme_getScalableImage: Can't get scalable image of class ", className, U" because the setting did not exist in neither the class nor the default settings!\n");
 		return MediaMethod();
@@ -443,14 +443,14 @@ static bool assignMediaMachineArguments(ClassSettings settings, MediaMachine &ma
 	// Search for argumentName in colorImages.
 	for (int32_t i = 0; i < settings.colorImages.length(); i++) {
 		if (string_caseInsensitiveMatch(settings.colorImages[i].key, argumentName)) {
-			machine_setInputByIndex(machine, methodIndex, inputIndex, settings.colorImages[i].value.value);
+			mediaMachine_setInputByIndex(machine, methodIndex, inputIndex, settings.colorImages[i].value.value);
 			return true;
 		}
 	}
 	// Search for argumentName in scalars.
 	for (int32_t i = 0; i < settings.scalars.length(); i++) {
 		if (string_caseInsensitiveMatch(settings.scalars[i].key, argumentName)) {
-			machine_setInputByIndex(machine, methodIndex, inputIndex, settings.scalars[i].value);
+			mediaMachine_setInputByIndex(machine, methodIndex, inputIndex, settings.scalars[i].value);
 			return true;
 		}
 	}
@@ -467,8 +467,8 @@ bool theme_assignMediaMachineArguments(const VisualTheme &theme, int32_t context
 
 ComponentState theme_getStateListenerMask(const MediaMethod &scalableImage) {
 	ComponentState result = 0;
-	for (int32_t inputIndex = 0; inputIndex < machine_getInputCount(scalableImage.machine, scalableImage.methodIndex); inputIndex++) {
-		String upperInputName = string_upperCase(machine_getInputName(scalableImage.machine, scalableImage.methodIndex, inputIndex));
+	for (int32_t inputIndex = 0; inputIndex < mediaMachine_getInputCount(scalableImage.machine, scalableImage.methodIndex); inputIndex++) {
+		String upperInputName = string_upperCase(mediaMachine_getInputName(scalableImage.machine, scalableImage.methodIndex, inputIndex));
 		if (string_match(upperInputName, U"FOCUSED")) {
 			result |= componentState_focusDirect;
 		} else if (string_match(upperInputName, U"HOVERED")) {
