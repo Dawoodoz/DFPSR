@@ -37,11 +37,17 @@
 //       because you only need to store handles to the data in the virtual machine.
 //     No need to make copies as if it was a physically separate memory space.
 
+// For each data type in the provided instruction set architecture, you must specify move, reset or both instructions.
+//   Defining the move instruction for the type allows initializing variables of the type using an explicit initial value.
+//     MOVE: target, source
+//   Defining the reset instruction for the type allows initializing values of the type without an explicit initial value.
+//     RESET: target
+
 #ifndef DFPSR_VIRTUAL_MACHINE
 #define DFPSR_VIRTUAL_MACHINE
 
 #include <cstdint>
-#include "../../math/FixedPoint.h"
+#include "../../base/StorableCallback.h"
 #include "../../collection/FixedArray.h"
 #include "../../collection/Array.h"
 #include "../../collection/List.h"
@@ -76,14 +82,14 @@ static ReadableString getName(AccessType access) {
 
 // Types used in machine instuctions
 enum class ArgumentType {
-	Immediate,
-	Reference
+	Immediate,      // Index to MemoryPlane::immediate
+	Reference,      // Indirect index translated into both global and stack-relative locations within MemoryPlane::stack
+	MethodReference // Index to a method to call
 };
 
 // Types
 // TODO: Make the use of FixedPoint optional in VirtualMachine
 using DataType = int32_t;
-static const DataType DataType_FixedPoint = 0;
 
 template <int32_t TYPE_COUNT>
 struct Variable {
@@ -108,11 +114,11 @@ struct Variable {
 struct VMA {
 	const ArgumentType argType;
 	const DataType dataType;
-	const FixedPoint value;
-	explicit VMA(FixedPoint value)
-	: argType(ArgumentType::Immediate), dataType(DataType_FixedPoint), value(value) {}
-	VMA(DataType dataType, int32_t globalIndex)
-	: argType(ArgumentType::Reference), dataType(dataType), value(FixedPoint::fromMantissa(globalIndex)) {}
+	// When argType equals Immediate, the index refers to MemoryPlane::accessByImmediateIndex(index).
+	// When argType equals Reference, the index refers to MemoryPlane::accessByGlobalIndex(index, framePointer).
+	const int32_t index; // Refers to 
+	VMA(ArgumentType argType, DataType dataType, int32_t index)
+	: argType(argType), dataType(dataType), index(index) {}
 };
 
 struct ArgSig {
@@ -122,7 +128,7 @@ struct ArgSig {
 	ArgSig(const ReadableString& name, bool byValue, DataType dataType)
 	: name(name), byValue(byValue), dataType(dataType) {}
 	bool matches(ArgumentType argType, DataType dataType) const {
-		if (this->byValue && this->dataType == DataType_FixedPoint) {
+		if (this->byValue) {
 			return dataType == this->dataType && (argType == ArgumentType::Immediate || argType == ArgumentType::Reference);
 		} else {
 			return dataType == this->dataType && argType == ArgumentType::Reference;
@@ -132,7 +138,10 @@ struct ArgSig {
 
 template <typename T>
 struct MemoryPlane {
+	// Memory that can be pointed to within the address space.
 	Array<T> stack;
+	// Memory that is only used for nameless immediate constants treated as values.
+	List<T> immediate;
 	explicit MemoryPlane(int32_t size) : stack(size, T()) {}
 	T& accessByStackIndex(int32_t stackIndex) {
 		return this->stack[stackIndex];
@@ -142,9 +151,28 @@ struct MemoryPlane {
 		int32_t stackIndex = (globalIndex < 0) ? -(globalIndex + 1) : (framePointer + globalIndex);
 		return this->stack[stackIndex];
 	}
+	const T& accessByImmediateIndex(int32_t immediateIndex) {
+		return this->immediate[immediateIndex];
+	}
 	T& getRef(const VMA& arg, int32_t framePointer) {
 		assert(arg.argType == ArgumentType::Reference);
-		return this->accessByGlobalIndex(arg.value.getMantissa(), framePointer);
+		return this->accessByGlobalIndex(arg.index, framePointer);
+	}
+	const T& getImm(const VMA& arg) {
+		assert(arg.argType == ArgumentType::Immediate);
+		return accessByImmediateIndex(arg.index);
+	}
+	const T& getRead(const VMA& arg, int32_t framePointer) {
+		if (arg.argType == ArgumentType::Immediate) {
+			return accessByImmediateIndex(arg.index);
+		} else /* if (arg.argType == ArgumentType::Reference) */ {
+			return this->accessByGlobalIndex(arg.index, framePointer);
+		}
+	}
+	// TODO: Call this when parsing an immediate value in the source code.
+	//       From where can it be called?
+	int32_t allocateImmediate(const T& value) {
+		return this->immediate.pushGetIndex(value);
 	}
 };
 
@@ -232,8 +260,6 @@ public:
 // Types
 template <int32_t TYPE_COUNT>
 inline static void initializeTemplate(VirtualMachine<TYPE_COUNT>& machine, int32_t globalIndex, const ReadableString& defaultValue) {}
-template <int32_t TYPE_COUNT>
-using VMT_Initializer = decltype(&initializeTemplate<TYPE_COUNT>);
 
 template <int32_t TYPE_COUNT>
 inline static void debugPrintTemplate(PlanarMemory<TYPE_COUNT>& memory, Variable<TYPE_COUNT>& variable, int32_t globalIndex, int32_t* framePointer, bool fullContent) {}
@@ -245,10 +271,9 @@ struct VMTypeDef {
 	ReadableString name;
 	DataType dataType;
 	bool allowDefaultValue;
-	VMT_Initializer<TYPE_COUNT> initializer;
 	VMT_DebugPrinter<TYPE_COUNT> debugPrinter;
-	VMTypeDef(const ReadableString& name, DataType dataType, bool allowDefaultValue, VMT_Initializer<TYPE_COUNT> initializer, VMT_DebugPrinter<TYPE_COUNT> debugPrinter)
-	: name(name), dataType(dataType), allowDefaultValue(allowDefaultValue), initializer(initializer), debugPrinter(debugPrinter) {}
+	VMTypeDef(const ReadableString& name, DataType dataType, bool allowDefaultValue, VMT_DebugPrinter<TYPE_COUNT> debugPrinter)
+	: name(name), dataType(dataType), allowDefaultValue(allowDefaultValue), debugPrinter(debugPrinter) {}
 };
 
 template <int32_t TYPE_COUNT>
@@ -287,7 +312,6 @@ struct Method {
 	}
 };
 
-// A virtual machine for efficient media processing.
 template <int32_t TYPE_COUNT>
 struct VirtualMachine {
 	// Methods
@@ -306,6 +330,8 @@ struct VirtualMachine {
 	}
 	// Instruction instances
 	List<MachineWord<TYPE_COUNT>> machineWords;
+	// Resolving of immediate constants in arguments.
+	const StorableCallback<VMA(PlanarMemory<TYPE_COUNT> &memory, const ReadableString &argument)> interpretImmediateArgument;
 	// Types
 	const VMTypeDef<TYPE_COUNT>* machineTypes; int32_t machineTypeCount;
 	const VMTypeDef<TYPE_COUNT>* getMachineType(const ReadableString& name) {
@@ -368,9 +394,10 @@ struct VirtualMachine {
 	// Constructor
 	VirtualMachine(const ReadableString& code, const Handle<PlanarMemory<TYPE_COUNT>>& memory,
 	  const InsSig<TYPE_COUNT>* machineInstructions, int32_t machineInstructionCount,
-	  const VMTypeDef<TYPE_COUNT>* machineTypes, int32_t machineTypeCount)
+	  const VMTypeDef<TYPE_COUNT>* machineTypes, int32_t machineTypeCount,
+	  StorableCallback<VMA(PlanarMemory<TYPE_COUNT> &memory, const ReadableString &argument)> interpretImmediateArgument)
 	: memory(memory), machineInstructions(machineInstructions), machineInstructionCount(machineInstructionCount),
-	  machineTypes(machineTypes), machineTypeCount(machineTypeCount) {
+	  interpretImmediateArgument(interpretImmediateArgument), machineTypes(machineTypes), machineTypeCount(machineTypeCount) {
 		#ifdef VIRTUAL_MACHINE_DEBUG_PRINT
 			printText(U"Starting media machine.\n");
 		#endif
@@ -441,6 +468,8 @@ struct VirtualMachine {
 			Indices to unifiedLocalIndices in methods
 			Can be used to find the name of the variable for debugging
 			Unlike the type local index, the unified index knows the type
+		Immediate index:
+			Only immediate references uses the address space for immediate indices.
 	*/
 	static int32_t globalToTypeLocalIndex(int32_t globalIndex) {
 		return globalIndex < 0 ? -(globalIndex + 1) : globalIndex;
@@ -488,6 +517,7 @@ struct VirtualMachine {
 		}
 	}
 
+	// Generate machine code to call a method using the "call" instruction.
 	void addCallInstructions(const List<String>& arguments) {
 		if (arguments.length() < 1) {
 			throwError(U"Cannot make a call without the name of a method!\n");
@@ -507,8 +537,10 @@ struct VirtualMachine {
 		// Split assembler arguments into separate input and output arguments for machine instructions
 		List<VMA> inputArguments;
 		List<VMA> outputArguments;
-		inputArguments.pushConstruct(FixedPoint::fromMantissa(calledMethodIndex));
-		outputArguments.pushConstruct(FixedPoint::fromMantissa(calledMethodIndex));
+		// Instead of storing an index to an immediate constant that requires a type, we use MethodReference to refer directly to the called method.
+		VMA methodIndex = VMA(ArgumentType::MethodReference, -1, calledMethodIndex);
+		inputArguments.push(methodIndex);
+		outputArguments.push(methodIndex);
 		int32_t outputCount = 0;
 		for (int32_t a = 1; a < arguments.length(); a++) {
 			ReadableString content = string_removeOuterWhiteSpace(arguments[a]);
@@ -538,9 +570,14 @@ struct VirtualMachine {
 				throwError(U"Input argument for \"", variable->name, U"\" in \"", calledMethod->name, U"\" must have the type \"", variable->typeDescription->name, U"\"!\n");
 			}
 		}
+		// Insert a machine instruction customized for calling a specific method
+		//   Everything within this lambda will then be executed when the call is made at runtime
 		addMachineWord([](VirtualMachine& machine, PlanarMemory<TYPE_COUNT>& memory, const List<VMA>& args) {
 			// Get the method to call
-			int32_t calledMethodIndex = args[0].value.getMantissa();
+			int32_t calledMethodIndex = args[0].index;
+			if (calledMethodIndex == 0) {
+				throwError(U"Can not call the init method from within the virtual machine!\n");
+			}
 			#ifdef VIRTUAL_MACHINE_DEBUG_PRINT
 				int32_t oldMethodIndex = memory.current.methodIndex;
 			#endif
@@ -563,10 +600,13 @@ struct VirtualMachine {
 					printText(U"    new stack pointer = ", newStackPointer[t], U"\n");
 				#endif
 			}
-			// Assign inputs
+			// Assign inputs while skipping the method index in the first argument
 			for (int32_t a = 1; a < args.length(); a++) {
+				// Get the argument
 				Variable<TYPE_COUNT>* target = &calledMethod->locals[a - 1];
+				// Get the argument's type
 				DataType typeIndex = target->typeDescription->dataType;
+				// Get the stack location
 				int32_t targetStackIndex = target->getStackIndex(newFramePointer[typeIndex]);
 				memory.store(targetStackIndex, args[a], memory.current.framePointer[typeIndex], typeIndex);
 			}
@@ -581,7 +621,7 @@ struct VirtualMachine {
 		}, inputArguments);
 		// Get results from the method
 		addMachineWord([](VirtualMachine& machine, PlanarMemory<TYPE_COUNT>& memory, const List<VMA>& args) {
-			int32_t calledMethodIndex = args[0].value.getMantissa();
+			int32_t calledMethodIndex = args[0].index;
 			Method<TYPE_COUNT>* calledMethod = &machine.methods[calledMethodIndex];
 			#ifdef VIRTUAL_MACHINE_DEBUG_PRINT
 				printText(U"Writing results after call to \"", calledMethod->name, U"\":\n");
@@ -671,9 +711,25 @@ struct VirtualMachine {
 		int32_t typeLocalIndex = currentMethod->count[typeDef.dataType] - 1;
 		int32_t globalIndex = typeLocalToGlobalIndex(global, typeLocalIndex);
 		this->methods[methodIndex].locals.pushConstruct(name, access, &typeDef, typeLocalIndex, global);
+		// If the variable is supposed to be initialized automatically and no value will be given from an input, then we have to initialize it using hidden machine instructions.
 		if (initialize && access != AccessType::Input) {
-			// Generate instructions for assigning the variable's initial value
-			typeDef.initializer(*this, globalIndex, defaultValueText);
+			// TODO: Give custom error messages when load or reset was not implemented.
+			//       If reset is missing, then the type does not have a default constructor and must have one specified.
+			//       If move is missing, then the type does not have a constructor accepting immediate constants.
+			if (string_length(defaultValueText) > 0) {
+				// An initial value was provided explicitly.
+				//   Look for a load instruction.
+				this->interpretCommand(U"Load", List<VMA>(
+					VMA(ArgumentType::Reference, typeDef.dataType, globalIndex),
+					this->interpretImmediateArgument(this->memory.getReference(), defaultValueText)
+				));
+			} else {
+				// No initial value was provided.
+				//   Look for a reset instruction.
+				this->interpretCommand(U"Reset", List<VMA>(
+					VMA(ArgumentType::Reference, typeDef.dataType, globalIndex)
+				));
+			}
 		}
 		return &this->methods[methodIndex].locals.last();
 	}
@@ -700,11 +756,8 @@ struct VirtualMachine {
 	VMA VMAfromText(int32_t methodIndex, const ReadableString& content) {
 		DsrChar first = content[0];
 		DsrChar second = content[1];
-		if (first == U'-' && second >= U'0' && second <= U'9') {
-			return VMA(FixedPoint::fromText(content));
-		} else if (first >= U'0' && first <= U'9') {
-			return VMA(FixedPoint::fromText(content));
-		} else {
+		if ((first >= U'a' && first <= U'z') || (first >= U'A' && first <= U'Z') || first >= U'_' || first >= U'<') {
+			// If the argument begins with a..z | A..Z | _ | < then it is a non-immediate argument.
 			int32_t leftIndex = string_findFirst(content, U'<');
 			int32_t rightIndex = string_findLast(content, U'>');
 			if (leftIndex > -1 && rightIndex > -1) {
@@ -716,26 +769,29 @@ struct VirtualMachine {
 				}
 				Variable<TYPE_COUNT>* resource = this->declareVariable(methodIndex, AccessType::Hidden, typeName, name, false, U"");
 				if (resource) {
-					return VMA(resource->typeDescription->dataType, resource->getGlobalIndex());
+					return VMA(ArgumentType::Reference, resource->typeDescription->dataType, resource->getGlobalIndex());
 				} else {
 					throwError(U"The resource \"", name, U"\" could not be declared as \"", typeName, U"\"!\n");
-					return VMA(FixedPoint());
+					return VMA(ArgumentType::Immediate, -1, -1);
 				}
 			} else if (leftIndex > -1) {
 				throwError(U"Using < without > for in-place temp allocation.\n");
-				return VMA(FixedPoint());
+				return VMA(ArgumentType::Immediate, -1, -1);
 			} else if (rightIndex > -1) {
 				throwError(U"Using > without < for in-place temp allocation.\n");
-				return VMA(FixedPoint());
+				return VMA(ArgumentType::Immediate, -1, -1);
 			} else {
 				Variable<TYPE_COUNT>* resource = getResource(content, methodIndex);
 				if (resource) {
-					return VMA(resource->typeDescription->dataType, resource->getGlobalIndex());
+					return VMA(ArgumentType::Reference, resource->typeDescription->dataType, resource->getGlobalIndex());
 				} else {
 					throwError(U"The resource \"", content, U"\" could not be found! Make sure that it's declared before being used.\n");
-					return VMA(FixedPoint());
+					return VMA(ArgumentType::Immediate, -1, -1);
 				}
 			}
+		} else {
+			// Ask the instruction set architecture to interpret the argument, while assuming that it is an immediate constant.
+			return this->interpretImmediateArgument(this->memory.getReference(), content);
 		}
 	}
 
@@ -793,9 +849,10 @@ struct VirtualMachine {
 		}
 		void debugArgument(const VMA& data, int32_t methodIndex, int32_t* framePointer, bool fullContent) {
 			if (data.argType == ArgumentType::Immediate) {
-				printText(data.value);
+				// TODO: Should debug printing be done here or in the implementation that actually knows the types?
+				printText(U"Immediate index ", data.index);
 			} else {
-				int32_t globalIndex = data.value.getMantissa();
+				int32_t globalIndex = data.index;
 				Variable<TYPE_COUNT>* variable = getDebugInfo(data.dataType, globalIndex, methodIndex);
 				const VMTypeDef<TYPE_COUNT>* typeDefinition = getMachineType(data.dataType);
 				#ifndef VIRTUAL_MACHINE_DEBUG_FULL_CONTENT
@@ -850,6 +907,9 @@ struct VirtualMachine {
 		}
 	#endif
 	void executeMethod(int32_t methodIndex) {
+		if (methodIndex < 0 || methodIndex >= this->methods.length()) {
+			throwError(U"Can not call a method of index ", methodIndex, U" using executeMethod, because it is out of bound 0..", this->methods.length() - 1, U"!\n");
+		}
 		Method<TYPE_COUNT>* rootMethod = &this->methods[methodIndex];
 
 		#ifdef VIRTUAL_MACHINE_PROFILE
