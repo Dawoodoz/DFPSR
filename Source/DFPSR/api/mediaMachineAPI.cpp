@@ -164,6 +164,14 @@ static const InsSig<MEDIA_MACHINE_TYPE_COUNT> mediaMachineInstructions[] = {
 		},
 		ArgSig(U"Target", false, DataType_ImageRgbaU8)
 	),
+	InsSig<MEDIA_MACHINE_TYPE_COUNT>::create(U"JUMP", 1,
+		[](VirtualMachine<MEDIA_MACHINE_TYPE_COUNT>& machine, PlanarMemory<MEDIA_MACHINE_TYPE_COUNT>& memory, const List<VMA>& args) {
+			int32_t targetAddress = args[0].index;
+			// TODO: Assert that the target address is within the same method when running in debug mode.
+			memory.current.programCounter = targetAddress;
+		},
+		ArgSig(U"InstructionAddress", true, DataType_InstructionAddress)
+	),
 	InsSig<MEDIA_MACHINE_TYPE_COUNT>::create(U"ROUND", 1,
 		[](VirtualMachine<MEDIA_MACHINE_TYPE_COUNT>& machine, PlanarMemory<MEDIA_MACHINE_TYPE_COUNT>& memory, const List<VMA>& args) {
 			SCALAR_REF(0) = FixedPoint::fromWhole(fixedPoint_round(SCALAR_VALUE(1)));

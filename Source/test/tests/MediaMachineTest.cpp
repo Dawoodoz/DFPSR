@@ -15,6 +15,9 @@ START_TEST(CompilerFront)
 			U"	INPUT: FixedPoint, x\n"
 			U"	OUTPUT: FixedPoint, result\n"
 			U"	CALL: addFixedPoint, result, x, 8\n"
+			U"	JUMP: myLabel\n"
+			U"		MOVE: result, 10\n" // Dead code to jump past
+			U"	LABEL: myLabel\n"
 			U"END:\n"
 		);
 		ASSERT(mediaMachine_exists(testMachine));
