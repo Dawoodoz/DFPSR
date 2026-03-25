@@ -82,14 +82,17 @@ static ReadableString getName(AccessType access) {
 
 // Types used in machine instuctions
 enum class ArgumentType {
-	Immediate,      // Index to MemoryPlane::immediate
-	Reference,      // Indirect index translated into both global and stack-relative locations within MemoryPlane::stack
-	MethodReference // Index to a method to call
+	Immediate,         // Index to MemoryPlane::immediate
+	Reference,         // Indirect index translated into both global and stack-relative locations within MemoryPlane::stack
+	MethodReference,   // Index to a method to call
+	InstructionAddress // Index to a machine instruction, which instructions can jump to.
 };
 
 // Types
-// TODO: Make the use of FixedPoint optional in VirtualMachine
 using DataType = int32_t;
+
+// Instruction addresses uses the list of instructions as their read-only memory.
+static const DataType DataType_InstructionAddress = -1;
 
 template <int32_t TYPE_COUNT>
 struct Variable {
@@ -129,9 +132,9 @@ struct ArgSig {
 	: name(name), byValue(byValue), dataType(dataType) {}
 	bool matches(ArgumentType argType, DataType dataType) const {
 		if (this->byValue) {
-			return dataType == this->dataType && (argType == ArgumentType::Immediate || argType == ArgumentType::Reference);
+			return (dataType == this->dataType) && (argType == ArgumentType::Reference || argType == ArgumentType::Immediate || argType == ArgumentType::InstructionAddress);
 		} else {
-			return dataType == this->dataType && argType == ArgumentType::Reference;
+			return (dataType == this->dataType) && (argType == ArgumentType::Reference);
 		}
 	}
 };
@@ -276,6 +279,13 @@ struct VMTypeDef {
 	: name(name), dataType(dataType), allowDefaultValue(allowDefaultValue), debugPrinter(debugPrinter) {}
 };
 
+struct InstructionLabel {
+	int32_t address;
+	String identifier;
+	InstructionLabel(int32_t address, const ReadableString &identifier)
+	: address(address), identifier(identifier) {}
+};
+
 template <int32_t TYPE_COUNT>
 struct Method {
 	String name;
@@ -292,6 +302,10 @@ struct Method {
 	bool declaredNonInput = false; // Goes true when a non-input is declared
 	bool declaredLocals = false; // Goes true when a local is declared
 	List<Variable<TYPE_COUNT>> locals; // locals[0..inputCount-1] are the inputs, while locals[inputCount..inputCount+outputCount-1] are the outputs
+
+	bool ended = false;
+
+	List<InstructionLabel> labels;
 
 	// Type-specific spaces
 	FixedArray<int32_t, TYPE_COUNT> count;
@@ -507,6 +521,15 @@ struct VirtualMachine {
 				memory.current.programCounter = -1;
 			}
 		});
+	}
+
+	bool isInsideOfMethod() const {
+		return this->methods.length() > 0 && !(this->methods.last().ended);
+	}
+
+	void endCurrentMethod() {
+		this->addReturnInstruction();
+		this->methods.last().ended = true;
 	}
 
 	static ReadableString getArg(const List<String>& arguments, int32_t index) {
@@ -781,6 +804,19 @@ struct VirtualMachine {
 				throwError(U"Using > without < for in-place temp allocation.\n");
 				return VMA(ArgumentType::Immediate, -1, -1);
 			} else {
+				// Look for a label.
+				if (this->isInsideOfMethod()) {
+					Method<TYPE_COUNT> &method = this->methods.last();
+					String labelName = string_removeOuterWhiteSpace(content);
+					debugText(U"Checking if ", labelName, U" is a label in the ", method.name, U" method.\n");
+					for (int32_t l = 0; l < method.labels.length(); l++) {
+						debugText(U"  * Label ", method.labels[l].identifier, U" @ ", method.labels[l].address, U"\n");
+						if (string_caseInsensitiveMatch(method.labels[l].identifier, labelName)) {
+							return VMA(ArgumentType::InstructionAddress, DataType_InstructionAddress, method.labels[l].address);
+						}
+					}
+				}
+				// If it is not a label then look for variables.
 				Variable<TYPE_COUNT>* resource = getResource(content, methodIndex);
 				if (resource) {
 					return VMA(ArgumentType::Reference, resource->typeDescription->dataType, resource->getGlobalIndex());
@@ -808,6 +844,7 @@ struct VirtualMachine {
 			if (this->methods.length() == 1) {
 				// When more than one function exists, the init method must end with a return instruction
 				//   Otherwise it would start executing instructions in another method and crash
+				// Finalizing the init method must wait until the next method begins, because it is extended each time a global variable is introduced at the top.
 				this->addReturnInstruction();
 			}
 			this->methods.pushConstruct(getArg(arguments, 0), this->machineWords.length(), this->machineTypeCount);
@@ -822,10 +859,31 @@ struct VirtualMachine {
 		} else if (string_caseInsensitiveMatch(command, U"Output")) {
 			this->declareVariable(methods.length() - 1, AccessType::Output, getArg(arguments, 0), getArg(arguments, 1), true, getArg(arguments, 2));
 		} else if (string_caseInsensitiveMatch(command, U"End")) {
+			if (!this->isInsideOfMethod()) throwError(U"Can not end a method outside of methods!\n");
 			this->addReturnInstruction();
 		} else if (string_caseInsensitiveMatch(command, U"Call")) {
+			if (!this->isInsideOfMethod()) throwError(U"Can not make calls outside of methods!\n");
 			this->addCallInstructions(arguments);
+		} else if (string_caseInsensitiveMatch(command, U"Label")) {
+			// TODO: Move this into a method for creating a label.
+			// TODO: Prevent overlapping names between methods, local variables and local labels.
+			// TODO: Resolve label identifiers into ArgumentType::InstructionAddress and assign the argument's index directly to the program counter when jumping.
+			if (!this->isInsideOfMethod()) {
+				throwError(U"Can not place labels outside of methods!\n");
+			} else if (arguments.length() < 1) {
+				throwError(U"Labels need to be named to allow identifying the following machine instruction!\n");
+			} else if (arguments.length() > 1) {
+				throwError(U"Labels may not have more than one argument containing the identifier!\n");
+			} else {
+				int32_t targetAddress = this->machineWords.length();
+				String labelIdentifier = arguments[0];
+				// TODO: Reject invalid label names.
+				debugText(U"Declaring label ", labelIdentifier, U" @ ", targetAddress, U"\n");
+				this->methods.last().labels.pushConstruct(targetAddress, labelIdentifier);
+			}
 		} else {
+			// TODO: Delay resolving so that functions can be declared after calls to them and jumps can go to later labels.
+			// If the command did not match with any of the generic instructions, resolve the arguments and look for a custom machine instruction.
 			int32_t methodIndex = this->methods.length() - 1;
 			List<VMA> resolvedArguments;
 			for (int32_t a = 0; a < arguments.length(); a++) {
