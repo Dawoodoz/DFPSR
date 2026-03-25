@@ -42,6 +42,8 @@
 //     MOVE: target, source
 //   Defining the reset instruction for the type allows initializing values of the type without an explicit initial value.
 //     RESET: target
+// While intrinsic commands allow overloading with different expected arguments to know what standard memory operations are called,
+//   non-intrinsic methods still need unique names because otherwise the caller would be forced to provide argument types just to find the method to call.
 
 #ifndef DFPSR_VIRTUAL_MACHINE
 #define DFPSR_VIRTUAL_MACHINE
@@ -56,9 +58,152 @@
 // Flags
 //#define VIRTUAL_MACHINE_PROFILE // Enable profiling
 //#define VIRTUAL_MACHINE_DEBUG_PRINT // Enable debug printing (will affect profiling)
-//#define VIRTUAL_MACHINE_DEBUG_FULL_CONTENT // Allow debug printing to show the full content of images
+//#define VIRTUAL_MACHINE_DEBUG_FULL_CONTENT // Allow debug printing to show the full content of variables
 
 namespace dsr {
+
+// Instead of tokenizing, the assembler simply splits everything after colon along commas to get the arguments.
+//   To avoid splitting with commas inside of text used to create immediate values, only the commas outside of "" () [] {} are used to split.
+static List<String> nestedCommaSplit(const ReadableString& source) {
+	List<String> result;
+	intptr_t sectionStart = 0;
+	bool quoted = false;
+	intptr_t depth = 0;
+	for (intptr_t i = 0; i < string_length(source); i++) {
+		DsrChar c = source[i];
+		if (quoted) {
+			if (c == U'"') {
+				quoted = false;
+			} else if (c == U'\\') {
+				// Skip one character after escape.
+				i++;
+			}
+		} else {
+			if (c == U'"') {
+				quoted = true;
+			} else if (c == U',' and depth == 0) {
+				ReadableString element = string_exclusiveRange(source, sectionStart, i);
+				result.push(string_removeOuterWhiteSpace(element));
+				sectionStart = i + 1;
+			} else if (c == U'(' || c == U'[' || c == U'{') {
+				depth++;
+			} else if (c == U')' || c == U']' || c == U'}') {
+				depth--;
+			}
+		}
+	}
+	if (string_length(source) > sectionStart) {
+		result.push(string_removeOuterWhiteSpace(string_exclusiveRange(source, sectionStart, string_length(source))));
+	}
+	if (quoted) {
+		throwError(U"Quotes may not contain unmangled line-breaks in virtual machine assembler code!\n");
+	}
+	if (depth != 0) {
+		throwError(U"Immediate constants must balance expressions containing () [] {}, because otherwise parsing of virtual machine assembler code can not know which commas are used to separate arguments!\n");
+	}
+	return result;
+}
+
+struct UnresolvedCommand {
+	String command;
+	List<String> arguments;
+	UnresolvedCommand(const ReadableString &command, const List<String> &arguments)
+	: command(command), arguments(arguments) {}
+};
+
+struct UnresolvedMethod {
+	String name;
+	List<String> labels;
+	List<UnresolvedCommand> commands;
+	UnresolvedMethod(const ReadableString &name)
+	: name(name) {}
+};
+
+struct UnresolvedProgram {
+	List<UnresolvedCommand> commands;
+	List<UnresolvedMethod> methods;
+};
+
+int32_t findUnresolvedMethod(const UnresolvedProgram &unresolvedProgram, const ReadableString& name) {
+	for (int32_t i = 0; i < unresolvedProgram.methods.length(); i++) {
+		if (string_caseInsensitiveMatch(unresolvedProgram.methods[i].name, name)) {
+			return i;
+		}
+	}
+	return -1;
+}
+
+static UnresolvedProgram scanProgram(const ReadableString &code) {
+	// An unresolved program structure to be resolved once we have all identifiers.
+	UnresolvedProgram program;
+	// Index to program.methods.
+	int32_t methodIndex = -1;
+	string_split_callback([&methodIndex, &program](ReadableString currentLine) {
+		// If the line has a comment, then skip everything from #
+		int32_t commentIndex = string_findFirst(currentLine, U'#');
+		if (commentIndex > -1) {
+			currentLine = string_before(currentLine, commentIndex);
+		}
+		currentLine = string_removeOuterWhiteSpace(currentLine);
+		int32_t colonIndex = string_findFirst(currentLine, U':');
+		if (colonIndex > -1) {
+			ReadableString command = string_removeOuterWhiteSpace(string_before(currentLine, colonIndex));
+			ReadableString argumentLine = string_after(currentLine, colonIndex);
+			List<String> arguments = nestedCommaSplit(argumentLine);
+			if (string_caseInsensitiveMatch(command, U"BEGIN")) {
+				if (arguments.length() != 1) {
+					throwError(U"Beginning a method should take one argument as the method's identifier!\n");
+				} else {
+					// The old length becomes the index.
+					methodIndex = program.methods.length();
+					program.methods.pushConstruct(arguments[0]);
+				}
+			} else if (string_caseInsensitiveMatch(command, U"END")) {
+				// No longer in a method.
+				methodIndex = -1;
+			} else {
+				if (methodIndex == -1) {
+					#ifdef VIRTUAL_MACHINE_DEBUG_PRINT
+						printText(U"Loading command ", command, U" into global initialization.\n");
+					#endif
+					// Create unresolved commands globally, which is used to declare global variables.
+					program.commands.pushConstruct(command, arguments);
+				} else {
+					UnresolvedMethod &method = program.methods[methodIndex];
+					// TODO: Register names and types.
+					if (string_caseInsensitiveMatch(command, U"LABEL")) {
+						if (arguments.length() != 1) {
+							throwError(U"Labels should take one argument as the label's identifier!\n");
+						} else {
+							method.labels.push(arguments[0]);
+						}
+					}
+					/*
+					if (string_caseInsensitiveMatch(command, U"Hidden")
+					 || string_caseInsensitiveMatch(command, U"Input")
+					 || string_caseInsensitiveMatch(command, U"Output")) {
+						if (arguments.length() == 2) {
+							method.variables.pushConstruct(arguments[0], arguments[1], U"");
+						} else if (arguments.length() == 3) {
+							method.variables.pushConstruct(arguments[0], arguments[1], arguments[2]);
+						} else {
+							throwError(U"Variable declarations need identifier, type and optionally an initial value!\n");
+						}
+					}
+					*/
+					#ifdef VIRTUAL_MACHINE_DEBUG_PRINT
+						printText(U"Loading command ", command, U" into ", method.name, U".\n");
+					#endif
+					// Create unresolved commands in the active method.
+					method.commands.pushConstruct(command, arguments);
+				}
+			}
+		} else if (string_length(currentLine) > 0) {
+			throwError(U"Unexpected line \"", currentLine, U"\".\n");
+		}
+	}, code, U'\n');
+	return program;
+}
 
 // Forward declarations
 template <int32_t TYPE_COUNT> struct VirtualMachine;
@@ -92,7 +237,8 @@ enum class ArgumentType {
 using DataType = int32_t;
 
 // Instruction addresses uses the list of instructions as their read-only memory.
-static const DataType DataType_InstructionAddress = -1;
+static const DataType DataType_Label = -1;
+static const DataType DataType_InstructionAddress = -2;
 
 template <int32_t TYPE_COUNT>
 struct Variable {
@@ -115,11 +261,11 @@ struct Variable {
 
 // Virtual Machine Argument
 struct VMA {
-	const ArgumentType argType;
-	const DataType dataType;
+	ArgumentType argType;
+	DataType dataType;
 	// When argType equals Immediate, the index refers to MemoryPlane::accessByImmediateIndex(index).
 	// When argType equals Reference, the index refers to MemoryPlane::accessByGlobalIndex(index, framePointer).
-	const int32_t index; // Refers to 
+	int32_t index; // Refers to 
 	VMA(ArgumentType argType, DataType dataType, int32_t index)
 	: argType(argType), dataType(dataType), index(index) {}
 };
@@ -131,11 +277,34 @@ struct ArgSig {
 	ArgSig(const ReadableString& name, bool byValue, DataType dataType)
 	: name(name), byValue(byValue), dataType(dataType) {}
 	bool matches(ArgumentType argType, DataType dataType) const {
-		if (this->byValue) {
-			return (dataType == this->dataType) && (argType == ArgumentType::Reference || argType == ArgumentType::Immediate || argType == ArgumentType::InstructionAddress);
-		} else {
-			return (dataType == this->dataType) && (argType == ArgumentType::Reference);
+		#ifdef VIRTUAL_MACHINE_DEBUG_PRINT
+			printText(U"Comparing potential match for argument \"", name, U"\".\n");
+		#endif
+		if (dataType != this->dataType) {
+			#ifdef VIRTUAL_MACHINE_DEBUG_PRINT
+				printText(U"	No match because the signature expected data type ", this->dataType, U" but ", dataType, U" was provided instead.\n");
+			#endif
+			return false;
 		}
+		if (this->byValue) {
+			if (!(argType == ArgumentType::Reference || argType == ArgumentType::Immediate || argType == ArgumentType::InstructionAddress)) {
+				#ifdef VIRTUAL_MACHINE_DEBUG_PRINT
+					printText(U"	No match because the argument type was not allowed for passing by value.\n");
+				#endif
+				return false;
+			}
+		} else {
+			if (!(argType == ArgumentType::Reference)) {
+				#ifdef VIRTUAL_MACHINE_DEBUG_PRINT
+					printText(U"	No match because the argument type was not allowed for passing by reference.\n");
+				#endif
+				return false;
+			}
+		}
+		#ifdef VIRTUAL_MACHINE_DEBUG_PRINT
+			printText(U"	Found a match.\n");
+		#endif
+		return true;
 	}
 };
 
@@ -213,12 +382,13 @@ using MachineOperation = decltype(&MachineOperationTemplate<TYPE_COUNT>);
 
 template <int32_t TYPE_COUNT>
 struct MachineWord {
+	int32_t methodIndex;
 	MachineOperation<TYPE_COUNT> operation;
 	List<VMA> args;
-	MachineWord(MachineOperation<TYPE_COUNT> operation, const List<VMA>& args)
-	: operation(operation), args(args) {}
-	explicit MachineWord(MachineOperation<TYPE_COUNT> operation)
-	: operation(operation) {}
+	MachineWord(int32_t methodIndex, MachineOperation<TYPE_COUNT> operation, const List<VMA>& args)
+	: methodIndex(methodIndex), operation(operation), args(args) {}
+	explicit MachineWord(int32_t methodIndex, MachineOperation<TYPE_COUNT> operation)
+	: methodIndex(methodIndex), operation(operation) {}
 };
 
 template <int32_t TYPE_COUNT>
@@ -265,7 +435,7 @@ template <int32_t TYPE_COUNT>
 inline static void initializeTemplate(VirtualMachine<TYPE_COUNT>& machine, int32_t globalIndex, const ReadableString& defaultValue) {}
 
 template <int32_t TYPE_COUNT>
-inline static void debugPrintTemplate(PlanarMemory<TYPE_COUNT>& memory, Variable<TYPE_COUNT>& variable, int32_t globalIndex, int32_t* framePointer, bool fullContent) {}
+inline static void debugPrintTemplate(PlanarMemory<TYPE_COUNT>& memory, Variable<TYPE_COUNT>& variable, int32_t globalIndex, const FixedArray<int32_t, TYPE_COUNT>& framePointer, bool fullContent) {}
 template <int32_t TYPE_COUNT>
 using VMT_DebugPrinter = decltype(&debugPrintTemplate<TYPE_COUNT>);
 
@@ -291,7 +461,7 @@ struct Method {
 	String name;
 
 	// Global instruction space
-	const int32_t startAddress = 0; // Index to machineWords
+	int32_t startAddress = 0; // Index to machineWords
 	int32_t instructionCount = 0; // Number of machine words (safer than return statements in case of memory corruption)
 
 	// Unified local space
@@ -303,8 +473,6 @@ struct Method {
 	bool declaredLocals = false; // Goes true when a local is declared
 	List<Variable<TYPE_COUNT>> locals; // locals[0..inputCount-1] are the inputs, while locals[inputCount..inputCount+outputCount-1] are the outputs
 
-	bool ended = false;
-
 	List<InstructionLabel> labels;
 
 	// Type-specific spaces
@@ -312,12 +480,12 @@ struct Method {
 	// Look-up table from a combination of type and type-local indices to unified-local indices
 	FixedArray<List<int32_t>, TYPE_COUNT> unifiedLocalIndices;
 
-	Method(const String& name, int32_t startAddress, int32_t machineTypeCount) : name(name), startAddress(startAddress) {
-		// Increase TYPE_COUNT if it's not enough
-		assert(machineTypeCount <= TYPE_COUNT);
-	}
+	Method(const String& name) : name(name) {}
 	Variable<TYPE_COUNT>* getLocal(const ReadableString& name) {
 		for (int32_t i = 0; i < this->locals.length(); i++) {
+			#ifdef VIRTUAL_MACHINE_DEBUG_PRINT
+				printText(U"Comparing ", name, U" with variable ", this->locals[i].name, U".\n");
+			#endif
 			if (string_caseInsensitiveMatch(this->locals[i].name, name)) {
 				return &this->locals[i];
 			}
@@ -364,47 +532,7 @@ struct VirtualMachine {
 		}
 		return nullptr;
 	}
-	// Instead of tokenizing, the assembler simply splits everything after colon along commas to get the arguments.
-	//   To avoid splitting with commas inside of text used to create immediate values, only the commas outside of "" () [] {} are used to split.
-	List<String> nestedCommaSplit(const ReadableString& source) {
-		List<String> result;
-		intptr_t sectionStart = 0;
-		bool quoted = false;
-		intptr_t depth = 0;
-		for (intptr_t i = 0; i < string_length(source); i++) {
-			DsrChar c = source[i];
-			if (quoted) {
-				if (c == U'"') {
-					quoted = false;
-				} else if (c == U'\\') {
-					// Skip one character after escape.
-					i++;
-				}
-			} else {
-				if (c == U'"') {
-					quoted = true;
-				} else if (c == U',' and depth == 0) {
-					ReadableString element = string_exclusiveRange(source, sectionStart, i);
-					result.push(string_removeOuterWhiteSpace(element));
-					sectionStart = i + 1;
-				} else if (c == U'(' || c == U'[' || c == U'{') {
-					depth++;
-				} else if (c == U')' || c == U']' || c == U'}') {
-					depth--;
-				}
-			}
-		}
-		if (string_length(source) > sectionStart) {
-			result.push(string_removeOuterWhiteSpace(string_exclusiveRange(source, sectionStart, string_length(source))));
-		}
-		if (quoted) {
-			throwError(U"Quotes may not contain unmangled line-breaks in virtual machine assembler code!\n");
-		}
-		if (depth != 0) {
-			throwError(U"Immediate constants must balance expressions containing () [] {}, because otherwise parsing of virtual machine assembler code can not know which commas are used to separate arguments!\n");
-		}
-		return result;
-	}
+
 	// Constructor
 	VirtualMachine(const ReadableString& code, const Handle<PlanarMemory<TYPE_COUNT>>& memory,
 	  const InsSig<TYPE_COUNT>* machineInstructions, int32_t machineInstructionCount,
@@ -412,35 +540,112 @@ struct VirtualMachine {
 	  StorableCallback<VMA(PlanarMemory<TYPE_COUNT> &memory, const ReadableString &argument)> interpretImmediateArgument)
 	: memory(memory), machineInstructions(machineInstructions), machineInstructionCount(machineInstructionCount),
 	  interpretImmediateArgument(interpretImmediateArgument), machineTypes(machineTypes), machineTypeCount(machineTypeCount) {
+		  // Increase TYPE_COUNT if it's not enough for the supplied list of types.
+		assert(machineTypeCount <= TYPE_COUNT);
 		#ifdef VIRTUAL_MACHINE_DEBUG_PRINT
 			printText(U"Starting media machine.\n");
 		#endif
-		this->methods.pushConstruct(U"<init>", 0, this->machineTypeCount);
 		#ifdef VIRTUAL_MACHINE_DEBUG_PRINT
 			printText(U"Reading assembly.\n");
 		#endif
-		string_split_callback([this](ReadableString currentLine) {
-			// If the line has a comment, then skip everything from #
-			int32_t commentIndex = string_findFirst(currentLine, U'#');
-			if (commentIndex > -1) {
-				currentLine = string_before(currentLine, commentIndex);
+		UnresolvedProgram unresolvedProgram = scanProgram(code);
+
+		// Create the <init> method at the end with unresolved variables and commands stolen from the global space.
+		unresolvedProgram.methods.pushConstruct(U"<init>");
+		int32_t initMethodIndex = unresolvedProgram.methods.length() - 1;
+		UnresolvedMethod &initMethod = unresolvedProgram.methods[initMethodIndex];
+		initMethod.commands = dsr::move(unresolvedProgram.commands);
+
+		// Allocate empty methods, just so that variables can look at empty lists while looking for duplicate declarations.
+		for (int32_t methodIndex = 0; methodIndex < unresolvedProgram.methods.length(); methodIndex++) {
+			const UnresolvedMethod &unresolvedMethod = unresolvedProgram.methods[methodIndex];
+			this->methods.pushConstruct(unresolvedMethod.name);
+			#ifdef VIRTUAL_MACHINE_DEBUG_PRINT
+				printText(U"Creating \"", unresolvedMethod.name, U"\" at method index ", methodIndex, U".\n");
+			#endif
+		}
+
+		// Fill methods with variables, so that there is something to access by name.
+		for (int32_t methodIndex = 0; methodIndex < unresolvedProgram.methods.length(); methodIndex++) {
+			bool global = methodIndex == initMethodIndex;
+			const UnresolvedMethod &unresolvedMethod = unresolvedProgram.methods[methodIndex];
+			// Create local variables and commands.
+			for (int32_t c = 0; c < unresolvedMethod.commands.length(); c++) {
+				const UnresolvedCommand &unresolvedCommand = unresolvedMethod.commands[c];
+				if (string_caseInsensitiveMatch(unresolvedCommand.command, U"Temp")) {
+					for (int32_t a = 1; a < unresolvedCommand.arguments.length(); a++) {
+						this->declareVariable(methodIndex, initMethodIndex, AccessType::Hidden, getArg(unresolvedCommand.arguments, 0), getArg(unresolvedCommand.arguments, a), false, U"", global);
+						#ifdef VIRTUAL_MACHINE_DEBUG_PRINT
+							printText(U"	Allocating temporary variable \"", getArg(unresolvedCommand.arguments, a), U"\" as \"", getArg(unresolvedCommand.arguments, 0), U"\".\n");
+						#endif
+					}
+				} else if (string_caseInsensitiveMatch(unresolvedCommand.command, U"Hidden")) {
+					this->declareVariable(methodIndex, initMethodIndex, AccessType::Hidden, getArg(unresolvedCommand.arguments, 0), getArg(unresolvedCommand.arguments, 1), true, getArg(unresolvedCommand.arguments, 2), global);
+					#ifdef VIRTUAL_MACHINE_DEBUG_PRINT
+						printText(U"	Allocating hidden variable \"", getArg(unresolvedCommand.arguments, 1), U"\" as \"", getArg(unresolvedCommand.arguments, 0), U"\".\n");
+					#endif
+				} else if (string_caseInsensitiveMatch(unresolvedCommand.command, U"Input")) {
+					this->declareVariable(methodIndex, initMethodIndex, AccessType::Input, getArg(unresolvedCommand.arguments, 0), getArg(unresolvedCommand.arguments, 1), true, getArg(unresolvedCommand.arguments, 2), global);
+					#ifdef VIRTUAL_MACHINE_DEBUG_PRINT
+						printText(U"	Allocating input variable \"", getArg(unresolvedCommand.arguments, 1), U"\" as \"", getArg(unresolvedCommand.arguments, 0), U"\".\n");
+					#endif
+				} else if (string_caseInsensitiveMatch(unresolvedCommand.command, U"Output")) {
+					this->declareVariable(methodIndex, initMethodIndex, AccessType::Output, getArg(unresolvedCommand.arguments, 0), getArg(unresolvedCommand.arguments, 1), true, getArg(unresolvedCommand.arguments, 2), global);
+					#ifdef VIRTUAL_MACHINE_DEBUG_PRINT
+						printText(U"	Allocating output variable \"", getArg(unresolvedCommand.arguments, 1), U"\" as \"", getArg(unresolvedCommand.arguments, 0), U"\".\n");
+					#endif
+				}
 			}
-			currentLine = string_removeOuterWhiteSpace(currentLine);
-			int32_t colonIndex = string_findFirst(currentLine, U':');
-			if (colonIndex > -1) {
-				ReadableString command = string_removeOuterWhiteSpace(string_before(currentLine, colonIndex));
-				ReadableString argumentLine = string_after(currentLine, colonIndex);
-				List<String> arguments = nestedCommaSplit(argumentLine);
-				this->interpretMachineWord(command, arguments);
-			} else if (string_length(currentLine) > 0) {
-				throwError(U"Unexpected line \"", currentLine, U"\".\n");
+		}
+
+		// Iterate over the empty methods and fill them with machine instructions and labels while assigning start addresses.
+		for (int32_t methodIndex = 0; methodIndex < this->methods.length(); methodIndex++) {
+			bool global = methodIndex == initMethodIndex;
+			const UnresolvedMethod &unresolvedMethod = unresolvedProgram.methods[methodIndex];
+			this->methods[methodIndex].startAddress = this->machineWords.length();
+			#ifdef VIRTUAL_MACHINE_DEBUG_PRINT
+				printText(U"Method \"", this->methods[methodIndex].name, U"\" begins at instruction ", this->methods[methodIndex].startAddress, U".\n");
+			#endif
+			// Create local variables and commands.
+			for (int32_t c = 0; c < unresolvedMethod.commands.length(); c++) {
+				const UnresolvedCommand &unresolvedCommand = unresolvedMethod.commands[c];
+				this->generateLabelsAndStatements(methodIndex, initMethodIndex, unresolvedProgram, unresolvedMethod, unresolvedCommand.command, unresolvedCommand.arguments, global);
 			}
-		}, code, U'\n');
-		// Calling "<init>" to execute global commands
+			this->addReturnInstruction(methodIndex);
+			#ifdef VIRTUAL_MACHINE_DEBUG_PRINT
+				printText(U"Creating return instruction at the end of \"", unresolvedMethod.name, U"\".\n");
+			#endif
+		}
+
+		// Convert indices to local labels into instruction addresses.
+		for (int32_t m = 0; m < this->machineWords.length(); m++) {
+			MachineWord<TYPE_COUNT> &machineWord = this->machineWords[m];
+			for (int32_t a = 0; a < machineWord.args.length(); a++) {
+				VMA &argument = machineWord.args[a];
+				if (argument.argType == ArgumentType::InstructionAddress
+				 && argument.dataType == DataType_Label) {
+					// TODO: Look up the address from the label.
+					//       This requires knowing the method index.
+					const Method<TYPE_COUNT> &method = this->methods[machineWord.methodIndex];
+					int32_t localLabelIndex = argument.index;
+					if (localLabelIndex < 0 || localLabelIndex >= method.labels.length()) {
+						throwError(U"Local label index ", localLabelIndex, U" was out of bound 0..", method.labels.length(), U" in the ", method.name, U" method!\n");
+					} else {
+						int32_t instructionAddress = method.labels[localLabelIndex].address;
+						argument = VMA(ArgumentType::InstructionAddress, DataType_InstructionAddress, instructionAddress);
+						#ifdef VIRTUAL_MACHINE_DEBUG_PRINT
+							printText(U"Converted LabelIndex ", localLabelIndex, U" into InstructionAddress ", instructionAddress, U".\n");
+						#endif
+					}
+				}
+			}
+		}
+
+		// Calling the last method "<init>" to execute global commands
 		#ifdef VIRTUAL_MACHINE_DEBUG_PRINT
 			printText(U"Initializing global machine state.\n");
 		#endif
-		this->executeMethod(0);
+		this->executeMethod(this->methods.length() - 1);
 	}
 
 	int32_t findMethod(const ReadableString& name) {
@@ -452,14 +657,21 @@ struct VirtualMachine {
 		return -1;
 	}
 
-	Variable<TYPE_COUNT>* getResource(const ReadableString& name, int32_t methodIndex) {
+	Variable<TYPE_COUNT>* getResource(const ReadableString& name, int32_t methodIndex, int32_t initMethodIndex) {
+		#ifdef VIRTUAL_MACHINE_DEBUG_PRINT
+			if (methodIndex == initMethodIndex) {
+				printText(U"Looking for resource \"", name, U"\" in <init> method ", methodIndex, U".\n");
+			} else {
+				printText(U"Looking for resource \"", name, U"\" in method ", methodIndex, U" with <init> at ", initMethodIndex, U" as the fallback namespace.\n");
+			}
+		#endif
 		Variable<TYPE_COUNT>* result = this->methods[methodIndex].getLocal(name);
 		if (result) {
 			// If found, take the local variable
 			return result;
-		} else if (methodIndex > 0) {
+		} else if (methodIndex != initMethodIndex) {
 			// If not found but having another scope, look for global variables in the global initiation method
-			return getResource(name, 0);
+			return getResource(name, initMethodIndex, initMethodIndex);
 		} else {
 			return nullptr;
 		}
@@ -467,10 +679,10 @@ struct VirtualMachine {
 
 	/*
 	Indices
-		Global index: (Identifier) The value stores in the mantissas of machine instructions to refer to things
+		Global index: (Identifier) Negative for globals and natural for stack.
 			These are translated into stack indices for run-time lookups
 			Useful for storing in compile-time when there's no stack nor frame-pointer for mapping to any real memory address
-			Relative to the frame-pointer, so it cannot access anything else then globals (using negative indices) and locals (using natural indices)
+			Relative to the frame-pointer, so it cannot access anything else than globals (using negative indices) and locals (using natural indices)
 		Stack index: (Pointer) The absolute index of a variable at run-time
 			Indices to the type's own stack in the machine
 			A frame pointer is needed to create them, but the memory of calling methods can be accessed using stack indices
@@ -492,20 +704,18 @@ struct VirtualMachine {
 		return isGlobal ? -(typeLocalIndex + 1) : typeLocalIndex;
 	}
 
-	void addMachineWord(MachineOperation<TYPE_COUNT> operation, const List<VMA>& args) {
-		this->machineWords.pushConstruct(operation, args);
-		this->methods[this->methods.length() - 1].instructionCount++;
+	void addMachineWord(int32_t methodIndex, MachineOperation<TYPE_COUNT> operation, const List<VMA>& args = List<VMA>()) {
+		#ifdef VIRTUAL_MACHINE_DEBUG_PRINT
+			printText(U"Instruction ", this->machineWords.length(), U" is declared in method ", methodIndex, U".\n");
+		#endif
+		this->machineWords.pushConstruct(methodIndex, operation, args);
+		this->methods[methodIndex].instructionCount++;
 	}
 
-	void addMachineWord(MachineOperation<TYPE_COUNT> operation) {
-		this->machineWords.pushConstruct(operation);
-		this->methods[this->methods.length() - 1].instructionCount++;
-	}
-
-	void addReturnInstruction() {
-		addMachineWord([](VirtualMachine& machine, PlanarMemory<TYPE_COUNT>& memory, const List<VMA>& args) {
+	void addReturnInstruction(int32_t methodIndex) {
+		addMachineWord(methodIndex, [](VirtualMachine& machine, PlanarMemory<TYPE_COUNT>& memory, const List<VMA>& args) {
 			if (memory.callStack.length() > 0) {
-				// Return to caller
+				// If the call was made from another method in the virtual machine, then we return to that call.
 				#ifdef VIRTUAL_MACHINE_DEBUG_PRINT
 					printText(U"Returning from \"", machine.methods[memory.current.methodIndex].name, U"\" to caller \"", machine.methods[memory.callStack.last().methodIndex].name, U"\"\n");
 					machine.debugPrintMemory();
@@ -514,6 +724,7 @@ struct VirtualMachine {
 				memory.callStack.pop();
 				memory.current.programCounter++;
 			} else {
+				// If there was no callers in the call stack, return to the external caller outside of the virtual machine.
 				#ifdef VIRTUAL_MACHINE_DEBUG_PRINT
 					printText(U"Returning from \"", machine.methods[memory.current.methodIndex].name, U"\"\n");
 				#endif
@@ -521,15 +732,6 @@ struct VirtualMachine {
 				memory.current.programCounter = -1;
 			}
 		});
-	}
-
-	bool isInsideOfMethod() const {
-		return this->methods.length() > 0 && !(this->methods.last().ended);
-	}
-
-	void endCurrentMethod() {
-		this->addReturnInstruction();
-		this->methods.last().ended = true;
 	}
 
 	static ReadableString getArg(const List<String>& arguments, int32_t index) {
@@ -541,14 +743,12 @@ struct VirtualMachine {
 	}
 
 	// Generate machine code to call a method using the "call" instruction.
-	void addCallInstructions(const List<String>& arguments) {
+	void addCallInstructions(int32_t methodIndex, int32_t initMethodIndex, const UnresolvedProgram &unresolvedProgram, const UnresolvedMethod &unresolvedMethod, const List<String>& arguments) {
 		if (arguments.length() < 1) {
 			throwError(U"Cannot make a call without the name of a method!\n");
 		}
-		// TODO: Allow calling methods that aren't defined yet.
-		int32_t currentMethodIndex = this->methods.length() - 1;
 		ReadableString methodName = string_removeOuterWhiteSpace(arguments[0]);
-		int32_t calledMethodIndex = findMethod(methodName);
+		int32_t calledMethodIndex = findUnresolvedMethod(unresolvedProgram, methodName);
 		if (calledMethodIndex == -1) {
 			throwError(U"Tried to make an internal call to the method \"", methodName, U"\", which was not previously defined in the virtual machine! Make sure that the name is spelled correctly and the method is defined above the caller.\n");
 		}
@@ -561,18 +761,18 @@ struct VirtualMachine {
 		List<VMA> inputArguments;
 		List<VMA> outputArguments;
 		// Instead of storing an index to an immediate constant that requires a type, we use MethodReference to refer directly to the called method.
-		VMA methodIndex = VMA(ArgumentType::MethodReference, -1, calledMethodIndex);
-		inputArguments.push(methodIndex);
-		outputArguments.push(methodIndex);
+		VMA methodIndexArgument = VMA(ArgumentType::MethodReference, -1, calledMethodIndex);
+		inputArguments.push(methodIndexArgument);
+		outputArguments.push(methodIndexArgument);
 		int32_t outputCount = 0;
 		for (int32_t a = 1; a < arguments.length(); a++) {
 			ReadableString content = string_removeOuterWhiteSpace(arguments[a]);
 			if (string_length(content) > 0) {
 				if (outputCount < calledMethod->outputCount) {
-					outputArguments.push(this->VMAfromText(currentMethodIndex, getArg(arguments, a)));
+					outputArguments.push(this->VMAfromText(unresolvedProgram, unresolvedMethod, methodIndex, initMethodIndex, getArg(arguments, a), false));
 					outputCount++;
 				} else {
-					inputArguments.push(this->VMAfromText(currentMethodIndex, getArg(arguments, a)));
+					inputArguments.push(this->VMAfromText(unresolvedProgram, unresolvedMethod, methodIndex, initMethodIndex, getArg(arguments, a), false));
 				}
 			}
 		}
@@ -595,12 +795,9 @@ struct VirtualMachine {
 		}
 		// Insert a machine instruction customized for calling a specific method
 		//   Everything within this lambda will then be executed when the call is made at runtime
-		addMachineWord([](VirtualMachine& machine, PlanarMemory<TYPE_COUNT>& memory, const List<VMA>& args) {
+		addMachineWord(methodIndex, [](VirtualMachine& machine, PlanarMemory<TYPE_COUNT>& memory, const List<VMA>& args) {
 			// Get the method to call
 			int32_t calledMethodIndex = args[0].index;
-			if (calledMethodIndex == 0) {
-				throwError(U"Can not call the init method from within the virtual machine!\n");
-			}
 			#ifdef VIRTUAL_MACHINE_DEBUG_PRINT
 				int32_t oldMethodIndex = memory.current.methodIndex;
 			#endif
@@ -643,7 +840,7 @@ struct VirtualMachine {
 			}
 		}, inputArguments);
 		// Get results from the method
-		addMachineWord([](VirtualMachine& machine, PlanarMemory<TYPE_COUNT>& memory, const List<VMA>& args) {
+		addMachineWord(methodIndex, [](VirtualMachine& machine, PlanarMemory<TYPE_COUNT>& memory, const List<VMA>& args) {
 			int32_t calledMethodIndex = args[0].index;
 			Method<TYPE_COUNT>* calledMethod = &machine.methods[calledMethodIndex];
 			#ifdef VIRTUAL_MACHINE_DEBUG_PRINT
@@ -657,7 +854,8 @@ struct VirtualMachine {
 				memory.load(sourceStackIndex, args[a], memory.current.framePointer[typeIndex], typeIndex);
 				#ifdef VIRTUAL_MACHINE_DEBUG_PRINT
 					printText(U"  ");
-					machine.debugArgument(VMA(typeIndex, source->getGlobalIndex()), calledMethodIndex, memory.current.stackPointer, false);
+					//VMA(ArgumentType argType, DataType dataType, int32_t index)
+					machine.debugArgument(VMA(ArgumentType::MethodReference, typeIndex, source->getGlobalIndex()), calledMethodIndex, memory.current.stackPointer, false);
 					printText(U" -> ");
 					machine.debugArgument(args[a], memory.current.methodIndex, memory.current.framePointer, false);
 					printText(U"\n");
@@ -673,16 +871,16 @@ struct VirtualMachine {
 		}, outputArguments);
 	}
 
-	void interpretCommand(const ReadableString& operation, const List<VMA>& resolvedArguments) {
+	void interpretCommand(int32_t methodIndex, const ReadableString& operation, const List<VMA>& resolvedArguments) {
 		// Compare the input with overloads
 		for (int32_t s = 0; s < machineInstructionCount; s++) {
 			if (machineInstructions[s].matches(operation, resolvedArguments)) {
-				this->addMachineWord(machineInstructions[s].operation, resolvedArguments);
+				this->addMachineWord(methodIndex, machineInstructions[s].operation, resolvedArguments);
 				return;
 			}
 		}
 		// TODO: Allow asking the specific machine type what the given types are called.
-		String message = string_combine(U"\nError! ", operation, U" does not match any overload for the given arguments:\n");
+		String message = string_combine(U"\nError! ", operation, U" does not match any overload:\n");
 		for (int32_t s = 0; s < machineInstructionCount; s++) {
 			const InsSig<TYPE_COUNT>* signature = &machineInstructions[s];
 			if (string_caseInsensitiveMatch(signature->name, operation)) {
@@ -701,9 +899,8 @@ struct VirtualMachine {
 	}
 
 	// TODO: Inline into declareVariable
-	Variable<TYPE_COUNT>* declareVariable_aux(const VMTypeDef<TYPE_COUNT>& typeDef, int32_t methodIndex, AccessType access, const ReadableString& name, bool initialize, const ReadableString& defaultValueText) {
+	Variable<TYPE_COUNT>* declareVariable_aux(const VMTypeDef<TYPE_COUNT>& typeDef, int32_t methodIndex, AccessType access, const ReadableString& name, bool initialize, const ReadableString& defaultValueText, bool global) {
 		// Make commonly used data more readable
-		bool global = methodIndex == 0;
 		Method<TYPE_COUNT>* currentMethod = &this->methods[methodIndex];
 
 		// Assert correctness
@@ -742,14 +939,14 @@ struct VirtualMachine {
 			if (string_length(defaultValueText) > 0) {
 				// An initial value was provided explicitly.
 				//   Look for a load instruction.
-				this->interpretCommand(U"Load", List<VMA>(
+				this->interpretCommand(methodIndex, U"Load", List<VMA>(
 					VMA(ArgumentType::Reference, typeDef.dataType, globalIndex),
 					this->interpretImmediateArgument(this->memory.getReference(), defaultValueText)
 				));
 			} else {
 				// No initial value was provided.
 				//   Look for a reset instruction.
-				this->interpretCommand(U"Reset", List<VMA>(
+				this->interpretCommand(methodIndex, U"Reset", List<VMA>(
 					VMA(ArgumentType::Reference, typeDef.dataType, globalIndex)
 				));
 			}
@@ -757,8 +954,8 @@ struct VirtualMachine {
 		return &this->methods[methodIndex].locals.last();
 	}
 
-	Variable<TYPE_COUNT>* declareVariable(int32_t methodIndex, AccessType access, const ReadableString& typeName, const ReadableString& name, bool initialize, const ReadableString& defaultValueText) {
-		if (this->getResource(name, methodIndex)) {
+	Variable<TYPE_COUNT>* declareVariable(int32_t methodIndex, int32_t initMethodIndex, AccessType access, const ReadableString& typeName, const ReadableString& name, bool initialize, const ReadableString& defaultValueText, bool global) {
+		if (this->getResource(name, methodIndex, initMethodIndex)) {
 			throwError(U"A resource named \"", name, U"\" already exists! Be aware that resource names are case insensitive.\n");
 			return nullptr;
 		} else {
@@ -768,7 +965,7 @@ struct VirtualMachine {
 				if (string_length(defaultValueText) > 0 && !typeDef->allowDefaultValue) {
 					throwError(U"The variable \"", name, U"\" doesn't have an immediate constructor for \"", typeName, U"\".\n");
 				}
-				return this->declareVariable_aux(*typeDef, methodIndex, access, name, initialize, defaultValueText);
+				return this->declareVariable_aux(*typeDef, methodIndex, access, name, initialize, defaultValueText, global);
 			} else {
 				throwError(U"Cannot declare variable of unknown type \"", typeName, U"\"!\n");
 				return nullptr;
@@ -776,7 +973,10 @@ struct VirtualMachine {
 		}
 	}
 
-	VMA VMAfromText(int32_t methodIndex, const ReadableString& content) {
+	VMA VMAfromText(const UnresolvedProgram &unresolvedProgram, const UnresolvedMethod &unresolvedMethod, int32_t methodIndex, int32_t initMethodIndex, const ReadableString& content, bool global) {
+		#ifdef VIRTUAL_MACHINE_DEBUG_PRINT
+			printText(U"VMAfromText in method ", methodIndex, U" interpreting argument \"", content, U"\".\n");
+		#endif
 		DsrChar first = content[0];
 		DsrChar second = content[1];
 		if ((first >= U'a' && first <= U'z') || (first >= U'A' && first <= U'Z') || first >= U'_' || first >= U'<') {
@@ -790,7 +990,7 @@ struct VirtualMachine {
 				if (string_length(remainder) > 0) {
 					throwError(U"No code allowed after > for in-place temp declarations!\n");
 				}
-				Variable<TYPE_COUNT>* resource = this->declareVariable(methodIndex, AccessType::Hidden, typeName, name, false, U"");
+				Variable<TYPE_COUNT>* resource = this->declareVariable(methodIndex, initMethodIndex, AccessType::Hidden, typeName, name, false, U"", global);
 				if (resource) {
 					return VMA(ArgumentType::Reference, resource->typeDescription->dataType, resource->getGlobalIndex());
 				} else {
@@ -805,23 +1005,21 @@ struct VirtualMachine {
 				return VMA(ArgumentType::Immediate, -1, -1);
 			} else {
 				// Look for a label.
-				if (this->isInsideOfMethod()) {
-					Method<TYPE_COUNT> &method = this->methods.last();
-					String labelName = string_removeOuterWhiteSpace(content);
-					debugText(U"Checking if ", labelName, U" is a label in the ", method.name, U" method.\n");
-					for (int32_t l = 0; l < method.labels.length(); l++) {
-						debugText(U"  * Label ", method.labels[l].identifier, U" @ ", method.labels[l].address, U"\n");
-						if (string_caseInsensitiveMatch(method.labels[l].identifier, labelName)) {
-							return VMA(ArgumentType::InstructionAddress, DataType_InstructionAddress, method.labels[l].address);
-						}
+				String labelName = string_removeOuterWhiteSpace(content);
+				//debugText(U"Checking if ", labelName, U" is a label in the ", unresolvedMethod.name, U" method.\n");
+				for (int32_t l = 0; l < unresolvedMethod.labels.length(); l++) {
+					//debugText(U"  * Label ", unresolvedMethod.labels[l], U"\n");
+					if (string_caseInsensitiveMatch(unresolvedMethod.labels[l], labelName)) {
+						// Once code generation is finished, label indices will be replaced with the final address by looking it up from the label.
+						return VMA(ArgumentType::InstructionAddress, DataType_Label, l);
 					}
 				}
 				// If it is not a label then look for variables.
-				Variable<TYPE_COUNT>* resource = getResource(content, methodIndex);
+				Variable<TYPE_COUNT>* resource = getResource(content, methodIndex, initMethodIndex);
 				if (resource) {
 					return VMA(ArgumentType::Reference, resource->typeDescription->dataType, resource->getGlobalIndex());
 				} else {
-					throwError(U"The resource \"", content, U"\" could not be found! Make sure that it's declared before being used.\n");
+					throwError(U"The resource \"", content, U"\" could not be found from method \"", unresolvedProgram.methods[methodIndex].name, U"\"!\n");
 					return VMA(ArgumentType::Immediate, -1, -1);
 				}
 			}
@@ -831,68 +1029,59 @@ struct VirtualMachine {
 		}
 	}
 
-	void interpretMachineWord(const ReadableString& command, const List<String>& arguments) {
+	void generateLabelsAndStatements(int32_t methodIndex, int32_t initMethodIndex, const UnresolvedProgram &unresolvedProgram, const UnresolvedMethod &unresolvedMethod, const ReadableString& command, const List<String>& arguments, bool global) {
 		#ifdef VIRTUAL_MACHINE_DEBUG_PRINT
-			printText(U"interpretMachineWord @", this->machineWords.length(), U" ", command, U"(");
+			printText(U"generateLabelsAndStatements @", this->machineWords.length(), U" in method ", methodIndex, U" ", command, U"(");
 			for (int32_t a = 0; a < arguments.length(); a++) {
 				if (a > 0) { printText(U", "); }
-				printText(getArg(arguments, a));
+				printText(arguments[a]);
 			}
 			printText(U")\n");
 		#endif
 		if (string_caseInsensitiveMatch(command, U"Begin")) {
-			if (this->methods.length() == 1) {
-				// When more than one function exists, the init method must end with a return instruction
-				//   Otherwise it would start executing instructions in another method and crash
-				// Finalizing the init method must wait until the next method begins, because it is extended each time a global variable is introduced at the top.
-				this->addReturnInstruction();
-			}
-			this->methods.pushConstruct(getArg(arguments, 0), this->machineWords.length(), this->machineTypeCount);
-		} else if (string_caseInsensitiveMatch(command, U"Temp")) {
-			for (int32_t a = 1; a < arguments.length(); a++) {
-				this->declareVariable(methods.length() - 1, AccessType::Hidden, getArg(arguments, 0), getArg(arguments, a), false, U"");
-			}
-		} else if (string_caseInsensitiveMatch(command, U"Hidden")) {
-			this->declareVariable(methods.length() - 1, AccessType::Hidden, getArg(arguments, 0), getArg(arguments, 1), true, getArg(arguments, 2));
-		} else if (string_caseInsensitiveMatch(command, U"Input")) {
-			this->declareVariable(methods.length() - 1, AccessType::Input, getArg(arguments, 0), getArg(arguments, 1), true, getArg(arguments, 2));
-		} else if (string_caseInsensitiveMatch(command, U"Output")) {
-			this->declareVariable(methods.length() - 1, AccessType::Output, getArg(arguments, 0), getArg(arguments, 1), true, getArg(arguments, 2));
+			throwError(U"Unexpected BEGIN command found inside of method!\n");
 		} else if (string_caseInsensitiveMatch(command, U"End")) {
-			if (!this->isInsideOfMethod()) throwError(U"Can not end a method outside of methods!\n");
-			this->addReturnInstruction();
+			throwError(U"Unexpected END command found inside of method!\n");
+		} else if (string_caseInsensitiveMatch(command, U"Hidden")
+		        || string_caseInsensitiveMatch(command, U"Input")
+		        || string_caseInsensitiveMatch(command, U"Output")
+		        || string_caseInsensitiveMatch(command, U"Temp")) {
+			// Variables should already be generated.
 		} else if (string_caseInsensitiveMatch(command, U"Call")) {
-			if (!this->isInsideOfMethod()) throwError(U"Can not make calls outside of methods!\n");
-			this->addCallInstructions(arguments);
+			#ifdef VIRTUAL_MACHINE_DEBUG_PRINT
+				printText(U"Generating call from method ", methodIndex, U"\n");
+			#endif
+			this->addCallInstructions(methodIndex, initMethodIndex, unresolvedProgram, unresolvedMethod, arguments);
 		} else if (string_caseInsensitiveMatch(command, U"Label")) {
 			// TODO: Move this into a method for creating a label.
 			// TODO: Prevent overlapping names between methods, local variables and local labels.
-			// TODO: Resolve label identifiers into ArgumentType::InstructionAddress and assign the argument's index directly to the program counter when jumping.
-			if (!this->isInsideOfMethod()) {
-				throwError(U"Can not place labels outside of methods!\n");
-			} else if (arguments.length() < 1) {
-				throwError(U"Labels need to be named to allow identifying the following machine instruction!\n");
-			} else if (arguments.length() > 1) {
+			if (arguments.length() > 1) {
 				throwError(U"Labels may not have more than one argument containing the identifier!\n");
 			} else {
 				int32_t targetAddress = this->machineWords.length();
 				String labelIdentifier = arguments[0];
 				// TODO: Reject invalid label names.
-				debugText(U"Declaring label ", labelIdentifier, U" @ ", targetAddress, U"\n");
-				this->methods.last().labels.pushConstruct(targetAddress, labelIdentifier);
+				#ifdef VIRTUAL_MACHINE_DEBUG_PRINT
+					printText(U"Declaring label ", labelIdentifier, U" @ ", targetAddress, U"\n");
+				#endif
+				this->methods[methodIndex].labels.pushConstruct(targetAddress, labelIdentifier);
 			}
 		} else {
-			// TODO: Delay resolving so that functions can be declared after calls to them and jumps can go to later labels.
+			#ifdef VIRTUAL_MACHINE_DEBUG_PRINT
+				printText(U"Generating machine instructions for command \"", command, U"\" in method ", methodIndex, U"\n");
+			#endif
 			// If the command did not match with any of the generic instructions, resolve the arguments and look for a custom machine instruction.
-			int32_t methodIndex = this->methods.length() - 1;
 			List<VMA> resolvedArguments;
 			for (int32_t a = 0; a < arguments.length(); a++) {
 				ReadableString content = string_removeOuterWhiteSpace(arguments[a]);
 				if (string_length(content) > 0) {
-					resolvedArguments.push(this->VMAfromText(methodIndex, getArg(arguments, a)));
+					#ifdef VIRTUAL_MACHINE_DEBUG_PRINT
+						printText(U"	Resolving \"", content, U"\" in method ", methodIndex, U"\n");
+					#endif
+					resolvedArguments.push(this->VMAfromText(unresolvedProgram, unresolvedMethod, methodIndex, initMethodIndex, getArg(arguments, a), global));
 				}
 			}
-			this->interpretCommand(command, resolvedArguments);
+			this->interpretCommand(methodIndex, command, resolvedArguments);
 		}
 	}
 
@@ -905,10 +1094,14 @@ struct VirtualMachine {
 			int32_t unifiedLocalIndex = method->unifiedLocalIndices[dataType][typeLocalIndex];
 			return &(method->locals[unifiedLocalIndex]);
 		}
-		void debugArgument(const VMA& data, int32_t methodIndex, int32_t* framePointer, bool fullContent) {
+		void debugArgument(const VMA& data, int32_t methodIndex, const FixedArray<int32_t, TYPE_COUNT>& framePointer, bool fullContent) {
 			if (data.argType == ArgumentType::Immediate) {
 				// TODO: Should debug printing be done here or in the implementation that actually knows the types?
 				printText(U"Immediate index ", data.index);
+			} else if (data.argType == ArgumentType::InstructionAddress) {
+				printText(U"Instruction ", data.index);
+			} else if (data.argType == ArgumentType::MethodReference) {
+				printText(U"Method ", data.index);
 			} else {
 				int32_t globalIndex = data.index;
 				Variable<TYPE_COUNT>* variable = getDebugInfo(data.dataType, globalIndex, methodIndex);
@@ -928,7 +1121,7 @@ struct VirtualMachine {
 				}
 			}
 		}
-		void debugPrintVariables(int32_t methodIndex, int32_t* framePointer, const ReadableString& indentation) {
+		void debugPrintVariables(int32_t methodIndex, const FixedArray<int32_t, TYPE_COUNT>& framePointer, const ReadableString& indentation) {
 			Method<TYPE_COUNT>* method = &this->methods[methodIndex];
 			for (int32_t i = 0; i < method->locals.length(); i++) {
 				Variable<TYPE_COUNT>* variable = &method->locals[i];
@@ -942,7 +1135,7 @@ struct VirtualMachine {
 				printText(U"\n");
 			}
 		}
-		void debugPrintMethod(int32_t methodIndex, int32_t* framePointer, int32_t* stackPointer, const ReadableString& indentation) {
+		void debugPrintMethod(int32_t methodIndex, const FixedArray<int32_t, TYPE_COUNT>& framePointer, const FixedArray<int32_t, TYPE_COUNT>& stackPointer, const ReadableString& indentation) {
 			printText("  ", this->methods[methodIndex].name, ":\n");
 			for (int32_t t = 0; t < this->machineTypeCount; t++) {
 				printText(U"    FramePointer[", t, "] = ", framePointer[t], U" Count[", t, "] = ", this->methods[methodIndex].count[t], U" StackPointer[", t, "] = ", stackPointer[t], U"\n");
@@ -1042,21 +1235,6 @@ struct VirtualMachine {
 				printText(U" (debug prints are active)\n");
 			#endif
 		#endif
-	}
-	int32_t getResourceStackIndex(const ReadableString& name, int32_t methodIndex, DataType dataType, AccessType access = AccessType::Any) {
-		Variable<TYPE_COUNT>* variable = getResource(name, methodIndex);
-		if (variable) {
-			if (variable->typeDescription->dataType != dataType) {
-				throwError(U"The machine's resource named \"", variable->name, U"\" had the unexpected type \"", variable->typeDescription->name, U"\"!\n");
-			} else if (access != variable->access && access != AccessType::Any) {
-				throwError(U"The machine's resource named \"", variable->name, U"\" is not delared as \"", getName(access), U"\"!\n");
-			} else {
-				return variable->getStackIndex(this->memory->current.framePointer[dataType]);
-			}
-		} else {
-			throwError(U"The machine cannot find any resource named \"", name, U"\"!\n");
-		}
-		return -1;
 	}
 };
 
