@@ -5,12 +5,15 @@
 START_TEST(CompilerFront)
 	{
 		MediaMachine testMachine = mediaMachine_create(
+			U"HIDDEN: ImageU8, firstGlobalVariable\n"
+			U"HIDDEN: ImageRgbaU8, secondGlobalVariable\n"
 			U"BEGIN: addFixedPoint\n"
 			U"	INPUT: FixedPoint, left\n"
 			U"	INPUT: FixedPoint, right\n"
 			U"	OUTPUT: FixedPoint, result\n"
 			U"	ADD: result, left, right\n"
 			U"END:\n"
+			U"HIDDEN: FixedPoint, someGlobalVariable\n"
 			U"BEGIN: addEight\n"
 			U"	INPUT: FixedPoint, x\n"
 			U"	OUTPUT: FixedPoint, result\n"
@@ -18,7 +21,9 @@ START_TEST(CompilerFront)
 			U"	JUMP: myLabel\n"
 			U"		MOVE: result, 10\n" // Dead code to jump past
 			U"	LABEL: myLabel\n"
+			U"	TEMP: FixedPoint, aTemporaryVariable\n"
 			U"END:\n"
+			U"HIDDEN: ImageU8, anotherGlobalVariable\n"
 		);
 		ASSERT(mediaMachine_exists(testMachine));
 		{
