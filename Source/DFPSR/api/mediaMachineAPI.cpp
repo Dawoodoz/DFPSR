@@ -410,6 +410,14 @@ static const InsSig<MEDIA_MACHINE_TYPE_COUNT> mediaMachineInstructions[] = {
 		ArgSig(U"PositiveSource", true, DataType_FixedPoint),
 		ArgSig(U"NegativeSource", true, DataType_ImageU8)
 	),
+	InsSig<MEDIA_MACHINE_TYPE_COUNT>::create(U"NEG", 1,
+		OPERATION {
+			SCALAR_REF(0) = -SCALAR_VALUE(1);
+			NEXT_INSTRUCTION
+		},
+		ArgSig(U"Target", false, DataType_FixedPoint), // Aliasing is accepted
+		ArgSig(U"PositiveSource", true, DataType_FixedPoint)
+	),
 	InsSig<MEDIA_MACHINE_TYPE_COUNT>::create(U"MUL", 1,
 		OPERATION {
 			SCALAR_REF(0) = SCALAR_VALUE(1) * SCALAR_VALUE(2);
