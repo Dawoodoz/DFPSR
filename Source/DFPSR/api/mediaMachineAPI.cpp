@@ -130,6 +130,8 @@ static const VMTypeDef<MEDIA_MACHINE_TYPE_COUNT> mediaMachineTypes[] = {
 
 #define SCALAR_VALUE(ARG_INDEX) (MEDIA_MEMORY.fixedPointMemory.getRead(args[ARG_INDEX], memory.current.framePointer[DataType_FixedPoint]))
 #define INT_VALUE(ARG_INDEX) fixedPoint_round(SCALAR_VALUE(ARG_INDEX))
+#define BOOL_VALUE(ARG_INDEX) (SCALAR_VALUE(ARG_INDEX) != FixedPoint::zero())
+#define ONE_OR_ZERO FixedPoint::one() : FixedPoint::zero()
 #define SCALAR_REF(ARG_INDEX) (MEDIA_MEMORY.fixedPointMemory.getRef(args[ARG_INDEX], memory.current.framePointer[DataType_FixedPoint]))
 #define IMAGE_U8_REF(ARG_INDEX) (MEDIA_MEMORY.alignedImageU8Memory.getRef(args[ARG_INDEX], memory.current.framePointer[DataType_ImageU8]))
 #define IMAGE_RGBAU8_REF(ARG_INDEX) (MEDIA_MEMORY.orderedImageRgbaU8Memory.getRef(args[ARG_INDEX], memory.current.framePointer[DataType_ImageRgbaU8]))
@@ -194,6 +196,121 @@ static const InsSig<MEDIA_MACHINE_TYPE_COUNT> mediaMachineInstructions[] = {
 		// The argument for labels is matched with the Label type before we know the label's final instruction address,
 		//   but label indices it will be converted into DataType_InstructionAddress once all machine instructions are generated.
 		ArgSig(U"Address", true, DataType_Label)
+	),
+	InsSig<MEDIA_MACHINE_TYPE_COUNT>::create(U"JUMP_IF_TRUE", 1,
+		OPERATION {
+			if (SCALAR_VALUE(1) != FixedPoint::zero()) {
+				// True case
+				memory.current.programCounter = args[0].index; // Labels are replaced with absolute instruction addresses after generating the machine instructions.
+			} else {
+				// False case
+				NEXT_INSTRUCTION
+			}
+		},
+		ArgSig(U"Address", true, DataType_Label),
+		ArgSig(U"Condition", true, DataType_FixedPoint)
+	),
+	InsSig<MEDIA_MACHINE_TYPE_COUNT>::create(U"JUMP_IF_FALSE", 1,
+		OPERATION {
+			if (SCALAR_VALUE(1) == FixedPoint::zero()) {
+				// False case
+				memory.current.programCounter = args[0].index; // Labels are replaced with absolute instruction addresses after generating the machine instructions.
+			} else {
+				// True case
+				NEXT_INSTRUCTION
+			}
+		},
+		ArgSig(U"Address", true, DataType_Label),
+		ArgSig(U"Condition", true, DataType_FixedPoint)
+	),
+	InsSig<MEDIA_MACHINE_TYPE_COUNT>::create(U"LOGIC_AND", 1,
+		OPERATION {
+			SCALAR_REF(0) = (BOOL_VALUE(1) && BOOL_VALUE(2)) ? ONE_OR_ZERO;
+			NEXT_INSTRUCTION
+		},
+		ArgSig(U"Target", false, DataType_FixedPoint),
+		ArgSig(U"LeftSource", true, DataType_FixedPoint),
+		ArgSig(U"RightSource", true, DataType_FixedPoint)
+	),
+	InsSig<MEDIA_MACHINE_TYPE_COUNT>::create(U"LOGIC_OR", 1,
+		OPERATION {
+			SCALAR_REF(0) = (BOOL_VALUE(1) || BOOL_VALUE(2)) ? ONE_OR_ZERO;
+			NEXT_INSTRUCTION
+		},
+		ArgSig(U"Target", false, DataType_FixedPoint),
+		ArgSig(U"LeftSource", true, DataType_FixedPoint),
+		ArgSig(U"RightSource", true, DataType_FixedPoint)
+	),
+	InsSig<MEDIA_MACHINE_TYPE_COUNT>::create(U"LOGIC_XOR", 1,
+		OPERATION {
+			SCALAR_REF(0) = (BOOL_VALUE(1) != BOOL_VALUE(2)) ? ONE_OR_ZERO;
+			NEXT_INSTRUCTION
+		},
+		ArgSig(U"Target", false, DataType_FixedPoint),
+		ArgSig(U"LeftSource", true, DataType_FixedPoint),
+		ArgSig(U"RightSource", true, DataType_FixedPoint)
+	),
+	InsSig<MEDIA_MACHINE_TYPE_COUNT>::create(U"LOGIC_NOT", 1,
+		OPERATION {
+			SCALAR_REF(0) = BOOL_VALUE(1) ? ONE_OR_ZERO;
+			NEXT_INSTRUCTION
+		},
+		ArgSig(U"Target", false, DataType_FixedPoint),
+		ArgSig(U"LeftSource", true, DataType_FixedPoint)
+	),
+	InsSig<MEDIA_MACHINE_TYPE_COUNT>::create(U"EQUAL", 1,
+		OPERATION {
+			SCALAR_REF(0) = (SCALAR_VALUE(1) == SCALAR_VALUE(2)) ? ONE_OR_ZERO;
+			NEXT_INSTRUCTION
+		},
+		ArgSig(U"Target", false, DataType_FixedPoint),
+		ArgSig(U"LeftSource", true, DataType_FixedPoint),
+		ArgSig(U"RightSource", true, DataType_FixedPoint)
+	),
+	InsSig<MEDIA_MACHINE_TYPE_COUNT>::create(U"NOT_EQUAL", 1,
+		OPERATION {
+			SCALAR_REF(0) = (SCALAR_VALUE(1) != SCALAR_VALUE(2)) ? ONE_OR_ZERO;
+			NEXT_INSTRUCTION
+		},
+		ArgSig(U"Target", false, DataType_FixedPoint),
+		ArgSig(U"LeftSource", true, DataType_FixedPoint),
+		ArgSig(U"RightSource", true, DataType_FixedPoint)
+	),
+	InsSig<MEDIA_MACHINE_TYPE_COUNT>::create(U"GREATER", 1,
+		OPERATION {
+			SCALAR_REF(0) = (SCALAR_VALUE(1) > SCALAR_VALUE(2)) ? ONE_OR_ZERO;
+			NEXT_INSTRUCTION
+		},
+		ArgSig(U"Target", false, DataType_FixedPoint),
+		ArgSig(U"LeftSource", true, DataType_FixedPoint),
+		ArgSig(U"RightSource", true, DataType_FixedPoint)
+	),
+	InsSig<MEDIA_MACHINE_TYPE_COUNT>::create(U"GREATER_EQUAL", 1,
+		OPERATION {
+			SCALAR_REF(0) = (SCALAR_VALUE(1) >= SCALAR_VALUE(2)) ? ONE_OR_ZERO;
+			NEXT_INSTRUCTION
+		},
+		ArgSig(U"Target", false, DataType_FixedPoint),
+		ArgSig(U"LeftSource", true, DataType_FixedPoint),
+		ArgSig(U"RightSource", true, DataType_FixedPoint)
+	),
+	InsSig<MEDIA_MACHINE_TYPE_COUNT>::create(U"LESSER", 1,
+		OPERATION {
+			SCALAR_REF(0) = (SCALAR_VALUE(1) < SCALAR_VALUE(2)) ? ONE_OR_ZERO;
+			NEXT_INSTRUCTION
+		},
+		ArgSig(U"Target", false, DataType_FixedPoint),
+		ArgSig(U"LeftSource", true, DataType_FixedPoint),
+		ArgSig(U"RightSource", true, DataType_FixedPoint)
+	),
+	InsSig<MEDIA_MACHINE_TYPE_COUNT>::create(U"LESSER_EQUAL", 1,
+		OPERATION {
+			SCALAR_REF(0) = (SCALAR_VALUE(1) <= SCALAR_VALUE(2)) ? ONE_OR_ZERO;
+			NEXT_INSTRUCTION
+		},
+		ArgSig(U"Target", false, DataType_FixedPoint),
+		ArgSig(U"LeftSource", true, DataType_FixedPoint),
+		ArgSig(U"RightSource", true, DataType_FixedPoint)
 	),
 	InsSig<MEDIA_MACHINE_TYPE_COUNT>::create(U"ROUND", 1,
 		OPERATION {
