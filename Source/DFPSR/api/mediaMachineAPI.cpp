@@ -183,7 +183,7 @@ static const InsSig<MEDIA_MACHINE_TYPE_COUNT> mediaMachineInstructions[] = {
 		},
 		ArgSig(U"Target", false, DataType_ImageRgbaU8)
 	),
-	InsSig<MEDIA_MACHINE_TYPE_COUNT>::create(U"JUMP", 1,
+	InsSig<MEDIA_MACHINE_TYPE_COUNT>::create(U"JUMP", 0,
 		OPERATION {
 			int32_t targetAddress = args[0].index;
 			// TODO: Assert that the target address is within the same method when running in debug mode.
@@ -197,7 +197,7 @@ static const InsSig<MEDIA_MACHINE_TYPE_COUNT> mediaMachineInstructions[] = {
 		//   but label indices it will be converted into DataType_InstructionAddress once all machine instructions are generated.
 		ArgSig(U"Address", true, DataType_Label)
 	),
-	InsSig<MEDIA_MACHINE_TYPE_COUNT>::create(U"JUMP_IF_TRUE", 1,
+	InsSig<MEDIA_MACHINE_TYPE_COUNT>::create(U"JUMP_IF_TRUE", 0,
 		OPERATION {
 			if (SCALAR_VALUE(1) != FixedPoint::zero()) {
 				// True case
@@ -210,7 +210,7 @@ static const InsSig<MEDIA_MACHINE_TYPE_COUNT> mediaMachineInstructions[] = {
 		ArgSig(U"Address", true, DataType_Label),
 		ArgSig(U"Condition", true, DataType_FixedPoint)
 	),
-	InsSig<MEDIA_MACHINE_TYPE_COUNT>::create(U"JUMP_IF_FALSE", 1,
+	InsSig<MEDIA_MACHINE_TYPE_COUNT>::create(U"JUMP_IF_FALSE", 0,
 		OPERATION {
 			if (SCALAR_VALUE(1) == FixedPoint::zero()) {
 				// False case
