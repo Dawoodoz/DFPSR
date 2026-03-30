@@ -880,7 +880,7 @@ struct VirtualMachine {
 			}
 		}
 		// TODO: Allow asking the specific machine type what the given types are called.
-		String message = string_combine(U"\nError! ", operation, U" does not match any overload:\n");
+		String message = string_combine(U"\nError! The virtual machine operation ", operation, U" does not match any overload:\n");
 		for (int32_t s = 0; s < machineInstructionCount; s++) {
 			const InsSig<TYPE_COUNT>* signature = &machineInstructions[s];
 			if (string_caseInsensitiveMatch(signature->name, operation)) {
