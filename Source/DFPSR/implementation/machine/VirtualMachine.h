@@ -609,7 +609,7 @@ struct VirtualMachine {
 			// Create local variables and commands.
 			for (int32_t c = 0; c < unresolvedMethod.commands.length(); c++) {
 				const UnresolvedCommand &unresolvedCommand = unresolvedMethod.commands[c];
-				this->generateLabelsAndStatements(methodIndex, initMethodIndex, unresolvedProgram, unresolvedMethod, unresolvedCommand.command, unresolvedCommand.arguments, global);
+				this->generateMachineCode(methodIndex, initMethodIndex, unresolvedProgram, unresolvedMethod, unresolvedCommand.command, unresolvedCommand.arguments, global);
 			}
 			this->addReturnInstruction(methodIndex);
 			#ifdef VIRTUAL_MACHINE_DEBUG_PRINT
@@ -898,62 +898,6 @@ struct VirtualMachine {
 		throwError(message);
 	}
 
-	// TODO: Inline into declareVariable
-	Variable<TYPE_COUNT>* declareVariable_aux(const VMTypeDef<TYPE_COUNT>& typeDef, int32_t methodIndex, AccessType access, const ReadableString& name, bool initialize, const ReadableString& defaultValueText, bool global) {
-		// Make commonly used data more readable
-		Method<TYPE_COUNT>* currentMethod = &this->methods[methodIndex];
-
-		// Assert correctness
-		if (global && (access == AccessType::Input || access == AccessType::Output)) {
-			throwError(U"Cannot declare inputs or outputs globally!\n");
-		}
-
-		// Count how many variables the method has of each type
-		currentMethod->count[typeDef.dataType]++;
-		this->methods[methodIndex].unifiedLocalIndices[typeDef.dataType].push(this->methods[methodIndex].locals.length());
-		// Count inputs for calling the method
-		if (access == AccessType::Input) {
-			if (this->methods[methodIndex].declaredNonInput) {
-				throwError(U"Cannot declare input \"", name, U"\" after a non-input has been declared. Declare inputs, outputs and locals in order.\n");
-			}
-			this->methods[methodIndex].inputCount++;
-		} else if (access == AccessType::Output) {
-			if (this->methods[methodIndex].declaredLocals) {
-				throwError(U"Cannot declare output \"", name, U"\" after a local has been declared. Declare inputs, outputs and locals in order.\n");
-			}
-			this->methods[methodIndex].outputCount++;
-			this->methods[methodIndex].declaredNonInput = true;
-		} else if (access == AccessType::Hidden) {
-			this->methods[methodIndex].declaredLocals = true;
-			this->methods[methodIndex].declaredNonInput = true;
-		}
-		// Declare the variable so that code may find the type and index by name
-		int32_t typeLocalIndex = currentMethod->count[typeDef.dataType] - 1;
-		int32_t globalIndex = typeLocalToGlobalIndex(global, typeLocalIndex);
-		this->methods[methodIndex].locals.pushConstruct(name, access, &typeDef, typeLocalIndex, global);
-		// If the variable is supposed to be initialized automatically and no value will be given from an input, then we have to initialize it using hidden machine instructions.
-		if (initialize && access != AccessType::Input) {
-			// TODO: Give custom error messages when load or reset was not implemented.
-			//       If reset is missing, then the type does not have a default constructor and must have one specified.
-			//       If move is missing, then the type does not have a constructor accepting immediate constants.
-			if (string_length(defaultValueText) > 0) {
-				// An initial value was provided explicitly.
-				//   Look for a load instruction.
-				this->interpretCommand(methodIndex, U"Move", List<VMA>(
-					VMA(ArgumentType::Reference, typeDef.dataType, globalIndex),
-					this->interpretImmediateArgument(this->memory.getReference(), defaultValueText)
-				));
-			} else {
-				// No initial value was provided.
-				//   Look for a reset instruction.
-				this->interpretCommand(methodIndex, U"Reset", List<VMA>(
-					VMA(ArgumentType::Reference, typeDef.dataType, globalIndex)
-				));
-			}
-		}
-		return &this->methods[methodIndex].locals.last();
-	}
-
 	Variable<TYPE_COUNT>* declareVariable(int32_t methodIndex, int32_t initMethodIndex, AccessType access, const ReadableString& typeName, const ReadableString& name, bool initialize, const ReadableString& defaultValueText, bool global) {
 		if (this->getResource(name, methodIndex, initMethodIndex)) {
 			throwError(U"A resource named \"", name, U"\" already exists! Be aware that resource names are case insensitive.\n");
@@ -961,14 +905,78 @@ struct VirtualMachine {
 		} else {
 			// Loop over type definitions to find a match
 			const VMTypeDef<TYPE_COUNT>* typeDef = getMachineType(typeName);
-			if (typeDef) {
+			if (typeDef != nullptr) {
 				if (string_length(defaultValueText) > 0 && !typeDef->allowDefaultValue) {
 					throwError(U"The variable \"", name, U"\" doesn't have an immediate constructor for \"", typeName, U"\".\n");
 				}
-				return this->declareVariable_aux(*typeDef, methodIndex, access, name, initialize, defaultValueText, global);
+				// Declare the variable
+				Method<TYPE_COUNT>* currentMethod = &this->methods[methodIndex];
+				// Assert correctness
+				if (global && (access == AccessType::Input || access == AccessType::Output)) {
+					throwError(U"Cannot declare inputs or outputs globally!\n");
+				}
+				// Count how many variables the method has of each type
+				currentMethod->count[typeDef->dataType]++;
+				this->methods[methodIndex].unifiedLocalIndices[typeDef->dataType].push(this->methods[methodIndex].locals.length());
+				// Count inputs for calling the method
+				if (access == AccessType::Input) {
+					if (this->methods[methodIndex].declaredNonInput) {
+						throwError(U"Cannot declare input \"", name, U"\" after a non-input has been declared. Declare inputs, outputs and locals in order.\n");
+					}
+					this->methods[methodIndex].inputCount++;
+				} else if (access == AccessType::Output) {
+					if (this->methods[methodIndex].declaredLocals) {
+						throwError(U"Cannot declare output \"", name, U"\" after a local has been declared. Declare inputs, outputs and locals in order.\n");
+					}
+					this->methods[methodIndex].outputCount++;
+					this->methods[methodIndex].declaredNonInput = true;
+				} else if (access == AccessType::Hidden) {
+					this->methods[methodIndex].declaredLocals = true;
+					this->methods[methodIndex].declaredNonInput = true;
+				}
+				// Declare the variable so that code may find the type and index by name
+				int32_t typeLocalIndex = currentMethod->count[typeDef->dataType] - 1;
+				int32_t globalIndex = typeLocalToGlobalIndex(global, typeLocalIndex);
+				this->methods[methodIndex].locals.pushConstruct(name, access, typeDef, typeLocalIndex, global);
+				return &this->methods[methodIndex].locals.last();
 			} else {
 				throwError(U"Cannot declare variable of unknown type \"", typeName, U"\"!\n");
 				return nullptr;
+			}
+		}
+	}
+
+	void initializeVariable(int32_t methodIndex, int32_t initMethodIndex, AccessType access, const ReadableString& typeName, const ReadableString& name, bool initialize, const ReadableString& defaultValueText, bool global) {
+		const VMTypeDef<TYPE_COUNT>* typeDef = getMachineType(typeName);
+		Method<TYPE_COUNT>* currentMethod = &this->methods[methodIndex];
+		Variable<TYPE_COUNT>* variableDef = this->getResource(name, methodIndex, initMethodIndex);
+		if (typeDef == nullptr) {
+			throwError(U"Failed to find type ", typeName, U" when trying to generate machine code for initilizing ", name, U" in the virtual machine!\n");
+		} else if (variableDef == nullptr) {
+			throwError(U"Failed to find variable ", name, U" when trying to generate machine code for initilizing ", name, U" in the virtual machine!\n");
+		} else {
+			int32_t typeLocalIndex = currentMethod->count[typeDef->dataType] - 1;
+			int32_t globalIndex = typeLocalToGlobalIndex(global, typeLocalIndex);
+			this->methods[methodIndex].locals.pushConstruct(name, access, typeDef, typeLocalIndex, global);
+			// If the variable is supposed to be initialized automatically and no value will be given from an input, then we have to initialize it using hidden machine instructions.
+			if (initialize && access != AccessType::Input) {
+				// TODO: Give custom error messages when load or reset was not implemented.
+				//       If reset is missing, then the type does not have a default constructor and must have one specified.
+				//       If move is missing, then the type does not have a constructor accepting immediate constants.
+				if (string_length(defaultValueText) > 0) {
+					// An initial value was provided explicitly.
+					//   Look for a load instruction.
+					this->interpretCommand(methodIndex, U"Move", List<VMA>(
+						VMA(ArgumentType::Reference, typeDef->dataType, globalIndex),
+						this->interpretImmediateArgument(this->memory.getReference(), defaultValueText)
+					));
+				} else {
+					// No initial value was provided.
+					//   Look for a reset instruction.
+					this->interpretCommand(methodIndex, U"Reset", List<VMA>(
+						VMA(ArgumentType::Reference, typeDef->dataType, globalIndex)
+					));
+				}
 			}
 		}
 	}
@@ -1029,9 +1037,9 @@ struct VirtualMachine {
 		}
 	}
 
-	void generateLabelsAndStatements(int32_t methodIndex, int32_t initMethodIndex, const UnresolvedProgram &unresolvedProgram, const UnresolvedMethod &unresolvedMethod, const ReadableString& command, const List<String>& arguments, bool global) {
+	void generateMachineCode(int32_t methodIndex, int32_t initMethodIndex, const UnresolvedProgram &unresolvedProgram, const UnresolvedMethod &unresolvedMethod, const ReadableString& command, const List<String>& arguments, bool global) {
 		#ifdef VIRTUAL_MACHINE_DEBUG_PRINT
-			printText(U"generateLabelsAndStatements @", this->machineWords.length(), U" in method ", methodIndex, U" ", command, U"(");
+			printText(U"generateMachineCode @", this->machineWords.length(), U" in method ", methodIndex, U" ", command, U"(");
 			for (int32_t a = 0; a < arguments.length(); a++) {
 				if (a > 0) { printText(U", "); }
 				printText(arguments[a]);
@@ -1042,11 +1050,14 @@ struct VirtualMachine {
 			throwError(U"Unexpected BEGIN command found inside of method!\n");
 		} else if (string_caseInsensitiveMatch(command, U"End")) {
 			throwError(U"Unexpected END command found inside of method!\n");
-		} else if (string_caseInsensitiveMatch(command, U"Hidden")
-		        || string_caseInsensitiveMatch(command, U"Input")
-		        || string_caseInsensitiveMatch(command, U"Output")
-		        || string_caseInsensitiveMatch(command, U"Temp")) {
-			// Variables should already be generated.
+		} else if (string_caseInsensitiveMatch(command, U"Input")) {
+			// No initialization needed for input.
+		} else if (string_caseInsensitiveMatch(command, U"Output")) {
+			this->initializeVariable(methodIndex, initMethodIndex, AccessType::Output, getArg(arguments, 0), getArg(arguments, 1), true, getArg(arguments, 2), global);
+		} else if (string_caseInsensitiveMatch(command, U"Hidden")) {
+			this->initializeVariable(methodIndex, initMethodIndex, AccessType::Hidden, getArg(arguments, 0), getArg(arguments, 1), true, getArg(arguments, 2), global);
+		} else if (string_caseInsensitiveMatch(command, U"Temp")) {
+			// No initialization needed for temp.
 		} else if (string_caseInsensitiveMatch(command, U"Call")) {
 			#ifdef VIRTUAL_MACHINE_DEBUG_PRINT
 				printText(U"Generating call from method ", methodIndex, U"\n");
