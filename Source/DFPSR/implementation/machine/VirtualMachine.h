@@ -939,7 +939,7 @@ struct VirtualMachine {
 			if (string_length(defaultValueText) > 0) {
 				// An initial value was provided explicitly.
 				//   Look for a load instruction.
-				this->interpretCommand(methodIndex, U"Load", List<VMA>(
+				this->interpretCommand(methodIndex, U"Move", List<VMA>(
 					VMA(ArgumentType::Reference, typeDef.dataType, globalIndex),
 					this->interpretImmediateArgument(this->memory.getReference(), defaultValueText)
 				));
