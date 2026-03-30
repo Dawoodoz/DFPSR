@@ -1136,9 +1136,9 @@ struct VirtualMachine {
 			}
 		}
 		void debugPrintMethod(int32_t methodIndex, const FixedArray<int32_t, TYPE_COUNT>& framePointer, const FixedArray<int32_t, TYPE_COUNT>& stackPointer, const ReadableString& indentation) {
-			printText("  ", this->methods[methodIndex].name, ":\n");
+			printText(U"  ", this->methods[methodIndex].name, U":\n");
 			for (int32_t t = 0; t < this->machineTypeCount; t++) {
-				printText(U"    FramePointer[", t, "] = ", framePointer[t], U" Count[", t, "] = ", this->methods[methodIndex].count[t], U" StackPointer[", t, "] = ", stackPointer[t], U"\n");
+				printText(U"    FramePointer[", t, U"] = ", framePointer[t], U" Count[", t, U"] = ", this->methods[methodIndex].count[t], U" StackPointer[", t, U"] = ", stackPointer[t], U"\n");
 			}
 			debugPrintVariables(methodIndex, framePointer, indentation);
 			printText(U"\n");
