@@ -798,18 +798,6 @@ String dsr::string_unmangleQuote(const ReadableString& mangledText) {
 				// Detect bad input
 				if (c == U'\"') { // Double quote
 					 throwError(U"Unmangled double quote sign detected in string_unmangleQuote!\n", mangledText, U"\n");
-				} else if (c == U'\a') { // Audible bell
-					 throwError(U"Unmangled audible bell detected in string_unmangleQuote!\n", mangledText, U"\n");
-				} else if (c == U'\b') { // Backspace
-					 throwError(U"Unmangled backspace detected in string_unmangleQuote!\n", mangledText, U"\n");
-				} else if (c == U'\f') { // Form feed
-					 throwError(U"Unmangled form feed detected in string_unmangleQuote!\n", mangledText, U"\n");
-				} else if (c == U'\n') { // Line feed
-					 throwError(U"Unmangled line feed detected in string_unmangleQuote!\n", mangledText, U"\n");
-				} else if (c == U'\r') { // Carriage return
-					 throwError(U"Unmangled carriage return detected in string_unmangleQuote!\n", mangledText, U"\n");
-				} else if (c == U'\0') { // Null terminator
-					 throwError(U"Unmangled null terminator detected in string_unmangleQuote!\n", mangledText, U"\n");
 				} else {
 					string_appendChar(result, c);
 				}
