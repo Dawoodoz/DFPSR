@@ -69,6 +69,7 @@ Theme, GUI, font and sound APIs are still under active development and may have 
 ## Supported CPU hardware:
 * **Intel/AMD** using **SSE2**, **SSSE3**, **AVX** and **AVX2** intrinsics.
 * **ARM** using **NEON** intrinsics.
+* **RISC-V** currently using the existing scalar fallback path until a dedicated SIMD backend is added.
 * Unknown CPU architectures, by running the same vector operations without SIMD hardware acceleration. This is still faster than naive loops with one iteration per element, because multiple scalar operations in parallel are better at filling the processor's execution window.
 
 ## Supported compilers:
