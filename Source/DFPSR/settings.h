@@ -42,8 +42,32 @@
 		#error "Could not identify the operating system!\n"
 	#endif
 
+	// If a different target architecture is forced during portability checks, do not let host SIMD builtins leak in.
+	#if defined(__riscv)
+		#ifdef __AVX2__
+			#undef __AVX2__
+		#endif
+		#ifdef __AVX__
+			#undef __AVX__
+		#endif
+		#ifdef __SSSE3__
+			#undef __SSSE3__
+		#endif
+		#ifdef __SSE2__
+			#undef __SSE2__
+		#endif
+		#ifdef __ARM_NEON
+			#undef __ARM_NEON
+		#endif
+	#endif
+
 	// Identify processor types.
-	#if defined(__INTEL__) || defined(__SSE2__)
+	#if defined(__riscv)
+		#define USE_RISCV
+		#if defined(__riscv_xlen) && (__riscv_xlen == 64)
+			#define USE_RISCV64
+		#endif
+	#elif defined(__INTEL__) || defined(__SSE2__)
 		#define USE_INTEL
 	#elif defined(__ARM__) || defined(__ARM_NEON)
 		#define USE_ARM
@@ -56,7 +80,7 @@
 	//   SSE2 and NEON are usually enabled by default on instruction sets where they are not optional, which is good if you just want one release that is fast enough.
 	//   AVX with 256-bit float SIMD is useful for sound and physics that can be computed without integers.
 	//   AVX2 with full 256-bit SIMD is useful for 3D graphics and heavy 2D filters where memory bandwidth is not the bottleneck.
-	#if defined(__SSE2__)
+	#if defined(USE_INTEL) && defined(__SSE2__)
 		#define USE_SSE2 // Comment out this line to test without SSE2
 		#ifdef USE_SSE2
 			#ifdef __SSSE3__
@@ -71,7 +95,7 @@
 				#endif
 			#endif
 		#endif
-	#elif defined(__ARM_NEON)
+	#elif defined(USE_ARM) && defined(__ARM_NEON)
 		#define USE_NEON // Comment out this line to test without NEON
 		// TODO: Check if SVE is enabled once implemented in simd.h.
 	#endif
