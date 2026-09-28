@@ -43,7 +43,7 @@
 	#endif
 
 	// If a different target architecture is forced during portability checks, do not let host SIMD builtins leak in.
-	#if defined(__riscv)
+	#if defined(__riscv) || defined(__loongarch__) || defined(__loongarch)
 		#ifdef __AVX2__
 			#undef __AVX2__
 		#endif
@@ -71,6 +71,8 @@
 		#define USE_INTEL
 	#elif defined(__ARM__) || defined(__ARM_NEON)
 		#define USE_ARM
+	#elif defined(__loongarch__) || defined(__loongarch)
+		#define USE_LOONGARCH
 	#endif
 
 	// Determine which SIMD extensions to use in base/simd.h.
@@ -98,6 +100,9 @@
 	#elif defined(USE_ARM) && defined(__ARM_NEON)
 		#define USE_NEON // Comment out this line to test without NEON
 		// TODO: Check if SVE is enabled once implemented in simd.h.
+	#elif defined(USE_LOONGARCH) && defined(__loongarch_sx)
+		#define USE_LSX // Comment out this line to test without LSX
+		// TODO: Check if LASX is enabled once implemented in simd.h.
 	#endif
 
 	// Enable the EMULATE_X_256BIT_SIMD macro to force use of 256-bit vectors even when there is no hardware instructions supporting it.
@@ -127,6 +132,9 @@
 		#endif
 	#endif
 	#ifdef USE_NEON
+		#define USE_BASIC_SIMD
+	#endif
+	#ifdef USE_LSX
 		#define USE_BASIC_SIMD
 	#endif
 

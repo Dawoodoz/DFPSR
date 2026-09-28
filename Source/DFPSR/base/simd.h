@@ -119,6 +119,9 @@
 	#ifdef USE_NEON
 		#include <arm_neon.h> // NEON
 	#endif
+	#ifdef USE_LSX
+		#include <lsxintrin.h> // LoongArch LSX
+	#endif
 
 	namespace dsr {
 
@@ -400,6 +403,133 @@
 		#define BITWISE_OR_U32_SIMD(A, B) vorrq_u32(A, B)
 		#define BITWISE_XOR_U32_SIMD(A, B) veorq_u32(A, B)
 	#endif
+	// Everything declared in here handles things specific for LSX.
+	// Direct use of the macros will not provide portability to all hardware.
+	#ifdef USE_LSX
+		// Vector types
+		//   The GCC LSX intrinsics reuse the SSE vector types, so reinterpret casting stays within __m128i.
+		#define SIMD_F32x4 __m128
+		#define SIMD_U8x16 __m128i
+		#define SIMD_U16x8 __m128i
+		#define SIMD_U32x4 __m128i
+		#define SIMD_I32x4 __m128i
+
+		// Vector uploads in address order
+		//   LSX has no _mm_set style constructor from scalar arguments, so uploads go through aligned stack memory like NEON.
+		inline SIMD_F32x4 LOAD_VECTOR_F32_SIMD(float a, float b, float c, float d) {
+			ALIGN16 float data[4] = {a, b, c, d};
+			#ifdef SAFE_POINTER_CHECKS
+				if (uintptr_t((void*)data) & 15u) { throwError(U"Unaligned stack memory detected in LOAD_VECTOR_F32_SIMD for LSX!\n"); }
+			#endif
+			return (SIMD_F32x4)__lsx_vld(data, 0);
+		}
+		inline SIMD_F32x4 LOAD_SCALAR_F32_SIMD(float a) {
+			// Broadcast by reinterpreting the bits as an integer, because LSX only has integer broadcasts.
+			union FloatPunning { float asFloat; int32_t asInteger; } punned = {a};
+			return (SIMD_F32x4)__lsx_vreplgr2vr_w(punned.asInteger);
+		}
+		inline SIMD_U8x16 LOAD_VECTOR_U8_SIMD(uint8_t a, uint8_t b, uint8_t c, uint8_t d, uint8_t e, uint8_t f, uint8_t g, uint8_t h,
+		                                      uint8_t i, uint8_t j, uint8_t k, uint8_t l, uint8_t m, uint8_t n, uint8_t o, uint8_t p) {
+			ALIGN16 uint8_t data[16] = {a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p};
+			#ifdef SAFE_POINTER_CHECKS
+				if (uintptr_t((void*)data) & 15u) { throwError(U"Unaligned stack memory detected in LOAD_VECTOR_U8_SIMD for LSX!\n"); }
+			#endif
+			return __lsx_vld(data, 0);
+		}
+		inline SIMD_U8x16 LOAD_SCALAR_U8_SIMD(uint16_t a) {
+			return __lsx_vreplgr2vr_b((int)a);
+		}
+		inline SIMD_U16x8 LOAD_VECTOR_U16_SIMD(uint16_t a, uint16_t b, uint16_t c, uint16_t d, uint16_t e, uint16_t f, uint16_t g, uint16_t h) {
+			ALIGN16 uint16_t data[8] = {a, b, c, d, e, f, g, h};
+			#ifdef SAFE_POINTER_CHECKS
+				if (uintptr_t((void*)data) & 15u) { throwError(U"Unaligned stack memory detected in LOAD_VECTOR_U16_SIMD for LSX!\n"); }
+			#endif
+			return __lsx_vld(data, 0);
+		}
+		inline SIMD_U16x8 LOAD_SCALAR_U16_SIMD(uint16_t a) {
+			return __lsx_vreplgr2vr_h((int)a);
+		}
+		inline SIMD_U32x4 LOAD_VECTOR_U32_SIMD(uint32_t a, uint32_t b, uint32_t c, uint32_t d) {
+			ALIGN16 uint32_t data[4] = {a, b, c, d};
+			#ifdef SAFE_POINTER_CHECKS
+				if (uintptr_t((void*)data) & 15u) { throwError(U"Unaligned stack memory detected in LOAD_VECTOR_U32_SIMD for LSX!\n"); }
+			#endif
+			return __lsx_vld(data, 0);
+		}
+		inline SIMD_U32x4 LOAD_SCALAR_U32_SIMD(uint32_t a) {
+			return __lsx_vreplgr2vr_w((int)(int32_t)a);
+		}
+		inline SIMD_I32x4 LOAD_VECTOR_I32_SIMD(int32_t a, int32_t b, int32_t c, int32_t d) {
+			ALIGN16 int32_t data[4] = {a, b, c, d};
+			#ifdef SAFE_POINTER_CHECKS
+				if (uintptr_t((void*)data) & 15u) { throwError(U"Unaligned stack memory detected in LOAD_VECTOR_I32_SIMD for LSX!\n"); }
+			#endif
+			return __lsx_vld(data, 0);
+		}
+		inline SIMD_I32x4 LOAD_SCALAR_I32_SIMD(int32_t a) {
+			return __lsx_vreplgr2vr_w(a);
+		}
+
+		// Conversions
+		//   Using truncation like SSE's cvttps, instead of the current rounding mode.
+		#define F32_TO_I32_SIMD(A) __lsx_vftintrz_w_s(A)
+		#define F32_TO_U32_SIMD(A) __lsx_vftintrz_wu_s(A)
+		#define I32_TO_F32_SIMD(A) __lsx_vffint_s_w(A)
+		#define U32_TO_F32_SIMD(A) __lsx_vffint_s_wu(A)
+
+		// Unpacking conversions
+		//   LSX interleaves starting from the second argument into the low lanes, so zero filling comes first.
+		#define U8_LOW_TO_U16_SIMD(A) __lsx_vilvl_b(__lsx_vreplgr2vr_b(0), (A))
+		#define U8_HIGH_TO_U16_SIMD(A) __lsx_vilvh_b(__lsx_vreplgr2vr_b(0), (A))
+		#define U16_LOW_TO_U32_SIMD(A) __lsx_vilvl_h(__lsx_vreplgr2vr_h(0), (A))
+		#define U16_HIGH_TO_U32_SIMD(A) __lsx_vilvh_h(__lsx_vreplgr2vr_h(0), (A))
+
+		// Reinterpret casting
+		//   The same __m128i type is shared by all integer vectors, so reinterpret casting is a no-op.
+		#define REINTERPRET_U32_TO_U8_SIMD(A) (A)
+		#define REINTERPRET_U32_TO_U16_SIMD(A) (A)
+		#define REINTERPRET_U8_TO_U32_SIMD(A) (A)
+		#define REINTERPRET_U16_TO_U32_SIMD(A) (A)
+		#define REINTERPRET_U32_TO_I32_SIMD(A) (A)
+		#define REINTERPRET_I32_TO_U32_SIMD(A) (A)
+
+		// Vector float operations returning SIMD_F32x4
+		#define ADD_F32_SIMD(A, B) __lsx_vfadd_s(A, B)
+		#define SUB_F32_SIMD(A, B) __lsx_vfsub_s(A, B)
+		#define MUL_F32_SIMD(A, B) __lsx_vfmul_s(A, B)
+
+		// Vector integer operations returning SIMD_I32x4
+		#define ADD_I32_SIMD(A, B) __lsx_vadd_w(A, B)
+		#define SUB_I32_SIMD(A, B) __lsx_vsub_w(A, B)
+		#define MUL_I32_LSX(A, B) __lsx_vmul_w(A, B)
+
+		// Vector integer operations returning SIMD_U32x4
+		#define ADD_U32_SIMD(A, B) __lsx_vadd_w(A, B)
+		#define SUB_U32_SIMD(A, B) __lsx_vsub_w(A, B)
+		#define MUL_U32_LSX(A, B) __lsx_vmul_w(A, B)
+
+		// Vector integer operations returning SIMD_U16x8
+		#define ADD_U16_SIMD(A, B) __lsx_vadd_h(A, B)
+		#define SUB_U16_SIMD(A, B) __lsx_vsub_h(A, B)
+		#define MUL_U16_SIMD(A, B) __lsx_vmul_h(A, B)
+
+		// Vector integer operations returning SIMD_U8x16
+		#define ADD_U8_SIMD(A, B) __lsx_vadd_b(A, B)
+		#define ADD_SAT_U8_SIMD(A, B) __lsx_vsadd_bu(A, B) // Saturated addition
+		#define SUB_U8_SIMD(A, B) __lsx_vsub_b(A, B)
+		#define SUB_SAT_U8_SIMD(A, B) __lsx_vssub_bu(A, B) // Saturated subtraction
+		// No 8-bit multiplications
+
+		// Statistics
+		#define MIN_F32_SIMD(A, B) __lsx_vfmin_s(A, B)
+		#define MAX_F32_SIMD(A, B) __lsx_vfmax_s(A, B)
+
+		// Bitwise
+		#define BITWISE_AND_U32_SIMD(A, B) __lsx_vand_v(A, B)
+		#define BITWISE_OR_U32_SIMD(A, B) __lsx_vor_v(A, B)
+		#define BITWISE_XOR_U32_SIMD(A, B) __lsx_vxor_v(A, B)
+	#endif
+
 
 	/*
 	The vector types below are supposed to be portable across different CPU architectures.
@@ -487,6 +617,9 @@
 				#elif defined(USE_NEON)
 					ALIGN16 SIMD_F32x4 result = vld1q_f32(data);
 					return F32x4(result);
+				#elif defined(USE_LSX)
+					ALIGN16 SIMD_F32x4 result = (SIMD_F32x4)__lsx_vld(data, 0);
+					return F32x4(result);
 				#endif
 			#else
 				return F32x4(data[0], data[1], data[2], data[3]);
@@ -503,6 +636,8 @@
 					_mm_store_ps(data, this->v);
 				#elif defined(USE_NEON)
 					vst1q_f32(data, this->v);
+				#elif defined(USE_LSX)
+					__lsx_vst((SIMD_I32x4)this->v, data, 0);
 				#endif
 			#else
 				data[0] = this->scalars[0];
@@ -610,6 +745,9 @@
 				#elif defined(USE_NEON)
 					ALIGN16 SIMD_I32x4 result = vld1q_s32(data);
 					return I32x4(result);
+				#elif defined(USE_LSX)
+					ALIGN16 SIMD_I32x4 result = __lsx_vld(data, 0);
+					return I32x4(result);
 				#endif
 			#else
 				return I32x4(data[0], data[1], data[2], data[3]);
@@ -626,6 +764,8 @@
 					_mm_store_si128((__m128i*)data, this->v);
 				#elif defined(USE_NEON)
 					vst1q_s32(data, this->v);
+				#elif defined(USE_LSX)
+					__lsx_vst(this->v, data, 0);
 				#endif
 			#else
 				data[0] = this->scalars[0];
@@ -733,6 +873,9 @@
 				#elif defined(USE_NEON)
 					ALIGN16 SIMD_I32x4 result = vld1q_u32(data);
 					return U32x4(result);
+				#elif defined(USE_LSX)
+					ALIGN16 SIMD_I32x4 result = __lsx_vld(data, 0);
+					return U32x4(result);
 				#endif
 			#else
 				return U32x4(data[0], data[1], data[2], data[3]);
@@ -749,6 +892,8 @@
 					_mm_store_si128((__m128i*)data, this->v);
 				#elif defined(USE_NEON)
 					vst1q_u32(data, this->v);
+				#elif defined(USE_LSX)
+					__lsx_vst(this->v, data, 0);
 				#endif
 			#else
 				data[0] = this->scalars[0];
@@ -871,6 +1016,9 @@
 				#elif defined(USE_NEON)
 					ALIGN16 SIMD_I32x4 result = vld1q_u16(data);
 					return U16x8(result);
+				#elif defined(USE_LSX)
+					ALIGN16 SIMD_I32x4 result = __lsx_vld(data, 0);
+					return U16x8(result);
 				#endif
 			#else
 				return U16x8(data[0], data[1], data[2], data[3], data[4], data[5], data[6], data[7]);
@@ -886,6 +1034,8 @@
 					_mm_store_si128((__m128i*)data, this->v);
 				#elif defined(USE_NEON)
 					vst1q_u16(data, this->v);
+				#elif defined(USE_LSX)
+					__lsx_vst(this->v, data, 0);
 				#endif
 			#else
 				data[0] = this->scalars[0];
@@ -1029,6 +1179,9 @@
 				#elif defined(USE_NEON)
 					ALIGN16 SIMD_I32x4 result = vld1q_u8(data);
 					return U8x16(result);
+				#elif defined(USE_LSX)
+					ALIGN16 SIMD_I32x4 result = __lsx_vld(data, 0);
+					return U8x16(result);
 				#endif
 			#else
 				return U8x16(
@@ -1047,6 +1200,8 @@
 					_mm_store_si128((__m128i*)data, this->v);
 				#elif defined(USE_NEON)
 					vst1q_u8(data, this->v);
+				#elif defined(USE_LSX)
+					__lsx_vst(this->v, data, 0);
 				#endif
 			#else
 				data[0] = this->scalars[0];
@@ -2247,6 +2402,10 @@
 			return F32x4(result);
 		#elif defined(USE_NEON)
 			return F32x4(vabsq_f32(value.v));
+		#elif defined(USE_LSX)
+			// Mask out the negation bit to make the value positive.
+			__m128i noSignMask = __lsx_vreplgr2vr_w(0x7FFFFFFF);
+			return F32x4((SIMD_F32x4)__lsx_vand_v((SIMD_I32x4)value.v, noSignMask));
 		#else
 			float v0 = value.scalars[0];
 			float v1 = value.scalars[1];
@@ -2281,6 +2440,8 @@
 				IMPL_SCALAR_FALLBACK_INFIX_4_LANES(left, right, I32x4, int32_t, *)
 			#elif defined(USE_NEON)
 				return I32x4(MUL_I32_NEON(left.v, right.v));
+			#elif defined(USE_LSX)
+				return I32x4(MUL_I32_LSX(left.v, right.v));
 			#endif
 		#else
 			IMPL_SCALAR_REFERENCE_INFIX_4_LANES(left, right, I32x4, int32_t, *)
@@ -2302,6 +2463,9 @@
 			);
 		#elif defined(USE_NEON)
 			return I32x4(vabsq_s32(value.v));
+		#elif defined(USE_LSX)
+			// Applying the sign of the value onto itself gives the absolute value.
+			return I32x4(__lsx_vsigncov_w(value.v, value.v));
 		#else
 			int32_t v0 = value.scalars[0];
 			int32_t v1 = value.scalars[1];
@@ -2335,8 +2499,12 @@
 			#if defined(USE_SSE2)
 				// TODO: Use AVX2 for 32-bit integer multiplication when available.
 				IMPL_SCALAR_FALLBACK_INFIX_4_LANES(left, right, U32x4, uint32_t, *)
-			#else // NEON
+			#elif defined(USE_NEON)
 				return U32x4(MUL_U32_NEON(left.v, right.v));
+			#elif defined(USE_LSX)
+				return U32x4(MUL_U32_LSX(left.v, right.v));
+			#else
+				IMPL_SCALAR_FALLBACK_INFIX_4_LANES(left, right, U32x4, uint32_t, *)
 			#endif
 		#else
 			IMPL_SCALAR_REFERENCE_INFIX_4_LANES(left, right, U32x4, uint32_t, *)
@@ -2349,6 +2517,8 @@
 			return U16x8(_mm_and_si128(left.v, right.v));
 		#elif defined(USE_NEON)
 			return U16x8(vandq_u16(left.v, right.v));
+		#elif defined(USE_LSX)
+			return U16x8(__lsx_vand_v(left.v, right.v));
 		#else
 			IMPL_SCALAR_REFERENCE_INFIX_8_LANES(left, right, U16x8, uint16_t, &)
 		#endif
@@ -2359,6 +2529,8 @@
 			return U16x8(_mm_or_si128(left.v, right.v));
 		#elif defined(USE_NEON)
 			return U16x8(vorrq_u16(left.v, right.v));
+		#elif defined(USE_LSX)
+			return U16x8(__lsx_vor_v(left.v, right.v));
 		#else
 			IMPL_SCALAR_REFERENCE_INFIX_8_LANES(left, right, U16x8, uint16_t, |)
 		#endif
@@ -2369,6 +2541,8 @@
 			return U16x8(_mm_xor_si128(left.v, right.v));
 		#elif defined(USE_NEON)
 			return U16x8(veorq_u16(left.v, right.v));
+		#elif defined(USE_LSX)
+			return U16x8(__lsx_vxor_v(left.v, right.v));
 		#else
 			IMPL_SCALAR_REFERENCE_INFIX_8_LANES(left, right, U16x8, uint16_t, ^)
 		#endif
@@ -2395,6 +2569,8 @@
 			IMPL_SCALAR_FALLBACK_INFIX_8_LANES(left, bitOffsets, U16x8, uint16_t, <<)
 		#elif defined(USE_NEON)
 			return U16x8(vshlq_u16(left.v, vreinterpretq_s16_u16(bitOffsets.v)));
+		#elif defined(USE_LSX)
+			return U16x8(__lsx_vsll_h(left.v, bitOffsets.v));
 		#else
 			IMPL_SCALAR_REFERENCE_INFIX_8_LANES(left, bitOffsets, U16x8, uint16_t, <<)
 		#endif
@@ -2410,6 +2586,8 @@
 		#elif defined(USE_NEON)
 			//return U16x8(vshrq_u16(left.v, vreinterpretq_s16_u16(bitOffsets.v)));
 			return U16x8(vshlq_u16(left.v, vnegq_s16(vreinterpretq_s16_u16(bitOffsets.v))));
+		#elif defined(USE_LSX)
+			return U16x8(__lsx_vsrl_h(left.v, bitOffsets.v));
 		#else
 			IMPL_SCALAR_REFERENCE_INFIX_8_LANES(left, bitOffsets, U16x8, uint16_t, >>)
 		#endif
@@ -2468,6 +2646,8 @@
 			return U16x8(_mm_slli_epi16(left.v, bitOffset));
 		#elif defined(USE_NEON)
 			return U16x8(vshlq_u32(left.v, vdupq_n_s16(bitOffset)));
+		#elif defined(USE_LSX)
+			return U16x8(__lsx_vslli_h(left.v, bitOffset));
 		#else
 			U16x8 bitOffsets = U16x8(bitOffset);
 			IMPL_SCALAR_REFERENCE_INFIX_8_LANES(left, bitOffsets, U16x8, uint16_t, <<)
@@ -2482,6 +2662,8 @@
 		#elif defined(USE_NEON)
 			//return U16x8(vshrq_u16(left.v, vdupq_n_s16(bitOffset)));
 			return U16x8(vshlq_u16(left.v, vdupq_n_s16(-(int32_t)bitOffset)));
+		#elif defined(USE_LSX)
+			return U16x8(__lsx_vsrli_h(left.v, bitOffset));
 		#else
 			U16x8 bitOffsets = U16x8(bitOffset);
 			IMPL_SCALAR_REFERENCE_INFIX_8_LANES(left, bitOffsets, U16x8, uint16_t, >>)
@@ -2534,6 +2716,8 @@
 			IMPL_SCALAR_FALLBACK_INFIX_4_LANES(left, bitOffsets, U32x4, uint32_t, <<)
 		#elif defined(USE_NEON)
 			return U32x4(vshlq_u32(left.v, vreinterpretq_s32_u32(bitOffsets.v)));
+		#elif defined(USE_LSX)
+			return U32x4(__lsx_vsll_w(left.v, bitOffsets.v));
 		#else
 			IMPL_SCALAR_REFERENCE_INFIX_4_LANES(left, bitOffsets, U32x4, uint32_t, <<)
 		#endif
@@ -2550,6 +2734,8 @@
 			// TODO: Why is vshrq_u32 not found?
 			//return U32x4(vshrq_u32(left.v, vreinterpretq_s32_u32(bitOffsets.v)));
 			return U32x4(vshlq_u32(left.v, vnegq_s32(vreinterpretq_s32_u32(bitOffsets.v))));
+		#elif defined(USE_LSX)
+			return U32x4(__lsx_vsrl_w(left.v, bitOffsets.v));
 		#else
 			IMPL_SCALAR_REFERENCE_INFIX_4_LANES(left, bitOffsets, U32x4, uint32_t, >>)
 		#endif
@@ -2608,6 +2794,8 @@
 			return U32x4(_mm_slli_epi32(left.v, bitOffset));
 		#elif defined(USE_NEON)
 			return U32x4(vshlq_u32(left.v, LOAD_SCALAR_I32_SIMD(bitOffset)));
+		#elif defined(USE_LSX)
+			return U32x4(__lsx_vslli_w(left.v, bitOffset));
 		#else
 			U32x4 bitOffsets = U32x4(bitOffset);
 			IMPL_SCALAR_REFERENCE_INFIX_4_LANES(left, bitOffsets, U32x4, uint32_t, <<)
@@ -2623,6 +2811,8 @@
 			// TODO: Why is vshrq_u32 not found?
 			//return U32x4(vshrq_u32(left.v, LOAD_SCALAR_I32_SIMD(bitOffset)));
 			return U32x4(vshlq_u32(left.v, LOAD_SCALAR_I32_SIMD(-(int32_t)bitOffset)));
+		#elif defined(USE_LSX)
+			return U32x4(__lsx_vsrli_w(left.v, bitOffset));
 		#else
 			U32x4 bitOffsets = U32x4(bitOffset);
 			IMPL_SCALAR_REFERENCE_INFIX_4_LANES(left, bitOffsets, U32x4, uint32_t, >>)
@@ -2883,6 +3073,18 @@
 			#define VECTOR_EXTRACT_GENERATOR_U32(OFFSET, FALLBACK_RESULT) return U32x4(_MM_ALIGNR_EPI8(b.v, a.v, OFFSET * 4));
 			#define VECTOR_EXTRACT_GENERATOR_I32(OFFSET, FALLBACK_RESULT) return I32x4(_MM_ALIGNR_EPI8(b.v, a.v, OFFSET * 4));
 			#define VECTOR_EXTRACT_GENERATOR_F32(OFFSET, FALLBACK_RESULT) return F32x4(SIMD_F32x4(_MM_ALIGNR_EPI8(SIMD_U32x4(b.v), SIMD_U32x4(a.v), OFFSET * 4)));
+		#elif defined(USE_LSX)
+			// LSX has no alignr instruction, but vshuf_b can select bytes using a constant index vector.
+			static inline SIMD_U8x16 _LSX_ALIGNR_EPI8(SIMD_U8x16 high, SIMD_U8x16 low, int offset) {
+			ALIGN16 uint8_t indexData[16] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
+			for (int i = 0; i < 16; i++) { indexData[i] = (uint8_t)(i + offset); }
+			return __lsx_vshuf_b(high, low, __lsx_vld(indexData, 0));
+			}
+			#define VECTOR_EXTRACT_GENERATOR_U8(OFFSET, FALLBACK_RESULT) return U8x16(_LSX_ALIGNR_EPI8(b.v, a.v, OFFSET));
+			#define VECTOR_EXTRACT_GENERATOR_U16(OFFSET, FALLBACK_RESULT) return U16x8(_LSX_ALIGNR_EPI8(b.v, a.v, OFFSET * 2));
+			#define VECTOR_EXTRACT_GENERATOR_U32(OFFSET, FALLBACK_RESULT) return U32x4(_LSX_ALIGNR_EPI8(b.v, a.v, OFFSET * 4));
+			#define VECTOR_EXTRACT_GENERATOR_I32(OFFSET, FALLBACK_RESULT) return I32x4(_LSX_ALIGNR_EPI8(b.v, a.v, OFFSET * 4));
+			#define VECTOR_EXTRACT_GENERATOR_F32(OFFSET, FALLBACK_RESULT) return F32x4((SIMD_F32x4)_LSX_ALIGNR_EPI8((SIMD_U8x16)b.v, (SIMD_U8x16)a.v, OFFSET * 4));
 		#elif defined(USE_NEON)
 			#define VECTOR_EXTRACT_GENERATOR_U8(OFFSET, FALLBACK_RESULT) return U8x16(vextq_u8(a.v, b.v, OFFSET));
 			#define VECTOR_EXTRACT_GENERATOR_U16(OFFSET, FALLBACK_RESULT) return U16x8(vextq_u16(a.v, b.v, OFFSET));
@@ -4057,6 +4259,12 @@
 				ALIGN16 SIMD_F32x4 a = vrecpsq_f32(value.v, result);
 				result = MUL_F32_SIMD(a, result);
 				return F32x4(MUL_F32_SIMD(vrecpsq_f32(value.v, result), result));
+			#elif defined(USE_LSX)
+				// Approximate
+				ALIGN16 SIMD_F32x4 lowQS = __lsx_vfrecip_s(value.v);
+				F32x4 lowQ = F32x4(lowQS);
+				// Refine
+				return ((lowQ + lowQ) - (value * lowQ * lowQ));
 			#else
 				#error "Missing F32x4 implementation of reciprocal!\n");
 				return F32x4(0);
@@ -4096,6 +4304,13 @@
 				ALIGN16 SIMD_F32x4 b = vrsqrtsq_f32(a, reciRoot);
 				ALIGN16 SIMD_F32x4 c = MUL_F32_SIMD(b, reciRoot);
 				return F32x4(c);
+			#elif defined(USE_LSX)
+				// Approximate
+				ALIGN16 SIMD_F32x4 reciRootS = __lsx_vfrsqrt_s(value.v);
+				F32x4 reciRoot = F32x4(reciRootS);
+				F32x4 mul = value * reciRoot * reciRoot;
+				// Refine
+				return (reciRoot * 0.5f) * (3.0f - mul);
 			#else
 				static_assert(false, "Missing SIMD implementation of reciprocalSquareRoot!\n");
 				return F32x4(0);
@@ -4136,6 +4351,9 @@
 				// Refine
 				root = _mm_mul_ps(_mm_add_ps(root, _mm_div_ps(value.v, root)), half);
 				return F32x4(root);
+			#elif defined(USE_LSX)
+				// Exact square root.
+				return F32x4(__lsx_vfsqrt_s(value.v));
 			#else
 				return reciprocalSquareRoot(value) * value;
 			#endif
