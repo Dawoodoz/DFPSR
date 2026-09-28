@@ -2,8 +2,24 @@
 
 # run-simd-tests.sh
 # Build and run only the SIMD test modules (BruteSimdTest, SimdTest, VectorTest).
-# Intended for CI on non-x86 targets where running the full suite under
-# emulation would be too slow. Mirrors the build flow of test.sh.
+#
+# This script exists specifically for the LoongArch64 (LSX) CI job, which runs
+# inside a QEMU-emulated loongarch64 container (uraimo/run-on-arch-action).
+# It is NOT a replacement for test.sh; it works around limitations of that
+# emulated environment, where test.sh cannot be used as-is:
+#
+#   1. test.sh hardcodes -march=native. Under qemu-user the compiler sees the
+#      HOST CPU configuration (/proc/cpuinfo of the x86_64 runner), so
+#      -march=native either errors out or silently drops LSX — the opposite of
+#      what we want to test. We probe -mlsx / -msx explicitly instead
+#      (overridable via SIMD_FLAG).
+#   2. The full suite (~30 test modules) is far too slow under TCG emulation,
+#      and most modules are unrelated to the SIMD backend. Only the three
+#      headless compute tests are run here (overridable via TESTS).
+#   3. test.sh re-runs failures under gdb, which is not installed in the CI
+#      container. This script simply fails with a non-zero exit code.
+#
+# Correctness coverage only: timings under TCG emulation are not meaningful.
 
 TEST_FOLDER=$(dirname "$(realpath "$0")")
 cd "${TEST_FOLDER}" || exit 1
