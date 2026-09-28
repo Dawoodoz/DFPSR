@@ -197,6 +197,9 @@ START_TEST(BruteSimd)
 	#ifdef USE_NEON
 		printText(U"	* NEON\n");
 	#endif
+	#ifdef USE_LSX
+		printText(U"	* LSX\n");
+	#endif
 
 	// Addition.
 	BINARY_POINT_EQUIVALENCE_EXPR(uint8_t , U8x16 , a + b);

@@ -1051,6 +1051,9 @@ START_TEST(Simd)
 	#ifdef USE_NEON
 		printText(U"	* NEON\n");
 	#endif
+	#ifdef USE_LSX
+		printText(U"	* LSX\n");
+	#endif
 
 	testComparisons();
 
