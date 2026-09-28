@@ -66,4 +66,4 @@ jobs:
 						g++ --version
 					run: |
 						cd /opt/dfpsr/Source/test
-						bash run-simd-tests.sh
+						bash run-loongarch-simd-tests.sh

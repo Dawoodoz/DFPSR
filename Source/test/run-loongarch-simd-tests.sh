@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# run-simd-tests.sh
+# run-loongarch-simd-tests.sh
 # Build and run only the SIMD test modules (BruteSimdTest, SimdTest, VectorTest).
 #
 # This script exists specifically for the LoongArch64 (LSX) CI job, which runs
