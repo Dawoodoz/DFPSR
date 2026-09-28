@@ -38,3 +38,32 @@ jobs:
 			- name: Run tests on Windows
 				if: matrix.os == 'windows-latest'
 				run: .\Source\test\test_windows.bat
+	# GitHub-hosted runners are x86_64/arm64 only - there is no LoongArch runner.
+	# "os" is the real runner host; the (distro, architecture) pair is the emulated
+	# guest environment fed to run-on-arch-action: a QEMU-emulated loongarch64
+	# container (hence apk, not apt). builderTest's architecture axis is decorative;
+	# these matrix values are actually wired into the action inputs.
+	loongarchSimdTest:
+		runs-on: ${{ matrix.os }}
+		strategy:
+			matrix:
+				os: [ubuntu-latest]
+				distro: [alpine_latest]
+				architecture: [loongarch64]
+		steps:
+			- name: Checkout
+				uses: actions/checkout@v4
+			- name: Run tests on LoongArch64
+				uses: uraimo/run-on-arch-action@v3
+				with:
+					arch: ${{ matrix.architecture }}
+					distro: ${{ matrix.distro }}
+					githubToken: ${{ github.token }}
+					dockerRunArgs: |
+						--volume "${PWD}:/opt/dfpsr"
+					install: |
+						apk add --no-cache g++ make bash
+						g++ --version
+					run: |
+						cd /opt/dfpsr/Source/test
+						bash run-simd-tests.sh
