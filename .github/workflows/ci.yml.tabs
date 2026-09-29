@@ -43,6 +43,7 @@ jobs:
 	# guest environment fed to run-on-arch-action: a QEMU-emulated loongarch64
 	# container (hence apk, not apt). builderTest's architecture axis is decorative;
 	# these matrix values are actually wired into the action inputs.
+	# The simd axis runs both LSX and scalar fallback paths in parallel.
 	loongarchSimdTest:
 		runs-on: ${{ matrix.os }}
 		strategy:
@@ -50,6 +51,7 @@ jobs:
 				os: [ubuntu-latest]
 				distro: [alpine_latest]
 				architecture: [loongarch64]
+				simd: [lsx, scalar]
 		steps:
 			- name: Checkout
 				uses: actions/checkout@v4
@@ -66,4 +68,8 @@ jobs:
 						g++ --version
 					run: |
 						cd /opt/dfpsr/Source/test
-						bash run-loongarch-simd-tests.sh
+						if [ "${{ matrix.simd }}" = "lsx" ]; then
+							SIMD_FLAG="-mlsx" bash run-loongarch-simd-tests.sh
+						else
+							SIMD_FLAG="" bash run-loongarch-simd-tests.sh
+						fi

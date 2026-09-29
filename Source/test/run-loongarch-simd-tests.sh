@@ -32,8 +32,10 @@ DEBUGGER="-g"
 O_LEVEL=-O2
 
 # SIMD target flag. Default: enable LSX on LoongArch.
-# Overridable via SIMD_FLAG env var. Falls back to -msx for older GCC.
-if [ -z "${SIMD_FLAG}" ]; then
+# Overridable via SIMD_FLAG env var. Set to empty string to disable SIMD.
+# Falls back to -msx for older GCC.
+if [ -z "${SIMD_FLAG+x}" ]; then
+	# SIMD_FLAG not set at all, probe for LSX support
 	if echo | g++ -mlsx -dM -E -x c++ - >/dev/null 2>&1; then
 		SIMD_FLAG="-mlsx"
 	elif echo | g++ -msx -dM -E -x c++ - >/dev/null 2>&1; then
@@ -42,9 +44,14 @@ if [ -z "${SIMD_FLAG}" ]; then
 		SIMD_FLAG="-march=native"
 	fi
 fi
-echo "Using SIMD_FLAG = ${SIMD_FLAG}"
+echo "Using SIMD_FLAG = '${SIMD_FLAG}'"
 
-COMPILER_FLAGS="${MODE} ${DEBUGGER} ${SIMD_FLAG} ${CPP_VERSION} ${O_LEVEL}"
+# Build compiler flags (omit SIMD_FLAG if empty)
+if [ -n "${SIMD_FLAG}" ]; then
+	COMPILER_FLAGS="${MODE} ${DEBUGGER} ${SIMD_FLAG} ${CPP_VERSION} ${O_LEVEL}"
+else
+	COMPILER_FLAGS="${MODE} ${DEBUGGER} ${CPP_VERSION} ${O_LEVEL}"
+fi
 
 chmod +x "${ROOT_PATH}/tools/buildScripts/build.sh";
 "${ROOT_PATH}/tools/buildScripts/build.sh" "NONE" "NONE" "${ROOT_PATH}" "${TEMP_ROOT}" "NONE" "${COMPILER_FLAGS}";
